@@ -1,0 +1,10 @@
+node_modules
+dist
+.DS_Store
+*.log
+.env
+.env.*
+
+# Runtime data store (JSON persistence) — never commit staff data
+/data/*.json
+/data/uploads/

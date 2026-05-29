@@ -1,0 +1,217 @@
+// Warm UI kit — soft, rounded, friendly building blocks.
+
+const AVATAR_TONES = [
+  ['#e6f6f0', '#1aa179'],
+  ['#eef2fe', '#1e4fcc'],
+  ['#fbf0dd', '#d98a23'],
+  ['#efecfb', '#6f5bd6'],
+  ['#fbe9e6', '#d65745'],
+  ['#e7f1fb', '#2b7fd0'],
+]
+function toneFor(name = '') {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % AVATAR_TONES.length
+  return AVATAR_TONES[h]
+}
+function initials(name = '') {
+  const p = name.trim().split(/\s+/)
+  return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase() || '?'
+}
+
+export function Avatar({ name, size = 40, src }) {
+  const [bg, fg] = toneFor(name)
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        style={{ width: size, height: size }}
+        className="rounded-full object-cover"
+      />
+    )
+  }
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center rounded-full font-bold"
+      style={{ width: size, height: size, background: bg, color: fg, fontSize: size * 0.38 }}
+    >
+      {initials(name)}
+    </div>
+  )
+}
+
+const TONES = {
+  good: 'text-[var(--color-good)] bg-[var(--color-good-bg)]',
+  warn: 'text-[var(--color-warn)] bg-[var(--color-warn-bg)]',
+  rest: 'text-[var(--color-rest)] bg-[var(--color-rest-bg)]',
+  bad: 'text-[var(--color-bad)] bg-[var(--color-bad-bg)]',
+  brand: 'text-[var(--color-brand)] bg-[var(--color-brand-50)]',
+  neutral: 'text-[var(--color-ink-soft)] bg-[var(--color-line-soft)]',
+}
+
+export function Pill({ tone = 'neutral', children, dot = false }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${TONES[tone]}`}
+    >
+      {dot && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
+      {children}
+    </span>
+  )
+}
+
+export function Card({ className = '', children, as: Tag = 'div', ...rest }) {
+  return (
+    <Tag className={`card ${className}`} {...rest}>
+      {children}
+    </Tag>
+  )
+}
+
+export function StatCard({ icon: Icon, label, value, sub, tone = 'brand' }) {
+  return (
+    <Card className="flex flex-col gap-3 p-5">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-[var(--color-ink-soft)]">{label}</span>
+        {Icon && (
+          <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${TONES[tone]}`}>
+            <Icon size={18} strokeWidth={2.2} />
+          </span>
+        )}
+      </div>
+      <div className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">{value}</div>
+      {sub && <div className="text-sm text-[var(--color-ink-faint)]">{sub}</div>}
+    </Card>
+  )
+}
+
+export function Button({
+  children,
+  variant = 'primary',
+  size = 'md',
+  className = '',
+  icon: Icon,
+  ...rest
+}) {
+  const base =
+    'inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all focus-ring disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]'
+  const sizes = { sm: 'px-3.5 py-2 text-sm', md: 'px-5 py-2.5 text-sm', lg: 'px-6 py-3 text-base' }
+  const variants = {
+    primary:
+      'bg-[var(--color-brand)] text-white shadow-[0_6px_16px_rgba(30,79,204,0.25)] hover:bg-[var(--color-brand-600)]',
+    ghost:
+      'bg-[var(--color-line-soft)] text-[var(--color-ink)] hover:bg-[var(--color-line)]',
+    outline:
+      'border border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-brand)] hover:text-[var(--color-brand)]',
+    good: 'bg-[var(--color-good)] text-white hover:brightness-95',
+    danger: 'bg-[var(--color-bad-bg)] text-[var(--color-bad)] hover:brightness-97',
+  }
+  return (
+    <button className={`${base} ${sizes[size]} ${variants[variant]} ${className}`} {...rest}>
+      {Icon && <Icon size={18} strokeWidth={2.2} />}
+      {children}
+    </button>
+  )
+}
+
+export function Spinner({ size = 22 }) {
+  return (
+    <span
+      className="inline-block animate-spin rounded-full border-2 border-[var(--color-brand-100)] border-t-[var(--color-brand)]"
+      style={{ width: size, height: size }}
+    />
+  )
+}
+
+export function SectionTitle({ children, action }) {
+  return (
+    <div className="mb-3 flex items-center justify-between">
+      <h2 className="text-base font-bold text-[var(--color-ink)]">{children}</h2>
+      {action}
+    </div>
+  )
+}
+
+const FIELD_CLS =
+  'focus-ring w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]'
+
+export function Field({ label, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-semibold text-[var(--color-ink)]">{label}</span>
+      {children}
+    </label>
+  )
+}
+export function Input(props) {
+  return <input {...props} className={`${FIELD_CLS} ${props.className || ''}`} />
+}
+export function Textarea(props) {
+  return <textarea {...props} className={`${FIELD_CLS} resize-none ${props.className || ''}`} />
+}
+export function Select({ options = [], children, ...props }) {
+  return (
+    <select {...props} className={`${FIELD_CLS} ${props.className || ''}`}>
+      {children}
+      {options.map((o) => (
+        <option key={o} value={o}>
+          {o}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+export function Modal({ open, onClose, title, children, footer, maxWidth = 'max-w-lg' }) {
+  if (!open) return null
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(20,24,40,0.45)] p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className={`card w-full ${maxWidth} max-h-[92vh] overflow-y-auto rounded-b-none rounded-t-3xl sm:rounded-3xl rise`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-[var(--color-line-soft)] px-5 py-4">
+          <h3 className="text-lg font-extrabold tracking-tight text-[var(--color-ink)]">{title}</h3>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-line-soft)] hover:text-[var(--color-ink)]"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="px-5 py-5">{children}</div>
+        {footer && (
+          <div className="flex justify-end gap-2 border-t border-[var(--color-line-soft)] px-5 py-4">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function ConfirmDialog({ open, onCancel, onConfirm, title, message, confirmLabel = 'Delete', busy }) {
+  return (
+    <Modal
+      open={open}
+      onClose={onCancel}
+      title={title}
+      maxWidth="max-w-sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={onConfirm} disabled={busy}>
+            {busy ? <Spinner size={16} /> : confirmLabel}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-[var(--color-ink-soft)]">{message}</p>
+    </Modal>
+  )
+}

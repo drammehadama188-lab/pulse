@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Damia Staff — "warm people-platform" design system
+   Light, soft, rounded, friendly. Brand = Damia blue.
+   ============================================================ */
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand */
+  --color-brand: #1e4fcc;
+  --color-brand-600: #1b46b5;
+  --color-brand-700: #173a96;
+  --color-brand-50: #eef2fe;
+  --color-brand-100: #dce4fd;
+
+  /* Warm neutrals (paper, not stark white) */
+  --color-paper: #f7f5f1;
+  --color-surface: #ffffff;
+  --color-ink: #1d2333;
+  --color-ink-soft: #5b6478;
+  --color-ink-faint: #8b93a5;
+  --color-line: #ece9e2;
+  --color-line-soft: #f1eee8;
+
+  /* Status (soft, friendly) */
+  --color-good: #1aa179;
+  --color-good-bg: #e6f6f0;
+  --color-warn: #d98a23;
+  --color-warn-bg: #fbf0dd;
+  --color-rest: #6f5bd6;
+  --color-rest-bg: #efecfb;
+  --color-bad: #d65745;
+  --color-bad-bg: #fbe9e6;
+
+  /* Radii */
+  --radius-card: 22px;
+  --radius-lg: 16px;
+
+  /* Soft warm shadows */
+  --shadow-soft: 0 1px 2px rgba(29, 35, 51, 0.04), 0 8px 24px rgba(29, 35, 51, 0.05);
+  --shadow-lift: 0 2px 4px rgba(29, 35, 51, 0.05), 0 16px 40px rgba(29, 35, 51, 0.09);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background-color: var(--color-paper);
+  /* subtle warm atmosphere — soft blue + cream light leaks, not flat */
+  background-image:
+    radial-gradient(900px 500px at 100% -10%, rgba(30, 79, 204, 0.06), transparent 60%),
+    radial-gradient(700px 500px at -10% 110%, rgba(217, 138, 35, 0.05), transparent 55%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Friendly card */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Reusable focus ring */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-brand-100);
+  border-color: var(--color-brand);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* hide scrollbar on the mobile nav */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
