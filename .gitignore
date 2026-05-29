@@ -8,3 +8,7 @@ dist
 # Runtime data store (JSON persistence) — never commit staff data
 /data/*.json
 /data/uploads/
+
+# Local backups (contain customer + staff PII) — never commit
+/data.backup-*/
+**/*.backup-*.js
