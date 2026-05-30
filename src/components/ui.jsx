@@ -2,11 +2,11 @@
 
 const AVATAR_TONES = [
   ['#e6f6f0', '#1aa179'],
-  ['#eef2fe', '#1e4fcc'],
+  ['#d6f0e9', '#26a69a'],
   ['#fbf0dd', '#d98a23'],
   ['#efecfb', '#6f5bd6'],
   ['#fbe9e6', '#d65745'],
-  ['#e7f1fb', '#2b7fd0'],
+  ['#fdebef', '#d6294f'],
 ]
 function toneFor(name = '') {
   let h = 0
@@ -98,7 +98,7 @@ export function Button({
   const sizes = { sm: 'px-3.5 py-2 text-sm', md: 'px-5 py-2.5 text-sm', lg: 'px-6 py-3 text-base' }
   const variants = {
     primary:
-      'bg-[var(--color-brand)] text-white shadow-[0_6px_16px_rgba(30,79,204,0.25)] hover:bg-[var(--color-brand-600)]',
+      'bg-[var(--color-brand)] text-white shadow-[0_6px_16px_rgba(214,41,79,0.25)] hover:bg-[var(--color-brand-600)]',
     ghost:
       'bg-[var(--color-line-soft)] text-[var(--color-ink)] hover:bg-[var(--color-line)]',
     outline:

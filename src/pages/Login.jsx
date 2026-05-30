@@ -29,31 +29,45 @@ export default function Login() {
     <div className="grid min-h-screen md:grid-cols-2">
       {/* brand panel */}
       <div
-        className="relative hidden flex-col justify-between overflow-hidden p-12 text-white md:flex"
-        style={{ background: 'linear-gradient(150deg, #2a5fe0 0%, #1e4fcc 45%, #14306f 100%)' }}
+        className="relative hidden flex-col items-center justify-center overflow-hidden p-12 md:flex"
+        style={{ background: 'linear-gradient(150deg, #e7f6f0 0%, #d6f0e9 50%, #c4ebe0 100%)' }}
       >
         <div
           className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, rgba(214,41,79,0.12), transparent 70%)' }}
         />
         <div
           className="pointer-events-none absolute -bottom-32 -left-20 h-96 w-96 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(217,138,35,0.25), transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, rgba(38,166,154,0.22), transparent 70%)' }}
         />
-        <div className="relative">
-          <Brand />
-        </div>
-        <div className="relative max-w-sm">
-          <h1 className="text-3xl font-extrabold leading-tight tracking-tight">
-            Your workday,
-            <br />
-            all in one place.
-          </h1>
-          <p className="mt-3 text-white/75">
+        <div className="relative flex flex-col items-center text-center">
+          <div className="flex items-center gap-4">
+            <svg width="62" height="83" viewBox="0 0 120 160" aria-hidden>
+              <path
+                d="M78 10 C 46 44 44 72 60 96 C 70 111 66 122 50 130 C 60 112 46 102 52 80 C 58 54 70 30 78 10 Z"
+                fill="#d6294f"
+              />
+              <path
+                d="M56 92 C 32 118 32 140 48 154 C 41 140 52 130 60 122 C 71 112 68 96 56 92 Z"
+                fill="#d6294f"
+              />
+            </svg>
+            <div className="text-left leading-none">
+              <div className="text-5xl font-extrabold tracking-tight text-[var(--color-ink)]">
+                Pulse
+              </div>
+              <div className="mt-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--color-ink-soft)]">
+                by Damia Tracker
+              </div>
+            </div>
+          </div>
+          <p className="mt-7 max-w-xs text-[var(--color-ink-soft)]">
             Check in, request leave, track your targets and pay — built for the Damia team.
           </p>
         </div>
-        <div className="relative text-sm text-white/55">Damia Security Solutions Ltd</div>
+        <div className="absolute bottom-12 left-12 text-sm text-[var(--color-ink-faint)]">
+          Damia Security Solutions Ltd
+        </div>
       </div>
 
       {/* form */}

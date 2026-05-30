@@ -12,3 +12,6 @@ dist
 # Local backups (contain customer + staff PII) — never commit
 /data.backup-*/
 **/*.backup-*.js
+
+# Dev-only auth-seed helper (may hold a session token) — never commit
+/public/_seed.html

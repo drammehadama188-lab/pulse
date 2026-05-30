@@ -17,7 +17,7 @@ const ACT_TYPES = [
 const ACT_META = Object.fromEntries(ACT_TYPES.map((t) => [t.key, t]))
 ACT_META.status = { label: 'Status', icon: Flag, tone: 'neutral' }
 
-const HERO = 'linear-gradient(115deg, #1e4fcc 0%, #4733c9 42%, #8e2fb0 72%, #c0398f 100%)'
+const HERO = 'linear-gradient(115deg, #e0345a 0%, #d6294f 42%, #b81e58 72%, #a3173a 100%)'
 const blankActivity = () => ({ type: 'note', note: '', callStatus: 'Wants More info', nextAction: 'Call Back', from: '', to: '', cost: '', outcome: 'Follow Up Needed' })
 
 function initials(name = '') {

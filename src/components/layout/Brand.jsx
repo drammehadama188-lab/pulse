@@ -2,19 +2,18 @@ export function Brand({ compact = false }) {
   return (
     <div className="flex items-center gap-2.5">
       <div
-        className="flex h-9 w-9 items-center justify-center rounded-xl text-white"
-        style={{
-          background: 'linear-gradient(135deg, #2a5fe0, #1e4fcc 60%, #173a96)',
-          boxShadow: '0 6px 16px rgba(30,79,204,0.28)',
-        }}
+        className="flex h-9 w-9 items-center justify-center rounded-xl"
+        style={{ background: 'var(--color-mint-tile)' }}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        {/* Pulse flame */}
+        <svg width="17" height="23" viewBox="0 0 120 160" className="text-[var(--color-brand)]" aria-hidden>
           <path
-            d="M2 12.5h4.2l2-5.5 3.4 11 2.4-7 1.6 3.5H22"
-            stroke="white"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            d="M78 10 C 46 44 44 72 60 96 C 70 111 66 122 50 130 C 60 112 46 102 52 80 C 58 54 70 30 78 10 Z"
+            fill="currentColor"
+          />
+          <path
+            d="M56 92 C 32 118 32 140 48 154 C 41 140 52 130 60 122 C 71 112 68 96 56 92 Z"
+            fill="currentColor"
           />
         </svg>
       </div>
@@ -23,8 +22,8 @@ export function Brand({ compact = false }) {
           <div className="text-[16px] font-extrabold tracking-tight text-[var(--color-ink)]">
             Pulse
           </div>
-          <div className="-mt-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-ink-faint)]">
-            by Damia
+          <div className="-mt-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--color-ink-faint)]">
+            by Damia Tracker
           </div>
         </div>
       )}

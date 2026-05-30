@@ -1,27 +1,32 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Damia Staff — "warm people-platform" design system
-   Light, soft, rounded, friendly. Brand = Damia blue.
+   Pulse — design system
+   Light, soft, rounded, friendly. Brand = Pulse flame crimson on mint.
    ============================================================ */
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
-  /* Brand */
-  --color-brand: #1e4fcc;
-  --color-brand-600: #1b46b5;
-  --color-brand-700: #173a96;
-  --color-brand-50: #eef2fe;
-  --color-brand-100: #dce4fd;
+  /* Brand — Pulse flame crimson */
+  --color-brand: #d6294f;
+  --color-brand-600: #c01f44;
+  --color-brand-700: #a3173a;
+  --color-brand-50: #fdebef;
+  --color-brand-100: #fbd5dd;
 
-  /* Warm neutrals (paper, not stark white) */
-  --color-paper: #f7f5f1;
+  /* Mint — the Pulse backdrop / logo tile */
+  --color-mint: #d6f0e9;
+  --color-mint-tile: #cdeee6;
+  --color-mint-deep: #26a69a;
+
+  /* Mint-tinted neutrals (paper, not stark white) */
+  --color-paper: #e9f5f0;
   --color-surface: #ffffff;
-  --color-ink: #1d2333;
-  --color-ink-soft: #5b6478;
-  --color-ink-faint: #8b93a5;
-  --color-line: #ece9e2;
-  --color-line-soft: #f1eee8;
+  --color-ink: #161b26;
+  --color-ink-soft: #586173;
+  --color-ink-faint: #8a93a3;
+  --color-line: #e0ece8;
+  --color-line-soft: #edf5f2;
 
   /* Status (soft, friendly) */
   --color-good: #1aa179;
@@ -57,10 +62,10 @@ body {
   font-family: var(--font-sans);
   color: var(--color-ink);
   background-color: var(--color-paper);
-  /* subtle warm atmosphere — soft blue + cream light leaks, not flat */
+  /* soft Pulse atmosphere — mint wash + a faint crimson glow, not flat */
   background-image:
-    radial-gradient(900px 500px at 100% -10%, rgba(30, 79, 204, 0.06), transparent 60%),
-    radial-gradient(700px 500px at -10% 110%, rgba(217, 138, 35, 0.05), transparent 55%);
+    radial-gradient(900px 520px at 100% -10%, rgba(214, 41, 79, 0.05), transparent 60%),
+    radial-gradient(760px 540px at -10% 110%, rgba(38, 166, 154, 0.12), transparent 55%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
