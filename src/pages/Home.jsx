@@ -149,10 +149,14 @@ export default function Home() {
         {/* leave */}
         <StatCard
           icon={Palmtree}
-          tone="rest"
-          label="Leave balance"
-          value={`${leave.remaining} days`}
-          sub={`${leave.used} used of ${leave.allowance}`}
+          tone={leave?.annualEligible ? 'good' : 'warn'}
+          label="Annual leave"
+          value={leave?.annualEligible ? 'Eligible' : 'After 12 months'}
+          sub={
+            leave?.annualEligible
+              ? `${leave.annualUsed ?? 0} day${(leave.annualUsed ?? 0) === 1 ? '' : 's'} used`
+              : 'Eligible after 12 months of service'
+          }
         />
 
         {/* role metric */}
