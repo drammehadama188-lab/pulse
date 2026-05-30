@@ -674,6 +674,24 @@ app.delete('/api/coaching/:id', auth, notViewAs, managerOnly, (req, res) => {
   res.json({ ok: true })
 })
 
+// ---------- DEPARTMENTS ----------
+// Marketing — built fresh in Pulse, its own store. Sections are simple arrays.
+const MKT_SECTIONS = ['socialMedia', 'leadSources', 'contentCalendar', 'campaigns', 'collaborations', 'adSpend']
+const MKT_DEFAULT = Object.fromEntries(MKT_SECTIONS.map((s) => [s, []]))
+
+app.get('/api/marketing', auth, (req, res) => {
+  res.json({ ...MKT_DEFAULT, ...db.read('marketing', {}) })
+})
+app.post('/api/marketing/:section', auth, managerOnly, notViewAs, (req, res) => {
+  const { section } = req.params
+  if (!MKT_SECTIONS.includes(section)) return res.status(400).json({ error: 'Unknown section' })
+  const items = Array.isArray(req.body?.items) ? req.body.items : []
+  const data = { ...MKT_DEFAULT, ...db.read('marketing', {}) }
+  data[section] = items
+  db.write('marketing', data)
+  res.json({ [section]: items })
+})
+
 seedUsers()
 seedSales()
 app.listen(PORT, () => console.log(`Damia Staff API on http://localhost:${PORT}`))

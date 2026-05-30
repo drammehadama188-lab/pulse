@@ -1,4 +1,4 @@
-import { Home, Contact, TrendingUp, BarChart3, CalendarCheck, Megaphone, Clock, Palmtree, Wallet, User, ClipboardCheck, Users, Menu } from 'lucide-react'
+import { Home, Contact, TrendingUp, BarChart3, CalendarCheck, Megaphone, Clock, Palmtree, Wallet, User, ClipboardCheck, Users, Menu, Code2, Headphones, DollarSign, IdCard, Wrench, FileBarChart } from 'lucide-react'
 
 const SALES_DEPTS = ['Sales', 'Training']
 const isSales = (u) => SALES_DEPTS.includes(u?.department)
@@ -22,8 +22,26 @@ export const NAV = [
 
 export const MORE = { key: 'more', label: 'More', icon: Menu }
 
+// Departments — the management layer. Manager-only. Lives under /dept/* so it
+// never collides with the staff-facing pages above. Built fresh, one at a time;
+// `ready:false` renders a clean "being set up" shell.
+export const DEPARTMENTS = [
+  { to: '/dept/sales', label: 'Sales', icon: TrendingUp, ready: false },
+  { to: '/dept/projects', label: 'Projects', icon: Code2, ready: false },
+  { to: '/dept/customer-service', label: 'Customer Service', icon: Headphones, ready: false },
+  { to: '/dept/finance', label: 'Finance', icon: DollarSign, ready: false },
+  { to: '/dept/hr', label: 'HR & Team', icon: IdCard, ready: false },
+  { to: '/dept/operations', label: 'Operations', icon: Wrench, ready: false },
+  { to: '/dept/marketing', label: 'Marketing', icon: Megaphone, ready: true },
+  { to: '/dept/reports', label: 'Reports', icon: FileBarChart, ready: false },
+]
+
 export function navFor(user) {
   return NAV.filter((i) => i.show(user))
+}
+
+export function departmentsFor(user) {
+  return isManager(user) ? DEPARTMENTS : []
 }
 
 // mobile bottom bar: Home + up to 3 role-relevant + More (opens full menu)

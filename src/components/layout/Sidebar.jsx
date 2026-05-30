@@ -1,46 +1,64 @@
 import { NavLink } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { navFor } from './nav.js'
+import { navFor, departmentsFor } from './nav.js'
 import { Brand } from './Brand.jsx'
 import { Avatar } from '../ui.jsx'
+
+function NavRow({ item, soon = false }) {
+  return (
+    <NavLink
+      to={item.to}
+      end={item.to === '/'}
+      className={({ isActive }) =>
+        `group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
+          isActive
+            ? 'bg-[var(--color-brand-50)] text-[var(--color-brand)]'
+            : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-line-soft)] hover:text-[var(--color-ink)]'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <item.icon size={20} strokeWidth={isActive ? 2.4 : 2} className="shrink-0" />
+          <span className="flex-1">{item.label}</span>
+          {soon && (
+            <span className="rounded-full bg-[var(--color-line-soft)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">
+              Soon
+            </span>
+          )}
+        </>
+      )}
+    </NavLink>
+  )
+}
 
 export function Sidebar() {
   const { user, logout } = useAuth()
   const items = navFor(user)
+  const departments = departmentsFor(user)
 
   return (
-    <aside className="hidden w-[248px] shrink-0 flex-col border-r border-[var(--color-line)] bg-[var(--color-surface)]/70 px-4 py-6 backdrop-blur-sm md:flex">
+    <aside className="hidden w-[248px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-line)] bg-[var(--color-surface)]/70 px-4 py-6 backdrop-blur-sm md:flex">
       <div className="px-2">
         <Brand />
       </div>
 
       <nav className="mt-8 flex flex-1 flex-col gap-1">
         {items.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            className={({ isActive }) =>
-              `group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
-                isActive
-                  ? 'bg-[var(--color-brand-50)] text-[var(--color-brand)]'
-                  : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-line-soft)] hover:text-[var(--color-ink)]'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <item.icon
-                  size={20}
-                  strokeWidth={isActive ? 2.4 : 2}
-                  className="shrink-0"
-                />
-                {item.label}
-              </>
-            )}
-          </NavLink>
+          <NavRow key={item.to} item={item} />
         ))}
+
+        {departments.length > 0 && (
+          <>
+            <div className="mb-1 mt-6 px-3.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-ink-faint)]">
+              Departments
+            </div>
+            {departments.map((item) => (
+              <NavRow key={item.to} item={item} soon={!item.ready} />
+            ))}
+          </>
+        )}
       </nav>
 
       <div className="mt-4 flex items-center gap-3 rounded-2xl border border-[var(--color-line)] bg-[var(--color-paper)]/60 p-3">
