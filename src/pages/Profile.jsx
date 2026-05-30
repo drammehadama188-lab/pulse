@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { LogOut, Briefcase, CalendarDays, BadgeCheck } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { LogOut, Briefcase, CalendarDays, BadgeCheck, Users } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import { Avatar, Button, Card, Pill, SectionTitle, Spinner } from '../components/ui.jsx'
 
 export default function Profile() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [me, setMe] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -84,9 +86,16 @@ export default function Profile() {
         </div>
       )}
 
-      <Button variant="danger" icon={LogOut} onClick={logout} className="w-full sm:w-auto">
-        Log out
-      </Button>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        {user.role === 'manager' && (
+          <Button variant="outline" icon={Users} onClick={() => navigate('/team')} className="w-full sm:w-auto">
+            Manage team
+          </Button>
+        )}
+        <Button variant="danger" icon={LogOut} onClick={logout} className="w-full sm:w-auto">
+          Log out
+        </Button>
+      </div>
     </div>
   )
 }

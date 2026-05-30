@@ -9,7 +9,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import bcrypt from 'bcryptjs'
-import { team } from './src/data/team.js'
+import { team, pastStaff } from './src/data/team.js'
 import { sallyCustomers, sallyMonthlyHistory } from './src/data/sally-sales-seed.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -77,6 +77,46 @@ function seedUsers() {
   return users
 }
 
+// ---------- staff onboarding helpers ----------
+function uniqueUsername(base) {
+  const taken = new Set(seedUsers().map((u) => u.username))
+  let u = base || 'user'
+  let n = 2
+  while (taken.has(u)) u = `${base}${n++}`
+  return u
+}
+function addMonths(isoDate, months) {
+  const d = new Date(isoDate)
+  d.setMonth(d.getMonth() + months)
+  return d.toISOString().slice(0, 10)
+}
+function isArchived(u) {
+  return u.status === 'archived'
+}
+function archivedNameSet() {
+  return new Set(seedUsers().filter(isArchived).map((u) => u.name))
+}
+// created staff, mapped into the dashboard roster shape (NO salary, NO private notes)
+function createdStaffRoster() {
+  return seedUsers()
+    .filter((u) => u.createdViaPulse && !isArchived(u))
+    .map((u) => ({
+      name: u.name,
+      role: u.title,
+      type: u.department,
+      status: u.status || 'active',
+      joined: u.joined,
+      contract: u.contract,
+      contractEnd: u.contractEnd || null,
+      kpi: u.kpi,
+      weeklyTarget: u.weeklyTarget || 'Close 2 sales, generate 5 leads',
+      target: u.target || 0,
+      sales: 0,
+      revenueGenerated: 0,
+      performance: 0,
+    }))
+}
+
 const app = express()
 app.use(cors())
 app.use(express.json())
@@ -88,7 +128,8 @@ function persistSessions() {
 }
 function publicUser(u) {
   if (!u) return null
-  const { passwordHash, ...rest } = u
+  // salary is manager-only (served via /api/staff), never via /me or /users
+  const { passwordHash, salary, ...rest } = u
   return rest
 }
 function findUser(username) {
@@ -131,6 +172,7 @@ app.post('/api/login', (req, res) => {
   const { username, password } = req.body || {}
   const user = username ? findUser(username) : null
   if (!user) return res.status(401).json({ error: 'Unknown username' })
+  if (isArchived(user)) return res.status(403).json({ error: 'This account is archived' })
   if (REQUIRE_PASSWORD && !bcrypt.compareSync(password || '', user.passwordHash)) {
     return res.status(401).json({ error: 'Invalid username or password' })
   }
@@ -150,13 +192,154 @@ app.post('/api/logout', auth, (req, res) => {
 
 // ---------- roster (for dashboards) ----------
 app.get('/api/team', auth, (req, res) => {
-  res.json({ team })
+  const archived = archivedNameSet()
+  const merged = [...team, ...createdStaffRoster()].filter((p) => !archived.has(p.name))
+  // private manager notes never go to staff clients
+  const roster =
+    req.realUser.role === 'manager'
+      ? merged
+      : merged.map(({ nextActionNote, ...p }) => p)
+  res.json({ team: roster })
+})
+
+// ---------- staff onboarding (manager only) ----------
+// list staff created via Pulse (includes salary — manager eyes only)
+app.get('/api/staff', auth, managerOnly, (req, res) => {
+  const staff = seedUsers()
+    .filter((u) => u.createdViaPulse && !isArchived(u))
+    .map((u) => ({
+      username: u.username,
+      name: u.name,
+      email: u.email,
+      title: u.title,
+      department: u.department,
+      role: u.role,
+      status: u.status,
+      salary: u.salary,
+      target: u.target,
+      kpi: u.kpi,
+      contract: u.contract,
+      contractEnd: u.contractEnd,
+      joined: u.joined,
+      createdAt: u.createdAt,
+    }))
+  res.json({ staff })
+})
+
+// create a sales staff account
+app.post('/api/staff', auth, managerOnly, notViewAs, (req, res) => {
+  const { name, email, title, salary, target, contractMonths } = req.body || {}
+  if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name is required' })
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'A valid email is required' })
+  const users = seedUsers()
+  if (users.some((u) => (u.email || '').toLowerCase() === String(email).toLowerCase()))
+    return res.status(409).json({ error: 'A staff member with that email already exists' })
+
+  const username = uniqueUsername(usernameFor(name))
+  const joined = todayKey()
+  const months = Number(contractMonths) || 0
+  const contract = months > 0 ? `${months}-month fixed` : 'Indefinite'
+  const contractEnd = months > 0 ? addMonths(joined, months) : null
+  const tgt = Number(target) || 5
+  const cleanTitle = String(title || 'Sales Agent').trim()
+
+  const rec = {
+    username,
+    name: String(name).trim(),
+    email: String(email).trim().toLowerCase(),
+    role: 'staff',
+    department: 'Sales',
+    title: cleanTitle,
+    passwordHash: bcrypt.hashSync(DEFAULT_PASSWORD, 10),
+    mustChangePassword: true,
+    salary: Number(salary) || 0,
+    target: tgt,
+    kpi: `Close ${tgt} tracker sales per month`,
+    weeklyTarget: 'Close 2 sales, generate 5 leads',
+    contract,
+    contractEnd,
+    joined,
+    status: 'active',
+    createdViaPulse: true,
+    createdBy: req.user.username,
+    createdAt: new Date().toISOString(),
+    history: [
+      {
+        date: joined,
+        event: `Joined as ${cleanTitle} — ${contract}${contractEnd ? ` (ends ${contractEnd})` : ''}`,
+      },
+    ],
+  }
+  users.push(rec)
+  db.write('users', users)
+  res.json({ staff: { username, name: rec.name, email: rec.email, title: rec.title } })
+})
+
+// archive a staff member — keeps the record forever, blocks login, removes from active lists
+app.post('/api/staff/:username/archive', auth, managerOnly, notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === req.params.username)
+  if (!u) return res.status(404).json({ error: 'not found' })
+  if (u.username === req.realUser.username) return res.status(400).json({ error: "You can't archive your own account" })
+  if (isArchived(u)) return res.status(409).json({ error: 'Already archived' })
+  const reason = String(req.body?.reason || '').trim()
+  u.status = 'archived'
+  u.archivedAt = new Date().toISOString()
+  u.archivedBy = req.realUser.username
+  u.archivedReason = reason || null
+  u.history = u.history || []
+  u.history.push({ date: todayKey(), event: `Left the team${reason ? ` — ${reason}` : ''}` })
+  db.write('users', users)
+  // end any active sessions so they're logged out immediately
+  for (const [tok, s] of Object.entries(sessions)) if (s.username === u.username) delete sessions[tok]
+  persistSessions()
+  res.json({ ok: true })
+})
+
+// restore an archived staff member
+app.post('/api/staff/:username/restore', auth, managerOnly, notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === req.params.username)
+  if (!u) return res.status(404).json({ error: 'not found' })
+  if (!isArchived(u)) return res.status(409).json({ error: 'Not archived' })
+  u.status = 'active'
+  delete u.archivedAt
+  delete u.archivedBy
+  delete u.archivedReason
+  u.history = u.history || []
+  u.history.push({ date: todayKey(), event: 'Reactivated' })
+  db.write('users', users)
+  res.json({ ok: true })
+})
+
+// past agents (manager only) — archived Pulse accounts + the historical roster of people who left
+app.get('/api/past-agents', auth, managerOnly, (req, res) => {
+  const archived = seedUsers()
+    .filter(isArchived)
+    .map((u) => ({
+      username: u.username,
+      name: u.name,
+      role: u.title,
+      department: u.department,
+      reason: u.archivedReason || 'Left the team',
+      date: u.archivedAt ? u.archivedAt.slice(0, 10) : null,
+      joined: u.joined || null,
+      restorable: true,
+    }))
+  const historical = (pastStaff || []).map((p) => ({
+    name: p.name,
+    role: p.role,
+    reason: p.reason || 'Left the team',
+    date: p.date || null,
+    restorable: false,
+  }))
+  res.json({ pastAgents: [...archived, ...historical] })
 })
 
 // who a manager can "view as" (everyone but themselves)
 app.get('/api/users', auth, managerOnly, (req, res) => {
   const users = seedUsers()
-    .filter((u) => u.username !== req.realUser.username)
+    .filter((u) => u.username !== req.realUser.username && !isArchived(u))
     .map((u) => ({
       username: u.username,
       name: u.name,
@@ -231,7 +414,7 @@ app.get('/api/attendance', auth, managerOnly, (req, res) => {
   const date = req.query.date || todayKey()
   const all = db.read('attendance', [])
   const byUser = Object.fromEntries(all.filter((a) => a.date === date).map((a) => [a.username, a]))
-  const roster = seedUsers().filter((u) => u.username !== 'adama')
+  const roster = seedUsers().filter((u) => u.username !== 'adama' && !isArchived(u))
   const presence = roster.map((u) => ({
     username: u.username,
     name: u.name,
@@ -255,8 +438,10 @@ app.get('/api/leave/mine', auth, (req, res) => {
     .filter((l) => l.status === 'approved' && (l.type || 'Annual') === 'Annual')
     .reduce((s, l) => s + daysBetween(l.from, l.to), 0)
   // Blue Book: annual leave eligible only after 12 months of continuous service.
+  // joined date comes from the static roster, or the staff member's own account (created staff)
   const roster = team.find((t) => t.name === req.user.name)
-  const joined = roster?.joined ? new Date(roster.joined) : null
+  const joinedStr = roster?.joined || req.user.joined || null
+  const joined = joinedStr ? new Date(joinedStr) : null
   let annualEligible = true
   let eligibleFrom = null
   let monthsService = null
