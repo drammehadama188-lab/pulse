@@ -46,7 +46,7 @@ const TONES = {
   rest: 'text-[var(--color-rest)] bg-[var(--color-rest-bg)]',
   bad: 'text-[var(--color-bad)] bg-[var(--color-bad-bg)]',
   brand: 'text-[var(--color-brand)] bg-[var(--color-brand-50)]',
-  neutral: 'text-[var(--color-ink-soft)] bg-[var(--color-line-soft)]',
+  neutral: 'text-[var(--color-ink-soft)] bg-[var(--color-fill)]',
 }
 
 export function Pill({ tone = 'neutral', children, dot = false }) {

@@ -18,7 +18,7 @@ import Approvals from './pages/manager/Approvals.jsx'
 import Team from './pages/manager/Team.jsx'
 import Marketing from './pages/departments/Marketing.jsx'
 import DepartmentShell from './pages/departments/DepartmentShell.jsx'
-import { TrendingUp, Code2, Headphones, DollarSign, IdCard, Wrench, FileBarChart } from 'lucide-react'
+import { TrendingUp, Headphones, DollarSign, IdCard, Wrench, FileBarChart } from 'lucide-react'
 
 function FullScreenLoader() {
   return (
@@ -84,7 +84,6 @@ export default function App() {
         {/* Departments — management layer, manager-only. Built fresh, one at a time. */}
         <Route path="/dept/marketing" element={<RequireAuth manager><Marketing /></RequireAuth>} />
         <Route path="/dept/sales" element={<RequireAuth manager><DepartmentShell icon={TrendingUp} title="Sales" /></RequireAuth>} />
-        <Route path="/dept/projects" element={<RequireAuth manager><DepartmentShell icon={Code2} title="Projects" /></RequireAuth>} />
         <Route path="/dept/customer-service" element={<RequireAuth manager><DepartmentShell icon={Headphones} title="Customer Service" /></RequireAuth>} />
         <Route path="/dept/finance" element={<RequireAuth manager><DepartmentShell icon={DollarSign} title="Finance" /></RequireAuth>} />
         <Route path="/dept/hr" element={<RequireAuth manager><DepartmentShell icon={IdCard} title="HR & Team" /></RequireAuth>} />

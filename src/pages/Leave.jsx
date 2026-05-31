@@ -138,13 +138,25 @@ export default function Leave() {
             .slice()
             .reverse()
             .map((r) => (
-              <div key={r.id} className="flex items-center gap-4 px-5 py-4">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-rest-bg)] text-[var(--color-rest)]"><Palmtree size={18} /></span>
+              <div key={r.id} className="flex items-start gap-4 px-5 py-4">
+                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-rest-bg)] text-[var(--color-rest)]"><Palmtree size={18} /></span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-[var(--color-ink)]">{r.type} · {r.days} day{r.days > 1 ? 's' : ''}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-[var(--color-ink)]">{r.type} · {r.days} day{r.days > 1 ? 's' : ''}</span>
+                    <Pill tone={STATUS_TONE[r.status]}>{r.status[0].toUpperCase() + r.status.slice(1)}</Pill>
+                  </div>
                   <div className="text-sm text-[var(--color-ink-faint)]">{dateShort(r.from)} – {dateShort(r.to)}{r.reason ? ` · ${r.reason}` : ''}</div>
+                  {r.status !== 'pending' && r.decidedBy && (
+                    <div className="mt-1 text-xs text-[var(--color-ink-faint)]">
+                      {r.status === 'approved' ? 'Approved' : 'Rejected'} by {r.decidedBy}{r.decidedAt ? ` · ${dateShort(r.decidedAt)}` : ''}
+                    </div>
+                  )}
+                  {r.decisionNote && (
+                    <div className="mt-1 text-sm text-[var(--color-ink-soft)]">
+                      <span className="font-semibold text-[var(--color-ink)]">Note:</span> {r.decisionNote}
+                    </div>
+                  )}
                 </div>
-                <Pill tone={STATUS_TONE[r.status]}>{r.status[0].toUpperCase() + r.status.slice(1)}</Pill>
               </div>
             ))}
         </Card>

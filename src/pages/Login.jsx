@@ -30,7 +30,7 @@ export default function Login() {
       {/* brand panel */}
       <div
         className="relative hidden flex-col items-center justify-center overflow-hidden p-12 md:flex"
-        style={{ background: 'linear-gradient(150deg, #e7f6f0 0%, #d6f0e9 50%, #c4ebe0 100%)' }}
+        style={{ background: 'linear-gradient(150deg, #f6f7f9 0%, #ffffff 55%, #f3f4f6 100%)' }}
       >
         <div
           className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full"

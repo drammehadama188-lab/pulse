@@ -13,8 +13,8 @@ function NavRow({ item, soon = false }) {
       className={({ isActive }) =>
         `group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
           isActive
-            ? 'bg-[var(--color-brand-50)] text-[var(--color-brand)]'
-            : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-line-soft)] hover:text-[var(--color-ink)]'
+            ? 'bg-white text-[var(--color-sidebar)] shadow-sm'
+            : 'text-white/75 hover:bg-white/10 hover:text-white'
         }`
       }
     >
@@ -23,7 +23,7 @@ function NavRow({ item, soon = false }) {
           <item.icon size={20} strokeWidth={isActive ? 2.4 : 2} className="shrink-0" />
           <span className="flex-1">{item.label}</span>
           {soon && (
-            <span className="rounded-full bg-[var(--color-line-soft)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">
+            <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/70">
               Soon
             </span>
           )}
@@ -39,9 +39,9 @@ export function Sidebar() {
   const departments = departmentsFor(user)
 
   return (
-    <aside className="hidden w-[248px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-line)] bg-[var(--color-surface)]/70 px-4 py-6 backdrop-blur-sm md:flex">
+    <aside className="hidden w-[248px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-sidebar-edge)] bg-[var(--color-sidebar)] px-4 py-6 md:flex">
       <div className="px-2">
-        <Brand />
+        <Brand onDark />
       </div>
 
       <nav className="mt-8 flex flex-1 flex-col gap-1">
@@ -51,7 +51,7 @@ export function Sidebar() {
 
         {departments.length > 0 && (
           <>
-            <div className="mb-1 mt-6 px-3.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-ink-faint)]">
+            <div className="mb-1 mt-6 px-3.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">
               Departments
             </div>
             {departments.map((item) => (
@@ -61,16 +61,16 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="mt-4 flex items-center gap-3 rounded-2xl border border-[var(--color-line)] bg-[var(--color-paper)]/60 p-3">
+      <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-3">
         <Avatar name={user?.name} size={38} />
         <div className="min-w-0 flex-1 leading-tight">
-          <div className="truncate text-sm font-bold text-[var(--color-ink)]">{user?.name}</div>
-          <div className="truncate text-xs text-[var(--color-ink-faint)]">{user?.title}</div>
+          <div className="truncate text-sm font-bold text-white">{user?.name}</div>
+          <div className="truncate text-xs text-white/60">{user?.title}</div>
         </div>
         <button
           onClick={logout}
           title="Log out"
-          className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-bad-bg)] hover:text-[var(--color-bad)] focus-ring"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-white/70 transition-colors hover:bg-white/15 hover:text-white focus-ring"
         >
           <LogOut size={18} />
         </button>

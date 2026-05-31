@@ -63,7 +63,7 @@ export default function Team() {
         <SectionTitle
           action={
             <Button size="sm" icon={UserPlus} onClick={() => setAddOpen(true)}>
-              Add sales staff
+              Add staff
             </Button>
           }
         >
@@ -255,11 +255,13 @@ function ArchiveDialog({ target, onClose, onDone }) {
 }
 
 function AddStaffForm({ onClose, onCreated }) {
-  const [v, setV] = useState({ name: '', email: '', title: 'Sales Agent', salary: '', target: '5', contractMonths: '3' })
+  const [v, setV] = useState({ type: 'agent', name: '', email: '', title: 'Sales Agent', salary: '', target: '5', contractMonths: '3' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
   const set = (k) => (e) => setV({ ...v, [k]: e.target.value })
+  const isMgr = v.type === 'manager'
+  const pickType = (t) => setV((p) => ({ ...p, type: t, title: t === 'manager' ? 'Manager' : 'Sales Agent' }))
 
   async function save() {
     if (!v.name.trim()) return setError('Enter their full name')
@@ -270,6 +272,7 @@ function AddStaffForm({ onClose, onCreated }) {
       const r = await api('/staff', {
         method: 'POST',
         body: {
+          type: v.type,
           name: v.name,
           email: v.email,
           title: v.title,
@@ -304,7 +307,7 @@ function AddStaffForm({ onClose, onCreated }) {
               Username: <span className="font-bold text-[var(--color-ink)]">{created.username}</span>
             </div>
           </div>
-          <p className="rounded-xl bg-[var(--color-line-soft)] px-4 py-3 text-left text-sm text-[var(--color-ink-soft)]">
+          <p className="rounded-xl bg-[var(--color-fill)] px-4 py-3 text-left text-sm text-[var(--color-ink-soft)]">
             They can log in now with that username (no password yet). The invite email with the login link
             comes in the next step.
           </p>
@@ -317,7 +320,7 @@ function AddStaffForm({ onClose, onCreated }) {
     <Modal
       open
       onClose={onClose}
-      title="Add sales staff"
+      title={isMgr ? 'Add manager' : 'Add sales staff'}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -326,14 +329,25 @@ function AddStaffForm({ onClose, onCreated }) {
       }
     >
       <div className="space-y-4">
+        <div className="flex gap-2">
+          {[['agent', 'Sales agent'], ['manager', 'Manager']].map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => pickType(k)}
+              className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold transition-colors ${v.type === k ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <Field label="Full name"><Input value={v.name} onChange={set('name')} placeholder="e.g. Modou Njie" /></Field>
         <Field label="Email"><Input type="email" value={v.email} onChange={set('email')} placeholder="name@example.com" /></Field>
         <Field label="Title">
-          <Select value={v.title} onChange={set('title')} options={['Sales Agent', 'Sales Intern', 'Senior Sales Agent']} />
+          <Select value={v.title} onChange={set('title')} options={isMgr ? ['Manager', 'Operations Manager', 'General Manager', 'Team Lead'] : ['Sales Agent', 'Sales Intern', 'Senior Sales Agent']} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className={isMgr ? '' : 'grid grid-cols-2 gap-3'}>
           <Field label="Monthly salary (D)"><Input type="number" min="0" value={v.salary} onChange={set('salary')} placeholder="e.g. 6000" /></Field>
-          <Field label="Monthly target (sales)"><Input type="number" min="0" value={v.target} onChange={set('target')} /></Field>
+          {!isMgr && <Field label="Monthly target (sales)"><Input type="number" min="0" value={v.target} onChange={set('target')} /></Field>}
         </div>
         <Field label="Contract length">
           <Select value={v.contractMonths} onChange={set('contractMonths')}>
@@ -346,7 +360,9 @@ function AddStaffForm({ onClose, onCreated }) {
           </Select>
         </Field>
         <p className="text-xs text-[var(--color-ink-faint)]">
-          Salary is visible to managers only. Role is Sales — they get an empty pipeline of their own.
+          {isMgr
+            ? 'Role is Manager — they clock in and get the management view (team schedule, approvals, attendance override). Cross-department goals are set separately.'
+            : 'Salary is visible to managers only. Role is Sales — they get an empty pipeline of their own.'}
         </p>
         {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
@@ -391,7 +407,7 @@ function CoachingForm({ target, onClose }) {
             <button
               key={k}
               onClick={() => setV({ ...v, type: k })}
-              className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold transition-colors ${v.type === k ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-line-soft)] text-[var(--color-ink-soft)]'}`}
+              className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold transition-colors ${v.type === k ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}
             >
               {label}
             </button>

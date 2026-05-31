@@ -97,7 +97,7 @@ export default function Sales() {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${filter === f ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-line-soft)] text-[var(--color-ink-soft)]'}`}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${filter === f ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}
               >
                 {f}
               </button>

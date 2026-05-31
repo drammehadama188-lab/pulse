@@ -13,7 +13,7 @@ export function MobileNav() {
   return (
     <>
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-[var(--color-surface)]/95 backdrop-blur-md md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-sidebar-edge)] bg-[var(--color-sidebar)] md:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="mx-auto flex max-w-md items-stretch justify-around px-2">
@@ -23,12 +23,12 @@ export function MobileNav() {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors ${isActive ? 'text-[var(--color-brand)]' : 'text-[var(--color-ink-faint)]'}`
+                `flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors ${isActive ? 'text-white' : 'text-white/60'}`
               }
             >
               {({ isActive }) => (
                 <>
-                  <span className={`flex h-8 w-12 items-center justify-center rounded-full transition-colors ${isActive ? 'bg-[var(--color-brand-50)]' : ''}`}>
+                  <span className={`flex h-8 w-12 items-center justify-center rounded-full transition-colors ${isActive ? 'bg-white text-[var(--color-sidebar)]' : ''}`}>
                     <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                   </span>
                   {item.label}
@@ -38,7 +38,7 @@ export function MobileNav() {
           ))}
           <button
             onClick={() => setMoreOpen(true)}
-            className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold text-[var(--color-ink-faint)]"
+            className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold text-white/60"
           >
             <span className="flex h-8 w-12 items-center justify-center rounded-full">
               <MORE.icon size={20} strokeWidth={2} />

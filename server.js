@@ -228,34 +228,36 @@ app.get('/api/staff', auth, managerOnly, (req, res) => {
 
 // create a sales staff account
 app.post('/api/staff', auth, managerOnly, notViewAs, (req, res) => {
-  const { name, email, title, salary, target, contractMonths } = req.body || {}
+  const { type, name, email, title, salary, target, contractMonths } = req.body || {}
   if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name is required' })
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'A valid email is required' })
   const users = seedUsers()
   if (users.some((u) => (u.email || '').toLowerCase() === String(email).toLowerCase()))
     return res.status(409).json({ error: 'A staff member with that email already exists' })
 
+  const isMgr = type === 'manager'
   const username = uniqueUsername(usernameFor(name))
   const joined = todayKey()
   const months = Number(contractMonths) || 0
   const contract = months > 0 ? `${months}-month fixed` : 'Indefinite'
   const contractEnd = months > 0 ? addMonths(joined, months) : null
-  const tgt = Number(target) || 5
-  const cleanTitle = String(title || 'Sales Agent').trim()
+  // managers oversee everything across departments — no preset sales goal (set manually later)
+  const tgt = isMgr ? 0 : Number(target) || 5
+  const cleanTitle = String(title || (isMgr ? 'Manager' : 'Sales Agent')).trim()
 
   const rec = {
     username,
     name: String(name).trim(),
     email: String(email).trim().toLowerCase(),
-    role: 'staff',
-    department: 'Sales',
+    role: isMgr ? 'manager' : 'staff',
+    department: isMgr ? 'Management' : 'Sales',
     title: cleanTitle,
     passwordHash: bcrypt.hashSync(DEFAULT_PASSWORD, 10),
     mustChangePassword: true,
     salary: Number(salary) || 0,
     target: tgt,
-    kpi: `Close ${tgt} tracker sales per month`,
-    weeklyTarget: 'Close 2 sales, generate 5 leads',
+    kpi: isMgr ? '' : `Close ${tgt} tracker sales per month`,
+    weeklyTarget: isMgr ? '' : 'Close 2 sales, generate 5 leads',
     contract,
     contractEnd,
     joined,
@@ -424,6 +426,118 @@ app.get('/api/attendance', auth, managerOnly, (req, res) => {
   res.json({ date, presence })
 })
 
+// ---------- schedules (per-person weekly roster) ----------
+// Mon–Fri 9–5 is the default for anyone without a saved override (Blue Book normal week).
+const DEFAULT_WEEK = {
+  1: { start: '09:00', end: '17:00' },
+  2: { start: '09:00', end: '17:00' },
+  3: { start: '09:00', end: '17:00' },
+  4: { start: '09:00', end: '17:00' },
+  5: { start: '09:00', end: '17:00' },
+  6: null,
+  0: null,
+}
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
+// Monday (UTC) of the week containing `ref`. Gambia is GMT so local date == UTC date.
+function mondayKey(ref = new Date()) {
+  const d = new Date(ref)
+  const off = (d.getUTCDay() + 6) % 7
+  d.setUTCDate(d.getUTCDate() - off)
+  return d.toISOString().slice(0, 10)
+}
+function weekKeys(startYmd) {
+  const base = new Date(`${startYmd}T00:00:00Z`)
+  return Array.from({ length: 7 }, (_, i) => {
+    const x = new Date(base)
+    x.setUTCDate(base.getUTCDate() + i)
+    return x.toISOString().slice(0, 10)
+  })
+}
+
+// manager: whole-team week — each person's presence + their weekly schedule
+function shiftHours(shift) {
+  if (!shift) return 0
+  const [sh, sm] = shift.start.split(':').map(Number)
+  const [eh, em] = shift.end.split(':').map(Number)
+  return Math.max(0, (eh * 60 + em - sh * 60 - sm) / 60)
+}
+
+// weekly shift roster — each person's shift (times) + status per day + week hours.
+// manager → whole roster; staff → self only.
+app.get('/api/attendance/week', auth, (req, res) => {
+  const wkStart = /^\d{4}-\d{2}-\d{2}$/.test(req.query.start || '') ? req.query.start : mondayKey()
+  const days = weekKeys(wkStart)
+  const todayK = todayKey()
+  const attAll = db.read('attendance', [])
+  const leaveAll = db.read('leave', [])
+  const schedules = db.read('schedules', {})
+  const roster = req.user.role === 'manager'
+    ? scheduleRoster(req)
+    : seedUsers().filter((u) => u.username === req.user.username)
+
+  const people = roster.map((u) => {
+    const schedule = schedules[u.username] || DEFAULT_WEEK
+    const byDate = {}
+    let weekHours = 0
+    for (const k of days) {
+      const shift = schedule[dowOfKey(k)] || null
+      const attendance = attAll.find((a) => a.username === u.username && a.date === k) || null
+      const leave = leaveOnDate(leaveAll, u.username, k)
+      if (shift && !leave) weekHours += shiftHours(shift)
+      byDate[k] = {
+        status: dayStatus({ schedule, attendance, leave }, k, todayK),
+        shift,
+        checkIn: attendance?.checkIn || null,
+        checkOut: attendance?.checkOut || null,
+        late: !!attendance?.late,
+        leaveType: leave?.leaveType || null,
+        note: leave?.note || '',
+      }
+    }
+    return { username: u.username, name: u.name, department: u.department, schedule, weekHours, byDate }
+  })
+  res.json({ start: wkStart, days, today: todayK, people })
+})
+
+function cleanWeek(incoming = {}) {
+  const clean = {}
+  for (const dow of [0, 1, 2, 3, 4, 5, 6]) {
+    const v = incoming[dow]
+    clean[dow] = v && HHMM.test(v.start || '') && HHMM.test(v.end || '') ? { start: v.start, end: v.end } : null
+  }
+  return clean
+}
+function scheduleRoster(req) {
+  return seedUsers().filter((u) => !isArchived(u) && u.username !== req.user.username)
+}
+
+// manager: set each person's weekly roster in one request.
+// body: { schedules: { username: { days: { dow: {start,end}|null } } } } — each person can differ.
+app.put('/api/schedules', auth, managerOnly, notViewAs, (req, res) => {
+  const incoming = req.body?.schedules || {}
+  const allowed = new Set(scheduleRoster(req).map((u) => u.username))
+  const all = db.read('schedules', {})
+  let count = 0
+  for (const [username, week] of Object.entries(incoming)) {
+    if (!allowed.has(username)) continue
+    all[username] = cleanWeek(week?.days || week)
+    count++
+  }
+  db.write('schedules', all)
+  res.json({ count })
+})
+
+// manager: set one person's weekly roster (in/off + hours per weekday)
+app.put('/api/schedules/:username', auth, managerOnly, notViewAs, (req, res) => {
+  const target = findUser(req.params.username)
+  if (!target) return res.status(404).json({ error: 'No such user' })
+  const schedule = cleanWeek(req.body?.days)
+  const all = db.read('schedules', {})
+  all[target.username] = schedule
+  db.write('schedules', all)
+  res.json({ username: target.username, schedule })
+})
+
 // ---------- leave ----------
 function daysBetween(from, to) {
   const a = new Date(from)
@@ -453,7 +567,7 @@ app.get('/api/leave/mine', auth, (req, res) => {
     ef.setMonth(ef.getMonth() + 12)
     eligibleFrom = ef.toISOString().slice(0, 10)
   }
-  res.json({ requests: mine, annualUsed, annualEligible, eligibleFrom, monthsService })
+  res.json({ requests: mine.map((r) => visibleLeave(r, req.realUser)), annualUsed, annualEligible, eligibleFrom, monthsService })
 })
 
 app.post('/api/leave', auth, notViewAs, (req, res) => {
@@ -481,8 +595,20 @@ app.post('/api/leave', auth, notViewAs, (req, res) => {
 app.get('/api/leave', auth, managerOnly, (req, res) => {
   const all = db.read('leave', [])
   const status = req.query.status
-  res.json({ requests: status ? all.filter((l) => l.status === status) : all })
+  const list = status ? all.filter((l) => l.status === status) : all
+  res.json({ requests: list.map((r) => visibleLeave(r, req.realUser)) })
 })
+
+// The CEO/owner is the only one who reads the private "why" note on a decision.
+function isOwner(u) {
+  return u?.username === 'adama'
+}
+// Hide the CEO-only "why" note from everyone except the owner.
+function visibleLeave(rec, viewer) {
+  if (isOwner(viewer)) return rec
+  const { approverWhy, ...rest } = rec
+  return rest
+}
 
 function decideLeave(status) {
   return (req, res) => {
@@ -491,13 +617,128 @@ function decideLeave(status) {
     if (!rec) return res.status(404).json({ error: 'not found' })
     rec.status = status
     rec.decidedBy = req.user.name
+    rec.decidedByUsername = req.user.username
     rec.decidedAt = new Date().toISOString()
+    rec.decisionNote = String(req.body?.note || '').trim() // shown to the employee
+    rec.approverWhy = String(req.body?.why || '').trim() // private — CEO only
     db.write('leave', all)
     res.json({ request: rec })
   }
 }
 app.post('/api/leave/:id/approve', auth, notViewAs, managerOnly, decideLeave('approved'))
 app.post('/api/leave/:id/reject', auth, notViewAs, managerOnly, decideLeave('rejected'))
+
+// ---------- monthly attendance calendar (schedule + attendance + leave, layered) ----------
+function monthKeys(month) {
+  // month = 'YYYY-MM' → every 'YYYY-MM-DD' in it
+  const [y, m] = month.split('-').map(Number)
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate() // m is 1-based → last day of that month
+  return Array.from({ length: last }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`)
+}
+function dowOfKey(key) {
+  return new Date(`${key}T00:00:00Z`).getUTCDay()
+}
+// an approved leave record covering a date → { leaveType, note } or null
+function leaveOnDate(leaveAll, username, dateKey) {
+  const rec = leaveAll.find((l) => l.username === username && l.status === 'approved' && l.from <= dateKey && l.to >= dateKey)
+  return rec ? { leaveType: rec.type || 'Annual', note: rec.reason || '' } : null
+}
+// layered status: leave > attendance > schedule > calendar position
+function dayStatus({ schedule, attendance, leave }, dateKey, todayK) {
+  if (leave) {
+    const t = (leave.leaveType || '').toLowerCase()
+    if (t === 'sick') return 'sick'
+    if (t === 'off') return 'off' // excused off
+    return 'leave'
+  }
+  if (attendance?.checkIn) return attendance.late ? 'late' : 'worked'
+  if (!schedule[dowOfKey(dateKey)]) return 'off' // rest day per weekly schedule
+  if (dateKey > todayK) return 'future'
+  if (dateKey === todayK) return 'today'
+  return 'absent'
+}
+
+// manager → whole roster; staff → self only (mirrors today/mine vs manager)
+app.get('/api/attendance/month', auth, (req, res) => {
+  const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : todayKey().slice(0, 7)
+  const days = monthKeys(month)
+  const todayK = todayKey()
+  const attAll = db.read('attendance', [])
+  const leaveAll = db.read('leave', [])
+  const schedules = db.read('schedules', {})
+  const roster = req.user.role === 'manager'
+    ? scheduleRoster(req)
+    : seedUsers().filter((u) => u.username === req.user.username)
+
+  const people = roster.map((u) => {
+    const schedule = schedules[u.username] || DEFAULT_WEEK
+    const byDate = {}
+    for (const k of days) {
+      const attendance = attAll.find((a) => a.username === u.username && a.date === k) || null
+      const leave = leaveOnDate(leaveAll, u.username, k)
+      byDate[k] = {
+        status: dayStatus({ schedule, attendance, leave }, k, todayK),
+        checkIn: attendance?.checkIn || null,
+        checkOut: attendance?.checkOut || null,
+        late: !!attendance?.late,
+        leaveType: leave?.leaveType || null,
+        note: leave?.note || '',
+      }
+    }
+    return { username: u.username, name: u.name, department: u.department, schedule, byDate }
+  })
+  res.json({ month, days, today: todayK, people })
+})
+
+// manager logs/overrides a single person-date from the calendar.
+// Only ever creates/replaces rows tagged source:'calendar' / manual:true — never touches real requests.
+app.put('/api/attendance/day', auth, managerOnly, notViewAs, (req, res) => {
+  const { username, date, status, note } = req.body || {}
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return res.status(400).json({ error: 'Valid date required' })
+  if (!['worked', 'off', 'sick', 'leave'].includes(status)) return res.status(400).json({ error: 'Invalid status' })
+  const target = scheduleRoster(req).find((u) => u.username === username)
+  if (!target) return res.status(404).json({ error: 'No such staff member' })
+
+  // wipe any prior calendar override for this person+date so statuses never stack
+  const leaveAll = db.read('leave', []).filter((l) => !(l.username === username && l.source === 'calendar' && l.from === date && l.to === date))
+  const attAll = db.read('attendance', []).filter((a) => !(a.username === username && a.date === date && a.manual))
+
+  if (status === 'worked') {
+    const sched = (db.read('schedules', {})[username] || DEFAULT_WEEK)[dowOfKey(date)] || { start: '09:00', end: '17:00' }
+    attAll.push({
+      id: crypto.randomUUID(),
+      username,
+      name: target.name,
+      date,
+      checkIn: `${date}T${sched.start}:00.000Z`,
+      checkOut: `${date}T${sched.end}:00.000Z`,
+      late: false,
+      manual: true,
+    })
+  } else {
+    const typeMap = { sick: 'Sick', leave: 'Annual', off: 'Off' }
+    const now = new Date().toISOString()
+    leaveAll.push({
+      id: crypto.randomUUID(),
+      username,
+      name: target.name,
+      department: target.department,
+      type: typeMap[status],
+      from: date,
+      to: date,
+      days: 1,
+      reason: note || '',
+      status: 'approved',
+      decidedBy: req.user.name,
+      decidedAt: now,
+      createdAt: now,
+      source: 'calendar',
+    })
+  }
+  db.write('leave', leaveAll)
+  db.write('attendance', attAll)
+  res.json({ ok: true })
+})
 
 // ---------- sales: customers + activities (owner-scoped, customer-centric) ----------
 function seedSales() {

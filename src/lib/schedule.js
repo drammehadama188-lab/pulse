@@ -31,6 +31,12 @@ export function ymd(d) {
   return `${z.getFullYear()}-${String(z.getMonth() + 1).padStart(2, '0')}-${String(z.getDate()).padStart(2, '0')}`
 }
 
+// every Date in a calendar month. `year`, `monthIndex` (0=Jan … 11=Dec)
+export function monthDays(year, monthIndex) {
+  const last = new Date(year, monthIndex + 1, 0).getDate()
+  return Array.from({ length: last }, (_, i) => new Date(year, monthIndex, i + 1))
+}
+
 // the 7 days (Mon→Sun) of the week containing `ref`
 export function weekDays(ref = new Date()) {
   const d = new Date(ref)

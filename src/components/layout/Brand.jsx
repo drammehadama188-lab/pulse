@@ -1,9 +1,9 @@
-export function Brand({ compact = false }) {
+export function Brand({ compact = false, onDark = false }) {
   return (
     <div className="flex items-center gap-2.5">
       <div
         className="flex h-9 w-9 items-center justify-center rounded-xl"
-        style={{ background: 'var(--color-mint-tile)' }}
+        style={{ background: onDark ? '#ffffff' : 'var(--color-mint-tile)' }}
       >
         {/* Pulse flame */}
         <svg width="17" height="23" viewBox="0 0 120 160" className="text-[var(--color-brand)]" aria-hidden>
@@ -19,10 +19,10 @@ export function Brand({ compact = false }) {
       </div>
       {!compact && (
         <div className="leading-tight">
-          <div className="text-[16px] font-extrabold tracking-tight text-[var(--color-ink)]">
+          <div className={`text-[16px] font-extrabold tracking-tight ${onDark ? 'text-white' : 'text-[var(--color-ink)]'}`}>
             Pulse
           </div>
-          <div className="-mt-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--color-ink-faint)]">
+          <div className={`-mt-0.5 text-[9px] font-bold uppercase tracking-[0.16em] ${onDark ? 'text-white/60' : 'text-[var(--color-ink-faint)]'}`}>
             by Damia Tracker
           </div>
         </div>

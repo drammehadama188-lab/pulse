@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Check, X, Palmtree, Inbox } from 'lucide-react'
+import { Check, X, Palmtree, Inbox, Lock } from 'lucide-react'
 import { api } from '../../lib/api.js'
-import { Avatar, Button, Card, Pill, SectionTitle, Spinner } from '../../components/ui.jsx'
+import { Avatar, Button, Card, Field, Modal, Pill, SectionTitle, Spinner, Textarea } from '../../components/ui.jsx'
 import { dateShort } from '../../lib/format.js'
 
 const STATUS_TONE = { pending: 'warn', approved: 'good', rejected: 'bad' }
 
+const decidedOn = (iso) =>
+  iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
+
 export default function Approvals() {
   const [requests, setRequests] = useState(null)
-  const [busyId, setBusyId] = useState(null)
+  const [decision, setDecision] = useState(null) // { request, action }
 
   async function load() {
     const { requests } = await api('/leave')
@@ -17,18 +20,6 @@ export default function Approvals() {
   useEffect(() => {
     load()
   }, [])
-
-  async function decide(id, action) {
-    setBusyId(id)
-    try {
-      await api(`/leave/${id}/${action}`, { method: 'POST' })
-      await load()
-    } catch (e) {
-      alert(e.message)
-    } finally {
-      setBusyId(null)
-    }
-  }
 
   if (!requests)
     return (
@@ -64,27 +55,13 @@ export default function Approvals() {
                   <div className="text-sm text-[var(--color-ink-faint)]">
                     {r.type} · {r.days} day{r.days > 1 ? 's' : ''} · {dateShort(r.from)}–{dateShort(r.to)}
                   </div>
-                  {r.reason && (
-                    <div className="mt-1 text-sm italic text-[var(--color-ink-soft)]">“{r.reason}”</div>
-                  )}
+                  {r.reason && <div className="mt-1 text-sm italic text-[var(--color-ink-soft)]">“{r.reason}”</div>}
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="good"
-                    icon={Check}
-                    disabled={busyId === r.id}
-                    onClick={() => decide(r.id, 'approve')}
-                  >
+                  <Button size="sm" variant="good" icon={Check} onClick={() => setDecision({ request: r, action: 'approve' })}>
                     Approve
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    icon={X}
-                    disabled={busyId === r.id}
-                    onClick={() => decide(r.id, 'reject')}
-                  >
+                  <Button size="sm" variant="danger" icon={X} onClick={() => setDecision({ request: r, action: 'reject' })}>
                     Reject
                   </Button>
                 </div>
@@ -102,24 +79,107 @@ export default function Approvals() {
               .slice()
               .reverse()
               .map((r) => (
-                <div key={r.id} className="flex items-center gap-4 px-5 py-3.5">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-rest-bg)] text-[var(--color-rest)]">
+                <div key={r.id} className="flex items-start gap-4 px-5 py-4">
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-rest-bg)] text-[var(--color-rest)]">
                     <Palmtree size={16} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-[var(--color-ink)]">{r.name}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-[var(--color-ink)]">{r.name}</span>
+                      <Pill tone={STATUS_TONE[r.status]}>{r.status[0].toUpperCase() + r.status.slice(1)}</Pill>
+                    </div>
                     <div className="text-sm text-[var(--color-ink-faint)]">
                       {r.type} · {dateShort(r.from)}–{dateShort(r.to)}
                     </div>
+                    {r.decidedBy && (
+                      <div className="mt-0.5 text-xs text-[var(--color-ink-faint)]">
+                        by {r.decidedBy}{r.decidedAt ? ` · ${decidedOn(r.decidedAt)}` : ''}
+                      </div>
+                    )}
+                    {r.decisionNote && (
+                      <div className="mt-1.5 text-sm text-[var(--color-ink-soft)]">
+                        <span className="font-semibold text-[var(--color-ink)]">To {r.name.split(' ')[0]}:</span> {r.decisionNote}
+                      </div>
+                    )}
+                    {r.approverWhy && (
+                      <div className="mt-1.5 flex items-start gap-1.5 rounded-lg bg-[var(--color-fill)] px-2.5 py-1.5 text-xs text-[var(--color-ink-soft)]">
+                        <Lock size={12} className="mt-0.5 shrink-0" />
+                        <span><span className="font-semibold">CEO-only:</span> {r.approverWhy}</span>
+                      </div>
+                    )}
                   </div>
-                  <Pill tone={STATUS_TONE[r.status]}>
-                    {r.status[0].toUpperCase() + r.status.slice(1)}
-                  </Pill>
                 </div>
               ))}
           </Card>
         </div>
       )}
+
+      {decision && (
+        <DecisionModal
+          request={decision.request}
+          action={decision.action}
+          onClose={() => setDecision(null)}
+          onDone={() => { setDecision(null); load() }}
+        />
+      )}
     </div>
+  )
+}
+
+function DecisionModal({ request, action, onClose, onDone }) {
+  const approve = action === 'approve'
+  const [note, setNote] = useState('')
+  const [why, setWhy] = useState('')
+  const [busy, setBusy] = useState(false)
+  const first = request.name.split(' ')[0]
+
+  async function submit() {
+    setBusy(true)
+    try {
+      await api(`/leave/${request.id}/${action}`, { method: 'POST', body: { note, why } })
+      onDone()
+    } catch (e) {
+      alert(e.message)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`${approve ? 'Approve' : 'Reject'} — ${request.name}`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button variant={approve ? 'good' : 'danger'} onClick={submit} disabled={busy}>
+            {busy ? <Spinner size={16} /> : approve ? 'Approve' : 'Reject'}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="rounded-xl bg-[var(--color-fill)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+          {request.type} · {request.days} day{request.days > 1 ? 's' : ''} · {dateShort(request.from)}–{dateShort(request.to)}
+          {request.reason && <div className="mt-1 italic">“{request.reason}”</div>}
+        </div>
+        <Field label={`Note for ${first} (they'll see this)`}>
+          <Textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            placeholder={approve ? 'e.g. Approved — enjoy your time off' : 'e.g. We need cover that week, please re-request later'}
+          />
+        </Field>
+        <Field label="Why this decision — CEO only (private)">
+          <Textarea
+            value={why}
+            onChange={(e) => setWhy(e.target.value)}
+            rows={2}
+            placeholder="Your reasoning — only the CEO sees this, never the employee"
+          />
+        </Field>
+      </div>
+    </Modal>
   )
 }

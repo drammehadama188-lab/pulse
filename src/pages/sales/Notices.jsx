@@ -71,7 +71,7 @@ export default function Notices() {
             </div>
           ))}
         </div>
-        <div className="bg-[var(--color-paper)] px-5 py-3 text-xs text-[var(--color-ink-soft)]">
+        <div className="bg-[var(--color-fill)] px-5 py-3 text-xs text-[var(--color-ink-soft)]">
           Always use approved pricing. Any other discount must be authorised before promising it.
         </div>
       </Card>

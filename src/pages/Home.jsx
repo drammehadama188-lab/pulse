@@ -239,7 +239,7 @@ export default function Home() {
                   </div>
                 </div>
                 {me.kpi && (
-                  <div className="rounded-2xl bg-[var(--color-paper)] px-4 py-3 text-sm">
+                  <div className="rounded-2xl bg-[var(--color-fill)] px-4 py-3 text-sm">
                     <span className="font-semibold text-[var(--color-ink-soft)]">Goal · </span>
                     <span className="text-[var(--color-ink)]">{me.kpi}</span>
                   </div>
