@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Clock, Palmtree, Target, TrendingUp, ClipboardCheck, ChevronRight, LogIn, LogOut, CalendarClock } from 'lucide-react'
+import { Clock, Palmtree, Target, TrendingUp, ClipboardCheck, ChevronRight, LogIn, LogOut, CalendarClock, PhoneCall, MapPin, Zap, Contact } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import { getLocation } from '../lib/geo.js'
-import { Avatar, Button, Card, Pill, SectionTitle, Spinner, StatCard } from '../components/ui.jsx'
+import { Avatar, Button, Card, ConfirmDialog, Pill, SectionTitle, Spinner, StatCard } from '../components/ui.jsx'
 import CoachingFeed from '../components/CoachingFeed.jsx'
 import { greeting, firstName, timeShort, dateLong, dalasi } from '../lib/format.js'
 
@@ -14,9 +14,14 @@ export default function Home() {
   const [leave, setLeave] = useState(null)
   const [me, setMe] = useState(null) // roster record
   const [won, setWon] = useState(null) // won leads this month (sales)
+  const [revenue, setRevenue] = useState(0) // dalasi closed this month
+  const [followUps, setFollowUps] = useState([]) // customers awaiting follow-up
+  const [today, setToday] = useState({ calls: 0, visits: 0, leads: 0 }) // activity logged today
   const [mgr, setMgr] = useState({ pending: 0, present: 0, total: 0 })
   const [loading, setLoading] = useState(true)
   const [checking, setChecking] = useState(false)
+  const [undoOpen, setUndoOpen] = useState(false)
+  const [undoing, setUndoing] = useState(false)
 
   async function load() {
     const [a, l, t] = await Promise.all([
@@ -29,9 +34,29 @@ export default function Home() {
     const meRec = t.team.find((p) => p.name === user.name) || null
     setMe(meRec)
     if (meRec?.type === 'Sales' || meRec?.type === 'Training') {
-      const { customers } = await api('/customers')
+      const [{ customers }, { activities }] = await Promise.all([
+        api('/customers'),
+        api('/activities'),
+      ])
       const m = new Date().toISOString().slice(0, 7)
-      setWon(customers.filter((x) => x.status === 'Won' && (x.wonAt || '').startsWith(m)).length)
+      const wonThisMonth = customers.filter((x) => x.status === 'Won' && (x.wonAt || '').startsWith(m))
+      setWon(wonThisMonth.length)
+      setRevenue(wonThisMonth.reduce((s, c) => s + (Number(c.amountPaid) || Number(c.amountExpected) || 0), 0))
+      // Customers still in play — the ones to chase. (No follow-up DATE in the model
+      // yet, so we surface by status, newest first.)
+      const FOLLOW = ['Interested', 'Follow Up', 'Contacted']
+      setFollowUps(
+        customers
+          .filter((x) => FOLLOW.includes(x.status))
+          .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+      )
+      const todayKey = new Date().toISOString().slice(0, 10)
+      const logged = activities.filter((a) => (a.date || a.createdAt || '').slice(0, 10) === todayKey)
+      setToday({
+        calls: logged.filter((a) => a.type === 'call').length,
+        visits: logged.filter((a) => a.type === 'visit').length,
+        leads: logged.filter((a) => a.type === 'call' && a.callStatus === 'Interested - Lead').length,
+      })
     }
     if (isManager) {
       const [pend, pres] = await Promise.all([
@@ -64,6 +89,19 @@ export default function Home() {
       alert(e.message)
     } finally {
       setChecking(false)
+    }
+  }
+
+  async function undoCheckIn() {
+    setUndoing(true)
+    try {
+      await api('/attendance/undo-checkin', { method: 'POST' })
+      setAtt(null)
+      setUndoOpen(false)
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setUndoing(false)
     }
   }
 
@@ -144,6 +182,14 @@ export default function Home() {
               {checking ? <Spinner size={16} /> : checkedIn ? 'Check out' : 'Check in'}
             </Button>
           )}
+          {checkedIn && !isViewAs && (
+            <button
+              onClick={() => setUndoOpen(true)}
+              className="-mt-1 text-xs font-semibold text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-brand)]"
+            >
+              Checked in by mistake? Undo
+            </button>
+          )}
         </Card>
 
         {/* leave */}
@@ -167,11 +213,13 @@ export default function Home() {
             label="Sales this month"
             value={`${won ?? 0} / ${me.target ?? 0}`}
             sub={
-              me.target
-                ? (won ?? 0) >= me.target
-                  ? `Target hit · ${dalasi(me.commission)} commission`
-                  : `${me.target - (won ?? 0)} to target`
-                : 'No target set'
+              revenue > 0
+                ? `${dalasi(revenue)} closed${me.target ? ` · ${Math.max(0, me.target - (won ?? 0))} to target` : ''}`
+                : me.target
+                  ? (won ?? 0) >= me.target
+                    ? `Target hit · ${dalasi(me.commission)} commission`
+                    : `${me.target - (won ?? 0)} to target`
+                  : 'No target set'
             }
           />
         ) : (
@@ -184,6 +232,15 @@ export default function Home() {
           />
         )}
       </div>
+
+      {/* today's activity — the funnel, logged today */}
+      {isSales && (
+        <Card className="grid grid-cols-3 divide-x divide-[var(--color-line-soft)] p-0 rise" style={{ animationDelay: '90ms' }}>
+          <TodayStat icon={PhoneCall} label="Calls" value={today.calls} />
+          <TodayStat icon={MapPin} label="Visits" value={today.visits} />
+          <TodayStat icon={Zap} label="Leads" value={today.leads} />
+        </Card>
+      )}
 
       {/* manager peek */}
       {isManager && (
@@ -222,6 +279,36 @@ export default function Home() {
       {/* coaching / flags / meetings */}
       <CoachingFeed />
 
+      {/* follow-ups — who to chase next (sales) */}
+      {isSales && followUps.length > 0 && (
+        <div className="rise" style={{ animationDelay: '140ms' }}>
+          <SectionTitle action={<Link to="/sales" className="text-sm font-semibold text-[var(--color-brand)]">View all</Link>}>
+            Follow up with
+          </SectionTitle>
+          <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden">
+            {followUps.slice(0, 5).map((c) => (
+              <Link
+                key={c.id}
+                to={`/sales/c/${c.id}`}
+                className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--color-line-soft)]"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-brand-50)] text-[var(--color-brand)]">
+                  <Contact size={18} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold text-[var(--color-ink)]">{c.company}</div>
+                  <div className="truncate text-sm text-[var(--color-ink-faint)]">
+                    {c.nextAction || c.status}{c.phone ? ` · ${c.phone}` : ''}
+                  </div>
+                </div>
+                <Pill tone={c.status === 'Interested' ? 'good' : 'warn'}>{c.status}</Pill>
+                <ChevronRight size={18} className="ml-1 shrink-0 text-[var(--color-ink-faint)]" />
+              </Link>
+            ))}
+          </Card>
+        </div>
+      )}
+
       {/* focus + quick actions */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 rise" style={{ animationDelay: '160ms' }}>
@@ -254,12 +341,25 @@ export default function Home() {
         <div className="rise" style={{ animationDelay: '200ms' }}>
           <SectionTitle>Quick actions</SectionTitle>
           <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden">
+            {isSales && <QuickLink to="/sales" icon={Contact} label="Customers" />}
+            {isSales && <QuickLink to="/day" icon={Zap} label="Log my day" />}
+            {isSales && <QuickLink to="/pipeline" icon={TrendingUp} label="Pipeline" />}
             <QuickLink to="/leave" icon={Palmtree} label="Request leave" />
             <QuickLink to="/attendance" icon={Clock} label="My hours" />
             <QuickLink to="/profile" icon={Target} label="My profile" />
           </Card>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={undoOpen}
+        onCancel={() => setUndoOpen(false)}
+        onConfirm={undoCheckIn}
+        busy={undoing}
+        title="Undo check-in?"
+        message="This removes today's check-in so you can start again. Your hours for today reset."
+        confirmLabel="Undo check-in"
+      />
     </div>
   )
 }
@@ -277,6 +377,20 @@ function ContractChip({ contract, end }) {
         <CalendarClock size={14} />
         {contract ? `${contract} · ` : ''}ends {dateStr}{days >= 0 ? ` · ${days} day${days === 1 ? '' : 's'} left` : ' · expired'}
       </span>
+    </div>
+  )
+}
+
+function TodayStat({ icon: Icon, label, value }) {
+  return (
+    <div className="flex flex-col items-center gap-1 px-3 py-4">
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand-50)] text-[var(--color-brand)]">
+        <Icon size={18} strokeWidth={2.2} />
+      </span>
+      <div className="text-2xl font-extrabold leading-none text-[var(--color-ink)]">{value}</div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
+        {label} today
+      </div>
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { Clock, LogIn, LogOut, CheckCircle2, MapPin, ChevronLeft, ChevronRight, 
 import { api } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { getLocation, mapsUrl } from '../lib/geo.js'
-import { Avatar, Button, Card, Modal, Pill, Select, SectionTitle, Spinner } from '../components/ui.jsx'
+import { Avatar, Button, Card, ConfirmDialog, Modal, Pill, Select, SectionTitle, Spinner } from '../components/ui.jsx'
 import { timeShort, dateLong } from '../lib/format.js'
 import { DAY_FULL, WEEK_ORDER, weekDays, ymd } from '../lib/schedule.js'
 
@@ -95,7 +95,19 @@ function useSelfDay() {
       setBusy(false)
     }
   }
-  return { today, loading, busy, locating, act }
+  async function undo() {
+    setBusy(true)
+    try {
+      await api('/attendance/undo-checkin', { method: 'POST' })
+      setToday(null)
+      await load()
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return { today, loading, busy, locating, act, undo }
 }
 
 // ───────────────────────── weekly shift data (shared) ───────────────────────────
@@ -263,19 +275,25 @@ const STATUS_OPTIONS = [
   { key: 'off', label: 'Off (excused)' },
   { key: 'sick', label: 'Sick' },
   { key: 'leave', label: 'Annual leave' },
+  { key: 'clear', label: 'Clear · no record (undo)' },
 ]
+const hhmm = (iso) => (iso ? iso.slice(11, 16) : '')
 
 function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
   const known = ['worked', 'off', 'sick', 'leave']
   const [status, setStatus] = useState(cell.status === 'late' ? 'worked' : known.includes(cell.status) ? cell.status : 'worked')
   const [note, setNote] = useState(cell.note || '')
+  const [checkIn, setCheckIn] = useState(hhmm(cell.checkIn) || (cell.shift?.start ?? '09:00'))
+  const [checkOut, setCheckOut] = useState(hhmm(cell.checkOut) || (cell.shift?.end ?? '17:00'))
   const [saving, setSaving] = useState(false)
   const dateLabel = new Date(`${dateKey}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
 
   async function save() {
     setSaving(true)
     try {
-      await api('/attendance/day', { method: 'PUT', body: { username: person.username, date: dateKey, status, note } })
+      const body = { username: person.username, date: dateKey, status, note }
+      if (status === 'worked') { body.checkIn = checkIn; body.checkOut = checkOut }
+      await api('/attendance/day', { method: 'PUT', body })
       onSaved()
     } catch (e) {
       alert(e.message)
@@ -317,7 +335,25 @@ function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
           </label>
         ))}
       </div>
-      {status !== 'worked' && (
+      {status === 'worked' && (
+        <div className="mt-3 flex items-center gap-2">
+          <div className="flex-1">
+            <label className="mb-1 block text-xs font-semibold text-[var(--color-ink-soft)]">Checked in</label>
+            <input type="time" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
+          </div>
+          <span className="mt-5 text-[var(--color-ink-faint)]">–</span>
+          <div className="flex-1">
+            <label className="mb-1 block text-xs font-semibold text-[var(--color-ink-soft)]">Checked out</label>
+            <input type="time" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
+          </div>
+        </div>
+      )}
+      {status === 'clear' && (
+        <p className="mt-3 rounded-xl bg-[var(--color-fill)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+          Removes any check-in, worked, sick or leave record for this day — back to a blank scheduled day.
+        </p>
+      )}
+      {(status === 'sick' || status === 'leave' || status === 'off') && (
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -333,8 +369,9 @@ function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
 // ───────────────────────────── staff / agent view ───────────────────────────────
 function MyHours() {
   const { isViewAs } = useAuth()
-  const { today, loading, busy, locating, act } = useSelfDay()
+  const { today, loading, busy, locating, act, undo } = useSelfDay()
   const w = useWeekGrid()
+  const [undoOpen, setUndoOpen] = useState(false)
 
   if (loading) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
 
@@ -395,10 +432,25 @@ function MyHours() {
               {busy ? <Spinner size={18} /> : checkedIn ? 'Check out' : 'Check in'}
             </Button>
           )}
+          {checkedIn && !isViewAs && (
+            <button onClick={() => setUndoOpen(true)} disabled={busy} className="text-xs font-semibold text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-brand)]">
+              Checked in by mistake? Undo
+            </button>
+          )}
           {locating && <div className="text-xs text-[var(--color-ink-faint)]">Getting your location…</div>}
           {isViewAs && <span className="text-sm font-medium text-[var(--color-ink-faint)]">Read-only view</span>}
         </div>
       </Card>
+
+      <ConfirmDialog
+        open={undoOpen}
+        onCancel={() => setUndoOpen(false)}
+        onConfirm={async () => { await undo(); setUndoOpen(false) }}
+        busy={busy}
+        title="Undo check-in?"
+        message="This removes today's check-in so you can start again. Your hours for today reset."
+        confirmLabel="Undo check-in"
+      />
 
       {/* my week (read-only — set by the manager) */}
       <div>
@@ -484,7 +536,8 @@ function ManagerHours() {
   )
 }
 
-function SelfCheckInCompact({ today, loading, busy, act }) {
+function SelfCheckInCompact({ today, loading, busy, act, undo }) {
+  const [undoOpen, setUndoOpen] = useState(false)
   if (loading) return null
   const checkedIn = !!today?.checkIn && !today?.checkOut
   const done = !!today?.checkOut
@@ -502,11 +555,27 @@ function SelfCheckInCompact({ today, loading, busy, act }) {
           {done ? `${timeShort(today.checkIn)} – ${timeShort(today.checkOut)}` : checkedIn ? `since ${timeShort(today.checkIn)}` : dateLong()}
         </div>
       </div>
-      {!done && (
-        <Button size="sm" onClick={() => act(checkedIn ? 'check-out' : 'check-in')} disabled={busy} variant={checkedIn ? 'outline' : 'primary'} icon={busy ? undefined : checkedIn ? LogOut : LogIn}>
-          {busy ? <Spinner size={16} /> : checkedIn ? 'Check out' : 'Check in'}
-        </Button>
-      )}
+      <div className="flex flex-col items-end gap-1">
+        {!done && (
+          <Button size="sm" onClick={() => act(checkedIn ? 'check-out' : 'check-in')} disabled={busy} variant={checkedIn ? 'outline' : 'primary'} icon={busy ? undefined : checkedIn ? LogOut : LogIn}>
+            {busy ? <Spinner size={16} /> : checkedIn ? 'Check out' : 'Check in'}
+          </Button>
+        )}
+        {checkedIn && (
+          <button onClick={() => setUndoOpen(true)} disabled={busy} className="text-[11px] font-semibold text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-brand)]">
+            Undo
+          </button>
+        )}
+      </div>
+      <ConfirmDialog
+        open={undoOpen}
+        onCancel={() => setUndoOpen(false)}
+        onConfirm={async () => { await undo(); setUndoOpen(false) }}
+        busy={busy}
+        title="Undo check-in?"
+        message="This removes today's check-in so you can start again."
+        confirmLabel="Undo check-in"
+      />
     </Card>
   )
 }

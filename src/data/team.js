@@ -47,7 +47,7 @@ function autoCalc(person) {
 
 export const team = [
   { // Ya Fatou — moved to Customer Service Supervisor May 2026 (was Sales Supervisor)
-    name: 'Ya Fatou Sawaneh', role: 'Customer Service Supervisor', type: 'Customer Service',
+    name: 'Yafatou Sawaneh', role: 'Customer Service Supervisor', type: 'Customer Service',
     base: 7000, commission: 5000, total: 12000,
     status: 'active', joined: 'Oct 2025', contract: '6-month fixed', contractEnd: '2026-08-31',
     coreResponsibility: 'Lead customer service — renewals follow-up, ticket resolution, customer retention',

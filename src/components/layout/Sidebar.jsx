@@ -1,9 +1,17 @@
 import { NavLink } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { navFor, departmentsFor } from './nav.js'
+import { groupedNavFor, departmentsFor } from './nav.js'
 import { Brand } from './Brand.jsx'
 import { Avatar } from '../ui.jsx'
+
+function SectionLabel({ children }) {
+  return (
+    <div className="mb-1 mt-6 px-3.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">
+      {children}
+    </div>
+  )
+}
 
 function NavRow({ item, soon = false }) {
   return (
@@ -35,7 +43,7 @@ function NavRow({ item, soon = false }) {
 
 export function Sidebar() {
   const { user, logout } = useAuth()
-  const items = navFor(user)
+  const { top, sections } = groupedNavFor(user)
   const departments = departmentsFor(user)
 
   return (
@@ -45,15 +53,22 @@ export function Sidebar() {
       </div>
 
       <nav className="mt-8 flex flex-1 flex-col gap-1">
-        {items.map((item) => (
+        {top.map((item) => (
           <NavRow key={item.to} item={item} />
+        ))}
+
+        {sections.map((section) => (
+          <div key={section.label} className="flex flex-col gap-1">
+            <SectionLabel>{section.label}</SectionLabel>
+            {section.items.map((item) => (
+              <NavRow key={item.to} item={item} />
+            ))}
+          </div>
         ))}
 
         {departments.length > 0 && (
           <>
-            <div className="mb-1 mt-6 px-3.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">
-              Departments
-            </div>
+            <SectionLabel>Departments</SectionLabel>
             {departments.map((item) => (
               <NavRow key={item.to} item={item} soon={!item.ready} />
             ))}

@@ -1,11 +1,14 @@
 const TOKEN_KEY = 'damia-staff-token'
 
+// Per-tab login: sessionStorage is scoped to one tab and survives refresh but
+// not tab-close. This lets each tab stay on the account it logged into —
+// logging in elsewhere can't hijack this tab on refresh.
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY)
+  return sessionStorage.getItem(TOKEN_KEY)
 }
 export function setToken(t) {
-  if (t) localStorage.setItem(TOKEN_KEY, t)
-  else localStorage.removeItem(TOKEN_KEY)
+  if (t) sessionStorage.setItem(TOKEN_KEY, t)
+  else sessionStorage.removeItem(TOKEN_KEY)
 }
 
 // transient "view as" — not persisted; cleared on reload

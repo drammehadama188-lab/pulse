@@ -411,6 +411,17 @@ app.post('/api/attendance/check-out', auth, notViewAs, (req, res) => {
   res.json({ record: rec })
 })
 
+// self: undo a mistaken check-in — wipes TODAY's own record so they're "not
+// checked in" again and can re-check-in. Only today, only your own.
+app.post('/api/attendance/undo-checkin', auth, notViewAs, (req, res) => {
+  const date = todayKey()
+  const all = db.read('attendance', [])
+  const rec = all.find((a) => a.username === req.user.username && a.date === date)
+  if (!rec || !rec.checkIn) return res.status(409).json({ error: 'No check-in to undo today' })
+  db.write('attendance', all.filter((a) => !(a.username === req.user.username && a.date === date)))
+  res.json({ ok: true, record: null })
+})
+
 // manager: today's presence for whole team
 app.get('/api/attendance', auth, managerOnly, (req, res) => {
   const date = req.query.date || todayKey()
@@ -691,28 +702,37 @@ app.get('/api/attendance/month', auth, (req, res) => {
 })
 
 // manager logs/overrides a single person-date from the calendar.
-// Only ever creates/replaces rows tagged source:'calendar' / manual:true — never touches real requests.
+// The manager is authoritative: this replaces ANY attendance/calendar row for that
+// person+date (including a real mistaken check-in). `worked` accepts optional
+// checkIn/checkOut times ("HH:MM") to override the recorded clock times; `clear`
+// removes everything for the date (undo).
 app.put('/api/attendance/day', auth, managerOnly, notViewAs, (req, res) => {
-  const { username, date, status, note } = req.body || {}
+  const { username, date, status, note, checkIn, checkOut } = req.body || {}
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return res.status(400).json({ error: 'Valid date required' })
-  if (!['worked', 'off', 'sick', 'leave'].includes(status)) return res.status(400).json({ error: 'Invalid status' })
+  if (!['worked', 'off', 'sick', 'leave', 'clear'].includes(status)) return res.status(400).json({ error: 'Invalid status' })
   const target = scheduleRoster(req).find((u) => u.username === username)
   if (!target) return res.status(404).json({ error: 'No such staff member' })
 
-  // wipe any prior calendar override for this person+date so statuses never stack
+  // Manager override wins: drop the calendar leave AND every attendance row for
+  // this person+date (manual or a real check-in) so nothing stacks or duplicates.
   const leaveAll = db.read('leave', []).filter((l) => !(l.username === username && l.source === 'calendar' && l.from === date && l.to === date))
-  const attAll = db.read('attendance', []).filter((a) => !(a.username === username && a.date === date && a.manual))
+  const attAll = db.read('attendance', []).filter((a) => !(a.username === username && a.date === date))
 
-  if (status === 'worked') {
+  if (status === 'clear') {
+    // undo — leave nothing for this date
+  } else if (status === 'worked') {
     const sched = (db.read('schedules', {})[username] || DEFAULT_WEEK)[dowOfKey(date)] || { start: '09:00', end: '17:00' }
+    const inHHMM = HHMM.test(checkIn || '') ? checkIn : sched.start
+    const outHHMM = HHMM.test(checkOut || '') ? checkOut : sched.end
+    const [ih, im] = inHHMM.split(':').map(Number)
     attAll.push({
       id: crypto.randomUUID(),
       username,
       name: target.name,
       date,
-      checkIn: `${date}T${sched.start}:00.000Z`,
-      checkOut: `${date}T${sched.end}:00.000Z`,
-      late: false,
+      checkIn: `${date}T${inHHMM}:00.000Z`,
+      checkOut: `${date}T${outHHMM}:00.000Z`,
+      late: ih > 9 || (ih === 9 && im > 0),
       manual: true,
     })
   } else {
@@ -737,6 +757,151 @@ app.put('/api/attendance/day', auth, managerOnly, notViewAs, (req, res) => {
   }
   db.write('leave', leaveAll)
   db.write('attendance', attAll)
+  res.json({ ok: true })
+})
+
+// ---------- pay: payslips + benefits (self-read, manager-write) ----------
+// roster record (with salary fields) for a username — manager use only.
+function rosterFor(username) {
+  const u = findUser(username)
+  if (!u) return null
+  const merged = [...team, ...createdStaffRoster()]
+  return merged.find((p) => p.name === u.name) || null
+}
+
+const sum = (lines) => (lines || []).reduce((s, l) => s + (Number(l.amount) || 0), 0)
+function netOf(p) {
+  return sum(p.earnings) - sum(p.deductions)
+}
+
+// One-time seed of benefit records we already know about (e.g. Kaddy's maternity
+// exception). Only runs if the store is empty — never clobbers manager edits.
+function seedBenefits() {
+  if (db.read('benefits', null)) return
+  db.write('benefits', [
+    {
+      id: crypto.randomUUID(),
+      username: 'kaddy',
+      name: 'Kaddy Bojang',
+      title: 'Maternity leave (paid)',
+      detail: '6 months fully paid at D6,000/month — approved exception to standard policy.',
+      amount: 6000, // monthly pay during leave
+      status: 'ended',
+      from: '2025-11', to: '2026-05',
+      note: 'Returned 4 May 2026.',
+      createdAt: new Date().toISOString(),
+      createdBy: 'system',
+    },
+  ])
+}
+seedBenefits()
+
+// benefits — staff see their own; managers may read anyone's (?username=)
+app.get('/api/benefits', auth, (req, res) => {
+  const who = req.user.role === 'manager' && req.query.username ? req.query.username : req.user.username
+  const list = db.read('benefits', []).filter((b) => b.username === who)
+  res.json({ benefits: list })
+})
+
+app.post('/api/benefits', auth, managerOnly, notViewAs, (req, res) => {
+  const { username, title, detail, amount, status, from, to, note } = req.body || {}
+  const target = rosterFor(username) || findUser(username)
+  if (!target) return res.status(404).json({ error: 'No such staff member' })
+  if (!title) return res.status(400).json({ error: 'Title required' })
+  const all = db.read('benefits', [])
+  const rec = {
+    id: crypto.randomUUID(),
+    username,
+    name: target.name,
+    title,
+    detail: detail || '',
+    amount: Number(amount) || 0,
+    status: ['upcoming', 'active', 'ended'].includes(status) ? status : 'upcoming',
+    from: from || '', to: to || '',
+    note: note || '',
+    createdAt: new Date().toISOString(),
+    createdBy: req.user.username,
+  }
+  all.push(rec)
+  db.write('benefits', all)
+  res.json({ benefit: rec })
+})
+
+app.delete('/api/benefits/:id', auth, managerOnly, notViewAs, (req, res) => {
+  db.write('benefits', db.read('benefits', []).filter((b) => b.id !== req.params.id))
+  res.json({ ok: true })
+})
+
+// manager: roster for the payroll picker — username + salary fields, active staff only
+app.get('/api/payroll/people', auth, managerOnly, (req, res) => {
+  const archived = archivedNameSet()
+  const merged = [...team, ...createdStaffRoster()].filter((p) => !archived.has(p.name))
+  const people = merged.map((p) => {
+    const u = seedUsers().find((x) => x.name === p.name)
+    return {
+      username: u?.username || null,
+      name: p.name,
+      title: p.role || u?.title || '',
+      department: p.type || u?.department || '',
+      base: Number(p.base) || 0,
+      commission: Number(p.commission) || 0,
+      transport: Number(p.transport) || 0,
+      total: Number(p.total) || 0,
+    }
+  }).filter((p) => p.username)
+  res.json({ people })
+})
+
+// payslips — staff see their own; managers may read anyone's (?username=)
+app.get('/api/payslips', auth, (req, res) => {
+  const who = req.user.role === 'manager' && req.query.username ? req.query.username : req.user.username
+  const list = db.read('payslips', [])
+    .filter((p) => p.username === who)
+    .map((p) => ({ ...p, net: netOf(p) }))
+    .sort((a, b) => (a.period < b.period ? 1 : -1))
+  res.json({ payslips: list })
+})
+
+// manager: auto-draft a payslip from the roster salary (not saved — just a starting point)
+app.get('/api/payslips/draft', auth, managerOnly, (req, res) => {
+  const { username, period } = req.query
+  const r = rosterFor(username)
+  if (!r) return res.status(404).json({ error: 'No salary on file for this person' })
+  const earnings = [{ label: 'Base salary', amount: Number(r.base) || 0 }]
+  if (Number(r.commission) > 0) earnings.push({ label: 'Commission', amount: Number(r.commission) })
+  if (Number(r.transport) > 0) earnings.push({ label: 'Transport allowance', amount: Number(r.transport) })
+  res.json({ draft: { username, period: /^\d{4}-\d{2}$/.test(period || '') ? period : '', earnings, deductions: [] } })
+})
+
+app.post('/api/payslips', auth, managerOnly, notViewAs, (req, res) => {
+  const { username, period, earnings, deductions, note } = req.body || {}
+  const target = rosterFor(username) || findUser(username)
+  if (!target) return res.status(404).json({ error: 'No such staff member' })
+  if (!/^\d{4}-\d{2}$/.test(period || '')) return res.status(400).json({ error: 'Valid month required' })
+  const clean = (lines) => (Array.isArray(lines) ? lines : [])
+    .filter((l) => l && l.label && Number(l.amount) > 0)
+    .map((l) => ({ label: String(l.label), amount: Number(l.amount) }))
+  const all = db.read('payslips', [])
+  // one payslip per person per month — replace if re-saved
+  const next = all.filter((p) => !(p.username === username && p.period === period))
+  const rec = {
+    id: crypto.randomUUID(),
+    username,
+    name: target.name,
+    period,
+    earnings: clean(earnings),
+    deductions: clean(deductions),
+    note: note || '',
+    createdAt: new Date().toISOString(),
+    createdBy: req.user.username,
+  }
+  next.push(rec)
+  db.write('payslips', next)
+  res.json({ payslip: { ...rec, net: netOf(rec) } })
+})
+
+app.delete('/api/payslips/:id', auth, managerOnly, notViewAs, (req, res) => {
+  db.write('payslips', db.read('payslips', []).filter((p) => p.id !== req.params.id))
   res.json({ ok: true })
 })
 

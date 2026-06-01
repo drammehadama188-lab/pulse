@@ -6,20 +6,25 @@ const isManager = (u) => u?.role === 'manager'
 const isOwner = (u) => u?.username === 'adama' // CEO/owner — no self-service (leave, clock-in…)
 
 // Full sidebar list (desktop). Each item self-gates via show().
+// `group` buckets items into labelled sidebar sections (Home sits on top,
+// ungrouped). GROUP_ORDER below sets the section order + which headers show.
 export const NAV = [
-  { to: '/', label: 'Home', icon: Home, show: () => true },
-  { to: '/sales', label: 'Customers', icon: Contact, show: (u) => isSales(u) },
-  { to: '/pipeline', label: 'Pipeline', icon: TrendingUp, show: (u) => isSales(u) },
-  { to: '/report', label: 'Report', icon: BarChart3, show: (u) => isSales(u) },
-  { to: '/day', label: 'My Day', icon: CalendarCheck, show: (u) => isSales(u) },
-  { to: '/approvals', label: 'Approvals', icon: ClipboardCheck, show: isManager },
-  { to: '/team', label: 'Team', icon: Users, show: isManager },
-  { to: '/attendance', label: 'Hours', icon: Clock, show: () => true },
-  { to: '/leave', label: 'Leave', icon: Palmtree, show: (u) => !isOwner(u) },
-  { to: '/notices', label: 'Notices', icon: Megaphone, show: () => true },
-  { to: '/pay', label: 'Pay', icon: Wallet, show: () => true },
-  { to: '/profile', label: 'Me', icon: User, show: () => true },
+  { to: '/', label: 'Home', icon: Home, group: null, show: () => true },
+  { to: '/sales', label: 'Customers', icon: Contact, group: 'Sales', show: (u) => isSales(u) },
+  { to: '/pipeline', label: 'Pipeline', icon: TrendingUp, group: 'Sales', show: (u) => isSales(u) },
+  { to: '/report', label: 'Report', icon: BarChart3, group: 'Sales', show: (u) => isSales(u) },
+  { to: '/day', label: 'My Day', icon: CalendarCheck, group: 'Sales', show: (u) => isSales(u) },
+  { to: '/approvals', label: 'Approvals', icon: ClipboardCheck, group: 'Manage', show: isManager },
+  { to: '/team', label: 'Team', icon: Users, group: 'Manage', show: isManager },
+  { to: '/attendance', label: 'Hours', icon: Clock, group: 'Personal', show: () => true },
+  { to: '/leave', label: 'Leave', icon: Palmtree, group: 'Personal', show: (u) => !isOwner(u) },
+  { to: '/notices', label: 'Notices', icon: Megaphone, group: 'Personal', show: () => true },
+  { to: '/pay', label: 'Pay', icon: Wallet, group: 'Personal', show: () => true },
+  { to: '/profile', label: 'Me', icon: User, group: 'Personal', show: () => true },
 ]
+
+// Section order for the grouped sidebar.
+const GROUP_ORDER = ['Sales', 'Manage', 'Personal']
 
 export const MORE = { key: 'more', label: 'More', icon: Menu }
 
@@ -38,6 +43,18 @@ export const DEPARTMENTS = [
 
 export function navFor(user) {
   return NAV.filter((i) => i.show(user))
+}
+
+// Grouped sidebar: returns { top: [Home…], sections: [{ label, items }] }.
+// Empty sections are dropped so headers never show above nothing.
+export function groupedNavFor(user) {
+  const visible = navFor(user)
+  const top = visible.filter((i) => !i.group)
+  const sections = GROUP_ORDER.map((label) => ({
+    label,
+    items: visible.filter((i) => i.group === label),
+  })).filter((s) => s.items.length > 0)
+  return { top, sections }
 }
 
 export function departmentsFor(user) {
