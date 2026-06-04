@@ -35,7 +35,7 @@ export const DEPARTMENTS = [
   { to: '/dept/sales', label: 'Sales', icon: TrendingUp, ready: false },
   { to: '/dept/customer-service', label: 'Customer Service', icon: Headphones, ready: false },
   { to: '/dept/finance', label: 'Finance', icon: DollarSign, ready: false },
-  { to: '/dept/hr', label: 'HR & Team', icon: IdCard, ready: false },
+  { to: '/dept/hr', label: 'HR & Team', icon: IdCard, ready: true },
   { to: '/dept/operations', label: 'Operations', icon: Wrench, ready: false },
   { to: '/dept/marketing', label: 'Marketing', icon: Megaphone, ready: true },
   { to: '/dept/reports', label: 'Reports', icon: FileBarChart, ready: false },
