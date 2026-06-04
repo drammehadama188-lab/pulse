@@ -14,11 +14,14 @@ import Attendance from './pages/Attendance.jsx'
 import Leave from './pages/Leave.jsx'
 import Pay from './pages/Pay.jsx'
 import Profile from './pages/Profile.jsx'
+import ChangePassword from './pages/ChangePassword.jsx'
 import Approvals from './pages/manager/Approvals.jsx'
 import Team from './pages/manager/Team.jsx'
 import Marketing from './pages/departments/Marketing.jsx'
+import HRTeam from './pages/departments/HRTeam.jsx'
+import AgentProfile from './pages/sales/AgentProfile.jsx'
 import DepartmentShell from './pages/departments/DepartmentShell.jsx'
-import { TrendingUp, Headphones, DollarSign, IdCard, Wrench, FileBarChart } from 'lucide-react'
+import { TrendingUp, Headphones, DollarSign, Wrench, FileBarChart } from 'lucide-react'
 
 function FullScreenLoader() {
   return (
@@ -29,10 +32,13 @@ function FullScreenLoader() {
 }
 
 function RequireAuth({ children, manager = false }) {
-  const { user, loading, isManager } = useAuth()
+  const { user, realUser, loading, isManager } = useAuth()
   const location = useLocation()
   if (loading) return <FullScreenLoader />
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />
+  // First sign-in: nothing works until the starter password is replaced.
+  if (realUser?.mustChangePassword && location.pathname !== '/change-password')
+    return <Navigate to="/change-password" replace />
   if (manager && !isManager) return <Navigate to="/" replace />
   return children
 }
@@ -64,6 +70,7 @@ export default function App() {
         <Route path="/leave" element={<Leave />} />
         <Route path="/pay" element={<Pay />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/change-password" element={<ChangePassword />} />
         <Route
           path="/approvals"
           element={
@@ -86,7 +93,8 @@ export default function App() {
         <Route path="/dept/sales" element={<RequireAuth manager><DepartmentShell icon={TrendingUp} title="Sales" /></RequireAuth>} />
         <Route path="/dept/customer-service" element={<RequireAuth manager><DepartmentShell icon={Headphones} title="Customer Service" /></RequireAuth>} />
         <Route path="/dept/finance" element={<RequireAuth manager><DepartmentShell icon={DollarSign} title="Finance" /></RequireAuth>} />
-        <Route path="/dept/hr" element={<RequireAuth manager><DepartmentShell icon={IdCard} title="HR & Team" /></RequireAuth>} />
+        <Route path="/dept/hr" element={<RequireAuth manager><HRTeam /></RequireAuth>} />
+        <Route path="/agents/:slug" element={<RequireAuth manager><AgentProfile /></RequireAuth>} />
         <Route path="/dept/operations" element={<RequireAuth manager><DepartmentShell icon={Wrench} title="Operations" /></RequireAuth>} />
         <Route path="/dept/reports" element={<RequireAuth manager><DepartmentShell icon={FileBarChart} title="Reports" /></RequireAuth>} />
       </Route>

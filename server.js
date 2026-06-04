@@ -19,7 +19,11 @@ const PORT = 4003
 // Who manages people. Everyone else is staff.
 const MANAGER_NAMES = ['Ya Fatou Sawaneh', 'Kaddy Bojang']
 const DEFAULT_PASSWORD = 'damia2026'
-const REQUIRE_PASSWORD = false // password disabled for now (like The Desk). Flip to true to re-enable.
+// Passwords ON (4 Jun 2026) — Pulse is becoming the front door to Admin
+// (Open Admin SSO), so a Pulse login must actually prove who you are.
+// Everyone starts on DEFAULT_PASSWORD with mustChangePassword=true and is
+// forced to set their own at first sign-in.
+const REQUIRE_PASSWORD = true
 
 // ---------- tiny JSON "db" (swap this module for Postgres later) ----------
 fs.mkdirSync(DATA_DIR, { recursive: true })
@@ -183,6 +187,49 @@ app.post('/api/login', (req, res) => {
 })
 
 app.get('/api/me', auth, (req, res) => res.json({ user: publicUser(req.user) }))
+
+// Change own password. Verifies the current one, swaps the hash, clears the
+// first-login flag, and signs out every other session for this account.
+app.post('/api/change-password', auth, notViewAs, (req, res) => {
+  const { currentPassword, newPassword } = req.body || {}
+  if (!newPassword || String(newPassword).length < 8)
+    return res.status(400).json({ error: 'New password must be at least 8 characters' })
+  const users = seedUsers()
+  const user = users.find((u) => u.username === req.realUser.username)
+  if (!user) return res.status(401).json({ error: 'unauthorized' })
+  if (!bcrypt.compareSync(currentPassword || '', user.passwordHash))
+    return res.status(401).json({ error: 'Current password is incorrect' })
+  user.passwordHash = bcrypt.hashSync(String(newPassword), 10)
+  user.mustChangePassword = false
+  db.write('users', users)
+  for (const [tok, s] of Object.entries(sessions)) {
+    if (s.username === user.username && tok !== req.token) delete sessions[tok]
+  }
+  persistSessions()
+  res.json({ ok: true, user: publicUser(user) })
+})
+
+// Manager resets a forgotten password to a temporary one the staff member
+// must change at next sign-in. Managers can reset staff; only the CEO
+// account can reset another manager. All their sessions are signed out.
+app.post('/api/staff/:username/reset-password', auth, managerOnly, notViewAs, (req, res) => {
+  const { tempPassword } = req.body || {}
+  if (!tempPassword || String(tempPassword).length < 8)
+    return res.status(400).json({ error: 'Temporary password must be at least 8 characters' })
+  const users = seedUsers()
+  const target = users.find((u) => u.username === String(req.params.username).toLowerCase())
+  if (!target) return res.status(404).json({ error: 'No such user' })
+  if (target.role === 'manager' && req.realUser.username !== 'adama')
+    return res.status(403).json({ error: 'Only the CEO can reset a manager password' })
+  target.passwordHash = bcrypt.hashSync(String(tempPassword), 10)
+  target.mustChangePassword = true
+  db.write('users', users)
+  for (const [tok, s] of Object.entries(sessions)) {
+    if (s.username === target.username) delete sessions[tok]
+  }
+  persistSessions()
+  res.json({ ok: true })
+})
 
 app.post('/api/logout', auth, (req, res) => {
   delete sessions[req.token]
@@ -1096,6 +1143,174 @@ app.post('/api/marketing/:section', auth, managerOnly, notViewAs, (req, res) => 
   data[section] = items
   db.write('marketing', data)
   res.json({ [section]: items })
+})
+
+// ---------- HR & Team: KPI rules + warnings (migrated from Founder Hub) ----------
+// KPI rules: global, manager-managed. Upsert by id.
+app.get('/api/kpi-rules', auth, (req, res) => {
+  res.json({ rules: db.read('kpi-rules', []) })
+})
+app.post('/api/kpi-rules', auth, managerOnly, notViewAs, (req, res) => {
+  const b = req.body || {}
+  const rules = db.read('kpi-rules', [])
+  const fields = {
+    scope: b.scope === 'agent' ? 'agent' : 'role',
+    role: b.role ?? null,
+    agent: b.agent ?? null,
+    period: b.period || 'default',
+    personalTarget: b.personalTarget === '' || b.personalTarget == null ? null : Number(b.personalTarget),
+    teamTarget: b.teamTarget === '' || b.teamTarget == null ? null : Number(b.teamTarget),
+    weeklyTarget: b.weeklyTarget || '',
+    kpi: b.kpi || '',
+    coreResponsibility: b.coreResponsibility || '',
+    focus: b.focus || '',
+    active: b.active !== false,
+  }
+  let rule
+  if (b.id) {
+    rule = rules.find((r) => r.id === b.id)
+    if (!rule) return res.status(404).json({ error: 'not found' })
+    Object.assign(rule, fields)
+  } else {
+    rule = { id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...fields }
+    rules.push(rule)
+  }
+  db.write('kpi-rules', rules)
+  res.json({ rule })
+})
+app.delete('/api/kpi-rules/:id', auth, managerOnly, notViewAs, (req, res) => {
+  const rules = db.read('kpi-rules', []).filter((r) => r.id !== req.params.id)
+  db.write('kpi-rules', rules)
+  res.json({ ok: true })
+})
+
+// ---------- Person profiles: feedback, decisions, warnings, files ----------
+// Coaching notes (per agent).
+app.get('/api/feedback', auth, (req, res) => {
+  let notes = db.read('feedback', [])
+  if (req.query.agent) notes = notes.filter((n) => n.agent === req.query.agent)
+  notes = notes.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+  res.json({ notes })
+})
+app.post('/api/feedback', auth, managerOnly, notViewAs, (req, res) => {
+  const { agent, text } = req.body || {}
+  if (!agent || !text) return res.status(400).json({ error: 'agent and text required' })
+  const notes = db.read('feedback', [])
+  const note = { id: 'n_' + crypto.randomUUID(), agent, text, createdAt: new Date().toISOString(), createdBy: req.user.name || 'Manager' }
+  notes.push(note)
+  db.write('feedback', notes)
+  res.json({ success: true, note })
+})
+app.delete('/api/feedback/:id', auth, managerOnly, notViewAs, (req, res) => {
+  db.write('feedback', db.read('feedback', []).filter((n) => n.id !== req.params.id))
+  res.json({ success: true })
+})
+
+// Management decisions (per agent, log-style with current + history).
+app.get('/api/decisions', auth, (req, res) => {
+  const all = db.read('decisions', [])
+  if (req.query.agent) {
+    const forAgent = all.filter((d) => d.agent === req.query.agent).sort((a, b) => (b.setAt || '').localeCompare(a.setAt || ''))
+    return res.json({ current: forAgent[0] || null, history: forAgent.slice(1) })
+  }
+  res.json({ decisions: all })
+})
+app.post('/api/decisions', auth, managerOnly, notViewAs, (req, res) => {
+  const { agent, decision, reason } = req.body || {}
+  if (!agent || !decision) return res.status(400).json({ error: 'agent and decision required' })
+  const all = db.read('decisions', [])
+  const entry = { id: 'd_' + crypto.randomUUID(), agent, decision, reason: reason || '', setAt: new Date().toISOString(), setBy: req.user.name || 'Manager' }
+  all.push(entry)
+  db.write('decisions', all)
+  res.json({ success: true, decision: entry })
+})
+
+// Warnings (per agent; HR view lists all).
+app.get('/api/warnings', auth, (req, res) => {
+  let all = db.read('warnings', []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+  if (req.query.agent) all = all.filter((w) => w.agent === req.query.agent)
+  res.json({ warnings: all })
+})
+app.post('/api/warnings', auth, managerOnly, notViewAs, (req, res) => {
+  const { agent, type, reason, date } = req.body || {}
+  if (!agent || !type) return res.status(400).json({ error: 'agent and type required' })
+  if (!['verbal', 'formal', 'final'].includes(type)) return res.status(400).json({ error: 'type must be verbal/formal/final' })
+  const all = db.read('warnings', [])
+  const entry = { id: 'w_' + crypto.randomUUID(), agent, type, reason: reason || '', date: date || new Date().toISOString().slice(0, 10), issuedBy: req.user.name || 'Manager', createdAt: new Date().toISOString() }
+  all.push(entry)
+  db.write('warnings', all)
+  res.json({ success: true, warning: entry })
+})
+app.delete('/api/warnings/:id', auth, managerOnly, notViewAs, (req, res) => {
+  const before = db.read('warnings', [])
+  const after = before.filter((w) => w.id !== req.params.id)
+  if (after.length === before.length) return res.status(404).json({ error: 'not found' })
+  db.write('warnings', after)
+  res.json({ success: true })
+})
+
+// Agent files — uploaded docs stored on disk under data/agent-files/<slug>/.
+const FILES_DIR = path.join(DATA_DIR, 'agent-files')
+const fileSlug = (s) => (s || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+function ensureAgentDir(agent) {
+  const dir = path.join(FILES_DIR, fileSlug(agent))
+  fs.mkdirSync(dir, { recursive: true })
+  return dir
+}
+app.get('/api/agent-files', auth, (req, res) => {
+  let files = db.read('agent-files', [])
+  if (req.query.agent) files = files.filter((f) => f.agent === req.query.agent)
+  res.json({ files: files.slice().sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || '')) })
+})
+app.post('/api/agent-files', auth, managerOnly, notViewAs, (req, res) => {
+  const { agent, name, mimeType, base64, category } = req.body || {}
+  if (!agent || !name || !base64) return res.status(400).json({ error: 'agent, name, base64 required' })
+  const dir = ensureAgentDir(agent)
+  const id = 'f_' + crypto.randomUUID()
+  const cleanBase64 = base64.includes(',') ? base64.split(',').pop() : base64
+  const buffer = Buffer.from(cleanBase64, 'base64')
+  const ext = (name.split('.').pop() || 'bin').toLowerCase()
+  const storedAs = `${id}.${ext}`
+  fs.writeFileSync(path.join(dir, storedAs), buffer)
+  const files = db.read('agent-files', [])
+  const meta = { id, agent, name, category: category || 'general', mimeType: mimeType || 'application/octet-stream', sizeBytes: buffer.length, storedAs, uploadedAt: new Date().toISOString(), uploadedBy: req.user.name || 'Manager' }
+  files.push(meta)
+  db.write('agent-files', files)
+  res.json({ success: true, file: meta })
+})
+app.post('/api/agent-files/generate-review', auth, managerOnly, notViewAs, (req, res) => {
+  const { agent, period, reviewText, category } = req.body || {}
+  if (!agent || !period || !reviewText) return res.status(400).json({ error: 'agent, period, reviewText required' })
+  const dir = ensureAgentDir(agent)
+  const id = 'f_' + crypto.randomUUID()
+  const storedAs = `${id}.md`
+  fs.writeFileSync(path.join(dir, storedAs), reviewText)
+  const files = db.read('agent-files', [])
+  const meta = { id, agent, name: `Monthly Review - ${period.replace(/[^a-zA-Z0-9 -]/g, '')}.md`, category: category || 'monthly-review', mimeType: 'text/markdown', sizeBytes: Buffer.byteLength(reviewText, 'utf8'), storedAs, uploadedAt: new Date().toISOString(), uploadedBy: req.user.name || 'Manager', period }
+  files.push(meta)
+  db.write('agent-files', files)
+  res.json({ success: true, file: meta })
+})
+// Download is reached via a plain <a> tag, so it carries the token as ?t= instead of a header.
+app.get('/api/agent-files/:id/download', (req, res) => {
+  const t = req.query.t || (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
+  const s = sessions[t]
+  if (!s || s.exp < Date.now()) return res.status(401).json({ error: 'unauthorized' })
+  const meta = db.read('agent-files', []).find((f) => f.id === req.params.id)
+  if (!meta) return res.status(404).json({ error: 'not found' })
+  const filePath = path.join(FILES_DIR, fileSlug(meta.agent), meta.storedAs)
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'file missing' })
+  res.setHeader('Content-Type', meta.mimeType || 'application/octet-stream')
+  res.setHeader('Content-Disposition', `attachment; filename="${meta.name.replace(/"/g, '')}"`)
+  res.sendFile(filePath)
+})
+app.delete('/api/agent-files/:id', auth, managerOnly, notViewAs, (req, res) => {
+  const files = db.read('agent-files', [])
+  const meta = files.find((f) => f.id === req.params.id)
+  if (!meta) return res.status(404).json({ error: 'not found' })
+  try { const fp = path.join(FILES_DIR, fileSlug(meta.agent), meta.storedAs); if (fs.existsSync(fp)) fs.unlinkSync(fp) } catch { /* ignore */ }
+  db.write('agent-files', files.filter((f) => f.id !== req.params.id))
+  res.json({ success: true })
 })
 
 seedUsers()

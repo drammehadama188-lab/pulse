@@ -52,6 +52,12 @@ export function AuthProvider({ children }) {
     setRealUser(null)
   }
 
+  async function refreshUser() {
+    const { user } = await api('/me')
+    setRealUser(user)
+    return user
+  }
+
   function enterViewAs(target) {
     setViewAs(target.username)
     setViewUser(target)
@@ -71,6 +77,7 @@ export function AuthProvider({ children }) {
         loading,
         login,
         logout,
+        refreshUser,
         isManager: effectiveUser?.role === 'manager',
         realIsManager: realUser?.role === 'manager',
         isViewAs: !!viewUser,

@@ -9,6 +9,7 @@ export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -17,8 +18,8 @@ export default function Login() {
     setBusy(true)
     setError('')
     try {
-      await login(username.trim())
-      navigate('/', { replace: true })
+      const user = await login(username.trim(), password)
+      navigate(user?.mustChangePassword ? '/change-password' : '/', { replace: true })
     } catch (err) {
       setError(err.message || 'Could not sign in')
       setBusy(false)
@@ -96,6 +97,19 @@ export default function Login() {
               />
             </div>
 
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-[var(--color-ink)]">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Your password"
+                className="focus-ring w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]"
+              />
+            </div>
+
             {error && (
               <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">
                 {error}
@@ -105,7 +119,7 @@ export default function Login() {
             <Button
               type="submit"
               size="lg"
-              disabled={busy || !username}
+              disabled={busy || !username || !password}
               icon={busy ? undefined : LogIn}
               className="w-full"
             >
