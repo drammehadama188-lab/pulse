@@ -31,14 +31,20 @@ function FullScreenLoader() {
   )
 }
 
-function RequireAuth({ children, manager = false }) {
-  const { user, realUser, loading, isManager } = useAuth()
+// Route gate. `power` names a granted access power (server POWERS list);
+// power="ceo" marks CEO-only pages (unbuilt department shells). The legacy
+// `manager` prop now means holding the Team power. The server independently
+// enforces every check per request — this is presentation only.
+function RequireAuth({ children, manager = false, power = null }) {
+  const { user, realUser, loading, isManager, hasPower } = useAuth()
   const location = useLocation()
   if (loading) return <FullScreenLoader />
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />
   // First sign-in: nothing works until the starter password is replaced.
   if (realUser?.mustChangePassword && location.pathname !== '/change-password')
     return <Navigate to="/change-password" replace />
+  if (power === 'ceo' && user?.username !== 'adama') return <Navigate to="/" replace />
+  if (power && power !== 'ceo' && !hasPower(power)) return <Navigate to="/" replace />
   if (manager && !isManager) return <Navigate to="/" replace />
   return children
 }
@@ -74,7 +80,7 @@ export default function App() {
         <Route
           path="/approvals"
           element={
-            <RequireAuth manager>
+            <RequireAuth power="approvals">
               <Approvals />
             </RequireAuth>
           }
@@ -82,21 +88,21 @@ export default function App() {
         <Route
           path="/team"
           element={
-            <RequireAuth manager>
+            <RequireAuth power="team">
               <Team />
             </RequireAuth>
           }
         />
 
-        {/* Departments — management layer, manager-only. Built fresh, one at a time. */}
-        <Route path="/dept/marketing" element={<RequireAuth manager><Marketing /></RequireAuth>} />
-        <Route path="/dept/sales" element={<RequireAuth manager><DepartmentShell icon={TrendingUp} title="Sales" /></RequireAuth>} />
-        <Route path="/dept/customer-service" element={<RequireAuth manager><DepartmentShell icon={Headphones} title="Customer Service" /></RequireAuth>} />
-        <Route path="/dept/finance" element={<RequireAuth manager><DepartmentShell icon={DollarSign} title="Finance" /></RequireAuth>} />
-        <Route path="/dept/hr" element={<RequireAuth manager><HRTeam /></RequireAuth>} />
-        <Route path="/agents/:slug" element={<RequireAuth manager><AgentProfile /></RequireAuth>} />
-        <Route path="/dept/operations" element={<RequireAuth manager><DepartmentShell icon={Wrench} title="Operations" /></RequireAuth>} />
-        <Route path="/dept/reports" element={<RequireAuth manager><DepartmentShell icon={FileBarChart} title="Reports" /></RequireAuth>} />
+        {/* Departments — gated by granted powers; unbuilt shells stay CEO-only. */}
+        <Route path="/dept/marketing" element={<RequireAuth power="marketing"><Marketing /></RequireAuth>} />
+        <Route path="/dept/sales" element={<RequireAuth power="sales"><DepartmentShell icon={TrendingUp} title="Sales" /></RequireAuth>} />
+        <Route path="/dept/customer-service" element={<RequireAuth power="ceo"><DepartmentShell icon={Headphones} title="Customer Service" /></RequireAuth>} />
+        <Route path="/dept/finance" element={<RequireAuth power="payroll"><DepartmentShell icon={DollarSign} title="Finance" /></RequireAuth>} />
+        <Route path="/dept/hr" element={<RequireAuth power="hr"><HRTeam /></RequireAuth>} />
+        <Route path="/agents/:slug" element={<RequireAuth power="sales"><AgentProfile /></RequireAuth>} />
+        <Route path="/dept/operations" element={<RequireAuth power="ceo"><DepartmentShell icon={Wrench} title="Operations" /></RequireAuth>} />
+        <Route path="/dept/reports" element={<RequireAuth power="ceo"><DepartmentShell icon={FileBarChart} title="Reports" /></RequireAuth>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

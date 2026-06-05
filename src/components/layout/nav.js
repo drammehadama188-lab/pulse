@@ -2,8 +2,10 @@ import { Home, Contact, TrendingUp, BarChart3, CalendarCheck, Megaphone, Clock, 
 
 const SALES_DEPTS = ['Sales', 'Training']
 const isSales = (u) => SALES_DEPTS.includes(u?.department)
-const isManager = (u) => u?.role === 'manager'
 const isOwner = (u) => u?.username === 'adama' // CEO/owner — no self-service (leave, clock-in…)
+// Access comes from per-person power grants (CEO holds all). 'manager' is
+// just a title now — it unlocks nothing by itself.
+const has = (u, p) => (u?.powers || []).includes(p)
 
 // Full sidebar list (desktop). Each item self-gates via show().
 // `group` buckets items into labelled sidebar sections (Home sits on top,
@@ -14,8 +16,8 @@ export const NAV = [
   { to: '/pipeline', label: 'Pipeline', icon: TrendingUp, group: 'Sales', show: (u) => isSales(u) },
   { to: '/report', label: 'Report', icon: BarChart3, group: 'Sales', show: (u) => isSales(u) },
   { to: '/day', label: 'My Day', icon: CalendarCheck, group: 'Sales', show: (u) => isSales(u) },
-  { to: '/approvals', label: 'Approvals', icon: ClipboardCheck, group: 'Manage', show: isManager },
-  { to: '/team', label: 'Team', icon: Users, group: 'Manage', show: isManager },
+  { to: '/approvals', label: 'Approvals', icon: ClipboardCheck, group: 'Manage', show: (u) => has(u, 'approvals') },
+  { to: '/team', label: 'Team', icon: Users, group: 'Manage', show: (u) => has(u, 'team') },
   { to: '/attendance', label: 'Hours', icon: Clock, group: 'Personal', show: () => true },
   { to: '/leave', label: 'Leave', icon: Palmtree, group: 'Personal', show: (u) => !isOwner(u) },
   { to: '/notices', label: 'Notices', icon: Megaphone, group: 'Personal', show: () => true },
@@ -31,14 +33,16 @@ export const MORE = { key: 'more', label: 'More', icon: Menu }
 // Departments — the management layer. Manager-only. Lives under /dept/* so it
 // never collides with the staff-facing pages above. Built fresh, one at a time;
 // `ready:false` renders a clean "being set up" shell.
+// `power` decides who sees each department. Shells without a power yet
+// (not built, no owner decided) stay CEO-only.
 export const DEPARTMENTS = [
-  { to: '/dept/sales', label: 'Sales', icon: TrendingUp, ready: false },
-  { to: '/dept/customer-service', label: 'Customer Service', icon: Headphones, ready: false },
-  { to: '/dept/finance', label: 'Finance', icon: DollarSign, ready: false },
-  { to: '/dept/hr', label: 'HR & Team', icon: IdCard, ready: true },
-  { to: '/dept/operations', label: 'Operations', icon: Wrench, ready: false },
-  { to: '/dept/marketing', label: 'Marketing', icon: Megaphone, ready: true },
-  { to: '/dept/reports', label: 'Reports', icon: FileBarChart, ready: false },
+  { to: '/dept/sales', label: 'Sales', icon: TrendingUp, ready: false, power: 'sales' },
+  { to: '/dept/customer-service', label: 'Customer Service', icon: Headphones, ready: false, power: null },
+  { to: '/dept/finance', label: 'Finance', icon: DollarSign, ready: false, power: 'payroll' },
+  { to: '/dept/hr', label: 'HR & Team', icon: IdCard, ready: true, power: 'hr' },
+  { to: '/dept/operations', label: 'Operations', icon: Wrench, ready: false, power: null },
+  { to: '/dept/marketing', label: 'Marketing', icon: Megaphone, ready: true, power: 'marketing' },
+  { to: '/dept/reports', label: 'Reports', icon: FileBarChart, ready: false, power: null },
 ]
 
 export function navFor(user) {
@@ -58,7 +62,7 @@ export function groupedNavFor(user) {
 }
 
 export function departmentsFor(user) {
-  return isManager(user) ? DEPARTMENTS : []
+  return DEPARTMENTS.filter((d) => (d.power ? has(user, d.power) : isOwner(user)))
 }
 
 // mobile bottom bar: Home + up to 3 role-relevant + More (opens full menu)
@@ -66,7 +70,8 @@ export function mobileNavFor(user) {
   const home = NAV.find((i) => i.to === '/')
   const middle = []
   if (isSales(user)) middle.push(byPath('/sales'), byPath('/report'))
-  if (isManager(user)) middle.push(byPath('/approvals'), byPath('/team'))
+  if (has(user, 'approvals')) middle.push(byPath('/approvals'))
+  if (has(user, 'team')) middle.push(byPath('/team'))
   middle.push(byPath('/attendance'))
   return [home, ...middle.filter(Boolean).slice(0, 3)]
 }

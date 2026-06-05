@@ -9,7 +9,7 @@ import CoachingFeed from '../components/CoachingFeed.jsx'
 import { greeting, firstName, timeShort, dateLong, dalasi } from '../lib/format.js'
 
 export default function Home() {
-  const { user, isManager, isViewAs } = useAuth()
+  const { user, isManager, isViewAs, hasPower } = useAuth()
   const [att, setAtt] = useState(null)
   const [leave, setLeave] = useState(null)
   const [me, setMe] = useState(null) // roster record
@@ -58,15 +58,17 @@ export default function Home() {
         leads: logged.filter((a) => a.type === 'call' && a.callStatus === 'Interested - Lead').length,
       })
     }
-    if (isManager) {
+    // Each stat needs its own power — fetch only what this person can see
+    // and survive a 403 on either without breaking the page.
+    if (hasPower('approvals') || hasPower('team')) {
       const [pend, pres] = await Promise.all([
-        api('/leave?status=pending'),
-        api('/attendance'),
+        hasPower('approvals') ? api('/leave?status=pending').catch(() => null) : null,
+        hasPower('team') ? api('/attendance').catch(() => null) : null,
       ])
       setMgr({
-        pending: pend.requests.length,
-        present: pres.presence.filter((p) => p.record?.checkIn).length,
-        total: pres.presence.length,
+        pending: pend ? pend.requests.length : 0,
+        present: pres ? pres.presence.filter((p) => p.record?.checkIn).length : 0,
+        total: pres ? pres.presence.length : 0,
       })
     }
     setLoading(false)
@@ -242,8 +244,8 @@ export default function Home() {
         </Card>
       )}
 
-      {/* manager peek */}
-      {isManager && (
+      {/* manager peek — anyone holding Approvals or Team power */}
+      {(hasPower('approvals') || hasPower('team')) && (
         <Card className="flex flex-wrap items-center gap-x-8 gap-y-4 p-5 rise" style={{ animationDelay: '120ms' }}>
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-warn-bg)] text-[var(--color-warn)]">
@@ -266,12 +268,16 @@ export default function Home() {
             </div>
           </div>
           <div className="ml-auto flex gap-2">
-            <Link to="/approvals">
-              <Button variant="ghost" size="sm">Review approvals</Button>
-            </Link>
-            <Link to="/team">
-              <Button variant="ghost" size="sm">View team</Button>
-            </Link>
+            {hasPower('approvals') && (
+              <Link to="/approvals">
+                <Button variant="ghost" size="sm">Review approvals</Button>
+              </Link>
+            )}
+            {hasPower('team') && (
+              <Link to="/team">
+                <Button variant="ghost" size="sm">View team</Button>
+              </Link>
+            )}
           </div>
         </Card>
       )}

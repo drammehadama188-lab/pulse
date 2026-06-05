@@ -69,6 +69,14 @@ export function AuthProvider({ children }) {
 
   const effectiveUser = viewUser || realUser
 
+  // Powers: per-person grants resolved by the server (CEO has all).
+  // The EFFECTIVE user's powers drive what's visible (so view-as shows
+  // exactly what they see); the REAL user's powers drive what you may DO.
+  const powers = effectiveUser?.powers || []
+  const realPowers = realUser?.powers || []
+  const hasPower = (p) => powers.includes(p)
+  const hasRealPower = (p) => realPowers.includes(p)
+
   return (
     <AuthContext.Provider
       value={{
@@ -78,8 +86,12 @@ export function AuthProvider({ children }) {
         login,
         logout,
         refreshUser,
-        isManager: effectiveUser?.role === 'manager',
-        realIsManager: realUser?.role === 'manager',
+        powers,
+        hasPower,
+        hasRealPower,
+        // legacy flag — "manager-ish" now means holding the Team power
+        isManager: hasPower('team'),
+        realIsManager: hasRealPower('team'),
         isViewAs: !!viewUser,
         enterViewAs,
         exitViewAs,

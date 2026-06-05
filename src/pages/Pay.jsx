@@ -25,7 +25,9 @@ const STATUS_TONE = { upcoming: 'brand', active: 'good', ended: 'neutral' }
 const STATUS_RANK = { active: 0, upcoming: 1, ended: 2 }
 
 export default function Pay() {
-  const { user, isManager, isViewAs } = useAuth()
+  const { user, hasPower, isViewAs } = useAuth()
+  // Pay management needs the Payroll power specifically (not Team)
+  const isManager = hasPower('payroll')
   const [people, setPeople] = useState([]) // manager: payroll roster
   const [selected, setSelected] = useState(user.username)
   const [ownRoster, setOwnRoster] = useState(null) // self salary

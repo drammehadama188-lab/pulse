@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Plus, UserPlus, CheckCircle2, Archive, RotateCcw } from 'lucide-react'
+import { ArrowRight, Plus, UserPlus, CheckCircle2, Archive, RotateCcw, KeyRound } from 'lucide-react'
 import { api } from '../../lib/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { Avatar, Button, Card, Pill, SectionTitle, Spinner, Modal, Field, Input, Select, Textarea } from '../../components/ui.jsx'
@@ -13,7 +13,7 @@ const COACH_TYPES = [
 ]
 
 export default function Team() {
-  const { enterViewAs } = useAuth()
+  const { enterViewAs, hasRealPower, realUser } = useAuth()
   const navigate = useNavigate()
   const [presence, setPresence] = useState(null)
   const [team, setTeam] = useState([])
@@ -21,6 +21,7 @@ export default function Team() {
   const [coachTarget, setCoachTarget] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
   const [archiveTarget, setArchiveTarget] = useState(null)
+  const [accessTarget, setAccessTarget] = useState(null)
   const [pastAgents, setPastAgents] = useState([])
 
   function load() {
@@ -78,6 +79,16 @@ export default function Team() {
                 <div className="truncate text-xs text-[var(--color-ink-faint)]">{u.title}</div>
               </div>
               {u.role === 'manager' && <Pill tone="good">Manager</Pill>}
+              {(u.powers || []).length > 0 && <Pill tone="neutral">{(u.powers || []).length} powers</Pill>}
+              {hasRealPower('grant') && (
+                <button
+                  onClick={() => setAccessTarget(u)}
+                  title="Access — grant or take powers"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-line)] text-[var(--color-ink-soft)] transition-colors hover:border-[var(--color-brand)] hover:text-[var(--color-brand)]"
+                >
+                  <KeyRound size={15} />
+                </button>
+              )}
               <button
                 onClick={() => setCoachTarget(u)}
                 title="Add coaching, flag or meeting"
@@ -92,13 +103,15 @@ export default function Team() {
               >
                 <Archive size={15} />
               </button>
-              <button
-                onClick={() => viewAs(u)}
-                title="Open their view"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-brand-50)] text-[var(--color-brand)] transition-colors hover:bg-[var(--color-brand-100)]"
-              >
-                <ArrowRight size={16} />
-              </button>
+              {hasRealPower('viewas') && (
+                <button
+                  onClick={() => viewAs(u)}
+                  title="Open their view"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-brand-50)] text-[var(--color-brand)] transition-colors hover:bg-[var(--color-brand-100)]"
+                >
+                  <ArrowRight size={16} />
+                </button>
+              )}
             </div>
           ))}
         </Card>
@@ -197,6 +210,17 @@ export default function Team() {
 
       {coachTarget && <CoachingForm target={coachTarget} onClose={() => setCoachTarget(null)} />}
       {addOpen && <AddStaffForm onClose={() => setAddOpen(false)} onCreated={load} />}
+      {accessTarget && (
+        <AccessForm
+          target={accessTarget}
+          isCeo={realUser?.username === 'adama'}
+          onClose={() => setAccessTarget(null)}
+          onSaved={() => {
+            setAccessTarget(null)
+            load()
+          }}
+        />
+      )}
       {archiveTarget && (
         <ArchiveDialog
           target={archiveTarget}
@@ -366,6 +390,97 @@ function AddStaffForm({ onClose, onCreated }) {
         </p>
         {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
+    </Modal>
+  )
+}
+
+// Access toggles — grant or take powers for one person. CEO can toggle
+// everything; other granters cannot touch the 'grant' power (server
+// enforces both rules again on save).
+function AccessForm({ target, isCeo, onClose, onSaved }) {
+  const [catalogue, setCatalogue] = useState(null)
+  const [selected, setSelected] = useState(new Set(target.powers || []))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api('/powers').then((d) => setCatalogue(d.powers)).catch((e) => setError(e.message))
+  }, [])
+
+  function toggle(key) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  async function save() {
+    setBusy(true)
+    setError('')
+    try {
+      await api(`/staff/${target.username}/access`, { method: 'POST', body: { powers: [...selected] } })
+      onSaved()
+    } catch (e) {
+      setError(e.message)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`Access — ${target.name}`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save} disabled={busy || !catalogue}>{busy ? <Spinner size={16} /> : 'Save access'}</Button>
+        </>
+      }
+    >
+      {!catalogue && !error && <div className="flex justify-center py-8"><Spinner size={22} /></div>}
+      {catalogue && (
+        <div className="space-y-2">
+          <p className="text-sm text-[var(--color-ink-soft)]">
+            Tick a power to open it for {target.name.split(' ')[0]}. Changes apply on their next page load.
+          </p>
+          {catalogue.map((p) => {
+            const locked = p.key === 'grant' && !isCeo
+            const on = selected.has(p.key)
+            return (
+              <button
+                key={p.key}
+                onClick={() => !locked && toggle(p.key)}
+                disabled={locked}
+                className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors ${
+                  on ? 'border-[var(--color-brand)] bg-[var(--color-brand-50)]' : 'border-[var(--color-line)]'
+                } ${locked ? 'opacity-50' : ''}`}
+              >
+                <span
+                  className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border text-white ${
+                    on ? 'border-[var(--color-brand)] bg-[var(--color-brand)]' : 'border-[var(--color-line)]'
+                  }`}
+                >
+                  {on ? <CheckCircle2 size={14} /> : null}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-[var(--color-ink)]">
+                    {p.label}
+                    {locked && <span className="ml-2 text-xs font-medium text-[var(--color-ink-faint)]">CEO only</span>}
+                  </span>
+                  <span className="block truncate text-xs text-[var(--color-ink-faint)]">{p.detail}</span>
+                </span>
+              </button>
+            )
+          })}
+          {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        </div>
+      )}
+      {!catalogue && error && (
+        <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
+      )}
     </Modal>
   )
 }

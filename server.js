@@ -134,7 +134,9 @@ function publicUser(u) {
   if (!u) return null
   // salary is manager-only (served via /api/staff), never via /me or /users
   const { passwordHash, salary, ...rest } = u
-  return rest
+  // resolved powers ride along so the UI can gate sections client-side;
+  // the server re-checks every request regardless
+  return { ...rest, powers: powersFor(u) }
 }
 function findUser(username) {
   return seedUsers().find((u) => u.username === username.toLowerCase())
@@ -149,7 +151,7 @@ function auth(req, res, next) {
   let effective = real
   let isViewAs = false
   const va = req.headers['x-view-as']
-  if (va && real.role === 'manager') {
+  if (va && can(real, 'viewas')) {
     const target = findUser(va)
     if (target) {
       effective = target
@@ -162,9 +164,39 @@ function auth(req, res, next) {
   req.token = token
   next()
 }
-function managerOnly(req, res, next) {
-  if (req.user.role !== 'manager') return res.status(403).json({ error: 'forbidden' })
-  next()
+// ---------- access powers ----------
+// Per-person toggles, granted by the CEO (or anyone holding 'grant').
+// The CEO (adama) implicitly holds every power. The 'manager' role is a
+// TITLE only — power comes exclusively from these grants.
+const POWERS = [
+  ['sales', 'Sales oversight', 'All agents’ pipelines, reports and profiles'],
+  ['approvals', 'Leave approvals', 'Approve or reject leave requests'],
+  ['team', 'Team', 'Presence, schedules, coaching, add/archive staff'],
+  ['payroll', 'Payroll', 'Salaries, payslips and benefits'],
+  ['hr', 'HR', 'KPI rules, contracts, warnings, agent files'],
+  ['marketing', 'Marketing', 'Marketing department page'],
+  ['notices', 'Notices', 'Post and remove announcements'],
+  ['viewas', 'View as', 'See the app as another staff member (read-only)'],
+  ['grant', 'Grant access', 'Give or take powers (not their own, not the CEO’s)'],
+]
+const POWER_KEYS = POWERS.map(([k]) => k)
+const CEO = 'adama'
+
+function powersFor(u) {
+  if (!u) return []
+  if (u.username === CEO) return [...POWER_KEYS]
+  return Array.isArray(u.permissions) ? u.permissions.filter((p) => POWER_KEYS.includes(p)) : []
+}
+function can(u, power) {
+  return powersFor(u).includes(power)
+}
+// Powers are always checked on the REAL user — "view as" never changes
+// what you're allowed to do, only what you're looking at.
+function requirePower(power) {
+  return (req, res, next) => {
+    if (!can(req.realUser, power)) return res.status(403).json({ error: 'forbidden' })
+    next()
+  }
 }
 // Block writes while a manager is viewing as someone else (read-only impersonation).
 function notViewAs(req, res, next) {
@@ -190,6 +222,46 @@ app.get('/api/me', auth, (req, res) => res.json({ user: publicUser(req.user) }))
 
 // Change own password. Verifies the current one, swaps the hash, clears the
 // first-login flag, and signs out every other session for this account.
+// ---------- access powers: list + grant/revoke ----------
+// The catalogue, for building the toggle UI.
+app.get('/api/powers', auth, (req, res) => {
+  res.json({ powers: POWERS.map(([key, label, detail]) => ({ key, label, detail })) })
+})
+
+// Set someone's powers. Holder of 'grant' required. Guardrails:
+//   - the CEO's powers can never be edited (he has everything, always)
+//   - non-CEO granters cannot edit their OWN powers
+//   - only the CEO can give or take the 'grant' power itself
+// Every change is appended to the target's accessLog: who, when, before, after.
+app.post('/api/staff/:username/access', auth, notViewAs, requirePower('grant'), (req, res) => {
+  const target = String(req.params.username).toLowerCase()
+  const requested = Array.isArray(req.body?.powers) ? req.body.powers : null
+  if (!requested) return res.status(400).json({ error: 'powers must be an array' })
+  const invalid = requested.filter((p) => !POWER_KEYS.includes(p))
+  if (invalid.length) return res.status(400).json({ error: `Unknown power: ${invalid.join(', ')}` })
+
+  if (target === CEO) return res.status(403).json({ error: 'The CEO’s access cannot be edited' })
+  const isCeo = req.realUser.username === CEO
+  if (!isCeo && target === req.realUser.username)
+    return res.status(403).json({ error: 'You cannot edit your own access' })
+
+  const users = seedUsers()
+  const user = users.find((u) => u.username === target)
+  if (!user) return res.status(404).json({ error: 'No such user' })
+
+  const before = powersFor(user)
+  if (!isCeo && (requested.includes('grant') !== before.includes('grant')))
+    return res.status(403).json({ error: 'Only the CEO can give or take Grant access' })
+
+  user.permissions = [...new Set(requested)]
+  user.accessLog = [
+    ...(user.accessLog || []),
+    { at: new Date().toISOString(), by: req.realUser.username, before, after: user.permissions },
+  ]
+  db.write('users', users)
+  res.json({ ok: true, user: publicUser(user) })
+})
+
 app.post('/api/change-password', auth, notViewAs, (req, res) => {
   const { currentPassword, newPassword } = req.body || {}
   if (!newPassword || String(newPassword).length < 8)
@@ -212,7 +284,7 @@ app.post('/api/change-password', auth, notViewAs, (req, res) => {
 // Manager resets a forgotten password to a temporary one the staff member
 // must change at next sign-in. Managers can reset staff; only the CEO
 // account can reset another manager. All their sessions are signed out.
-app.post('/api/staff/:username/reset-password', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/staff/:username/reset-password', auth, requirePower('team'), notViewAs, (req, res) => {
   const { tempPassword } = req.body || {}
   if (!tempPassword || String(tempPassword).length < 8)
     return res.status(400).json({ error: 'Temporary password must be at least 8 characters' })
@@ -243,7 +315,7 @@ app.get('/api/team', auth, (req, res) => {
   const merged = [...team, ...createdStaffRoster()].filter((p) => !archived.has(p.name))
   // private manager notes never go to staff clients
   const roster =
-    req.realUser.role === 'manager'
+    can(req.realUser, 'team')
       ? merged
       : merged.map(({ nextActionNote, ...p }) => p)
   res.json({ team: roster })
@@ -251,7 +323,7 @@ app.get('/api/team', auth, (req, res) => {
 
 // ---------- staff onboarding (manager only) ----------
 // list staff created via Pulse (includes salary — manager eyes only)
-app.get('/api/staff', auth, managerOnly, (req, res) => {
+app.get('/api/staff', auth, requirePower('team'), (req, res) => {
   const staff = seedUsers()
     .filter((u) => u.createdViaPulse && !isArchived(u))
     .map((u) => ({
@@ -274,7 +346,7 @@ app.get('/api/staff', auth, managerOnly, (req, res) => {
 })
 
 // create a sales staff account
-app.post('/api/staff', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/staff', auth, requirePower('team'), notViewAs, (req, res) => {
   const { type, name, email, title, salary, target, contractMonths } = req.body || {}
   if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name is required' })
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'A valid email is required' })
@@ -325,7 +397,7 @@ app.post('/api/staff', auth, managerOnly, notViewAs, (req, res) => {
 })
 
 // archive a staff member — keeps the record forever, blocks login, removes from active lists
-app.post('/api/staff/:username/archive', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/staff/:username/archive', auth, requirePower('team'), notViewAs, (req, res) => {
   const users = seedUsers()
   const u = users.find((x) => x.username === req.params.username)
   if (!u) return res.status(404).json({ error: 'not found' })
@@ -346,7 +418,7 @@ app.post('/api/staff/:username/archive', auth, managerOnly, notViewAs, (req, res
 })
 
 // restore an archived staff member
-app.post('/api/staff/:username/restore', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/staff/:username/restore', auth, requirePower('team'), notViewAs, (req, res) => {
   const users = seedUsers()
   const u = users.find((x) => x.username === req.params.username)
   if (!u) return res.status(404).json({ error: 'not found' })
@@ -362,7 +434,7 @@ app.post('/api/staff/:username/restore', auth, managerOnly, notViewAs, (req, res
 })
 
 // past agents (manager only) — archived Pulse accounts + the historical roster of people who left
-app.get('/api/past-agents', auth, managerOnly, (req, res) => {
+app.get('/api/past-agents', auth, requirePower('team'), (req, res) => {
   const archived = seedUsers()
     .filter(isArchived)
     .map((u) => ({
@@ -386,7 +458,7 @@ app.get('/api/past-agents', auth, managerOnly, (req, res) => {
 })
 
 // who a manager can "view as" (everyone but themselves)
-app.get('/api/users', auth, managerOnly, (req, res) => {
+app.get('/api/users', auth, requirePower('team'), (req, res) => {
   const users = seedUsers()
     .filter((u) => u.username !== req.realUser.username && !isArchived(u))
     .map((u) => ({
@@ -395,6 +467,7 @@ app.get('/api/users', auth, managerOnly, (req, res) => {
       role: u.role,
       department: u.department,
       title: u.title,
+      powers: powersFor(u), // drives the Access toggles on the Team page
     }))
   res.json({ users })
 })
@@ -470,7 +543,7 @@ app.post('/api/attendance/undo-checkin', auth, notViewAs, (req, res) => {
 })
 
 // manager: today's presence for whole team
-app.get('/api/attendance', auth, managerOnly, (req, res) => {
+app.get('/api/attendance', auth, requirePower('team'), (req, res) => {
   const date = req.query.date || todayKey()
   const all = db.read('attendance', [])
   const byUser = Object.fromEntries(all.filter((a) => a.date === date).map((a) => [a.username, a]))
@@ -529,7 +602,7 @@ app.get('/api/attendance/week', auth, (req, res) => {
   const attAll = db.read('attendance', [])
   const leaveAll = db.read('leave', [])
   const schedules = db.read('schedules', {})
-  const roster = req.user.role === 'manager'
+  const roster = can(req.realUser, 'team') && !req.isViewAs
     ? scheduleRoster(req)
     : seedUsers().filter((u) => u.username === req.user.username)
 
@@ -571,7 +644,7 @@ function scheduleRoster(req) {
 
 // manager: set each person's weekly roster in one request.
 // body: { schedules: { username: { days: { dow: {start,end}|null } } } } — each person can differ.
-app.put('/api/schedules', auth, managerOnly, notViewAs, (req, res) => {
+app.put('/api/schedules', auth, requirePower('team'), notViewAs, (req, res) => {
   const incoming = req.body?.schedules || {}
   const allowed = new Set(scheduleRoster(req).map((u) => u.username))
   const all = db.read('schedules', {})
@@ -586,7 +659,7 @@ app.put('/api/schedules', auth, managerOnly, notViewAs, (req, res) => {
 })
 
 // manager: set one person's weekly roster (in/off + hours per weekday)
-app.put('/api/schedules/:username', auth, managerOnly, notViewAs, (req, res) => {
+app.put('/api/schedules/:username', auth, requirePower('team'), notViewAs, (req, res) => {
   const target = findUser(req.params.username)
   if (!target) return res.status(404).json({ error: 'No such user' })
   const schedule = cleanWeek(req.body?.days)
@@ -650,7 +723,7 @@ app.post('/api/leave', auth, notViewAs, (req, res) => {
   res.json({ request: rec })
 })
 
-app.get('/api/leave', auth, managerOnly, (req, res) => {
+app.get('/api/leave', auth, requirePower('approvals'), (req, res) => {
   const all = db.read('leave', [])
   const status = req.query.status
   const list = status ? all.filter((l) => l.status === status) : all
@@ -683,8 +756,8 @@ function decideLeave(status) {
     res.json({ request: rec })
   }
 }
-app.post('/api/leave/:id/approve', auth, notViewAs, managerOnly, decideLeave('approved'))
-app.post('/api/leave/:id/reject', auth, notViewAs, managerOnly, decideLeave('rejected'))
+app.post('/api/leave/:id/approve', auth, notViewAs, requirePower('approvals'), decideLeave('approved'))
+app.post('/api/leave/:id/reject', auth, notViewAs, requirePower('approvals'), decideLeave('rejected'))
 
 // ---------- monthly attendance calendar (schedule + attendance + leave, layered) ----------
 function monthKeys(month) {
@@ -724,7 +797,7 @@ app.get('/api/attendance/month', auth, (req, res) => {
   const attAll = db.read('attendance', [])
   const leaveAll = db.read('leave', [])
   const schedules = db.read('schedules', {})
-  const roster = req.user.role === 'manager'
+  const roster = can(req.realUser, 'team') && !req.isViewAs
     ? scheduleRoster(req)
     : seedUsers().filter((u) => u.username === req.user.username)
 
@@ -753,7 +826,7 @@ app.get('/api/attendance/month', auth, (req, res) => {
 // person+date (including a real mistaken check-in). `worked` accepts optional
 // checkIn/checkOut times ("HH:MM") to override the recorded clock times; `clear`
 // removes everything for the date (undo).
-app.put('/api/attendance/day', auth, managerOnly, notViewAs, (req, res) => {
+app.put('/api/attendance/day', auth, requirePower('team'), notViewAs, (req, res) => {
   const { username, date, status, note, checkIn, checkOut } = req.body || {}
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return res.status(400).json({ error: 'Valid date required' })
   if (!['worked', 'off', 'sick', 'leave', 'clear'].includes(status)) return res.status(400).json({ error: 'Invalid status' })
@@ -845,12 +918,12 @@ seedBenefits()
 
 // benefits — staff see their own; managers may read anyone's (?username=)
 app.get('/api/benefits', auth, (req, res) => {
-  const who = req.user.role === 'manager' && req.query.username ? req.query.username : req.user.username
+  const who = can(req.realUser, 'payroll') && req.query.username ? req.query.username : req.user.username
   const list = db.read('benefits', []).filter((b) => b.username === who)
   res.json({ benefits: list })
 })
 
-app.post('/api/benefits', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/benefits', auth, requirePower('payroll'), notViewAs, (req, res) => {
   const { username, title, detail, amount, status, from, to, note } = req.body || {}
   const target = rosterFor(username) || findUser(username)
   if (!target) return res.status(404).json({ error: 'No such staff member' })
@@ -874,13 +947,13 @@ app.post('/api/benefits', auth, managerOnly, notViewAs, (req, res) => {
   res.json({ benefit: rec })
 })
 
-app.delete('/api/benefits/:id', auth, managerOnly, notViewAs, (req, res) => {
+app.delete('/api/benefits/:id', auth, requirePower('payroll'), notViewAs, (req, res) => {
   db.write('benefits', db.read('benefits', []).filter((b) => b.id !== req.params.id))
   res.json({ ok: true })
 })
 
 // manager: roster for the payroll picker — username + salary fields, active staff only
-app.get('/api/payroll/people', auth, managerOnly, (req, res) => {
+app.get('/api/payroll/people', auth, requirePower('payroll'), (req, res) => {
   const archived = archivedNameSet()
   const merged = [...team, ...createdStaffRoster()].filter((p) => !archived.has(p.name))
   const people = merged.map((p) => {
@@ -901,7 +974,7 @@ app.get('/api/payroll/people', auth, managerOnly, (req, res) => {
 
 // payslips — staff see their own; managers may read anyone's (?username=)
 app.get('/api/payslips', auth, (req, res) => {
-  const who = req.user.role === 'manager' && req.query.username ? req.query.username : req.user.username
+  const who = can(req.realUser, 'payroll') && req.query.username ? req.query.username : req.user.username
   const list = db.read('payslips', [])
     .filter((p) => p.username === who)
     .map((p) => ({ ...p, net: netOf(p) }))
@@ -910,7 +983,7 @@ app.get('/api/payslips', auth, (req, res) => {
 })
 
 // manager: auto-draft a payslip from the roster salary (not saved — just a starting point)
-app.get('/api/payslips/draft', auth, managerOnly, (req, res) => {
+app.get('/api/payslips/draft', auth, requirePower('payroll'), (req, res) => {
   const { username, period } = req.query
   const r = rosterFor(username)
   if (!r) return res.status(404).json({ error: 'No salary on file for this person' })
@@ -920,7 +993,7 @@ app.get('/api/payslips/draft', auth, managerOnly, (req, res) => {
   res.json({ draft: { username, period: /^\d{4}-\d{2}$/.test(period || '') ? period : '', earnings, deductions: [] } })
 })
 
-app.post('/api/payslips', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/payslips', auth, requirePower('payroll'), notViewAs, (req, res) => {
   const { username, period, earnings, deductions, note } = req.body || {}
   const target = rosterFor(username) || findUser(username)
   if (!target) return res.status(404).json({ error: 'No such staff member' })
@@ -947,7 +1020,7 @@ app.post('/api/payslips', auth, managerOnly, notViewAs, (req, res) => {
   res.json({ payslip: { ...rec, net: netOf(rec) } })
 })
 
-app.delete('/api/payslips/:id', auth, managerOnly, notViewAs, (req, res) => {
+app.delete('/api/payslips/:id', auth, requirePower('payroll'), notViewAs, (req, res) => {
   db.write('payslips', db.read('payslips', []).filter((p) => p.id !== req.params.id))
   res.json({ ok: true })
 })
@@ -1072,7 +1145,7 @@ app.delete('/api/activities/:id', auth, notViewAs, (req, res) => {
 app.get('/api/announcements', auth, (req, res) => {
   res.json({ announcements: db.read('announcements', []) })
 })
-app.post('/api/announcements', auth, notViewAs, managerOnly, (req, res) => {
+app.post('/api/announcements', auth, notViewAs, requirePower('notices'), (req, res) => {
   const all = db.read('announcements', [])
   const { title, body, type } = req.body || {}
   const rec = {
@@ -1087,7 +1160,7 @@ app.post('/api/announcements', auth, notViewAs, managerOnly, (req, res) => {
   db.write('announcements', all)
   res.json({ record: rec })
 })
-app.delete('/api/announcements/:id', auth, notViewAs, managerOnly, (req, res) => {
+app.delete('/api/announcements/:id', auth, notViewAs, requirePower('notices'), (req, res) => {
   db.write('announcements', db.read('announcements', []).filter((a) => a.id !== req.params.id))
   res.json({ ok: true })
 })
@@ -1096,7 +1169,7 @@ app.delete('/api/announcements/:id', auth, notViewAs, managerOnly, (req, res) =>
 // type: 'coaching' | 'flag' | 'meeting'. Staff see their own; managers manage all.
 app.get('/api/coaching', auth, (req, res) => {
   let all = db.read('coaching', [])
-  if (req.user.role === 'manager' && !req.isViewAs) {
+  if (can(req.realUser, 'team') && !req.isViewAs) {
     if (req.query.user) all = all.filter((c) => c.targetUsername === req.query.user)
   } else {
     all = all.filter((c) => c.targetUsername === req.user.username)
@@ -1104,7 +1177,7 @@ app.get('/api/coaching', auth, (req, res) => {
   all = all.slice().sort((a, b) => ((a.datetime || a.createdAt) < (b.datetime || b.createdAt) ? 1 : -1))
   res.json({ coaching: all })
 })
-app.post('/api/coaching', auth, notViewAs, managerOnly, (req, res) => {
+app.post('/api/coaching', auth, notViewAs, requirePower('team'), (req, res) => {
   const { targetUsername, type, title, note, datetime } = req.body || {}
   if (!targetUsername) return res.status(400).json({ error: 'targetUsername required' })
   const all = db.read('coaching', [])
@@ -1122,7 +1195,7 @@ app.post('/api/coaching', auth, notViewAs, managerOnly, (req, res) => {
   db.write('coaching', all)
   res.json({ record: rec })
 })
-app.delete('/api/coaching/:id', auth, notViewAs, managerOnly, (req, res) => {
+app.delete('/api/coaching/:id', auth, notViewAs, requirePower('team'), (req, res) => {
   db.write('coaching', db.read('coaching', []).filter((c) => c.id !== req.params.id))
   res.json({ ok: true })
 })
@@ -1135,7 +1208,7 @@ const MKT_DEFAULT = Object.fromEntries(MKT_SECTIONS.map((s) => [s, []]))
 app.get('/api/marketing', auth, (req, res) => {
   res.json({ ...MKT_DEFAULT, ...db.read('marketing', {}) })
 })
-app.post('/api/marketing/:section', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/marketing/:section', auth, requirePower('marketing'), notViewAs, (req, res) => {
   const { section } = req.params
   if (!MKT_SECTIONS.includes(section)) return res.status(400).json({ error: 'Unknown section' })
   const items = Array.isArray(req.body?.items) ? req.body.items : []
@@ -1150,7 +1223,7 @@ app.post('/api/marketing/:section', auth, managerOnly, notViewAs, (req, res) => 
 app.get('/api/kpi-rules', auth, (req, res) => {
   res.json({ rules: db.read('kpi-rules', []) })
 })
-app.post('/api/kpi-rules', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/kpi-rules', auth, requirePower('hr'), notViewAs, (req, res) => {
   const b = req.body || {}
   const rules = db.read('kpi-rules', [])
   const fields = {
@@ -1178,7 +1251,7 @@ app.post('/api/kpi-rules', auth, managerOnly, notViewAs, (req, res) => {
   db.write('kpi-rules', rules)
   res.json({ rule })
 })
-app.delete('/api/kpi-rules/:id', auth, managerOnly, notViewAs, (req, res) => {
+app.delete('/api/kpi-rules/:id', auth, requirePower('hr'), notViewAs, (req, res) => {
   const rules = db.read('kpi-rules', []).filter((r) => r.id !== req.params.id)
   db.write('kpi-rules', rules)
   res.json({ ok: true })
@@ -1192,7 +1265,7 @@ app.get('/api/feedback', auth, (req, res) => {
   notes = notes.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
   res.json({ notes })
 })
-app.post('/api/feedback', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/feedback', auth, requirePower('sales'), notViewAs, (req, res) => {
   const { agent, text } = req.body || {}
   if (!agent || !text) return res.status(400).json({ error: 'agent and text required' })
   const notes = db.read('feedback', [])
@@ -1201,7 +1274,7 @@ app.post('/api/feedback', auth, managerOnly, notViewAs, (req, res) => {
   db.write('feedback', notes)
   res.json({ success: true, note })
 })
-app.delete('/api/feedback/:id', auth, managerOnly, notViewAs, (req, res) => {
+app.delete('/api/feedback/:id', auth, requirePower('sales'), notViewAs, (req, res) => {
   db.write('feedback', db.read('feedback', []).filter((n) => n.id !== req.params.id))
   res.json({ success: true })
 })
@@ -1215,7 +1288,7 @@ app.get('/api/decisions', auth, (req, res) => {
   }
   res.json({ decisions: all })
 })
-app.post('/api/decisions', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/decisions', auth, requirePower('sales'), notViewAs, (req, res) => {
   const { agent, decision, reason } = req.body || {}
   if (!agent || !decision) return res.status(400).json({ error: 'agent and decision required' })
   const all = db.read('decisions', [])
@@ -1231,7 +1304,7 @@ app.get('/api/warnings', auth, (req, res) => {
   if (req.query.agent) all = all.filter((w) => w.agent === req.query.agent)
   res.json({ warnings: all })
 })
-app.post('/api/warnings', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/warnings', auth, requirePower('hr'), notViewAs, (req, res) => {
   const { agent, type, reason, date } = req.body || {}
   if (!agent || !type) return res.status(400).json({ error: 'agent and type required' })
   if (!['verbal', 'formal', 'final'].includes(type)) return res.status(400).json({ error: 'type must be verbal/formal/final' })
@@ -1241,7 +1314,7 @@ app.post('/api/warnings', auth, managerOnly, notViewAs, (req, res) => {
   db.write('warnings', all)
   res.json({ success: true, warning: entry })
 })
-app.delete('/api/warnings/:id', auth, managerOnly, notViewAs, (req, res) => {
+app.delete('/api/warnings/:id', auth, requirePower('hr'), notViewAs, (req, res) => {
   const before = db.read('warnings', [])
   const after = before.filter((w) => w.id !== req.params.id)
   if (after.length === before.length) return res.status(404).json({ error: 'not found' })
@@ -1262,7 +1335,7 @@ app.get('/api/agent-files', auth, (req, res) => {
   if (req.query.agent) files = files.filter((f) => f.agent === req.query.agent)
   res.json({ files: files.slice().sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || '')) })
 })
-app.post('/api/agent-files', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/agent-files', auth, requirePower('hr'), notViewAs, (req, res) => {
   const { agent, name, mimeType, base64, category } = req.body || {}
   if (!agent || !name || !base64) return res.status(400).json({ error: 'agent, name, base64 required' })
   const dir = ensureAgentDir(agent)
@@ -1278,7 +1351,7 @@ app.post('/api/agent-files', auth, managerOnly, notViewAs, (req, res) => {
   db.write('agent-files', files)
   res.json({ success: true, file: meta })
 })
-app.post('/api/agent-files/generate-review', auth, managerOnly, notViewAs, (req, res) => {
+app.post('/api/agent-files/generate-review', auth, requirePower('hr'), notViewAs, (req, res) => {
   const { agent, period, reviewText, category } = req.body || {}
   if (!agent || !period || !reviewText) return res.status(400).json({ error: 'agent, period, reviewText required' })
   const dir = ensureAgentDir(agent)
@@ -1304,7 +1377,7 @@ app.get('/api/agent-files/:id/download', (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${meta.name.replace(/"/g, '')}"`)
   res.sendFile(filePath)
 })
-app.delete('/api/agent-files/:id', auth, managerOnly, notViewAs, (req, res) => {
+app.delete('/api/agent-files/:id', auth, requirePower('hr'), notViewAs, (req, res) => {
   const files = db.read('agent-files', [])
   const meta = files.find((f) => f.id === req.params.id)
   if (!meta) return res.status(404).json({ error: 'not found' })
