@@ -80,7 +80,7 @@ export default function Login() {
           <h2 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">
             Welcome back
           </h2>
-          <p className="mt-1.5 text-[var(--color-ink-soft)]">Enter your username to continue.</p>
+          <p className="mt-1.5 text-[var(--color-ink-soft)]">Sign in with your username and password.</p>
 
           <form onSubmit={onSubmit} className="mt-7 space-y-4">
             <div>

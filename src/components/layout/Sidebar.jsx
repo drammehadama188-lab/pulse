@@ -1,9 +1,49 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LogOut } from 'lucide-react'
+import { LogOut, ExternalLink } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
+import { api } from '../../lib/api.js'
 import { groupedNavFor, departmentsFor } from './nav.js'
 import { Brand } from './Brand.jsx'
-import { Avatar } from '../ui.jsx'
+import { Avatar, Spinner } from '../ui.jsx'
+
+// "Open Admin" — Adama's design (4 Jun): visible only to holders of the
+// Admin power, and only once the bridge flag is on. Opens the customer
+// system in a new tab signed in as this person, so their actions are
+// logged there under their own name.
+function OpenAdminButton() {
+  const { hasRealPower, openAdminEnabled, isViewAs } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  if (!openAdminEnabled || !hasRealPower('admin') || isViewAs) return null
+
+  async function open() {
+    setBusy(true)
+    setError('')
+    try {
+      const { url } = await api('/open-admin', { method: 'POST' })
+      window.open(url, '_blank', 'noopener')
+    } catch (e) {
+      setError(e.message || 'Could not open Admin')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-4">
+      <button
+        onClick={open}
+        disabled={busy}
+        className="flex w-full items-center gap-3 rounded-2xl bg-white/15 px-3.5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-white/25"
+      >
+        {busy ? <Spinner size={18} /> : <ExternalLink size={18} strokeWidth={2.2} className="shrink-0" />}
+        <span className="flex-1 text-left">Open Admin</span>
+      </button>
+      {error && <p className="mt-1 px-3.5 text-xs text-white/70">{error}</p>}
+    </div>
+  )
+}
 
 function SectionLabel({ children }) {
   return (
@@ -75,6 +115,8 @@ export function Sidebar() {
           </>
         )}
       </nav>
+
+      <OpenAdminButton />
 
       <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-3">
         <Avatar name={user?.name} size={38} />

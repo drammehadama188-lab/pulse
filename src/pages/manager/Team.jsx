@@ -400,6 +400,8 @@ function AddStaffForm({ onClose, onCreated }) {
 function AccessForm({ target, isCeo, onClose, onSaved }) {
   const [catalogue, setCatalogue] = useState(null)
   const [selected, setSelected] = useState(new Set(target.powers || []))
+  const [canSignIn, setCanSignIn] = useState(!target.suspended)
+  const [email, setEmail] = useState(target.email || '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -420,7 +422,9 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
     setBusy(true)
     setError('')
     try {
-      await api(`/staff/${target.username}/access`, { method: 'POST', body: { powers: [...selected] } })
+      const body = { powers: [...selected], canSignIn }
+      if (email.trim() && email.trim().toLowerCase() !== (target.email || '')) body.email = email.trim()
+      await api(`/staff/${target.username}/access`, { method: 'POST', body })
       onSaved()
     } catch (e) {
       setError(e.message)
@@ -443,6 +447,26 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
       {!catalogue && !error && <div className="flex justify-center py-8"><Spinner size={22} /></div>}
       {catalogue && (
         <div className="space-y-2">
+          {/* Master switch — pause their Pulse sign-in entirely (reversible). */}
+          <button
+            onClick={() => setCanSignIn((v) => !v)}
+            className={`mb-1 flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors ${
+              canSignIn ? 'border-[var(--color-good)] bg-[var(--color-good-bg)]' : 'border-[var(--color-bad)] bg-[var(--color-bad-bg)]'
+            }`}
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-[var(--color-ink)]">
+                {canSignIn ? 'Can sign in to Pulse' : 'Sign-in paused'}
+              </span>
+              <span className="block text-xs text-[var(--color-ink-faint)]">
+                {canSignIn ? 'Switch off to pause their access instantly (reversible).' : 'They cannot log in until you switch this back on.'}
+              </span>
+            </span>
+            <Pill tone={canSignIn ? 'good' : 'bad'}>{canSignIn ? 'On' : 'Paused'}</Pill>
+          </button>
+          <Field label="Email (needed for Open Admin)">
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@damiatracker.com" />
+          </Field>
           <p className="text-sm text-[var(--color-ink-soft)]">
             Tick a power to open it for {target.name.split(' ')[0]}. Changes apply on their next page load.
           </p>

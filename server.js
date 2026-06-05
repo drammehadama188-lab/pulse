@@ -13,6 +13,16 @@ import { team, pastStaff } from './src/data/team.js'
 import { sallyCustomers, sallyMonthlyHistory } from './src/data/sally-sales-seed.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Minimal .env loader (no dependency) — used for the Open Admin bridge
+// settings: OPEN_ADMIN, ADMIN_API_URL, ADMIN_BASE_URL, PULSE_SSO_SECRET.
+try {
+  for (const line of fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n')) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/)
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2]
+  }
+} catch { /* no .env — fine, bridge stays off */ }
+
 const DATA_DIR = path.join(__dirname, 'data')
 const PORT = 4003
 
@@ -146,7 +156,7 @@ function auth(req, res, next) {
   const s = sessions[token]
   if (!s || s.exp < Date.now()) return res.status(401).json({ error: 'unauthorized' })
   const real = findUser(s.username)
-  if (!real) return res.status(401).json({ error: 'unauthorized' })
+  if (!real || real.suspended) return res.status(401).json({ error: 'unauthorized' })
   // "View as": a manager may impersonate another user for READ-ONLY viewing.
   let effective = real
   let isViewAs = false
@@ -177,6 +187,7 @@ const POWERS = [
   ['marketing', 'Marketing', 'Marketing department page'],
   ['notices', 'Notices', 'Post and remove announcements'],
   ['viewas', 'View as', 'See the app as another staff member (read-only)'],
+  ['admin', 'Open Admin', 'The customer system — customers, vehicles, renewals, SIMs'],
   ['grant', 'Grant access', 'Give or take powers (not their own, not the CEO’s)'],
 ]
 const POWER_KEYS = POWERS.map(([k]) => k)
@@ -209,16 +220,18 @@ app.post('/api/login', (req, res) => {
   const user = username ? findUser(username) : null
   if (!user) return res.status(401).json({ error: 'Unknown username' })
   if (isArchived(user)) return res.status(403).json({ error: 'This account is archived' })
+  if (user.suspended) return res.status(403).json({ error: 'Your sign-in is paused. Speak to Adama.' })
   if (REQUIRE_PASSWORD && !bcrypt.compareSync(password || '', user.passwordHash)) {
     return res.status(401).json({ error: 'Invalid username or password' })
   }
   const token = crypto.randomBytes(24).toString('hex')
   sessions[token] = { username: user.username, exp: Date.now() + 1000 * 60 * 60 * 24 * 14 }
   persistSessions()
-  res.json({ token, user: publicUser(user) })
+  res.json({ token, user: publicUser(user), openAdminEnabled: OPEN_ADMIN })
 })
 
-app.get('/api/me', auth, (req, res) => res.json({ user: publicUser(req.user) }))
+app.get('/api/me', auth, (req, res) =>
+  res.json({ user: publicUser(req.user), openAdminEnabled: OPEN_ADMIN }))
 
 // Change own password. Verifies the current one, swaps the hash, clears the
 // first-login flag, and signs out every other session for this account.
@@ -254,12 +267,72 @@ app.post('/api/staff/:username/access', auth, notViewAs, requirePower('grant'), 
     return res.status(403).json({ error: 'Only the CEO can give or take Grant access' })
 
   user.permissions = [...new Set(requested)]
+  // Optional: set their email here too (seeded accounts have none, and the
+  // Open Admin hand-off needs one to identify them in the admin system).
+  if (typeof req.body?.email === 'string' && req.body.email.trim()) {
+    const email = req.body.email.trim().toLowerCase()
+    if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'Invalid email' })
+    user.email = email
+  }
+  // Master switch: pause/resume their Pulse sign-in entirely (reversible —
+  // different from Archive, which means they left). Pausing kills sessions.
+  let signInChange = null
+  if (typeof req.body?.canSignIn === 'boolean') {
+    const suspend = !req.body.canSignIn
+    if (suspend !== !!user.suspended) {
+      user.suspended = suspend
+      signInChange = suspend ? 'paused' : 'resumed'
+      if (suspend) {
+        for (const [tok, s] of Object.entries(sessions)) {
+          if (s.username === user.username) delete sessions[tok]
+        }
+        persistSessions()
+      }
+    }
+  }
   user.accessLog = [
     ...(user.accessLog || []),
-    { at: new Date().toISOString(), by: req.realUser.username, before, after: user.permissions },
+    {
+      at: new Date().toISOString(),
+      by: req.realUser.username,
+      before,
+      after: user.permissions,
+      ...(signInChange ? { signIn: signInChange } : {}),
+    },
   ]
   db.write('users', users)
   res.json({ ok: true, user: publicUser(user) })
+})
+
+// ---------- Open Admin (SSO bridge into the customer system) ----------
+// Adama's design (4 Jun): "Open Admin" is itself a power — grant it to
+// anyone, e.g. to cover for someone out of the office. Holder clicks the
+// button in Pulse → Pulse asks the admin server (server-to-server, shared
+// secret) for a one-time sign-in link for THIS person's own admin identity
+// → browser opens it. Flag-gated: stays off until handover day
+// (OPEN_ADMIN=on in the env).
+const OPEN_ADMIN = process.env.OPEN_ADMIN === 'on'
+const ADMIN_API_URL = process.env.ADMIN_API_URL || 'http://127.0.0.1:4011'
+const ADMIN_BASE_URL = process.env.ADMIN_BASE_URL || 'http://localhost:5180'
+const PULSE_SSO_SECRET = process.env.PULSE_SSO_SECRET || ''
+
+app.post('/api/open-admin', auth, notViewAs, requirePower('admin'), async (req, res) => {
+  if (!OPEN_ADMIN || !PULSE_SSO_SECRET)
+    return res.status(503).json({ error: 'Open Admin is not switched on yet' })
+  if (!req.realUser.email)
+    return res.status(400).json({ error: 'This account has no email yet — set one in Access first' })
+  try {
+    const r = await fetch(`${ADMIN_API_URL}/api/admin/sso/handoff`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Pulse-Secret': PULSE_SSO_SECRET },
+      body: JSON.stringify({ email: req.realUser.email, name: req.realUser.name }),
+    })
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) return res.status(502).json({ error: data.error || 'Admin did not accept the hand-off' })
+    res.json({ url: ADMIN_BASE_URL + data.url })
+  } catch {
+    res.status(502).json({ error: 'Could not reach Admin' })
+  }
 })
 
 app.post('/api/change-password', auth, notViewAs, (req, res) => {
@@ -467,7 +540,9 @@ app.get('/api/users', auth, requirePower('team'), (req, res) => {
       role: u.role,
       department: u.department,
       title: u.title,
+      email: u.email || null,
       powers: powersFor(u), // drives the Access toggles on the Team page
+      suspended: !!u.suspended,
     }))
   res.json({ users })
 })

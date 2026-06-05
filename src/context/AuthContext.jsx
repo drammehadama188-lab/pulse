@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [realUser, setRealUser] = useState(null)
   const [viewUser, setViewUser] = useState(null) // "view as" target (manager only)
   const [loading, setLoading] = useState(true)
+  const [openAdminEnabled, setOpenAdminEnabled] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -16,8 +17,11 @@ export function AuthProvider({ children }) {
         return
       }
       try {
-        const { user } = await api('/me')
-        if (alive) setRealUser(user)
+        const { user, openAdminEnabled: oa } = await api('/me')
+        if (alive) {
+          setRealUser(user)
+          setOpenAdminEnabled(!!oa)
+        }
       } catch {
         setToken(null)
       } finally {
@@ -31,12 +35,13 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function login(username, password) {
-    const { token, user } = await api('/login', {
+    const { token, user, openAdminEnabled: oa } = await api('/login', {
       method: 'POST',
       body: { username, password },
     })
     setToken(token)
     setRealUser(user)
+    setOpenAdminEnabled(!!oa)
     return user
   }
 
@@ -89,6 +94,7 @@ export function AuthProvider({ children }) {
         powers,
         hasPower,
         hasRealPower,
+        openAdminEnabled,
         // legacy flag — "manager-ish" now means holding the Team power
         isManager: hasPower('team'),
         realIsManager: hasRealPower('team'),
