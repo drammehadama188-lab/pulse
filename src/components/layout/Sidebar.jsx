@@ -12,12 +12,19 @@ import { Avatar, Spinner } from '../ui.jsx'
 // system in a new tab signed in as this person, so their actions are
 // logged there under their own name.
 function OpenAdminButton() {
-  const { hasRealPower, openAdminEnabled, isViewAs } = useAuth()
+  const { hasRealPower, openAdminEnabled, isViewAs, realUser, adminUrl } = useAuth()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   if (!openAdminEnabled || !hasRealPower('admin') || isViewAs) return null
+  // The owner account is banned from the SSO bridge by design — for the CEO
+  // the button is a plain link to Admin, where he signs in as himself.
+  const isCeo = realUser?.username === 'adama'
 
   async function open() {
+    if (isCeo) {
+      window.open(adminUrl || '/', '_blank', 'noopener')
+      return
+    }
     setBusy(true)
     setError('')
     try {

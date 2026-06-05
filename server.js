@@ -227,11 +227,11 @@ app.post('/api/login', (req, res) => {
   const token = crypto.randomBytes(24).toString('hex')
   sessions[token] = { username: user.username, exp: Date.now() + 1000 * 60 * 60 * 24 * 14 }
   persistSessions()
-  res.json({ token, user: publicUser(user), openAdminEnabled: OPEN_ADMIN })
+  res.json({ token, user: publicUser(user), openAdminEnabled: OPEN_ADMIN, adminUrl: ADMIN_BASE_URL })
 })
 
 app.get('/api/me', auth, (req, res) =>
-  res.json({ user: publicUser(req.user), openAdminEnabled: OPEN_ADMIN }))
+  res.json({ user: publicUser(req.user), openAdminEnabled: OPEN_ADMIN, adminUrl: ADMIN_BASE_URL }))
 
 // Change own password. Verifies the current one, swaps the hash, clears the
 // first-login flag, and signs out every other session for this account.
