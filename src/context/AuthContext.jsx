@@ -3,12 +3,13 @@ import { api, getToken, setToken, setViewAs } from '../lib/api.js'
 
 const AuthContext = createContext(null)
 
+// NOTE (12 Jun 2026): the openAdminEnabled / adminUrl state was removed here
+// when Pulse was narrowed to HR-only and the Open Admin SSO bridge was cut.
+
 export function AuthProvider({ children }) {
   const [realUser, setRealUser] = useState(null)
   const [viewUser, setViewUser] = useState(null) // "view as" target (manager only)
   const [loading, setLoading] = useState(true)
-  const [openAdminEnabled, setOpenAdminEnabled] = useState(false)
-  const [adminUrl, setAdminUrl] = useState(null)
 
   useEffect(() => {
     let alive = true
@@ -18,11 +19,9 @@ export function AuthProvider({ children }) {
         return
       }
       try {
-        const { user, openAdminEnabled: oa, adminUrl: au } = await api('/me')
+        const { user } = await api('/me')
         if (alive) {
           setRealUser(user)
-          setOpenAdminEnabled(!!oa)
-          setAdminUrl(au || null)
         }
       } catch {
         setToken(null)
@@ -37,14 +36,12 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function login(username, password) {
-    const { token, user, openAdminEnabled: oa, adminUrl: au } = await api('/login', {
+    const { token, user } = await api('/login', {
       method: 'POST',
       body: { username, password },
     })
     setToken(token)
     setRealUser(user)
-    setOpenAdminEnabled(!!oa)
-    setAdminUrl(au || null)
     return user
   }
 
@@ -97,8 +94,6 @@ export function AuthProvider({ children }) {
         powers,
         hasPower,
         hasRealPower,
-        openAdminEnabled,
-        adminUrl,
         // legacy flag — "manager-ish" now means holding the Team power
         isManager: hasPower('team'),
         realIsManager: hasRealPower('team'),

@@ -115,7 +115,11 @@ export default function Home() {
     )
   }
 
-  const isSales = me?.type === 'Sales' || me?.type === 'Training'
+  // 12 Jun 2026 (Adama's request): Sales cleared out of Pulse (HR-only), so the
+  // dashboard's sales widgets — "Sales this month", today's funnel, follow-ups
+  // and the sales quick-links — are forced off for everyone. The non-sales
+  // branch renders the neutral "Your role" card instead.
+  const isSales = false
   const checkedIn = !!att?.checkIn && !att?.checkOut
   const done = !!att?.checkOut
 

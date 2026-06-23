@@ -14,8 +14,8 @@ import { sallyCustomers, sallyMonthlyHistory } from './src/data/sally-sales-seed
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// Minimal .env loader (no dependency) — used for the Open Admin bridge
-// settings: OPEN_ADMIN, ADMIN_API_URL, ADMIN_BASE_URL, PULSE_SSO_SECRET.
+// Minimal .env loader (no dependency). Currently no required keys — kept
+// so future config can drop into .env without a code change.
 try {
   for (const line of fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n')) {
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/)
@@ -29,8 +29,7 @@ const PORT = 4003
 // Who manages people. Everyone else is staff.
 const MANAGER_NAMES = ['Ya Fatou Sawaneh', 'Kaddy Bojang']
 const DEFAULT_PASSWORD = 'damia2026'
-// Passwords ON (4 Jun 2026) — Pulse is becoming the front door to Admin
-// (Open Admin SSO), so a Pulse login must actually prove who you are.
+// Passwords ON (4 Jun 2026) — a Pulse login must actually prove who you are.
 // Everyone starts on DEFAULT_PASSWORD with mustChangePassword=true and is
 // forced to set their own at first sign-in.
 const REQUIRE_PASSWORD = true
@@ -178,8 +177,9 @@ function auth(req, res, next) {
 // Per-person toggles, granted by the CEO (or anyone holding 'grant').
 // The CEO (adama) implicitly holds every power. The 'manager' role is a
 // TITLE only — power comes exclusively from these grants.
+// 'sales' power removed 12 Jun 2026 (Adama's request) — Pulse is HR-only. The
+// staff-profile route it used to gate (/agents/:slug) was re-pointed to 'hr'.
 const POWERS = [
-  ['sales', 'Sales oversight', 'All agents’ pipelines, reports and profiles'],
   ['approvals', 'Leave approvals', 'Approve or reject leave requests'],
   ['team', 'Team', 'Presence, schedules, coaching, add/archive staff'],
   ['payroll', 'Payroll', 'Salaries, payslips and benefits'],
@@ -187,7 +187,6 @@ const POWERS = [
   ['marketing', 'Marketing', 'Marketing department page'],
   ['notices', 'Notices', 'Post and remove announcements'],
   ['viewas', 'View as', 'See the app as another staff member (read-only)'],
-  ['admin', 'Open Admin', 'The customer system — customers, vehicles, renewals, SIMs'],
   ['grant', 'Grant access', 'Give or take powers (not their own, not the CEO’s)'],
 ]
 const POWER_KEYS = POWERS.map(([k]) => k)
@@ -227,11 +226,11 @@ app.post('/api/login', (req, res) => {
   const token = crypto.randomBytes(24).toString('hex')
   sessions[token] = { username: user.username, exp: Date.now() + 1000 * 60 * 60 * 24 * 14 }
   persistSessions()
-  res.json({ token, user: publicUser(user), openAdminEnabled: OPEN_ADMIN, adminUrl: ADMIN_BASE_URL })
+  res.json({ token, user: publicUser(user) })
 })
 
 app.get('/api/me', auth, (req, res) =>
-  res.json({ user: publicUser(req.user), openAdminEnabled: OPEN_ADMIN, adminUrl: ADMIN_BASE_URL }))
+  res.json({ user: publicUser(req.user) }))
 
 // Change own password. Verifies the current one, swaps the hash, clears the
 // first-login flag, and signs out every other session for this account.
@@ -304,36 +303,13 @@ app.post('/api/staff/:username/access', auth, notViewAs, requirePower('grant'), 
   res.json({ ok: true, user: publicUser(user) })
 })
 
-// ---------- Open Admin (SSO bridge into the customer system) ----------
-// Adama's design (4 Jun): "Open Admin" is itself a power — grant it to
-// anyone, e.g. to cover for someone out of the office. Holder clicks the
-// button in Pulse → Pulse asks the admin server (server-to-server, shared
-// secret) for a one-time sign-in link for THIS person's own admin identity
-// → browser opens it. Flag-gated: stays off until handover day
-// (OPEN_ADMIN=on in the env).
-const OPEN_ADMIN = process.env.OPEN_ADMIN === 'on'
-const ADMIN_API_URL = process.env.ADMIN_API_URL || 'http://127.0.0.1:4011'
-const ADMIN_BASE_URL = process.env.ADMIN_BASE_URL || 'http://localhost:5180'
-const PULSE_SSO_SECRET = process.env.PULSE_SSO_SECRET || ''
-
-app.post('/api/open-admin', auth, notViewAs, requirePower('admin'), async (req, res) => {
-  if (!OPEN_ADMIN || !PULSE_SSO_SECRET)
-    return res.status(503).json({ error: 'Open Admin is not switched on yet' })
-  if (!req.realUser.email)
-    return res.status(400).json({ error: 'This account has no email yet — set one in Access first' })
-  try {
-    const r = await fetch(`${ADMIN_API_URL}/api/admin/sso/handoff`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Pulse-Secret': PULSE_SSO_SECRET },
-      body: JSON.stringify({ email: req.realUser.email, name: req.realUser.name }),
-    })
-    const data = await r.json().catch(() => ({}))
-    if (!r.ok) return res.status(502).json({ error: data.error || 'Admin did not accept the hand-off' })
-    res.json({ url: ADMIN_BASE_URL + data.url })
-  } catch {
-    res.status(502).json({ error: 'Could not reach Admin' })
-  }
-})
+// ---------- Open Admin (SSO bridge into the customer system) — REMOVED ----------
+// Removed 12 Jun 2026 at Adama's explicit request: Pulse is being narrowed to
+// HR-only, so the admin sign-in bridge is gone. Deleted here: the
+// POST /api/open-admin endpoint, the OPEN_ADMIN / ADMIN_API_URL /
+// ADMIN_BASE_URL / PULSE_SSO_SECRET constants, and the 'admin' power (see
+// POWERS above). Frontend "Open Admin" button removed from Sidebar. The
+// customer data Pulse still holds will be transferred to the admin app later.
 
 app.post('/api/change-password', auth, notViewAs, (req, res) => {
   const { currentPassword, newPassword } = req.body || {}
@@ -1308,6 +1284,7 @@ app.post('/api/kpi-rules', auth, requirePower('hr'), notViewAs, (req, res) => {
     period: b.period || 'default',
     personalTarget: b.personalTarget === '' || b.personalTarget == null ? null : Number(b.personalTarget),
     teamTarget: b.teamTarget === '' || b.teamTarget == null ? null : Number(b.teamTarget),
+    unit: b.unit || '', // what the targets count (sales, installs, tickets, posts…) — role-neutral KPIs
     weeklyTarget: b.weeklyTarget || '',
     kpi: b.kpi || '',
     coreResponsibility: b.coreResponsibility || '',
@@ -1409,6 +1386,22 @@ app.get('/api/agent-files', auth, (req, res) => {
   let files = db.read('agent-files', [])
   if (req.query.agent) files = files.filter((f) => f.agent === req.query.agent)
   res.json({ files: files.slice().sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || '')) })
+})
+
+// Staff self-view ("My Reviews"): the signed-in person's OWN reviews, documents
+// and coaching. Always scoped to req.user on the SERVER (never a client-supplied
+// name) so a staff member can never read another person's file. Read-only —
+// HR still authors everything from the staff profile. (Added 12 Jun 2026.)
+app.get('/api/my/file', auth, (req, res) => {
+  const myName = req.user.name
+  const files = db.read('agent-files', []).filter((f) => f.agent === myName)
+  const byNewest = (a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || '')
+  const reviews = files.filter((f) => f.category === 'monthly-review').sort(byNewest)
+  const documents = files.filter((f) => f.category !== 'monthly-review').sort(byNewest)
+  const coaching = db.read('coaching', [])
+    .filter((c) => c.targetUsername === req.user.username)
+    .sort((a, b) => ((a.datetime || a.createdAt) < (b.datetime || b.createdAt) ? 1 : -1))
+  res.json({ reviews, documents, coaching })
 })
 app.post('/api/agent-files', auth, requirePower('hr'), notViewAs, (req, res) => {
   const { agent, name, mimeType, base64, category } = req.body || {}

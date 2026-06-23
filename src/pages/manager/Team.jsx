@@ -464,7 +464,7 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
             </span>
             <Pill tone={canSignIn ? 'good' : 'bad'}>{canSignIn ? 'On' : 'Paused'}</Pill>
           </button>
-          <Field label="Email (needed for Open Admin)">
+          <Field label="Email (for their invite & login link)">
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@damiatracker.com" />
           </Field>
           <p className="text-sm text-[var(--color-ink-soft)]">
