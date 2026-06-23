@@ -3,13 +3,14 @@ import { useAuth } from './context/AuthContext.jsx'
 import { AppLayout } from './components/layout/AppLayout.jsx'
 import { Spinner } from './components/ui.jsx'
 import Login from './pages/Login.jsx'
-import Home from './pages/Home.jsx'
+import Dashboard from './pages/Dashboard.jsx'
 import Sales from './pages/sales/Sales.jsx'
 import CustomerDetail from './pages/sales/CustomerDetail.jsx'
 import Pipeline from './pages/sales/Pipeline.jsx'
 import Report from './pages/sales/Monthly.jsx'
 import DailyTracker from './pages/sales/DailyTracker.jsx'
 import Notices from './pages/sales/Notices.jsx'
+import MyReviews from './pages/MyReviews.jsx'
 import Attendance from './pages/Attendance.jsx'
 import Leave from './pages/Leave.jsx'
 import Pay from './pages/Pay.jsx'
@@ -17,11 +18,10 @@ import Profile from './pages/Profile.jsx'
 import ChangePassword from './pages/ChangePassword.jsx'
 import Approvals from './pages/manager/Approvals.jsx'
 import Team from './pages/manager/Team.jsx'
-import Marketing from './pages/departments/Marketing.jsx'
 import HRTeam from './pages/departments/HRTeam.jsx'
 import AgentProfile from './pages/sales/AgentProfile.jsx'
 import DepartmentShell from './pages/departments/DepartmentShell.jsx'
-import { TrendingUp, Headphones, DollarSign, Wrench, FileBarChart } from 'lucide-react'
+import { Target, Gift, BookOpen, FolderOpen } from 'lucide-react'
 
 function FullScreenLoader() {
   return (
@@ -65,44 +65,56 @@ export default function App() {
           </RequireAuth>
         }
       >
-        <Route path="/" element={<Home />} />
-        <Route path="/sales" element={<Sales />} />
-        <Route path="/sales/c/:id" element={<CustomerDetail />} />
-        <Route path="/pipeline" element={<Pipeline />} />
-        <Route path="/report" element={<Report />} />
-        <Route path="/day" element={<DailyTracker />} />
-        <Route path="/notices" element={<Notices />} />
+        {/* Landing — role-aware: CEO/HR see the control-centre overview, staff see personal Home. */}
+        <Route path="/" element={<Dashboard />} />
+        {/* 12 Jun 2026 (Adama's request): Sales cleared out of Pulse (HR-only).
+            These paths now redirect Home; the Sales page components remain on
+            disk but unrouted. Customer/sales DATA is kept for the admin transfer. */}
+        <Route path="/sales" element={<Navigate to="/" replace />} />
+        <Route path="/sales/c/:id" element={<Navigate to="/" replace />} />
+        <Route path="/pipeline" element={<Navigate to="/" replace />} />
+        <Route path="/report" element={<Navigate to="/" replace />} />
+        <Route path="/day" element={<Navigate to="/" replace />} />
+
+        {/* ── HR control centre (22 Jun 2026, Adama's request) ──────────────
+            The old single "HR & Team" page (8 buried tabs) is dissolved into
+            first-class sectioned pages. Each focused page mounts a slice of
+            HRTeam via `only={…}`. Ready/adapt screens wired to real content;
+            new ones (Goals & Reviews, Benefits, Policies, Documents) render a
+            clean "being set up" shell to be filled in Phase 2. */}
+        {/* PEOPLE */}
+        <Route path="/people" element={<RequireAuth power="hr"><HRTeam only={['roster', 'past']} title="Employees" subtitle="Your team — active and past" /></RequireAuth>} />
+        <Route path="/performance" element={<RequireAuth power="hr"><HRTeam only={['performance', 'kpi']} title="Performance" subtitle="Goals, KPIs and how the team is delivering" /></RequireAuth>} />
+        <Route path="/contracts" element={<RequireAuth power="hr"><HRTeam only={['contracts']} title="Contracts" subtitle="Contract timeline, sorted by urgency" /></RequireAuth>} />
+        {/* MANAGEMENT */}
+        <Route path="/reviews" element={<RequireAuth power="hr"><DepartmentShell icon={Target} title="Goals & Reviews" subtitle="Management" blurb="Goals, monthly reviews, achievements and improvement plans. Being set up — coming online here soon." /></RequireAuth>} />
+        <Route path="/requests" element={<RequireAuth power="approvals"><Approvals /></RequireAuth>} />
+        <Route path="/records" element={<RequireAuth power="hr"><HRTeam only={['warnings']} title="Employee Records" subtitle="Warnings, disciplinary actions and notes" /></RequireAuth>} />
+        {/* PAYROLL */}
+        <Route path="/payroll" element={<RequireAuth power="payroll"><HRTeam only={['payroll']} title="Payroll" subtitle="Salaries, commission and payroll history" /></RequireAuth>} />
+        <Route path="/benefits" element={<RequireAuth power="payroll"><DepartmentShell icon={Gift} title="Benefits" subtitle="Payroll" blurb="Allowances, bonuses and staff benefits. Being set up — coming online here soon." /></RequireAuth>} />
+        {/* COMPANY */}
+        <Route path="/policies" element={<RequireAuth power="hr"><DepartmentShell icon={BookOpen} title="Policies" subtitle="Company" blurb="The Blue Book, Labour Act and company policies. Being set up — coming online here soon." /></RequireAuth>} />
+        <Route path="/documents" element={<RequireAuth power="hr"><DepartmentShell icon={FolderOpen} title="Documents" subtitle="Company" blurb="Contracts, IDs and employee documents. Being set up — coming online here soon." /></RequireAuth>} />
+
+        {/* Personal self-service */}
+        {/* Notices repurposed → My Reviews (staff self-view) on 12 Jun 2026. */}
+        <Route path="/my-reviews" element={<MyReviews />} />
+        <Route path="/notices" element={<Navigate to="/my-reviews" replace />} />
         <Route path="/attendance" element={<Attendance />} />
         <Route path="/leave" element={<Leave />} />
         <Route path="/pay" element={<Pay />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/me" element={<Profile />} />
+        <Route path="/profile" element={<Navigate to="/me" replace />} />
         <Route path="/change-password" element={<ChangePassword />} />
-        <Route
-          path="/approvals"
-          element={
-            <RequireAuth power="approvals">
-              <Approvals />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/team"
-          element={
-            <RequireAuth power="team">
-              <Team />
-            </RequireAuth>
-          }
-        />
+        <Route path="/approvals" element={<RequireAuth power="approvals"><Approvals /></RequireAuth>} />
+        <Route path="/team" element={<RequireAuth power="team"><Team /></RequireAuth>} />
 
-        {/* Departments — gated by granted powers; unbuilt shells stay CEO-only. */}
-        <Route path="/dept/marketing" element={<RequireAuth power="marketing"><Marketing /></RequireAuth>} />
-        <Route path="/dept/sales" element={<RequireAuth power="sales"><DepartmentShell icon={TrendingUp} title="Sales" /></RequireAuth>} />
-        <Route path="/dept/customer-service" element={<RequireAuth power="ceo"><DepartmentShell icon={Headphones} title="Customer Service" /></RequireAuth>} />
-        <Route path="/dept/finance" element={<RequireAuth power="payroll"><DepartmentShell icon={DollarSign} title="Finance" /></RequireAuth>} />
+        {/* Back-compat: the old bundled HR page + its deep links still resolve. */}
         <Route path="/dept/hr" element={<RequireAuth power="hr"><HRTeam /></RequireAuth>} />
-        <Route path="/agents/:slug" element={<RequireAuth power="sales"><AgentProfile /></RequireAuth>} />
-        <Route path="/dept/operations" element={<RequireAuth power="ceo"><DepartmentShell icon={Wrench} title="Operations" /></RequireAuth>} />
-        <Route path="/dept/reports" element={<RequireAuth power="ceo"><DepartmentShell icon={FileBarChart} title="Reports" /></RequireAuth>} />
+        <Route path="/dept/marketing" element={<Navigate to="/" replace />} />
+        {/* Staff profile — opened from the roster/performance pages. */}
+        <Route path="/agents/:slug" element={<RequireAuth power="hr"><AgentProfile /></RequireAuth>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

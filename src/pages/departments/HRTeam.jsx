@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Users, DollarSign, AlertTriangle, Target, Shield, TrendingUp,
+  Users, DollarSign, AlertTriangle, Target, Shield,
   Plus, Edit2, Trash2, Settings, ChevronDown, UserX,
 } from 'lucide-react';
 import { team, pastStaff, payrollHistory } from '../../data/team';
@@ -81,13 +81,22 @@ const statusBadge = s => ({ active: 'bg-emerald-100 text-emerald-700', maternity
 const typeBadge = t => ({ Sales: 'bg-green-100 text-green-700', Operations: 'bg-gray-100 text-gray-700', Marketing: 'bg-pink-100 text-pink-700', Technology: 'bg-blue-100 text-blue-700', Training: 'bg-amber-100 text-amber-700' })[t] || 'bg-gray-100 text-gray-700';
 const actionBadge = a => ({ review: 'bg-blue-100 text-blue-700', warning: 'bg-red-100 text-red-700', training: 'bg-orange-100 text-orange-700', promotion: 'bg-green-100 text-green-700', 'let-go': 'bg-red-200 text-red-800', monitor: 'bg-gray-100 text-gray-600', none: 'bg-gray-50 text-gray-400' })[a] || 'bg-gray-100 text-gray-600';
 
-export default function HRTeam() {
+export default function HRTeam({
+  only = null,
+  title = 'HR & Team',
+  subtitle = 'Who is performing, who is costing money, and what to do next',
+}) {
   const location = useLocation();
   const navigate = useNavigate();
   const openProfile = (name) => navigate(`/agents/${name.toLowerCase().replace(/\s+/g, '-')}`);
-  const initialTab = new URLSearchParams(location.search).get('tab') || 'dashboard';
+  const urlTab = new URLSearchParams(location.search).get('tab');
+  const initialTab = only ? (only.includes(urlTab) ? urlTab : only[0]) : (urlTab || 'dashboard');
   const [tab, setTab] = useState(initialTab);
-  const [expandedRow] = useState(null);
+  // When mounted as a focused control-centre page (only=[…]), the big metric
+  // cards + attention alerts only belong on the Dashboard view, not on every page.
+  const showOverview = !only || only.includes('dashboard');
+  // expandedRow state removed 12 Jun 2026 — the roster detail panel it gated
+  // was dead code (no setter); rows now open the full profile via openProfile.
   const [periodMode, setPeriodMode] = useState('last_month');
   const [customRange, setCustomRange] = useState(null);
   const [allWarnings, setAllWarnings] = useState([]);
@@ -105,16 +114,15 @@ export default function HRTeam() {
     return map;
   }, [allWarnings]);
 
-  const { label: periodLabel } = periodRange(periodMode, customRange);
+  periodRange(periodMode, customRange);
 
-  // Metrics from the roster (team.js) — Pulse's source of truth.
-  const liveMetrics = useMemo(() => {
-    const map = {};
-    team.forEach(t => { map[t.name] = { sales: t.sales || 0, revenue: t.revenueGenerated || 0 }; });
-    return map;
-  }, []);
+  // 12 Jun 2026 (Adama's request): the `liveMetrics` map (per-person sales +
+  // revenue from team.js) was removed here — its only consumers were the
+  // sales-derived Revenue/Avg-Performance cards and the Cost-vs-Value panel,
+  // all dropped when Pulse was narrowed to HR-only.
 
   useEffect(() => {
+    if (only) return; // focused pages set their own tab; don't fight the URL
     const qp = new URLSearchParams(location.search).get('tab');
     if (qp && qp !== tab) setTab(qp);
   }, [location.search]);
@@ -128,13 +136,13 @@ export default function HRTeam() {
     { id: 'contracts', label: 'Contracts' },
     { id: 'warnings', label: `Warnings${allWarnings.length > 0 ? ` (${allWarnings.length})` : ''}` },
     { id: 'past', label: 'Past Staff' },
-  ];
+  ].filter((t) => !only || only.includes(t.id));
 
   // KPI Settings state
   const [kpiRules, setKpiRules] = useState([]);
   const [kpiLoading, setKpiLoading] = useState(false);
   const [kpiFilter, setKpiFilter] = useState({ scope: 'all', period: 'all', role: 'all', agent: 'all' });
-  const blankRule = { id: null, scope: 'role', role: '', agent: '', period: 'default', personalTarget: '', teamTarget: '', weeklyTarget: '', kpi: '', coreResponsibility: '', focus: '', active: true };
+  const blankRule = { id: null, scope: 'role', role: '', agent: '', period: 'default', unit: '', personalTarget: '', teamTarget: '', weeklyTarget: '', kpi: '', coreResponsibility: '', focus: '', active: true };
   const [kpiForm, setKpiForm] = useState(blankRule);
   const [kpiEditing, setKpiEditing] = useState(false);
   const [kpiSaving, setKpiSaving] = useState(false);
@@ -196,8 +204,8 @@ export default function HRTeam() {
     <div>
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">HR &amp; Team</h1>
-          <p className="text-gray-500 mt-1">Who is performing, who is costing money, and what to do next</p>
+          <h1 className="text-3xl font-semibold text-gray-900">{title}</h1>
+          <p className="text-gray-500 mt-1">{subtitle}</p>
         </div>
         <TimePeriodSelector
           selected={periodMode}
@@ -206,7 +214,7 @@ export default function HRTeam() {
         />
       </div>
 
-      {alerts.length > 0 && (
+      {showOverview && alerts.length > 0 && (
         <div className="mb-6 space-y-2">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-2"><AlertTriangle size={14} className="text-red-500" /> Attention Required</p>
           {alerts.map((a, i) => (
@@ -221,7 +229,8 @@ export default function HRTeam() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      {showOverview && (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-blue-50"><Users size={16} className="text-blue-600" /></div><p className="text-gray-500 text-xs">Headcount</p></div>
           <h3 className="text-2xl font-bold text-gray-900">{team.length}</h3>
@@ -233,20 +242,9 @@ export default function HRTeam() {
           <p className="text-[10px] text-gray-500 mt-1">Base only</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-green-50"><TrendingUp size={16} className="text-green-600" /></div><p className="text-gray-500 text-xs">Revenue</p></div>
-          {(() => { const live = Object.values(liveMetrics).reduce((s, m) => s + m.revenue, 0); return <h3 className="text-2xl font-bold text-emerald-600">D{live.toLocaleString()}</h3>; })()}
-          <p className="text-[10px] text-gray-500 mt-1">Roster total</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-amber-50"><Target size={16} className="text-amber-600" /></div><p className="text-gray-500 text-xs">Avg Performance</p></div>
-          {(() => {
-            const sales = workingTeam.filter(t => t.target > 0);
-            if (!sales.length) return <h3 className="text-2xl font-bold text-gray-400">—</h3>;
-            const perfs = sales.map(t => Math.min(200, Math.round(((liveMetrics[t.name]?.sales || 0) / t.target) * 100)));
-            const avg = Math.round(perfs.reduce((s, p) => s + p, 0) / perfs.length);
-            return <h3 className={`text-2xl font-bold ${perfColor(avg)}`}>{avg}%</h3>;
-          })()}
-          <p className="text-[10px] text-gray-500 mt-1">vs target</p>
+          <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-amber-50"><Target size={16} className="text-amber-600" /></div><p className="text-gray-500 text-xs">In Evaluation</p></div>
+          <h3 className="text-2xl font-bold text-amber-600">{probationTeam.length + trainingTeam.length}</h3>
+          <p className="text-[10px] text-gray-500 mt-1">{probationTeam.length} probation, {trainingTeam.length} training</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-red-50"><Shield size={16} className="text-red-600" /></div><p className="text-gray-500 text-xs">Expiring</p></div>
@@ -254,33 +252,36 @@ export default function HRTeam() {
           <p className="text-[10px] text-gray-500 mt-1">Within 90 days</p>
         </div>
       </div>
+      )}
 
+      {tabs.length > 1 && (
       <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit flex-wrap">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>{t.label}</button>
         ))}
       </div>
+      )}
 
       {tab === 'dashboard' && (
         <div className="space-y-6">
+          {/* 12 Jun 2026 (Adama's request): the "Cost vs Value" panel (per-head
+              revenue − salary profit, sales/finance data) was replaced with the
+              HR-native "Headcount by department" breakdown below, as part of
+              narrowing Pulse to HR-only and removing sales-dependent metrics. */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">Cost vs Value</h3>
-            <p className="text-sm text-gray-500 mb-4">From the roster · {periodLabel}</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {team.filter(t => t.status !== 'maternity' && (t.type === 'Sales' || (liveMetrics[t.name]?.revenue || 0) > 0)).map((t, i) => {
-                const revenue = liveMetrics[t.name]?.revenue || 0;
-                const sales = liveMetrics[t.name]?.sales || 0;
-                const profit = revenue - t.base;
-                return (
-                  <div key={i} onClick={() => openProfile(t.name)} className={`p-4 rounded-lg border cursor-pointer ${profit > 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-900 text-sm">{t.name}</span>
-                      <span className={`text-sm font-bold ${profit > 0 ? 'text-green-700' : 'text-red-700'}`}>{profit > 0 ? '+' : ''}D{profit.toLocaleString()}</span>
-                    </div>
-                    <div className="flex gap-4 text-xs text-gray-600"><span>Cost: D{t.base.toLocaleString()}</span><span>Revenue: D{revenue.toLocaleString()}</span><span>{sales} sale{sales === 1 ? '' : 's'}</span></div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Headcount by department</h3>
+            <p className="text-sm text-gray-500 mb-4">How the team is distributed today</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {(() => {
+                const byType = {};
+                team.forEach(t => { byType[t.type] = (byType[t.type] || 0) + 1; });
+                return Object.entries(byType).sort((a, b) => b[1] - a[1]).map(([type, count], i) => (
+                  <div key={i} className="p-4 rounded-lg border border-gray-200 text-center">
+                    <p className="text-2xl font-bold text-gray-900">{count}</p>
+                    <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-[10px] font-medium ${typeBadge(type)}`}>{type}</span>
                   </div>
-                );
-              })}
+                ));
+              })()}
             </div>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
@@ -324,10 +325,6 @@ export default function HRTeam() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {team.filter(t => t.status !== 'maternity').map((t, i) => {
               const initials = t.name.split(' ').map(w => w[0]).slice(0, 2).join('');
-              const rev = t.revenueGenerated || 0;
-              const cost = t.base || 0;
-              const profit = rev - cost;
-              const showROI = t.type === 'Sales' || rev > 0;
               return (
                 <div key={i} onClick={() => openProfile(t.name)} className="bg-white rounded-3xl border border-gray-100 p-6 cursor-pointer hover:border-gray-300 hover:shadow-md transition-all">
                   <div className="flex items-start gap-4 mb-5">
@@ -369,20 +366,9 @@ export default function HRTeam() {
                     </div>
                   )}
 
-                  {showROI && (
-                    <div className="mt-4 grid grid-cols-2 gap-3 pt-4 border-t border-gray-100">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-0.5">Revenue</p>
-                        <p className="text-sm font-semibold text-gray-900">D{rev.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-0.5">Net</p>
-                        <p className={`text-sm font-semibold ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {profit >= 0 ? '+' : '−'}D{Math.abs(profit).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  {/* 12 Jun 2026 (Adama's request): per-person Revenue / Net (ROI)
+                      block removed here — sales/finance data, dropped as part of
+                      narrowing Pulse to HR-only. */}
 
                   {t.nextAction && t.nextAction !== 'none' && (
                     <div className="mt-4 flex items-center gap-2">
@@ -481,23 +467,35 @@ export default function HRTeam() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold mb-1 block">Unit — what you're counting</label>
+                  <input type="text" value={kpiForm.unit} onChange={e => setKpiForm({ ...kpiForm, unit: e.target.value })}
+                    placeholder="e.g. sales, installs, tickets, posts, renewals"
+                    list="kpi-units"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400" />
+                  <datalist id="kpi-units">
+                    <option value="sales" /><option value="installs" /><option value="tickets" />
+                    <option value="renewals" /><option value="posts" /><option value="calls" /><option value="visits" />
+                  </datalist>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold mb-1 block">Personal target (# sales/month)</label>
+                    <label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold mb-1 block">Personal target / month</label>
                     <input type="number" value={kpiForm.personalTarget} onChange={e => setKpiForm({ ...kpiForm, personalTarget: e.target.value })}
-                      placeholder="5"
+                      placeholder={kpiForm.unit ? `5 ${kpiForm.unit}` : '5'}
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400" />
                   </div>
                   <div>
-                    <label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold mb-1 block">Team target (# sales/month)</label>
+                    <label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold mb-1 block">Team target / month</label>
                     <input type="number" value={kpiForm.teamTarget} onChange={e => setKpiForm({ ...kpiForm, teamTarget: e.target.value })}
-                      placeholder="15 (optional)"
+                      placeholder="optional"
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400" />
                   </div>
                   <div>
                     <label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold mb-1 block">Weekly target (text)</label>
                     <input type="text" value={kpiForm.weeklyTarget} onChange={e => setKpiForm({ ...kpiForm, weeklyTarget: e.target.value })}
-                      placeholder="4 sales/week"
+                      placeholder={kpiForm.unit ? `4 ${kpiForm.unit}/week` : 'e.g. 4 per week'}
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400" />
                   </div>
                 </div>
@@ -505,13 +503,13 @@ export default function HRTeam() {
                 <div>
                   <label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold mb-1 block">Monthly KPI (human-readable)</label>
                   <input type="text" value={kpiForm.kpi} onChange={e => setKpiForm({ ...kpiForm, kpi: e.target.value })}
-                    placeholder="e.g. Close 5 trackers per month"
+                    placeholder="e.g. Complete 8 installs this month"
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400" />
                 </div>
                 <div>
                   <label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold mb-1 block">Core responsibility</label>
                   <input type="text" value={kpiForm.coreResponsibility} onChange={e => setKpiForm({ ...kpiForm, coreResponsibility: e.target.value })}
-                    placeholder="e.g. Lead sales team and drive revenue"
+                    placeholder="e.g. Own renewals and keep customers retained"
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400" />
                 </div>
                 <div>
@@ -598,8 +596,8 @@ export default function HRTeam() {
                           </td>
                           <td className="py-3 px-4 font-medium text-gray-900">{r.agent || r.role}</td>
                           <td className="py-3 px-4 text-gray-600">{rPeriodLabel}</td>
-                          <td className="py-3 px-4 text-center text-gray-900">{r.personalTarget ?? '—'}</td>
-                          <td className="py-3 px-4 text-center text-gray-900">{r.teamTarget ?? '—'}</td>
+                          <td className="py-3 px-4 text-center text-gray-900">{r.personalTarget != null ? `${r.personalTarget}${r.unit ? ` ${r.unit}` : ''}` : '—'}</td>
+                          <td className="py-3 px-4 text-center text-gray-900">{r.teamTarget != null ? `${r.teamTarget}${r.unit ? ` ${r.unit}` : ''}` : '—'}</td>
                           <td className="py-3 px-4 text-gray-600 max-w-[140px] truncate">{r.weeklyTarget || '—'}</td>
                           <td className="py-3 px-4 text-gray-700 max-w-[260px] truncate">{r.kpi || '—'}</td>
                           <td className="py-3 px-4 text-center">
@@ -653,16 +651,9 @@ export default function HRTeam() {
               </tbody>
             </table>
           </div>
-          {expandedRow !== null && (
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                <div><p className="text-[10px] uppercase text-gray-400 mb-1">Core Responsibility</p><p className="text-gray-900">{team[expandedRow].coreResponsibility}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-400 mb-1">KPI</p><p className="text-gray-900">{team[expandedRow].kpi}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-400 mb-1">Next Action</p><span className={`px-2 py-0.5 rounded text-xs font-medium ${actionBadge(team[expandedRow].nextAction)}`}>{team[expandedRow].nextAction}</span><p className="text-xs text-gray-500 mt-1">{team[expandedRow].nextActionNote}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-400 mb-1">Notes</p><p className="text-gray-900 text-xs">{team[expandedRow].notes}</p></div>
-              </div>
-            </div>
-          )}
+          {/* 12 Jun 2026 (Adama's request): removed the dead "expandedRow" detail
+              panel — its state had no setter (rows open the full profile via
+              openProfile instead), so this block could never render. */}
         </div>
       )}
 

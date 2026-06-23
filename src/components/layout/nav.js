@@ -1,55 +1,71 @@
-import { Home, Contact, TrendingUp, BarChart3, CalendarCheck, Megaphone, Clock, Palmtree, Wallet, User, ClipboardCheck, Users, Menu, Headphones, DollarSign, IdCard, Wrench, FileBarChart } from 'lucide-react'
+import {
+  LayoutDashboard, Users, TrendingUp, Clock, FileText, Target,
+  ClipboardCheck, ShieldAlert, Wallet, Gift, BookOpen, FolderOpen,
+  Palmtree, User, Menu,
+} from 'lucide-react'
 
-const SALES_DEPTS = ['Sales', 'Training']
-const isSales = (u) => SALES_DEPTS.includes(u?.department)
 const isOwner = (u) => u?.username === 'adama' // CEO/owner — no self-service (leave, clock-in…)
 // Access comes from per-person power grants (CEO holds all). 'manager' is
 // just a title now — it unlocks nothing by itself.
 const has = (u, p) => (u?.powers || []).includes(p)
+// Anyone with the 'hr' power sees the management control-centre sections.
+const mgr = (u) => has(u, 'hr')
 
 // Full sidebar list (desktop). Each item self-gates via show().
-// `group` buckets items into labelled sidebar sections (Home sits on top,
-// ungrouped). GROUP_ORDER below sets the section order + which headers show.
+// `group` buckets items into labelled sidebar sections (Dashboard sits on top,
+// ungrouped). GROUP_ORDER below sets the section order.
+//
+// 22 Jun 2026 (Adama's request): the whole platform IS the CEO's HR control
+// centre, so the old single "HR & Team" department page (8 buried tabs) was
+// dissolved and its screens promoted to first-class, sectioned nav items —
+// modelled on the admin app. Marketing removed (Pulse is HR-only). The
+// management sections gate on powers so a plain staffer only sees Dashboard +
+// Personal; the CEO (all powers) sees the full control centre.
 export const NAV = [
-  { to: '/', label: 'Home', icon: Home, group: null, show: () => true },
-  { to: '/sales', label: 'Customers', icon: Contact, group: 'Sales', show: (u) => isSales(u) },
-  { to: '/pipeline', label: 'Pipeline', icon: TrendingUp, group: 'Sales', show: (u) => isSales(u) },
-  { to: '/report', label: 'Report', icon: BarChart3, group: 'Sales', show: (u) => isSales(u) },
-  { to: '/day', label: 'My Day', icon: CalendarCheck, group: 'Sales', show: (u) => isSales(u) },
-  { to: '/approvals', label: 'Approvals', icon: ClipboardCheck, group: 'Manage', show: (u) => has(u, 'approvals') },
-  { to: '/team', label: 'Team', icon: Users, group: 'Manage', show: (u) => has(u, 'team') },
-  { to: '/attendance', label: 'Hours', icon: Clock, group: 'Personal', show: () => true },
-  { to: '/leave', label: 'Leave', icon: Palmtree, group: 'Personal', show: (u) => !isOwner(u) },
-  { to: '/notices', label: 'Notices', icon: Megaphone, group: 'Personal', show: () => true },
-  { to: '/pay', label: 'Pay', icon: Wallet, group: 'Personal', show: () => true },
-  { to: '/profile', label: 'Me', icon: User, group: 'Personal', show: () => true },
+  { id: 'dashboard', to: '/', label: 'Dashboard', icon: LayoutDashboard, group: null, show: () => true },
+
+  // PEOPLE — the roster, performance and contracts (management view)
+  { id: 'people', to: '/people', label: 'Employees', icon: Users, group: 'People', show: mgr },
+  { id: 'performance', to: '/performance', label: 'Performance', icon: TrendingUp, group: 'People', show: mgr },
+  { id: 'attendance-mgr', to: '/attendance', label: 'Attendance', icon: Clock, group: 'People', show: mgr },
+  { id: 'contracts', to: '/contracts', label: 'Contracts', icon: FileText, group: 'People', show: mgr },
+
+  // MANAGEMENT — goals, incoming requests, the employee record
+  { id: 'reviews', to: '/reviews', label: 'Goals & Reviews', icon: Target, group: 'Management', show: mgr },
+  { id: 'requests', to: '/requests', label: 'Requests', icon: ClipboardCheck, group: 'Management', show: (u) => has(u, 'approvals') || has(u, 'team') },
+  { id: 'records', to: '/records', label: 'Employee Records', icon: ShieldAlert, group: 'Management', show: mgr },
+
+  // PAYROLL
+  { id: 'payroll', to: '/payroll', label: 'Payroll', icon: Wallet, group: 'Payroll', show: (u) => has(u, 'payroll') },
+  { id: 'benefits', to: '/benefits', label: 'Benefits', icon: Gift, group: 'Payroll', show: (u) => has(u, 'payroll') },
+
+  // COMPANY
+  { id: 'policies', to: '/policies', label: 'Policies', icon: BookOpen, group: 'Company', show: mgr },
+  { id: 'documents', to: '/documents', label: 'Documents', icon: FolderOpen, group: 'Company', show: mgr },
+
+  // PERSONAL — self-service. Staff (no 'hr' power) get their own Attendance here;
+  // managers reach the team view via the PEOPLE section instead.
+  { id: 'my-hours', to: '/attendance', label: 'My Hours', icon: Clock, group: 'Personal', show: (u) => !mgr(u) },
+  { id: 'my-leave', to: '/leave', label: 'Leave', icon: Palmtree, group: 'Personal', show: (u) => !isOwner(u) },
+  { id: 'my-reviews', to: '/my-reviews', label: 'My Reviews', icon: FileText, group: 'Personal', show: (u) => !mgr(u) },
+  { id: 'my-pay', to: '/pay', label: 'Pay', icon: Wallet, group: 'Personal', show: (u) => !mgr(u) },
+  { id: 'me', to: '/me', label: 'Me', icon: User, group: 'Personal', show: () => true },
 ]
 
 // Section order for the grouped sidebar.
-const GROUP_ORDER = ['Sales', 'Manage', 'Personal']
+const GROUP_ORDER = ['People', 'Management', 'Payroll', 'Company', 'Personal']
 
 export const MORE = { key: 'more', label: 'More', icon: Menu }
 
-// Departments — the management layer. Manager-only. Lives under /dept/* so it
-// never collides with the staff-facing pages above. Built fresh, one at a time;
-// `ready:false` renders a clean "being set up" shell.
-// `power` decides who sees each department. Shells without a power yet
-// (not built, no owner decided) stay CEO-only.
-export const DEPARTMENTS = [
-  { to: '/dept/sales', label: 'Sales', icon: TrendingUp, ready: false, power: 'sales' },
-  { to: '/dept/customer-service', label: 'Customer Service', icon: Headphones, ready: false, power: null },
-  { to: '/dept/finance', label: 'Finance', icon: DollarSign, ready: false, power: 'payroll' },
-  { to: '/dept/hr', label: 'HR & Team', icon: IdCard, ready: true, power: 'hr' },
-  { to: '/dept/operations', label: 'Operations', icon: Wrench, ready: false, power: null },
-  { to: '/dept/marketing', label: 'Marketing', icon: Megaphone, ready: true, power: 'marketing' },
-  { to: '/dept/reports', label: 'Reports', icon: FileBarChart, ready: false, power: null },
-]
+// Departments are dissolved — everything lives in NAV now. Kept as an empty
+// export so the Sidebar import stays valid (it renders nothing).
+export const DEPARTMENTS = []
 
 export function navFor(user) {
   return NAV.filter((i) => i.show(user))
 }
 
-// Grouped sidebar: returns { top: [Home…], sections: [{ label, items }] }.
+// Grouped sidebar: returns { top: [Dashboard…], sections: [{ label, items }] }.
 // Empty sections are dropped so headers never show above nothing.
 export function groupedNavFor(user) {
   const visible = navFor(user)
@@ -61,21 +77,19 @@ export function groupedNavFor(user) {
   return { top, sections }
 }
 
-export function departmentsFor(user) {
-  return DEPARTMENTS.filter((d) => (d.power ? has(user, d.power) : isOwner(user)))
+export function departmentsFor() {
+  return DEPARTMENTS
 }
 
-// mobile bottom bar: Home + up to 3 role-relevant + More (opens full menu)
+// mobile bottom bar: Dashboard + up to 3 role-relevant + More (opens full menu)
 export function mobileNavFor(user) {
-  const home = NAV.find((i) => i.to === '/')
+  const home = byId('dashboard')
   const middle = []
-  if (isSales(user)) middle.push(byPath('/sales'), byPath('/report'))
-  if (has(user, 'approvals')) middle.push(byPath('/approvals'))
-  if (has(user, 'team')) middle.push(byPath('/team'))
-  middle.push(byPath('/attendance'))
+  if (mgr(user)) middle.push(byId('people'), byId('performance'), byId('payroll'))
+  else middle.push(byId('my-hours'), byId('my-reviews'), byId('me'))
   return [home, ...middle.filter(Boolean).slice(0, 3)]
 }
 
-function byPath(p) {
-  return NAV.find((i) => i.to === p)
+function byId(id) {
+  return NAV.find((i) => i.id === id)
 }

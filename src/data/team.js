@@ -62,33 +62,6 @@ export const team = [
       { date: '2026-05-01', event: 'Moved to Customer Service Supervisor — pay unchanged' },
     ],
   },
-  { // Ebou — no sales target, manual fields
-    name: 'Ebou Jobe', role: 'Technician / Installer', type: 'Operations',
-    base: 15000, commission: 0, total: 15000,
-    status: 'active', joined: 'Sep 2025', contract: 'Contractor',
-    coreResponsibility: 'Install trackers and handle hardware setup',
-    kpi: 'Complete all installations within 48 hours',
-    weeklyTarget: 'Complete all pending installations',
-    performance: 88, actualOutput: '7 completed, 1 pending',
-    nextAction: 'monitor', nextActionNote: 'Reliable. Works closely with Abdou on ops.',
-    lastCheckIn: '2026-04-10', revenueGenerated: 0, warnings: 0,
-    history: [
-      { date: '2025-09-01', event: 'Joined as Technician / Installer (Contractor)' },
-    ],
-  },
-  autoCalc({
-    name: 'Ramatoulie Mboge', role: 'Digital Marketing & Media Officer', type: 'Marketing',
-    base: 8000, commission: 2000, transport: 1000, total: 11000,
-    status: 'probation', joined: '2026-04-20', contract: '2-month probation', contractEnd: '2026-06-20',
-    coreResponsibility: 'Create video/photo content, manage social media, plan campaigns',
-    kpi: 'Grow social engagement + deliver consistent content pipeline',
-    weeklyTarget: 'Onboarding — meet team, learn brand voice, plan first content slate',
-    nextActionNote: 'New hire — starts 20 Apr. Probation ends 20 Jun. D8K base + D1K transport, D2K commission post-probation.',
-    lastCheckIn: null, revenueGenerated: 0, warnings: 0,
-    history: [
-      { date: '2026-04-20', event: 'Joined as Digital Marketing & Media Officer — 2-month probation (ends 20 Jun 2026)' },
-    ],
-  }),
   autoCalc({
     name: 'Kaddy Bojang', role: 'Senior Sales Agent', type: 'Sales',
     base: 6000, commission: 6000, total: 12000,
@@ -118,20 +91,20 @@ export const team = [
       { date: '2026-04-01', event: 'Joined as Sales Agent — 3-month fixed contract (ends 30 Jun 2026)' },
     ],
   }),
-  // --- TRAINEES: change 'sales' and 'revenueGenerated', rest auto-calculates ---
-  autoCalc({
-    name: 'Majigen Sowe', role: 'Trainee', type: 'Training',
-    base: 2000, commission: 0, total: 2000,
-    status: 'training', joined: '30 Mar 2026', contractEnd: '2026-05-31',
-    coreResponsibility: 'Learn sales process and demonstrate potential',
-    kpi: '2 sales during training',
-    weeklyTarget: '20 calls, 3 leads, 1 sale',
-    target: 2, sales: 1, revenueGenerated: 7500,
-    lastCheckIn: '2026-04-11', warnings: 0,
+  { // Momodou Lamin Keita — pre-contract Team Lead training (D5,000 transport allowance only) until 27 Jun 2026; on pass, 3-month Team Lead contract at D16K base + up to D10K commission
+    name: 'Momodou Lamin Keita', role: 'Team Lead (in training)', type: 'Operations',
+    base: 0, commission: 0, transport: 5000, total: 5000,
+    status: 'training', joined: 'Jun 2026', contract: 'Pre-contract training', contractEnd: '2026-06-27',
+    coreResponsibility: 'Learn the product and how the company runs; demonstrate ability to lead and organise the team through the app launch',
+    kpi: 'Pass training assessment — product knowledge + team management',
+    weeklyTarget: 'Wk1 product knowledge · Wk2 team management · Wk3 coordination',
+    performance: 0, actualOutput: 'In training',
+    nextAction: 'review', nextActionNote: 'Training ends 27 Jun 2026. On pass: Team Lead — D16,000 base + up to D10,000 commission (3-month fixed).',
+    lastCheckIn: null, revenueGenerated: 0, warnings: 0,
     history: [
-      { date: '2026-03-30', event: 'Started Sales Trainee programme — 2-month evaluation (ends 31 May 2026)' },
+      { date: '2026-05-20', event: 'Started pre-contract Team Lead training & assessment (D5,000 transport allowance)', dateApproximate: true },
     ],
-  }),
+  },
   { // Cleaner — no calculations needed
     name: 'Cleaner', role: 'Office Cleaner', type: 'Operations',
     base: 2500, commission: 0, total: 2500,
@@ -156,6 +129,10 @@ export const pastStaff = [
   { name: 'Abdou Manjang', role: 'Operations + Social (Internship)', pay: 2000, reason: 'Left after ~1 week — role did not work out', date: 'Apr 2026', finalPay: 0 },
   { name: 'Sulaiman Bello', role: 'Developer', pay: 23000, reason: 'Let go', date: 'May 2026', finalPay: 6900 },
   { name: 'Olley Touray', role: 'Customer Support Trainee', pay: 2000, reason: 'Left during training', date: 'May 2026', finalPay: 0 },
+  { name: 'Majigen Sowe', role: 'Sales Trainee', pay: 2000, reason: 'Training ended — not converted to a sales role', date: 'May 2026', finalPay: 2000 },
+  { name: 'Ramatoulie Mboge', role: 'Digital Marketing & Media Officer', pay: 9000, reason: 'Terminated in probation — performance (20 May 2026)', date: 'May 2026', finalPay: 9000 },
+  { name: 'Ebrima Jallow', role: 'Digital Marketing & Media Officer', pay: 6000, reason: 'Left — one-month probation (20 May–20 Jun) not confirmed', date: 'Jun 2026', finalPay: 0 },
+  { name: 'Ebou Jobe', role: 'Technician / Installer', pay: 15000, reason: 'Contract ended 15 Jun 2026', date: 'Jun 2026', finalPay: 15000 },
 ];
 
 export const payrollHistory = [

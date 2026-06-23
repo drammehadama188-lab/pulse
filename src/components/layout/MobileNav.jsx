@@ -19,7 +19,7 @@ export function MobileNav() {
         <div className="mx-auto flex max-w-md items-stretch justify-around px-2">
           {primary.map((item) => (
             <NavLink
-              key={item.to}
+              key={item.id}
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
@@ -57,7 +57,7 @@ export function MobileNav() {
                 const active = item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
                 return (
                   <NavLink
-                    key={item.to}
+                    key={item.id}
                     to={item.to}
                     end={item.to === '/'}
                     onClick={() => setMoreOpen(false)}

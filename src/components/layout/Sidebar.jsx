@@ -1,56 +1,13 @@
-import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LogOut, ExternalLink } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { api } from '../../lib/api.js'
 import { groupedNavFor, departmentsFor } from './nav.js'
 import { Brand } from './Brand.jsx'
-import { Avatar, Spinner } from '../ui.jsx'
+import { Avatar } from '../ui.jsx'
 
-// "Open Admin" — Adama's design (4 Jun): visible only to holders of the
-// Admin power, and only once the bridge flag is on. Opens the customer
-// system in a new tab signed in as this person, so their actions are
-// logged there under their own name.
-function OpenAdminButton() {
-  const { hasRealPower, openAdminEnabled, isViewAs, realUser, adminUrl } = useAuth()
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  if (!openAdminEnabled || !hasRealPower('admin') || isViewAs) return null
-  // The owner account is banned from the SSO bridge by design — for the CEO
-  // the button is a plain link to Admin, where he signs in as himself.
-  const isCeo = realUser?.username === 'adama'
-
-  async function open() {
-    if (isCeo) {
-      window.open(adminUrl || '/', '_blank', 'noopener')
-      return
-    }
-    setBusy(true)
-    setError('')
-    try {
-      const { url } = await api('/open-admin', { method: 'POST' })
-      window.open(url, '_blank', 'noopener')
-    } catch (e) {
-      setError(e.message || 'Could not open Admin')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="mt-4">
-      <button
-        onClick={open}
-        disabled={busy}
-        className="flex w-full items-center gap-3 rounded-2xl bg-white/15 px-3.5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-white/25"
-      >
-        {busy ? <Spinner size={18} /> : <ExternalLink size={18} strokeWidth={2.2} className="shrink-0" />}
-        <span className="flex-1 text-left">Open Admin</span>
-      </button>
-      {error && <p className="mt-1 px-3.5 text-xs text-white/70">{error}</p>}
-    </div>
-  )
-}
+// "Open Admin" SSO button removed 12 Jun 2026 at Adama's request — Pulse is
+// now HR-only, with no sign-in bridge into the customer/admin system. The old
+// OpenAdminButton component (api('/open-admin'), ExternalLink icon) lived here.
 
 function SectionLabel({ children }) {
   return (
@@ -101,14 +58,14 @@ export function Sidebar() {
 
       <nav className="mt-8 flex flex-1 flex-col gap-1">
         {top.map((item) => (
-          <NavRow key={item.to} item={item} />
+          <NavRow key={item.id} item={item} />
         ))}
 
         {sections.map((section) => (
           <div key={section.label} className="flex flex-col gap-1">
             <SectionLabel>{section.label}</SectionLabel>
             {section.items.map((item) => (
-              <NavRow key={item.to} item={item} />
+              <NavRow key={item.id} item={item} />
             ))}
           </div>
         ))}
@@ -123,7 +80,7 @@ export function Sidebar() {
         )}
       </nav>
 
-      <OpenAdminButton />
+      {/* Open Admin SSO button removed 12 Jun 2026 at Adama's request — Pulse is HR-only now. */}
 
       <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-3">
         <Avatar name={user?.name} size={38} />
