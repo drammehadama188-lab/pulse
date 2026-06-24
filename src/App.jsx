@@ -19,7 +19,7 @@ import ChangePassword from './pages/ChangePassword.jsx'
 import Approvals from './pages/manager/Approvals.jsx'
 import Team from './pages/manager/Team.jsx'
 import HRTeam from './pages/departments/HRTeam.jsx'
-import AgentProfile from './pages/sales/AgentProfile.jsx'
+import EmployeeProfile from './pages/EmployeeProfile.jsx'
 import DepartmentShell from './pages/departments/DepartmentShell.jsx'
 import { Target, Gift, BookOpen, FolderOpen } from 'lucide-react'
 
@@ -114,7 +114,7 @@ export default function App() {
         <Route path="/dept/hr" element={<RequireAuth power="hr"><HRTeam /></RequireAuth>} />
         <Route path="/dept/marketing" element={<Navigate to="/" replace />} />
         {/* Staff profile — opened from the roster/performance pages. */}
-        <Route path="/agents/:slug" element={<RequireAuth power="hr"><AgentProfile /></RequireAuth>} />
+        <Route path="/agents/:slug" element={<RequireAuth power="hr"><EmployeeProfile /></RequireAuth>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
