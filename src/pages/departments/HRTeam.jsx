@@ -925,9 +925,9 @@ export default function HRTeam({
                     type="button"
                     disabled={!expandable}
                     onClick={() => expandable && setOpenPayMonth(isOpen ? null : key)}
-                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-left ${expandable ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'}`}
+                    className={`w-full flex items-stretch text-left ${expandable ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'}`}
                   >
-                    <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                    <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap px-3 py-2">
                       {expandable
                         ? <ChevronDown size={13} className={`text-gray-400 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
                         : <span className="inline-block w-[13px]" />}
@@ -938,22 +938,28 @@ export default function HRTeam({
                         ? <span className="text-xs text-gray-400 truncate hidden md:inline">· {m.breakdown}</span>
                         : m.headcount != null && <span className="text-xs text-gray-400">· {m.headcount} {m.headcount === 1 ? 'person' : 'people'} paid</span>}
                     </div>
-                    <span className="text-sm font-bold shrink-0">D{m.total.toLocaleString()}</span>
+                    <div className="w-36 shrink-0 flex items-center justify-end border-l border-gray-100 px-3 py-2">
+                      <span className="text-sm font-bold">D{m.total.toLocaleString()}</span>
+                    </div>
                   </button>
                   {expandable && isOpen && (
                     <div className="border-t border-gray-100 bg-gray-50/50">
                       {m.people.map((p, j) => (
-                        <div key={j} className="flex items-center justify-between gap-3 px-3 py-2 pl-[34px] border-b border-gray-100/70">
-                          <div className="min-w-0">
+                        <div key={j} className="flex items-stretch border-b border-gray-100/70">
+                          <div className="flex-1 min-w-0 px-3 py-2 pl-[34px]">
                             <span className={`text-sm ${p.unallocated ? 'italic text-gray-500' : 'text-gray-700'}`}>{p.name}</span>
                             {p.note && <span className="block text-xs text-gray-400">{p.note}</span>}
                           </div>
-                          <span className="text-sm text-gray-700 shrink-0 whitespace-nowrap">D{(p.amount || 0).toLocaleString()}</span>
+                          <div className="w-36 shrink-0 flex items-center justify-end border-l border-gray-100 px-3 py-2">
+                            <span className="text-sm text-gray-700 whitespace-nowrap">D{(p.amount || 0).toLocaleString()}</span>
+                          </div>
                         </div>
                       ))}
-                      <div className="flex items-center justify-between gap-3 px-3 py-2 pl-[34px] border-b border-gray-100">
-                        <span className="text-sm font-semibold text-gray-900">Total</span>
-                        <span className="text-sm font-bold text-gray-900 shrink-0 whitespace-nowrap">D{itemised.toLocaleString()}</span>
+                      <div className="flex items-stretch border-b border-gray-100">
+                        <div className="flex-1 min-w-0 px-3 py-2 pl-[34px]"><span className="text-sm font-semibold text-gray-900">Total</span></div>
+                        <div className="w-36 shrink-0 flex items-center justify-end border-l border-gray-100 px-3 py-2">
+                          <span className="text-sm font-bold text-gray-900 whitespace-nowrap">D{itemised.toLocaleString()}</span>
+                        </div>
                       </div>
                       {!reconciles && (
                         <p className="text-xs text-amber-600 px-3 py-2 pl-[34px] flex items-center gap-1">
