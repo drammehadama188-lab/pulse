@@ -94,6 +94,10 @@ export default function HRTeam({
   // power still see the month + total, but not who was paid what.
   const canSeePayDetail = user?.username === 'adama';
   const [openPayMonth, setOpenPayMonth] = useState(null);
+  // History is grouped by year; the current year is open, older years collapse
+  // so the page doesn't become an endless scroll of months.
+  const [openYears, setOpenYears] = useState(() => [String(new Date().getFullYear())]);
+  const toggleYear = (y) => setOpenYears(s => s.includes(y) ? s.filter(x => x !== y) : [...s, y]);
   // Live payroll history from Zoho Books (owner-only). Falls back to the static
   // team.js list if the pull fails or the user isn't the owner.
   const [payLive, setPayLive] = useState(null);
@@ -844,7 +848,14 @@ export default function HRTeam({
                 : payError ? `Couldn't reach Zoho Books (${payError}). Showing the last known figures.`
                 : 'Click a month to see the per-person breakdown. Salaries account only.'}
             </p>
-            <div className="space-y-3">{(canSeePayDetail && payLive ? payLive : payrollHistory).map((m, i) => {
+            <div className="space-y-3">{(() => {
+              const months = (canSeePayDetail && payLive ? payLive : payrollHistory);
+              const yearOf = (m) => (m.ym ? m.ym.slice(0, 4) : (String(m.month).match(/\d{4}/)?.[0] || '—'));
+              const order = [];
+              const byYear = {};
+              months.forEach((m) => { const y = yearOf(m); if (!byYear[y]) { byYear[y] = []; order.push(y); } byYear[y].push(m); });
+              order.sort((a, b) => b.localeCompare(a));
+              const renderMonth = (m) => {
               const key = m.ym || m.month;
               const expandable = canSeePayDetail && Array.isArray(m.people) && m.people.length > 0;
               const isOpen = openPayMonth === key;
@@ -907,7 +918,24 @@ export default function HRTeam({
                   )}
                 </div>
               );
-            })}</div>
+              };
+              return order.map((y) => {
+                const yMonths = byYear[y];
+                const yTotal = yMonths.reduce((s, m) => s + (m.total || 0), 0);
+                const open = openYears.includes(y);
+                return (
+                  <div key={y} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <button type="button" onClick={() => toggleYear(y)} className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50">
+                      <span className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                        <ChevronDown size={15} className={`text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} />{y}
+                      </span>
+                      <span className="text-xs text-gray-400">{yMonths.length} {yMonths.length === 1 ? 'month' : 'months'} · D{yTotal.toLocaleString()}</span>
+                    </button>
+                    {open && <div className="px-2 pb-2 space-y-2">{yMonths.map(renderMonth)}</div>}
+                  </div>
+                );
+              });
+            })()}</div>
           </div>
 
           {/* Confirm modal — shows the exact Books payload before any real post */}
