@@ -33,11 +33,12 @@ function ViewAsBanner() {
 export function AppLayout() {
   const { user } = useAuth()
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-screen flex-col overflow-hidden">
       <ViewAsBanner />
-      <div className="flex min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 overflow-hidden">
+        {/* Sidebar stays fixed; only the content column scrolls. */}
         <Sidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
           {/* mobile top bar */}
           <header className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--color-line)] bg-[var(--color-surface)]/90 px-4 py-3 backdrop-blur-md md:hidden">
             <Brand />
