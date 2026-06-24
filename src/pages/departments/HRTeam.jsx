@@ -863,28 +863,26 @@ export default function HRTeam({
               const itemised = (m.people || []).reduce((s, p) => s + (p.amount || 0), 0);
               const reconciles = itemised === m.total;
               return (
-                <div key={key} className="border border-gray-100 rounded-lg overflow-hidden">
+                <div key={key} className="border-b border-gray-100 last:border-b-0">
                   <button
                     type="button"
                     disabled={!expandable}
                     onClick={() => expandable && setOpenPayMonth(isOpen ? null : key)}
-                    className={`w-full flex items-center justify-between p-4 text-left ${expandable ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'}`}
+                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-left ${expandable ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'}`}
                   >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 flex items-center gap-2 flex-wrap">
-                        {m.month}
-                        {expandable && <ChevronDown size={14} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
-                        {m.confidence === 'in_progress' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">In progress</span>}
-                        {m.confidence === 'low' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">May be incomplete</span>}
-                      </p>
+                    <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                      {expandable && <ChevronDown size={13} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
+                      <span className="text-sm font-medium text-gray-900">{m.month}</span>
+                      {m.confidence === 'in_progress' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">In progress</span>}
+                      {m.confidence === 'low' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">May be incomplete</span>}
                       {m.breakdown
-                        ? <p className="text-xs text-gray-500 mt-1">{m.breakdown}</p>
-                        : m.headcount != null && <p className="text-xs text-gray-500 mt-1">{m.headcount} {m.headcount === 1 ? 'person' : 'people'} paid</p>}
+                        ? <span className="text-xs text-gray-400 truncate hidden md:inline">· {m.breakdown}</span>
+                        : m.headcount != null && <span className="text-xs text-gray-400">· {m.headcount} {m.headcount === 1 ? 'person' : 'people'} paid</span>}
                     </div>
-                    <p className="text-lg font-bold shrink-0 ml-4">D{m.total.toLocaleString()}</p>
+                    <span className="text-sm font-bold shrink-0">D{m.total.toLocaleString()}</span>
                   </button>
                   {expandable && isOpen && (
-                    <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
+                    <div className="border-t border-gray-100 bg-gray-50 px-3 py-2">
                       <table className="w-full">
                         <tbody>
                           {m.people.map((p, j) => (
@@ -931,7 +929,7 @@ export default function HRTeam({
                       </span>
                       <span className="text-xs text-gray-400">{yMonths.length} {yMonths.length === 1 ? 'month' : 'months'} · D{yTotal.toLocaleString()}</span>
                     </button>
-                    {open && <div className="px-2 pb-2 space-y-2">{yMonths.map(renderMonth)}</div>}
+                    {open && <div className="border-t border-gray-100">{yMonths.map(renderMonth)}</div>}
                   </div>
                 );
               });
