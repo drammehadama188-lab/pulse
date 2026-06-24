@@ -82,6 +82,24 @@ const statusBadge = s => ({ active: 'bg-emerald-100 text-emerald-700', maternity
 const typeBadge = t => ({ Sales: 'bg-green-100 text-green-700', Operations: 'bg-gray-100 text-gray-700', Marketing: 'bg-pink-100 text-pink-700', Technology: 'bg-blue-100 text-blue-700', Training: 'bg-amber-100 text-amber-700' })[t] || 'bg-gray-100 text-gray-700';
 const actionBadge = a => ({ review: 'bg-blue-100 text-blue-700', warning: 'bg-red-100 text-red-700', training: 'bg-orange-100 text-orange-700', promotion: 'bg-green-100 text-green-700', 'let-go': 'bg-red-200 text-red-800', monitor: 'bg-gray-100 text-gray-600', none: 'bg-gray-50 text-gray-400' })[a] || 'bg-gray-100 text-gray-600';
 
+// Derive a leave/exit category from a past-staff reason (categorising existing
+// text — no data invented). Drives the Past Staff filter chips.
+function pastCategory(reason) {
+  const r = (reason || '').toLowerCase();
+  if (/terminat|let go|dismiss|fired/.test(r)) return 'Terminated';
+  if (/contract end/.test(r)) return 'Contract Ended';
+  if (/training|intern|trainee|not confirmed|not converted|probation/.test(r)) return 'Training/Internship';
+  if (/left|resign|voluntar/.test(r)) return 'Resigned';
+  return 'Other';
+}
+const PAST_CAT_COLOR = {
+  Terminated: 'bg-red-100 text-red-700',
+  'Contract Ended': 'bg-blue-100 text-blue-700',
+  'Training/Internship': 'bg-orange-100 text-orange-700',
+  Resigned: 'bg-gray-100 text-gray-700',
+  Other: 'bg-gray-100 text-gray-600',
+};
+
 export default function HRTeam({
   only = null,
   title = 'HR & Team',
@@ -147,9 +165,17 @@ export default function HRTeam({
   const [periodMode, setPeriodMode] = useState('last_month');
   const [customRange, setCustomRange] = useState(null);
   const [allWarnings, setAllWarnings] = useState([]);
+  const [pendingLeave, setPendingLeave] = useState(null);
+  const [pastFilter, setPastFilter] = useState('all');
 
   useEffect(() => {
     api('/warnings').then(d => setAllWarnings(d.warnings || [])).catch(() => setAllWarnings([]));
+  }, [tab]);
+
+  // Pending leave count for the Records dashboard (owner/approvers only).
+  useEffect(() => {
+    if (tab !== 'warnings') return;
+    api('/leave?status=pending').then(d => setPendingLeave((d.requests || []).length)).catch(() => setPendingLeave(null));
   }, [tab]);
 
   // Pull live payroll history once the owner opens the Payroll tab.
@@ -1122,45 +1148,99 @@ export default function HRTeam({
         </div>
       )}
 
-      {tab === 'warnings' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">Warnings — all team</h3>
-          <p className="text-sm text-gray-500 mb-4">{allWarnings.length === 0 ? 'No warnings on file across the team.' : `${allWarnings.length} warning${allWarnings.length === 1 ? '' : 's'} on record.`}</p>
-          {allWarnings.length === 0 ? (
-            <div className="p-12 text-center text-gray-400 text-sm">No warnings recorded.</div>
-          ) : (
-            <div className="space-y-2">
-              {allWarnings.map(w => {
-                const typeColor = w.type === 'final' ? 'bg-red-200 text-red-900' : w.type === 'formal' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
-                return (
-                  <div key={w.id} className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 mt-0.5 ${typeColor}`}>{w.type}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{w.agent}</p>
-                      <p className="text-sm text-gray-700 mt-0.5">{w.reason}</p>
-                      <p className="text-[11px] text-gray-500 mt-1">{w.date ? new Date(w.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''} · issued by {w.issuedBy}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === 'past' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Past Team Members</h3>
-          <div className="space-y-4">
-            {pastStaff.map((p, i) => (
-              <div key={i} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"><UserX size={18} className="text-gray-400" /></div><div><p className="text-sm font-medium text-gray-900">{p.name}</p><p className="text-xs text-gray-500">{p.role} — D{p.pay.toLocaleString()}/mo</p></div></div>
-                <div className="text-right"><p className="text-sm text-gray-600">{p.reason}</p><p className="text-xs text-gray-400">{p.date} — Final: D{p.finalPay.toLocaleString()}</p></div>
+      {tab === 'warnings' && (() => {
+        const expiring = contractDeadlines.filter(c => c.daysLeft > 0 && c.daysLeft <= 90).length;
+        const probationCount = team.filter(t => t.status === 'probation').length;
+        const cards = [
+          { label: 'Active employees', value: team.length },
+          { label: 'Past employees', value: pastStaff.length },
+          { label: 'Warnings', value: allWarnings.length, accent: allWarnings.length > 0 ? 'text-red-600' : 'text-gray-900' },
+          { label: 'Probation', value: probationCount, accent: probationCount > 0 ? 'text-amber-600' : 'text-gray-900' },
+          { label: 'Contracts expiring', value: expiring, sub: '≤ 90 days', accent: expiring > 0 ? 'text-amber-600' : 'text-gray-900' },
+          { label: 'Leave requests', value: pendingLeave == null ? '—' : pendingLeave, sub: 'pending' },
+        ];
+        return (
+        <div className="space-y-6">
+          {/* HR archive dashboard — real counts only */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {cards.map((c, i) => (
+              <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">{c.label}</p>
+                <p className={`text-2xl font-bold mt-1 ${c.accent || 'text-gray-900'}`}>{c.value}</p>
+                {c.sub && <p className="text-[11px] text-gray-400 mt-0.5">{c.sub}</p>}
               </div>
             ))}
           </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Warnings &amp; disciplinary</h3>
+            <p className="text-sm text-gray-500 mb-4">{allWarnings.length === 0 ? 'No warnings on file across the team.' : `${allWarnings.length} warning${allWarnings.length === 1 ? '' : 's'} on record.`}</p>
+            {allWarnings.length === 0 ? (
+              <div className="p-12 text-center text-gray-400 text-sm">No warnings recorded.</div>
+            ) : (
+              <div className="space-y-2">
+                {allWarnings.map(w => {
+                  const typeColor = w.type === 'final' ? 'bg-red-200 text-red-900' : w.type === 'formal' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
+                  return (
+                    <div key={w.id} className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 mt-0.5 ${typeColor}`}>{w.type}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">{w.agent}</p>
+                        <p className="text-sm text-gray-700 mt-0.5">{w.reason}</p>
+                        <p className="text-[11px] text-gray-500 mt-1">{w.date ? new Date(w.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''} · issued by {w.issuedBy}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
-      )}
+        );
+      })()}
+
+      {tab === 'past' && (() => {
+        const withCat = pastStaff.map(p => ({ ...p, cat: pastCategory(p.reason) }));
+        const cats = ['all', 'Resigned', 'Terminated', 'Contract Ended', 'Training/Internship'];
+        const counts = withCat.reduce((m, p) => { m[p.cat] = (m[p.cat] || 0) + 1; return m; }, {});
+        const shown = pastFilter === 'all' ? withCat : withCat.filter(p => p.cat === pastFilter);
+        return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">Past Employees</h3>
+          <p className="text-sm text-gray-500 mb-4">Company history — {pastStaff.length} former team member{pastStaff.length === 1 ? '' : 's'}.</p>
+          <div className="flex flex-wrap items-center gap-2 mb-5">
+            {cats.map(c => (
+              <button key={c} type="button" onClick={() => setPastFilter(c)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${pastFilter === c ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {c === 'all' ? `All (${pastStaff.length})` : `${c}${counts[c] ? ` (${counts[c]})` : ''}`}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-3">
+            {shown.map((p, i) => (
+              <div key={i} className="p-4 border border-gray-200 rounded-lg">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0"><UserX size={18} className="text-gray-400" /></div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{p.name}</p>
+                      <p className="text-xs text-gray-500">{p.role}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${PAST_CAT_COLOR[p.cat] || PAST_CAT_COLOR.Other}`}>{p.cat}</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-3 border-t border-gray-100">
+                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Left</p><p className="text-sm text-gray-900 mt-0.5">{p.date || '—'}</p></div>
+                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Monthly pay</p><p className="text-sm text-gray-900 mt-0.5">D{(p.pay || 0).toLocaleString()}</p></div>
+                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Final settlement</p><p className="text-sm text-gray-900 mt-0.5">{p.finalPay > 0 ? `D${p.finalPay.toLocaleString()}` : '—'}</p></div>
+                  <div className="col-span-2 sm:col-span-1"><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Reason</p><p className="text-sm text-gray-700 mt-0.5">{p.reason}</p></div>
+                </div>
+              </div>
+            ))}
+            {shown.length === 0 && <div className="p-10 text-center text-gray-400 text-sm">No one in this category.</div>}
+          </div>
+        </div>
+        );
+      })()}
     </div>
   );
 }
