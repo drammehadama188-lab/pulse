@@ -753,6 +753,7 @@ export default function HRTeam({
                 <th className="text-left px-6 py-4 text-xs uppercase tracking-wider text-gray-500 font-semibold">Status</th>
                 <th className="text-right px-6 py-4 text-xs uppercase tracking-wider text-gray-500 font-semibold">Base (D)</th>
                 <th className="text-left px-6 py-4 text-xs uppercase tracking-wider text-gray-500 font-semibold">Ends</th>
+                <th className="px-3 py-4"></th>
               </tr></thead>
               <tbody>
                 {team.map((p, i) => (
@@ -763,6 +764,7 @@ export default function HRTeam({
                     <td className="px-6 py-4"><span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${statusBadge(p.status)}`}>{p.status}</span></td>
                     <td className="px-6 py-4 text-sm text-gray-900 text-right font-medium">D{p.base.toLocaleString()}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{p.contractEnd ? new Date(p.contractEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
+                    <td className="px-3 py-4 text-right"><ChevronDown size={16} className="-rotate-90 text-gray-300 inline" /></td>
                   </tr>
                 ))}
               </tbody>

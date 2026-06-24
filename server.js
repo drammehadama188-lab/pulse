@@ -1632,6 +1632,28 @@ app.delete('/api/agent-files/:id', auth, requirePower('hr'), notViewAs, (req, re
   res.json({ success: true })
 })
 
+// ---------- employee profile fields (editable HR data not in the static roster) ----------
+// Personal/contact + HR fields the static team.js roster doesn't carry. Stored
+// per employee NAME so they survive roster edits. Read by anyone with 'hr';
+// written by 'hr'. Never holds pay (that's the roster/payroll).
+const PROFILE_FIELDS = ['phone', 'email', 'emergencyContact', 'emergencyPhone', 'manager', 'nextReview', 'address', 'notes']
+app.get('/api/employee-profile', auth, requirePower('hr'), (req, res) => {
+  const name = req.query.name
+  if (!name) return res.status(400).json({ error: 'name required' })
+  const all = db.read('profiles', {})
+  res.json({ profile: all[name] || {} })
+})
+app.put('/api/employee-profile', auth, requirePower('hr'), notViewAs, (req, res) => {
+  const { name, fields } = req.body || {}
+  if (!name) return res.status(400).json({ error: 'name required' })
+  const all = db.read('profiles', {})
+  const clean = {}
+  for (const k of PROFILE_FIELDS) if (fields && fields[k] !== undefined) clean[k] = String(fields[k] || '').trim()
+  all[name] = { ...(all[name] || {}), ...clean, updatedAt: new Date().toISOString(), updatedBy: req.user.username }
+  db.write('profiles', all)
+  res.json({ profile: all[name] })
+})
+
 seedUsers()
 seedSales()
 app.listen(PORT, () => console.log(`Damia Staff API on http://localhost:${PORT}`))
