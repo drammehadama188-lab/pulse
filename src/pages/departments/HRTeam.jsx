@@ -928,7 +928,9 @@ export default function HRTeam({
                     className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-left ${expandable ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'}`}
                   >
                     <div className="min-w-0 flex items-center gap-2 flex-wrap">
-                      {expandable && <ChevronDown size={13} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
+                      {expandable
+                        ? <ChevronDown size={13} className={`text-gray-400 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
+                        : <span className="inline-block w-[13px]" />}
                       <span className="text-sm font-medium text-gray-900">{m.month}</span>
                       {m.confidence === 'in_progress' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">In progress</span>}
                       {m.confidence === 'low' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">May be incomplete</span>}
@@ -939,33 +941,27 @@ export default function HRTeam({
                     <span className="text-sm font-bold shrink-0">D{m.total.toLocaleString()}</span>
                   </button>
                   {expandable && isOpen && (
-                    <div className="border-t border-gray-100 bg-gray-50 px-3 py-2">
-                      <table className="w-full">
-                        <tbody>
-                          {m.people.map((p, j) => (
-                            <tr key={j} className="border-b border-gray-100 last:border-0">
-                              <td className="py-2 pr-3 text-sm text-gray-900">
-                                <span className={p.unallocated ? 'italic text-gray-500' : ''}>{p.name}</span>
-                                {p.note && <span className="block text-xs text-gray-400 mt-0.5">{p.note}</span>}
-                              </td>
-                              <td className="py-2 text-sm text-right font-medium whitespace-nowrap text-gray-900">D{(p.amount || 0).toLocaleString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot>
-                          <tr className="border-t-2 border-gray-200">
-                            <td className="py-2 pr-3 text-sm font-bold text-gray-900">Total</td>
-                            <td className="py-2 text-sm text-right font-bold whitespace-nowrap text-gray-900">D{itemised.toLocaleString()}</td>
-                          </tr>
-                        </tfoot>
-                      </table>
+                    <div className="border-t border-gray-100 bg-gray-50/50">
+                      {m.people.map((p, j) => (
+                        <div key={j} className="flex items-center justify-between gap-3 px-3 py-2 pl-[34px] border-b border-gray-100/70">
+                          <div className="min-w-0">
+                            <span className={`text-sm ${p.unallocated ? 'italic text-gray-500' : 'text-gray-700'}`}>{p.name}</span>
+                            {p.note && <span className="block text-xs text-gray-400">{p.note}</span>}
+                          </div>
+                          <span className="text-sm text-gray-700 shrink-0 whitespace-nowrap">D{(p.amount || 0).toLocaleString()}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-between gap-3 px-3 py-2 pl-[34px] border-b border-gray-100">
+                        <span className="text-sm font-semibold text-gray-900">Total</span>
+                        <span className="text-sm font-bold text-gray-900 shrink-0 whitespace-nowrap">D{itemised.toLocaleString()}</span>
+                      </div>
                       {!reconciles && (
-                        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                        <p className="text-xs text-amber-600 px-3 py-2 pl-[34px] flex items-center gap-1">
                           <AlertTriangle size={12} /> Itemised lines (D{itemised.toLocaleString()}) don't match the recorded total (D{m.total.toLocaleString()}).
                         </p>
                       )}
                       {m.confidence === 'low' && (
-                        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                        <p className="text-xs text-amber-600 px-3 py-2 pl-[34px] flex items-center gap-1">
                           <AlertTriangle size={12} /> This month looks low vs. the others — likely incomplete bookkeeping. Verify before relying on it.
                         </p>
                       )}
