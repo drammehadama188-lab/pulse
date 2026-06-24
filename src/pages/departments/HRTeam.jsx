@@ -98,11 +98,24 @@ export default function HRTeam({
   // so the page doesn't become an endless scroll of months.
   const [openYears, setOpenYears] = useState(() => [String(new Date().getFullYear())]);
   const toggleYear = (y) => setOpenYears(s => s.includes(y) ? s.filter(x => x !== y) : [...s, y]);
+  // Payroll is split into its own sub-pages (Run / History / Team Salaries).
+  const [paySection, setPaySection] = useState('run');
+  const [payHistYear, setPayHistYear] = useState('all');
+  const [payHistSearch, setPayHistSearch] = useState('');
+  // Run Payroll is owner-only; non-owners get History + Team Salaries only.
+  const payTabs = canSeePayDetail
+    ? [['run', 'Run Payroll'], ['history', 'History'], ['team', 'Team Salaries']]
+    : [['history', 'History'], ['team', 'Team Salaries']];
+  const paySec = payTabs.some(([k]) => k === paySection) ? paySection : payTabs[0][0];
   // Live payroll history from Zoho Books (owner-only). Falls back to the static
   // team.js list if the pull fails or the user isn't the owner.
   const [payLive, setPayLive] = useState(null);
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState(null);
+  // History data source + available years (used by the History sub-page filter).
+  const histMonths = canSeePayDetail && payLive ? payLive : payrollHistory;
+  const histYearOf = (m) => (m.ym ? m.ym.slice(0, 4) : (String(m.month).match(/\d{4}/)?.[0] || '—'));
+  const histYears = [...new Set((histMonths || []).map(histYearOf))].sort((a, b) => b.localeCompare(a));
   // Run-payroll (write to Books) state.
   const [payRun, setPayRun] = useState(null);            // { period, people[], paySources[] }
   const [payDraft, setPayDraft] = useState({});          // name -> { salary, bonus, source }
@@ -763,7 +776,12 @@ export default function HRTeam({
 
       {tab === 'payroll' && (
         <div className="space-y-6">
-          {canSeePayDetail && payRun && !payRun.error && (
+          <div className="flex items-center gap-1 bg-white rounded-xl shadow-sm border border-gray-200 p-1.5 w-fit">
+            {payTabs.map(([k, label]) => (
+              <button key={k} type="button" onClick={() => setPaySection(k)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${paySec === k ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{label}</button>
+            ))}
+          </div>
+          {paySec === 'run' && canSeePayDetail && payRun && !payRun.error && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-start justify-between mb-1">
                 <h3 className="text-lg font-semibold text-gray-900">Run Payroll — {payRun.period && new Date(payRun.period + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
@@ -824,8 +842,9 @@ export default function HRTeam({
               </div>
             </div>
           )}
+          {paySec === 'team' && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Payroll</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Team Salaries</h3>
             <table className="w-full"><thead><tr className="border-b border-gray-200">
               <th className="text-left px-4 py-3 text-xs uppercase text-gray-500">Name</th><th className="text-left px-4 py-3 text-xs uppercase text-gray-500">Role</th>
               <th className="text-right px-4 py-3 text-xs uppercase text-gray-500">Base</th><th className="text-right px-4 py-3 text-xs uppercase text-gray-500">Commission</th>
@@ -834,6 +853,8 @@ export default function HRTeam({
               {team.map((p, i) => <tr key={i} className="border-b border-gray-100"><td className="px-4 py-3 text-sm font-medium text-gray-900">{p.name}</td><td className="px-4 py-3 text-sm text-gray-600">{p.role}</td><td className="px-4 py-3 text-sm text-right">D{p.base.toLocaleString()}</td><td className="px-4 py-3 text-sm text-right">{p.commission > 0 ? <span className="text-green-600">Up to D{p.commission.toLocaleString()}</span> : '—'}</td><td className="px-4 py-3 text-sm font-bold text-right">D{p.total.toLocaleString()}</td></tr>)}
             </tbody><tfoot><tr className="border-t-2 border-gray-300"><td colSpan={4} className="px-4 py-3 font-bold">Total</td><td className="px-4 py-3 text-lg font-bold text-right">D{totalPayroll.toLocaleString()}</td></tr></tfoot></table>
           </div>
+          )}
+          {paySec === 'history' && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-start justify-between mb-1">
               <h3 className="text-lg font-semibold text-gray-900">Payroll History</h3>
@@ -848,12 +869,48 @@ export default function HRTeam({
                 : payError ? `Couldn't reach Zoho Books (${payError}). Showing the last known figures.`
                 : 'Click a month to see the per-person breakdown. Salaries account only.'}
             </p>
+            <div className="flex items-center gap-2 mb-4">
+              <select value={payHistYear} onChange={(e) => setPayHistYear(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white">
+                <option value="all">All years</option>
+                {histYears.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+              {canSeePayDetail && (
+                <input value={payHistSearch} onChange={(e) => setPayHistSearch(e.target.value)} placeholder="Search a person…" className="flex-1 max-w-xs border border-gray-200 rounded-lg px-3 py-1.5 text-sm" />
+              )}
+            </div>
             <div className="space-y-3">{(() => {
-              const months = (canSeePayDetail && payLive ? payLive : payrollHistory);
-              const yearOf = (m) => (m.ym ? m.ym.slice(0, 4) : (String(m.month).match(/\d{4}/)?.[0] || '—'));
+              const months = histMonths;
+              const yearOf = histYearOf;
+              const scoped = payHistYear === 'all' ? months : months.filter((m) => yearOf(m) === payHistYear);
+              const q = payHistSearch.trim().toLowerCase();
+              // Person search → flat results across the scoped months.
+              if (q) {
+                const hits = [];
+                scoped.forEach((m) => (m.people || []).forEach((p) => {
+                  if (String(p.name).toLowerCase().includes(q)) hits.push({ month: m.month, ym: m.ym || m.month, name: p.name, note: p.note, amount: p.amount });
+                }));
+                hits.sort((a, b) => (a.ym < b.ym ? 1 : -1));
+                const total = hits.reduce((s, h) => s + (h.amount || 0), 0);
+                if (!hits.length) return <p className="px-4 py-8 text-sm text-gray-400 text-center">No payments match “{payHistSearch}”.</p>;
+                return (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead><tr className="border-b border-gray-100 text-[11px] uppercase tracking-wider text-gray-400"><th className="text-left px-4 py-2 font-semibold">Month</th><th className="text-left px-4 py-2 font-semibold">Person</th><th className="text-right px-4 py-2 font-semibold">Amount</th></tr></thead>
+                      <tbody>{hits.map((h, i) => (
+                        <tr key={i} className="border-b border-gray-50 last:border-0">
+                          <td className="px-4 py-2 text-sm text-gray-600 whitespace-nowrap">{h.month}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900">{h.name}{h.note && <span className="block text-xs text-gray-400">{h.note}</span>}</td>
+                          <td className="px-4 py-2 text-sm text-right font-medium whitespace-nowrap">D{(h.amount || 0).toLocaleString()}</td>
+                        </tr>
+                      ))}</tbody>
+                      <tfoot><tr className="border-t-2 border-gray-200"><td className="px-4 py-2 text-sm font-bold" colSpan={2}>{hits.length} payment{hits.length === 1 ? '' : 's'}</td><td className="px-4 py-2 text-sm text-right font-bold">D{total.toLocaleString()}</td></tr></tfoot>
+                    </table>
+                  </div>
+                );
+              }
               const order = [];
               const byYear = {};
-              months.forEach((m) => { const y = yearOf(m); if (!byYear[y]) { byYear[y] = []; order.push(y); } byYear[y].push(m); });
+              scoped.forEach((m) => { const y = yearOf(m); if (!byYear[y]) { byYear[y] = []; order.push(y); } byYear[y].push(m); });
               order.sort((a, b) => b.localeCompare(a));
               const renderMonth = (m) => {
               const key = m.ym || m.month;
@@ -917,6 +974,11 @@ export default function HRTeam({
                 </div>
               );
               };
+              // A specific year is picked → show its months directly (no accordion).
+              if (payHistYear !== 'all') {
+                return <div className="border border-gray-200 rounded-lg overflow-hidden">{(byYear[payHistYear] || []).map(renderMonth)}</div>;
+              }
+              // All years → collapsible year sections.
               return order.map((y) => {
                 const yMonths = byYear[y];
                 const yTotal = yMonths.reduce((s, m) => s + (m.total || 0), 0);
@@ -935,6 +997,7 @@ export default function HRTeam({
               });
             })()}</div>
           </div>
+          )}
 
           {/* Confirm modal — shows the exact Books payload before any real post */}
           {payConfirm && (
