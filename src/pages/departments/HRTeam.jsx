@@ -251,8 +251,8 @@ export default function HRTeam({
     { id: 'roster', label: 'Team Roster' },
     { id: 'payroll', label: 'Payroll' },
     { id: 'contracts', label: 'Contracts' },
-    { id: 'warnings', label: `Warnings${allWarnings.length > 0 ? ` (${allWarnings.length})` : ''}` },
     { id: 'past', label: 'Past Staff' },
+    { id: 'warnings', label: `Records${allWarnings.length > 0 ? ` (${allWarnings.length})` : ''}` },
   ].filter((t) => !only || only.includes(t.id));
 
   // KPI Settings state

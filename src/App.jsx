@@ -83,7 +83,7 @@ export default function App() {
             new ones (Goals & Reviews, Benefits, Policies, Documents) render a
             clean "being set up" shell to be filled in Phase 2. */}
         {/* PEOPLE */}
-        <Route path="/people" element={<RequireAuth power="hr"><HRTeam only={['roster', 'past']} title="Employees" subtitle="Your team — active and past" /></RequireAuth>} />
+        <Route path="/people" element={<RequireAuth power="hr"><HRTeam only={['roster', 'past', 'warnings']} title="Employees & Records" subtitle="Your team — roster, past staff and records" /></RequireAuth>} />
         <Route path="/performance" element={<RequireAuth power="hr"><HRTeam only={['performance', 'kpi']} title="Performance" subtitle="Goals, KPIs and how the team is delivering" /></RequireAuth>} />
         <Route path="/contracts" element={<RequireAuth power="hr"><HRTeam only={['contracts']} title="Contracts" subtitle="Contract timeline, sorted by urgency" /></RequireAuth>} />
         {/* MANAGEMENT */}

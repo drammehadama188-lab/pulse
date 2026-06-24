@@ -24,8 +24,10 @@ const mgr = (u) => has(u, 'hr')
 export const NAV = [
   { id: 'dashboard', to: '/', label: 'Dashboard', icon: LayoutDashboard, group: null, show: () => true },
 
-  // PEOPLE — the roster, performance and contracts (management view)
-  { id: 'people', to: '/people', label: 'Employees', icon: Users, group: 'People', show: mgr },
+  // PEOPLE — the roster, performance and contracts (management view).
+  // "Employees & Records" folds the old standalone "Employee Records" (warnings)
+  // in as a tab (24 Jun 2026, Adama) so there's no duplicate nav item.
+  { id: 'people', to: '/people', label: 'Employees & Records', icon: Users, group: 'People', show: mgr },
   { id: 'performance', to: '/performance', label: 'Performance', icon: TrendingUp, group: 'People', show: mgr },
   { id: 'attendance-mgr', to: '/attendance', label: 'Attendance', icon: Clock, group: 'People', show: mgr },
   { id: 'contracts', to: '/contracts', label: 'Contracts', icon: FileText, group: 'People', show: mgr },
@@ -33,7 +35,7 @@ export const NAV = [
   // MANAGEMENT — goals, incoming requests, the employee record
   { id: 'reviews', to: '/reviews', label: 'Goals & Reviews', icon: Target, group: 'Management', show: mgr },
   { id: 'requests', to: '/requests', label: 'Requests', icon: ClipboardCheck, group: 'Management', show: (u) => has(u, 'approvals') || has(u, 'team') },
-  { id: 'records', to: '/records', label: 'Employee Records', icon: ShieldAlert, group: 'Management', show: mgr },
+  // 'records' (Employee Records / warnings) merged into "Employees & Records" tab.
 
   // PAYROLL
   { id: 'payroll', to: '/payroll', label: 'Payroll', icon: Wallet, group: 'Payroll', show: (u) => has(u, 'payroll') },
