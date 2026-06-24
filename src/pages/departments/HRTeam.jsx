@@ -7,6 +7,7 @@ import {
 import { team, pastStaff, payrollHistory } from '../../data/team';
 import TimePeriodSelector from '../../components/TimePeriodSelector';
 import { api } from '../../lib/api.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 // HR & Team — migrated from the Founder Hub HR page into Pulse.
 // Metrics read from team.js (Pulse's roster source of truth). KPI rules and
@@ -88,6 +89,35 @@ export default function HRTeam({
 }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  // Per-person payroll history is owner/CEO-only. Managers with the payroll
+  // power still see the month + total, but not who was paid what.
+  const canSeePayDetail = user?.username === 'adama';
+  const [openPayMonth, setOpenPayMonth] = useState(null);
+  // Live payroll history from Zoho Books (owner-only). Falls back to the static
+  // team.js list if the pull fails or the user isn't the owner.
+  const [payLive, setPayLive] = useState(null);
+  const [payLoading, setPayLoading] = useState(false);
+  const [payError, setPayError] = useState(null);
+  // Run-payroll (write to Books) state.
+  const [payRun, setPayRun] = useState(null);            // { period, people[], paySources[] }
+  const [payDraft, setPayDraft] = useState({});          // name -> { salary, bonus, source }
+  const [payConfirm, setPayConfirm] = useState(null);    // { person, preview, ... } modal
+  const [payPosting, setPayPosting] = useState(false);
+  const [payEdit, setPayEdit] = useState(null);          // { rec, salary, bonus, source, date } edit modal
+  const [payUndo, setPayUndo] = useState(null);          // { rec } undo-confirm modal
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  function loadPayRun() {
+    api('/payroll/run')
+      .then(d => {
+        setPayRun(d);
+        const draft = {};
+        (d.people || []).forEach(p => { draft[p.name] = { salary: p.suggestedSalary, bonus: p.suggestedBonus, source: (d.paySources?.[0]?.key) || 'wave' }; });
+        setPayDraft(draft);
+      })
+      .catch(() => setPayRun({ error: true }));
+  }
   const openProfile = (name) => navigate(`/agents/${name.toLowerCase().replace(/\s+/g, '-')}`);
   const urlTab = new URLSearchParams(location.search).get('tab');
   const initialTab = only ? (only.includes(urlTab) ? urlTab : only[0]) : (urlTab || 'dashboard');
@@ -104,6 +134,76 @@ export default function HRTeam({
   useEffect(() => {
     api('/warnings').then(d => setAllWarnings(d.warnings || [])).catch(() => setAllWarnings([]));
   }, [tab]);
+
+  // Pull live payroll history once the owner opens the Payroll tab.
+  useEffect(() => {
+    if (tab !== 'payroll' || !canSeePayDetail || payLive || payLoading) return;
+    setPayLoading(true);
+    setPayError(null);
+    api('/payroll/history')
+      .then(d => setPayLive(d.months || []))
+      .catch(e => setPayError(e.message || 'Could not load from Zoho Books'))
+      .finally(() => setPayLoading(false));
+    if (!payRun) loadPayRun();
+  }, [tab, canSeePayDetail]);
+
+  // Open the confirm modal for a person: dry-run first so the owner sees the
+  // exact vendor + Books payload before anything posts.
+  async function startPay(person) {
+    const d = payDraft[person.name] || {};
+    setPayConfirm({ person, loading: true, salary: d.salary, bonus: d.bonus, source: d.source, date: todayISO });
+    try {
+      const preview = await api(`/payroll/pay?dryRun=1`, { method: 'POST', body: { name: person.name, salary: Number(d.salary) || 0, bonus: Number(d.bonus) || 0, paySourceKey: d.source, date: todayISO, period: payRun.period } });
+      setPayConfirm(c => c && { ...c, loading: false, preview });
+    } catch (e) {
+      setPayConfirm(c => c && { ...c, loading: false, error: e.message });
+    }
+  }
+
+  // Real post. force=true overrides the duplicate guard.
+  async function confirmPay(force = false) {
+    if (!payConfirm) return;
+    const { person, salary, bonus, source, date } = payConfirm;
+    setPayPosting(true);
+    try {
+      const res = await api('/payroll/pay', { method: 'POST', body: { name: person.name, salary: Number(salary) || 0, bonus: Number(bonus) || 0, paySourceKey: source, date, period: payRun.period, force } });
+      if (res.ok === false && res.reason === 'duplicate') {
+        setPayConfirm(c => c && { ...c, duplicate: res.duplicate, message: res.message });
+      } else {
+        setPayConfirm(null);
+        loadPayRun();          // refresh paid status
+        setPayLive(null);      // history will re-pull
+      }
+    } catch (e) {
+      setPayConfirm(c => c && { ...c, error: e.message });
+    } finally {
+      setPayPosting(false);
+    }
+  }
+
+  // Save an edit to a recorded payment (updates the Zoho expense).
+  async function saveEdit() {
+    if (!payEdit) return;
+    setPayPosting(true);
+    try {
+      await api(`/payroll/pay/${payEdit.rec.id}`, { method: 'PUT', body: { salary: Number(payEdit.salary) || 0, bonus: Number(payEdit.bonus) || 0, paySourceKey: payEdit.source, date: payEdit.date } });
+      setPayEdit(null); loadPayRun(); setPayLive(null);
+    } catch (e) {
+      setPayEdit(c => c && { ...c, error: e.message });
+    } finally { setPayPosting(false); }
+  }
+
+  // Undo a recorded payment (deletes the Zoho expense).
+  async function confirmUndo() {
+    if (!payUndo) return;
+    setPayPosting(true);
+    try {
+      await api(`/payroll/pay/${payUndo.rec.id}`, { method: 'DELETE' });
+      setPayUndo(null); loadPayRun(); setPayLive(null);
+    } catch (e) {
+      setPayUndo(c => c && { ...c, error: e.message });
+    } finally { setPayPosting(false); }
+  }
 
   const warningsByAgent = useMemo(() => {
     const map = {};
@@ -659,6 +759,67 @@ export default function HRTeam({
 
       {tab === 'payroll' && (
         <div className="space-y-6">
+          {canSeePayDetail && payRun && !payRun.error && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-start justify-between mb-1">
+                <h3 className="text-lg font-semibold text-gray-900">Run Payroll — {payRun.period && new Date(payRun.period + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
+                <span className="text-[11px] text-gray-400 flex items-center gap-1 mt-1"><DollarSign size={11} /> Records to Zoho Books</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">Enter what each person receives, pick how you paid them, then mark paid. Nothing posts until you confirm.</p>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead><tr className="border-b border-gray-200 text-xs uppercase text-gray-500">
+                    <th className="text-left px-3 py-2">Name</th>
+                    <th className="text-right px-3 py-2">Salary</th>
+                    <th className="text-right px-3 py-2">Bonus</th>
+                    <th className="text-right px-3 py-2">Total</th>
+                    <th className="text-left px-3 py-2">Paid via</th>
+                    <th className="text-right px-3 py-2"></th>
+                  </tr></thead>
+                  <tbody>
+                    {payRun.people.map((p) => {
+                      const d = payDraft[p.name] || { salary: 0, bonus: 0, source: 'wave' };
+                      const total = (Number(d.salary) || 0) + (Number(d.bonus) || 0);
+                      const setD = (patch) => setPayDraft(s => ({ ...s, [p.name]: { ...s[p.name], ...patch } }));
+                      return (
+                        <tr key={p.name} className="border-b border-gray-100">
+                          <td className="px-3 py-2"><p className="text-sm font-medium text-gray-900">{p.name}</p><p className="text-xs text-gray-500">{p.role}</p></td>
+                          {p.paid ? (
+                            <td colSpan={4} className="px-3 py-2 text-sm text-emerald-700">
+                              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">✓ Paid D{p.paid.total.toLocaleString()} · {p.paid.paySource} · {p.paid.date}</span>
+                              {p.paid.expenseId && <span className="text-[11px] text-gray-400 ml-2">Books #{String(p.paid.expenseId).slice(-6)}</span>}
+                              {p.paid.editedInZoho && <span className="text-[11px] text-amber-600 ml-2">· edited in Zoho</span>}
+                            </td>
+                          ) : (
+                            <>
+                              <td className="px-3 py-2 text-right"><input type="number" value={d.salary} onChange={e => setD({ salary: e.target.value })} className="w-24 text-right border border-gray-200 rounded px-2 py-1 text-sm" /></td>
+                              <td className="px-3 py-2 text-right"><input type="number" value={d.bonus} onChange={e => setD({ bonus: e.target.value })} className="w-24 text-right border border-gray-200 rounded px-2 py-1 text-sm" /></td>
+                              <td className="px-3 py-2 text-right text-sm font-bold whitespace-nowrap">D{total.toLocaleString()}</td>
+                              <td className="px-3 py-2">
+                                <select value={d.source} onChange={e => setD({ source: e.target.value })} className="border border-gray-200 rounded px-2 py-1 text-sm">
+                                  {(payRun.paySources || []).map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                                </select>
+                              </td>
+                            </>
+                          )}
+                          {!p.paid ? (
+                            <td className="px-3 py-2 text-right">
+                              <button type="button" onClick={() => startPay(p)} disabled={total <= 0} className={`px-3 py-1.5 rounded-lg text-sm font-medium ${total > 0 ? 'bg-gray-900 text-white hover:bg-gray-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>Mark paid</button>
+                            </td>
+                          ) : (
+                            <td className="px-3 py-2 text-right whitespace-nowrap">
+                              <button type="button" title="Edit payment" onClick={() => setPayEdit({ rec: p.paid, salary: p.paid.salary, bonus: p.paid.bonus, source: p.paid.paySourceKey, date: p.paid.date })} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"><Edit2 size={15} /></button>
+                              <button type="button" title="Undo payment" onClick={() => setPayUndo({ rec: p.paid })} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 ml-1"><Trash2 size={15} /></button>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Payroll</h3>
             <table className="w-full"><thead><tr className="border-b border-gray-200">
@@ -670,9 +831,166 @@ export default function HRTeam({
             </tbody><tfoot><tr className="border-t-2 border-gray-300"><td colSpan={4} className="px-4 py-3 font-bold">Total</td><td className="px-4 py-3 text-lg font-bold text-right">D{totalPayroll.toLocaleString()}</td></tr></tfoot></table>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payroll History</h3>
-            <div className="space-y-3">{payrollHistory.map((m, i) => <div key={i} className="flex items-center justify-between p-4 border border-gray-100 rounded-lg"><div><p className="text-sm font-medium text-gray-900">{m.month}</p><p className="text-xs text-gray-500 mt-1">{m.breakdown}</p></div><p className="text-lg font-bold">D{m.total.toLocaleString()}</p></div>)}</div>
+            <div className="flex items-start justify-between mb-1">
+              <h3 className="text-lg font-semibold text-gray-900">Payroll History</h3>
+              {canSeePayDetail && payLive && (
+                <span className="text-[11px] text-gray-400 flex items-center gap-1 mt-1"><DollarSign size={11} /> Live from Zoho Books</span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              {!canSeePayDetail
+                ? 'Monthly totals. Per-person detail is owner-only.'
+                : payLoading ? 'Loading from Zoho Books…'
+                : payError ? `Couldn't reach Zoho Books (${payError}). Showing the last known figures.`
+                : 'Click a month to see the per-person breakdown. Salaries account only.'}
+            </p>
+            <div className="space-y-3">{(canSeePayDetail && payLive ? payLive : payrollHistory).map((m, i) => {
+              const key = m.ym || m.month;
+              const expandable = canSeePayDetail && Array.isArray(m.people) && m.people.length > 0;
+              const isOpen = openPayMonth === key;
+              // Reconcile: do the itemised lines add up to the recorded total?
+              const itemised = (m.people || []).reduce((s, p) => s + (p.amount || 0), 0);
+              const reconciles = itemised === m.total;
+              return (
+                <div key={key} className="border border-gray-100 rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    disabled={!expandable}
+                    onClick={() => expandable && setOpenPayMonth(isOpen ? null : key)}
+                    className={`w-full flex items-center justify-between p-4 text-left ${expandable ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'}`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 flex items-center gap-2 flex-wrap">
+                        {m.month}
+                        {expandable && <ChevronDown size={14} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
+                        {m.confidence === 'in_progress' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">In progress</span>}
+                        {m.confidence === 'low' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">May be incomplete</span>}
+                      </p>
+                      {m.breakdown
+                        ? <p className="text-xs text-gray-500 mt-1">{m.breakdown}</p>
+                        : m.headcount != null && <p className="text-xs text-gray-500 mt-1">{m.headcount} {m.headcount === 1 ? 'person' : 'people'} paid</p>}
+                    </div>
+                    <p className="text-lg font-bold shrink-0 ml-4">D{m.total.toLocaleString()}</p>
+                  </button>
+                  {expandable && isOpen && (
+                    <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
+                      <table className="w-full">
+                        <tbody>
+                          {m.people.map((p, j) => (
+                            <tr key={j} className="border-b border-gray-100 last:border-0">
+                              <td className="py-2 pr-3 text-sm text-gray-900">
+                                <span className={p.unallocated ? 'italic text-gray-500' : ''}>{p.name}</span>
+                                {p.note && <span className="block text-xs text-gray-400 mt-0.5">{p.note}</span>}
+                              </td>
+                              <td className="py-2 text-sm text-right font-medium whitespace-nowrap text-gray-900">D{(p.amount || 0).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t-2 border-gray-200">
+                            <td className="py-2 pr-3 text-sm font-bold text-gray-900">Total</td>
+                            <td className="py-2 text-sm text-right font-bold whitespace-nowrap text-gray-900">D{itemised.toLocaleString()}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                      {!reconciles && (
+                        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                          <AlertTriangle size={12} /> Itemised lines (D{itemised.toLocaleString()}) don't match the recorded total (D{m.total.toLocaleString()}).
+                        </p>
+                      )}
+                      {m.confidence === 'low' && (
+                        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                          <AlertTriangle size={12} /> This month looks low vs. the others — likely incomplete bookkeeping. Verify before relying on it.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}</div>
           </div>
+
+          {/* Confirm modal — shows the exact Books payload before any real post */}
+          {payConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !payPosting && setPayConfirm(null)}>
+              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Record payment in Zoho Books</h3>
+                <p className="text-sm text-gray-500 mb-4">{payConfirm.person.name} — {payRun?.period}</p>
+                {payConfirm.loading ? (
+                  <p className="text-sm text-gray-500 py-6 text-center">Checking Zoho…</p>
+                ) : payConfirm.error ? (
+                  <div className="text-sm text-red-600 bg-red-50 rounded-lg p-3">{payConfirm.error}</div>
+                ) : payConfirm.preview && payConfirm.preview.ok === false ? (
+                  <div className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3 flex items-start gap-2">
+                    <AlertTriangle size={16} className="mt-0.5 shrink-0" /><span>{payConfirm.preview.message || 'Already recorded.'}</span>
+                  </div>
+                ) : payConfirm.preview ? (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-gray-500">Salary</span><span className="font-medium">D{Number(payConfirm.salary || 0).toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Bonus</span><span className="font-medium">D{Number(payConfirm.bonus || 0).toLocaleString()}</span></div>
+                    <div className="flex justify-between border-t border-gray-100 pt-2"><span className="text-gray-900 font-semibold">Total to Books</span><span className="font-bold">D{payConfirm.preview.total.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Paid via</span><span className="font-medium">{payConfirm.preview.paySource?.label}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-medium">{payConfirm.date}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Account</span><span className="font-medium">Salaries and Employee Wages</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Vendor</span><span className="font-medium text-right">{payConfirm.preview.vendor?.name}{payConfirm.preview.createdVendor && ' (new)'}</span></div>
+                    {payConfirm.preview.fuzzyVendor && <p className="text-xs text-amber-600 flex items-center gap-1"><AlertTriangle size={12} /> Matched by name — confirm this is the right person.</p>}
+                    {payConfirm.preview.vendor && String(payConfirm.preview.vendor.id).startsWith('(') && <p className="text-xs text-blue-600">A new vendor "{payConfirm.preview.vendor.name}" will be created in Zoho.</p>}
+                    {payConfirm.duplicate && <p className="text-xs text-amber-600 flex items-center gap-1"><AlertTriangle size={12} /> {payConfirm.message}</p>}
+                  </div>
+                ) : null}
+                <div className="flex justify-end gap-2 mt-6">
+                  <button type="button" onClick={() => setPayConfirm(null)} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+                  {payConfirm.preview && payConfirm.preview.ok !== false && !payConfirm.duplicate && (
+                    <button type="button" onClick={() => confirmPay(false)} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">{payPosting ? 'Recording…' : 'Confirm & record'}</button>
+                  )}
+                  {payConfirm.duplicate && (
+                    <button type="button" onClick={() => confirmPay(true)} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-60">{payPosting ? 'Recording…' : 'Pay anyway'}</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit a recorded payment */}
+          {payEdit && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !payPosting && setPayEdit(null)}>
+              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Edit payment — {payEdit.rec.name}</h3>
+                <p className="text-sm text-gray-500 mb-4">Updates the record in Zoho Books.</p>
+                <div className="space-y-3 text-sm">
+                  <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Salary</span><input type="number" value={payEdit.salary} onChange={e => setPayEdit(c => ({ ...c, salary: e.target.value }))} className="w-32 text-right border border-gray-200 rounded px-2 py-1" /></label>
+                  <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Bonus</span><input type="number" value={payEdit.bonus} onChange={e => setPayEdit(c => ({ ...c, bonus: e.target.value }))} className="w-32 text-right border border-gray-200 rounded px-2 py-1" /></label>
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-2"><span className="text-gray-900 font-semibold">New total</span><span className="font-bold">D{((Number(payEdit.salary) || 0) + (Number(payEdit.bonus) || 0)).toLocaleString()}</span></div>
+                  <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Paid via</span>
+                    <select value={payEdit.source} onChange={e => setPayEdit(c => ({ ...c, source: e.target.value }))} className="border border-gray-200 rounded px-2 py-1">
+                      {(payRun?.paySources || []).map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Date</span><input type="date" value={payEdit.date} onChange={e => setPayEdit(c => ({ ...c, date: e.target.value }))} className="border border-gray-200 rounded px-2 py-1" /></label>
+                  {payEdit.error && <div className="text-sm text-red-600 bg-red-50 rounded-lg p-2">{payEdit.error}</div>}
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button type="button" onClick={() => setPayEdit(null)} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+                  <button type="button" onClick={saveEdit} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">{payPosting ? 'Saving…' : 'Save changes'}</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Undo a recorded payment */}
+          {payUndo && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !payPosting && setPayUndo(null)}>
+              <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Undo payment?</h3>
+                <p className="text-sm text-gray-600 mb-4">This deletes {payUndo.rec.name}'s D{payUndo.rec.total.toLocaleString()} payment ({payUndo.rec.paySource}, {payUndo.rec.date}) from Zoho Books. {payUndo.rec.name} will show as unpaid again.</p>
+                {payUndo.error && <div className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{payUndo.error}</div>}
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setPayUndo(null)} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+                  <button type="button" onClick={confirmUndo} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-60">{payPosting ? 'Removing…' : 'Undo & delete'}</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

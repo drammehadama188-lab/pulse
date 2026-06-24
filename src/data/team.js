@@ -135,11 +135,53 @@ export const pastStaff = [
   { name: 'Ebou Jobe', role: 'Technician / Installer', pay: 15000, reason: 'Contract ended 15 Jun 2026', date: 'Jun 2026', finalPay: 15000 },
 ];
 
+// Legacy payroll history (Jan–Apr 2026), kept as a display-only record so the
+// HR Payroll History card can drill down per person. Each `people[]` line is
+// backfilled ONLY from what the original ledger blurb actually records — nothing
+// is invented. Where the named lines don't add up to the recorded month total,
+// the balance shows as a single `unallocated: true` line ("not itemised")
+// rather than being attributed to a made-up person. Going-forward months should
+// come from the live payslip API (/api/payslips), not this array.
 export const payrollHistory = [
-  { month: 'April 2026', total: 60400, breakdown: 'Mathew left 14 Apr — no pay. Abdou on new internship terms from 15 Apr (D5K 13–14 Apr + D2K 15–30 Apr). Rohey left 15 Apr — D3,000 final (half month base, no commission due to 2nd warning).' },
-  { month: 'March 2026', total: 35500, breakdown: 'Ebou D15K + Ya Fatou D12K + Agents D6K + Cleaner D2.5K' },
-  { month: 'February 2026', total: 21000, breakdown: 'Ebou D15K + Ya Fatou D6K (reduced after restructuring)' },
-  { month: 'January 2026', total: 65397, breakdown: 'Full team incl. Baboucarr + agents who were let go' },
+  {
+    month: 'April 2026',
+    total: 60400,
+    breakdown: 'Mathew left 14 Apr — no pay. Abdou on new internship terms from 15 Apr (D5K to 14 Apr + D2K 15–30 Apr). Rohey left 15 Apr — D3,000 final (half month base, no commission due to 2nd warning).',
+    people: [
+      { name: 'Mathew Lenor', amount: 0, note: 'Left 14 Apr — no pay' },
+      { name: 'Abdourahman Manjang', amount: 7000, note: 'D5,000 to 14 Apr + D2,000 internship 15–30 Apr' },
+      { name: 'Rohey Lowe', amount: 3000, note: 'Final pay — half-month base, no commission (2nd warning)' },
+      { name: 'Rest of team — not itemised', amount: 50400, unallocated: true, note: 'Bulk team pay for April was not recorded per person in the ledger' },
+    ],
+  },
+  {
+    month: 'March 2026',
+    total: 35500,
+    breakdown: 'Ebou D15K + Ya Fatou D12K + Agents D6K + Cleaner D2.5K',
+    people: [
+      { name: 'Ebou', amount: 15000 },
+      { name: 'Ya Fatou Sawaneh', amount: 12000 },
+      { name: 'Agents — not itemised', amount: 6000, unallocated: true, note: 'Recorded only as a combined "Agents" line in the ledger' },
+      { name: 'Cleaner', amount: 2500 },
+    ],
+  },
+  {
+    month: 'February 2026',
+    total: 21000,
+    breakdown: 'Ebou D15K + Ya Fatou D6K (reduced after restructuring)',
+    people: [
+      { name: 'Ebou', amount: 15000 },
+      { name: 'Ya Fatou Sawaneh', amount: 6000, note: 'Reduced after restructuring' },
+    ],
+  },
+  {
+    month: 'January 2026',
+    total: 65397,
+    breakdown: 'Full team incl. Baboucarr + agents who were let go',
+    people: [
+      { name: 'Whole team — not itemised', amount: 65397, unallocated: true, note: 'Full team incl. Baboucarr + agents since let go; never broken down per person in the ledger' },
+    ],
+  },
 ];
 
 export const totalPayroll = team.reduce((sum, t) => sum + t.total, 0);

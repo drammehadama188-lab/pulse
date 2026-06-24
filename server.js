@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url'
 import bcrypt from 'bcryptjs'
 import { team, pastStaff } from './src/data/team.js'
 import { sallyCustomers, sallyMonthlyHistory } from './src/data/sally-sales-seed.js'
+import { buildPayrollHistory, zohoConfigured, paySources, recordSalaryPayment, resolveVendor, getExpense, deleteExpense, updateSalaryExpense } from './lib/zoho-books.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -1074,6 +1075,183 @@ app.post('/api/payslips', auth, requirePower('payroll'), notViewAs, (req, res) =
 app.delete('/api/payslips/:id', auth, requirePower('payroll'), notViewAs, (req, res) => {
   db.write('payslips', db.read('payslips', []).filter((p) => p.id !== req.params.id))
   res.json({ ok: true })
+})
+
+// Payroll history — per-person, per-month, pulled LIVE from Zoho Books
+// (the "Salaries and Employee Wages" account). OWNER/CEO ONLY: this exposes
+// every staff member's pay, so it's gated to the CEO, not the payroll power.
+// Cached in memory (1h) so we don't hit Zoho on every page load; ?refresh=1
+// forces a fresh pull.
+let _payrollCache = null // { at, data }
+const PAYROLL_TTL = 60 * 60 * 1000
+app.get('/api/payroll/history', auth, async (req, res) => {
+  if (req.realUser.username !== CEO) return res.status(403).json({ error: 'forbidden' })
+  if (!zohoConfigured()) return res.status(503).json({ error: 'Zoho Books is not configured on this server' })
+  const fresh = req.query.refresh === '1'
+  if (!fresh && _payrollCache && Date.now() - _payrollCache.at < PAYROLL_TTL) {
+    return res.json({ ...(_payrollCache.data), cached: true })
+  }
+  try {
+    const data = await buildPayrollHistory({ from: '2025-01-01' })
+    _payrollCache = { at: Date.now(), data }
+    res.json({ ...data, cached: false })
+  } catch (err) {
+    // On failure keep serving the last good pull if we have one.
+    if (_payrollCache) return res.json({ ...(_payrollCache.data), cached: true, stale: true, error: err.message })
+    res.status(502).json({ error: 'Could not reach Zoho Books: ' + err.message })
+  }
+})
+
+// ---------- payroll RUN (owner-only writes to Zoho Books) ----------
+// Owner-only gate, reused by every endpoint below.
+function requireOwner(req, res, next) {
+  if (req.realUser.username !== CEO) return res.status(403).json({ error: 'forbidden' })
+  next()
+}
+
+// Pay-source picker options (Wave / Access Bank / Cash …).
+app.get('/api/payroll/paysources', auth, requireOwner, (req, res) => {
+  res.json({ paySources: paySources().map((s) => ({ key: s.key, label: s.label })) })
+})
+
+// The roster to run for a month + what's already been paid (local record).
+// `?period=YYYY-MM` (defaults to the current month). Suggested salary/bonus
+// pre-fill from the roster; the owner edits them before paying.
+app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
+  const period = /^\d{4}-\d{2}$/.test(req.query.period || '') ? req.query.period : new Date().toISOString().slice(0, 7)
+  const archived = archivedNameSet()
+  const merged = [...team, ...createdStaffRoster()].filter((p) => !archived.has(p.name))
+  let paidRecords = db.read('payroll', []).filter((r) => r.period === period)
+  // Reconcile each recorded payment against Books (Books is the truth): if the
+  // expense was deleted in Zoho, drop the local record; if its total changed,
+  // sync ours + flag it. Keeps the "Paid" badge honest no matter where edited.
+  if (zohoConfigured() && paidRecords.length) {
+    const all = db.read('payroll', [])
+    let changed = false
+    for (const r of paidRecords) {
+      if (!r.expenseId) continue
+      try {
+        const exp = await getExpense(r.expenseId)
+        if (!exp) { // deleted in Zoho
+          const i = all.findIndex((x) => x.id === r.id)
+          if (i >= 0) { all.splice(i, 1); changed = true; r._deleted = true }
+        } else if (Math.round(exp.total) !== Math.round(r.total)) {
+          r.total = Math.round(exp.total); r.editedInZoho = true
+          const i = all.findIndex((x) => x.id === r.id)
+          if (i >= 0) { all[i] = { ...all[i], total: r.total, editedInZoho: true }; changed = true }
+        }
+      } catch { /* leave record as-is on a transient Zoho hiccup */ }
+    }
+    if (changed) { db.write('payroll', all); _payrollCache = null }
+    paidRecords = paidRecords.filter((r) => !r._deleted)
+  }
+  const paidByName = {}
+  paidRecords.forEach((r) => { paidByName[r.name] = r })
+  // de-dupe roster by name (createdStaffRoster may overlap team)
+  const seen = new Set()
+  const people = merged.filter((p) => (seen.has(p.name) ? false : seen.add(p.name))).map((p) => ({
+    name: p.name,
+    role: p.role || '',
+    suggestedSalary: Number(p.base) || 0,
+    suggestedBonus: Number(p.commission) || 0,
+    paid: paidByName[p.name] || null,
+  }))
+  res.json({ period, people, paySources: paySources().map((s) => ({ key: s.key, label: s.label })) })
+})
+
+// Resolve which Zoho vendor a name maps to (for the confirm step) — read only.
+app.get('/api/payroll/resolve-vendor', auth, requireOwner, async (req, res) => {
+  if (!zohoConfigured()) return res.status(503).json({ error: 'Zoho Books is not configured' })
+  try { res.json(await resolveVendor(req.query.name || '')) }
+  catch (err) { res.status(502).json({ error: err.message }) }
+})
+
+// Record a payment. dryRun=1 returns the exact Books payload WITHOUT writing.
+// On a real run it posts one Salaries expense and stores a local record.
+app.post('/api/payroll/pay', auth, requireOwner, notViewAs, async (req, res) => {
+  if (!zohoConfigured()) return res.status(503).json({ error: 'Zoho Books is not configured' })
+  const { name, salary, bonus, paySourceKey, date, period, force } = req.body || {}
+  if (!name) return res.status(400).json({ error: 'name required' })
+  const dryRun = req.query.dryRun === '1' || req.body?.dryRun === true
+  try {
+    const result = await recordSalaryPayment({ name, salary, bonus, paySourceKey, date, period, force: !!force, dryRun })
+    // duplicate / no_vendor are business outcomes (not HTTP errors) — return 200
+    // with ok:false so the UI can show them without the fetch helper throwing.
+    if (!result.ok) return res.json(result)
+    if (!dryRun) {
+      // Persist what we paid so the run shows status without re-hitting Books.
+      const all = db.read('payroll', [])
+      const ym = (period && /^\d{4}-\d{2}$/.test(period)) ? period : String(date).slice(0, 7)
+      const rec = {
+        id: crypto.randomUUID(),
+        period: ym,
+        name,
+        salary: Math.round(Number(salary) || 0),
+        bonus: Math.round(Number(bonus) || 0),
+        total: result.total,
+        paySource: result.paySource?.label || paySourceKey,
+        paySourceKey,
+        date,
+        expenseId: result.expenseId || null,
+        vendorId: result.vendor?.id || null,
+        createdVendor: !!result.createdVendor,
+        postedBy: req.user.username,
+        postedAt: new Date().toISOString(),
+      }
+      // one record per person per month
+      db.write('payroll', [...all.filter((r) => !(r.name === name && r.period === ym)), rec])
+      // a fresh payment invalidates the cached history
+      _payrollCache = null
+      return res.json({ ...result, record: rec })
+    }
+    res.json(result)
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
+})
+
+// Edit a recorded payment — updates the Zoho expense + the local record.
+app.put('/api/payroll/pay/:id', auth, requireOwner, notViewAs, async (req, res) => {
+  if (!zohoConfigured()) return res.status(503).json({ error: 'Zoho Books is not configured' })
+  const all = db.read('payroll', [])
+  const rec = all.find((r) => r.id === req.params.id)
+  if (!rec) return res.status(404).json({ error: 'No such payment record' })
+  if (!rec.expenseId) return res.status(409).json({ error: 'This record has no linked Zoho expense' })
+  const { salary, bonus, paySourceKey, date } = req.body || {}
+  try {
+    const upd = await updateSalaryExpense(rec.expenseId, {
+      name: rec.name, vendorId: rec.vendorId,
+      salary: Number(salary) || 0, bonus: Number(bonus) || 0,
+      paySourceKey: paySourceKey || rec.paySourceKey, date: date || rec.date, period: rec.period,
+    })
+    const next = {
+      ...rec,
+      salary: Math.round(Number(salary) || 0), bonus: Math.round(Number(bonus) || 0), total: upd.total,
+      paySource: upd.paySource?.label || rec.paySource, paySourceKey: paySourceKey || rec.paySourceKey,
+      date: date || rec.date, editedInZoho: false, editedBy: req.user.username, editedAt: new Date().toISOString(),
+    }
+    db.write('payroll', all.map((r) => (r.id === rec.id ? next : r)))
+    _payrollCache = null
+    res.json({ ok: true, record: next })
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
+})
+
+// Undo a recorded payment — deletes the Zoho expense + removes the local record.
+app.delete('/api/payroll/pay/:id', auth, requireOwner, notViewAs, async (req, res) => {
+  if (!zohoConfigured()) return res.status(503).json({ error: 'Zoho Books is not configured' })
+  const all = db.read('payroll', [])
+  const rec = all.find((r) => r.id === req.params.id)
+  if (!rec) return res.status(404).json({ error: 'No such payment record' })
+  try {
+    if (rec.expenseId) await deleteExpense(rec.expenseId)
+    db.write('payroll', all.filter((r) => r.id !== rec.id))
+    _payrollCache = null
+    res.json({ ok: true })
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
 })
 
 // ---------- sales: customers + activities (owner-scoped, customer-centric) ----------

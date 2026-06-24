@@ -15,3 +15,10 @@ dist
 
 # Dev-only auth-seed helper (may hold a session token) — never commit
 /public/_seed.html
+
+# Zoho secrets — never commit. The refresh token lives in .env (already
+# ignored above); these patterns are belt-and-suspenders in case a config or
+# token file is ever written to disk.
+.zoho-config.json
+.zoho-tokens.json
+.zoho-*.json
