@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Pencil, Upload, Download, FileText, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Pencil, Upload, Download, FileText, AlertTriangle, CheckCircle2, Circle } from 'lucide-react';
 import { team } from '../data/team';
 import { api } from '../lib/api.js';
 
@@ -46,6 +46,7 @@ export default function EmployeeProfile() {
   const [warnings, setWarnings] = useState([]);
   const [review, setReview] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [checklist, setChecklist] = useState({ onboarding: [], offboarding: [] });
 
   useEffect(() => {
     if (!agent) return;
@@ -54,7 +55,18 @@ export default function EmployeeProfile() {
     api(`/agent-files?agent=${n}`).then(d => setFiles(d.files || [])).catch(() => setFiles([]));
     api(`/warnings?agent=${n}`).then(d => setWarnings(d.warnings || [])).catch(() => setWarnings([]));
     api(`/decisions?agent=${n}`).then(d => setReview(d.current || null)).catch(() => {});
+    api(`/employee-checklist?name=${n}`).then(d => setChecklist({ onboarding: d.onboarding || [], offboarding: d.offboarding || [] })).catch(() => {});
   }, [agent?.name]);
+
+  async function toggleCheck(type, label, done) {
+    // optimistic
+    setChecklist(c => ({ ...c, [type]: c[type].map(it => it.label === label ? { ...it, done } : it) }));
+    try {
+      await api('/employee-checklist', { method: 'PUT', body: { name: agent.name, type, label, done } });
+    } catch {
+      setChecklist(c => ({ ...c, [type]: c[type].map(it => it.label === label ? { ...it, done: !done } : it) }));
+    }
+  }
 
   if (!agent) {
     return (
@@ -101,7 +113,8 @@ export default function EmployeeProfile() {
     } catch { /* ignore */ } finally { setUploading(false); e.target.value = ''; }
   }
 
-  const tabs = [['overview', 'Overview'], ['documents', `Documents${documents.length ? ` (${documents.length})` : ''}`], ['performance', 'Performance'], ['activity', 'Activity']];
+  const onbDone = checklist.onboarding.filter(i => i.done).length;
+  const tabs = [['overview', 'Overview'], ['documents', `Documents${documents.length ? ` (${documents.length})` : ''}`], ['performance', 'Performance'], ['checklists', `Checklists${checklist.onboarding.length ? ` (${onbDone}/${checklist.onboarding.length})` : ''}`], ['activity', 'Activity']];
 
   return (
     <div className="max-w-4xl">
@@ -220,6 +233,36 @@ export default function EmployeeProfile() {
               ))}</div>
             )}
           </div>
+        </div>
+      )}
+
+      {tab === 'checklists' && (
+        <div className="space-y-4">
+          {[['onboarding', 'Onboarding', 'emerald'], ['offboarding', 'Offboarding', 'red']].map(([type, title, color]) => {
+            const items = checklist[type] || [];
+            const done = items.filter(i => i.done).length;
+            const pct = items.length ? Math.round((done / items.length) * 100) : 0;
+            return (
+              <div key={type} className="bg-white rounded-3xl border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+                  <span className="text-xs font-medium text-gray-500">{done}/{items.length} done</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-gray-100 mb-5 overflow-hidden">
+                  <div className={`h-full rounded-full ${color === 'emerald' ? 'bg-emerald-500' : 'bg-red-400'}`} style={{ width: `${pct}%` }} />
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {items.map((it) => (
+                    <button key={it.label} type="button" onClick={() => toggleCheck(type, it.label, !it.done)} className="w-full flex items-center gap-3 py-3 text-left hover:bg-gray-50 -mx-2 px-2 rounded-lg">
+                      {it.done ? <CheckCircle2 size={18} className={color === 'emerald' ? 'text-emerald-600' : 'text-red-500'} /> : <Circle size={18} className="text-gray-300" />}
+                      <span className={`flex-1 text-sm ${it.done ? 'text-gray-500 line-through' : 'text-gray-900'}`}>{it.label}</span>
+                      {it.done && it.doneAt && <span className="text-[11px] text-gray-400">{formatDate(it.doneAt)}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

@@ -1654,6 +1654,33 @@ app.put('/api/employee-profile', auth, requirePower('hr'), notViewAs, (req, res)
   res.json({ profile: all[name] })
 })
 
+// ---------- onboarding / offboarding checklists (per employee) ----------
+const ONBOARDING_ITEMS = ['Signed contract', 'Submitted ID', 'Training complete', 'App access granted', 'Uniform issued']
+const OFFBOARDING_ITEMS = ['Equipment returned', 'Accounts disabled', 'Final salary paid', 'Exit interview completed']
+function mergeChecklist(items, stored) {
+  return items.map((label) => ({ label, ...(stored && stored[label] ? stored[label] : { done: false }) }))
+}
+app.get('/api/employee-checklist', auth, requirePower('hr'), (req, res) => {
+  const name = req.query.name
+  if (!name) return res.status(400).json({ error: 'name required' })
+  const c = (db.read('checklists', {}))[name] || {}
+  res.json({ onboarding: mergeChecklist(ONBOARDING_ITEMS, c.onboarding), offboarding: mergeChecklist(OFFBOARDING_ITEMS, c.offboarding) })
+})
+app.put('/api/employee-checklist', auth, requirePower('hr'), notViewAs, (req, res) => {
+  const { name, type, label, done } = req.body || {}
+  const items = type === 'onboarding' ? ONBOARDING_ITEMS : type === 'offboarding' ? OFFBOARDING_ITEMS : null
+  if (!name || !items) return res.status(400).json({ error: 'name and valid type required' })
+  if (!items.includes(label)) return res.status(400).json({ error: 'unknown checklist item' })
+  const all = db.read('checklists', {})
+  const c = all[name] || {}
+  const section = c[type] || {}
+  section[label] = done ? { done: true, doneAt: new Date().toISOString(), doneBy: req.user.username } : { done: false }
+  c[type] = section
+  all[name] = c
+  db.write('checklists', all)
+  res.json({ ok: true, item: { label, ...section[label] } })
+})
+
 seedUsers()
 seedSales()
 app.listen(PORT, () => console.log(`Damia Staff API on http://localhost:${PORT}`))
