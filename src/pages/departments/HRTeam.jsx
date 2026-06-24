@@ -955,8 +955,8 @@ export default function HRTeam({
                           </div>
                         </div>
                       ))}
-                      <div className="flex items-stretch border-b border-gray-100">
-                        <div className="flex-1 min-w-0 px-3 py-2 pl-[34px]"><span className="text-sm font-semibold text-gray-900">Total</span></div>
+                      <div className="flex items-stretch border-t border-gray-200 border-b border-gray-100 bg-gray-100/50">
+                        <div className="flex-1 min-w-0 px-3 py-2 pl-[34px]"><span className="text-sm font-bold text-gray-900">Total</span></div>
                         <div className="w-36 shrink-0 flex items-center justify-end border-l border-gray-100 px-3 py-2">
                           <span className="text-sm font-bold text-gray-900 whitespace-nowrap">D{itemised.toLocaleString()}</span>
                         </div>
