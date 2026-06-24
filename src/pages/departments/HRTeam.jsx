@@ -784,7 +784,7 @@ export default function HRTeam({
           {paySec === 'run' && canSeePayDetail && payRun && !payRun.error && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-start justify-between mb-1">
-                <h3 className="text-lg font-semibold text-gray-900">Run Payroll — {payRun.period && new Date(payRun.period + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Run Payroll — {payRun.period && new Date(Number(payRun.period.slice(0, 4)), Number(payRun.period.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
                 <span className="text-[11px] text-gray-400 flex items-center gap-1 mt-1"><DollarSign size={11} /> Records to Zoho Books</span>
               </div>
               <p className="text-xs text-gray-500 mb-4">Enter what each person receives, pick how you paid them, then mark paid. Nothing posts until you confirm.</p>
@@ -838,6 +838,25 @@ export default function HRTeam({
                       );
                     })}
                   </tbody>
+                  {(() => {
+                    let sal = 0, bon = 0;
+                    payRun.people.forEach((p) => {
+                      const d = payDraft[p.name] || {};
+                      sal += p.paid ? (p.paid.salary || 0) : (Number(d.salary) || 0);
+                      bon += p.paid ? (p.paid.bonus || 0) : (Number(d.bonus) || 0);
+                    });
+                    return (
+                      <tfoot>
+                        <tr className="border-t-2 border-gray-300">
+                          <td className="px-3 py-3 text-sm font-bold text-gray-900">Estimated total</td>
+                          <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">D{sal.toLocaleString()}</td>
+                          <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">D{bon.toLocaleString()}</td>
+                          <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">D{(sal + bon).toLocaleString()}</td>
+                          <td colSpan={2}></td>
+                        </tr>
+                      </tfoot>
+                    );
+                  })()}
                 </table>
               </div>
             </div>
