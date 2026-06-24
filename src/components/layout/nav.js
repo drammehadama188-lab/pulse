@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, TrendingUp, Clock, FileText, Target,
   ClipboardCheck, ShieldAlert, Wallet, Gift, BookOpen, FolderOpen,
-  Palmtree, User, Menu,
+  Palmtree, User, Menu, UserPlus,
 } from 'lucide-react'
 
 const isOwner = (u) => u?.username === 'adama' // CEO/owner — no self-service (leave, clock-in…)
@@ -30,6 +30,7 @@ export const NAV = [
   { id: 'people', to: '/people', label: 'Employees & Records', icon: Users, group: 'People', show: mgr },
   { id: 'performance', to: '/performance', label: 'Performance', icon: TrendingUp, group: 'People', show: mgr },
   { id: 'attendance-mgr', to: '/attendance', label: 'Attendance', icon: Clock, group: 'People', show: mgr },
+  { id: 'recruitment', to: '/recruitment', label: 'Recruitment', icon: UserPlus, group: 'People', show: mgr },
   { id: 'contracts', to: '/contracts', label: 'Contracts', icon: FileText, group: 'People', show: mgr },
 
   // MANAGEMENT — goals, incoming requests, the employee record

@@ -20,6 +20,7 @@ import Approvals from './pages/manager/Approvals.jsx'
 import Team from './pages/manager/Team.jsx'
 import HRTeam from './pages/departments/HRTeam.jsx'
 import EmployeeProfile from './pages/EmployeeProfile.jsx'
+import Recruitment from './pages/Recruitment.jsx'
 import DepartmentShell from './pages/departments/DepartmentShell.jsx'
 import { Target, Gift, BookOpen, FolderOpen } from 'lucide-react'
 
@@ -86,6 +87,7 @@ export default function App() {
         <Route path="/people" element={<RequireAuth power="hr"><HRTeam only={['roster', 'past', 'warnings']} title="Employees & Records" subtitle="Your team — roster, past staff and records" /></RequireAuth>} />
         <Route path="/performance" element={<RequireAuth power="hr"><HRTeam only={['performance', 'kpi']} title="Performance" subtitle="Goals, KPIs and how the team is delivering" /></RequireAuth>} />
         <Route path="/contracts" element={<RequireAuth power="hr"><HRTeam only={['contracts']} title="Contracts" subtitle="Contract timeline, sorted by urgency" /></RequireAuth>} />
+        <Route path="/recruitment" element={<RequireAuth power="hr"><Recruitment /></RequireAuth>} />
         {/* MANAGEMENT */}
         <Route path="/reviews" element={<RequireAuth power="hr"><DepartmentShell icon={Target} title="Goals & Reviews" subtitle="Management" blurb="Goals, monthly reviews, achievements and improvement plans. Being set up — coming online here soon." /></RequireAuth>} />
         <Route path="/requests" element={<RequireAuth power="approvals"><Approvals /></RequireAuth>} />

@@ -1681,6 +1681,43 @@ app.put('/api/employee-checklist', auth, requirePower('hr'), notViewAs, (req, re
   res.json({ ok: true, item: { label, ...section[label] } })
 })
 
+// ---------- recruitment: applicants pipeline ----------
+const APPLICANT_STAGES = ['cv_received', 'interviewed', 'hired', 'rejected']
+const APPLICANT_FIELDS = ['name', 'role', 'email', 'phone', 'source', 'notes']
+app.get('/api/applicants', auth, requirePower('hr'), (req, res) => {
+  const list = db.read('applicants', []).slice().sort((a, b) => ((a.updatedAt || a.createdAt) < (b.updatedAt || b.createdAt) ? 1 : -1))
+  res.json({ applicants: list })
+})
+app.post('/api/applicants', auth, requirePower('hr'), notViewAs, (req, res) => {
+  const b = req.body || {}
+  if (!b.name) return res.status(400).json({ error: 'name required' })
+  const now = new Date().toISOString()
+  const rec = { id: crypto.randomUUID(), stage: 'cv_received', createdAt: now, updatedAt: now, createdBy: req.user.username, history: [{ stage: 'cv_received', at: now, by: req.user.username }] }
+  for (const k of APPLICANT_FIELDS) rec[k] = String(b[k] || '').trim()
+  const all = db.read('applicants', [])
+  all.push(rec)
+  db.write('applicants', all)
+  res.json({ applicant: rec })
+})
+app.put('/api/applicants/:id', auth, requirePower('hr'), notViewAs, (req, res) => {
+  const all = db.read('applicants', [])
+  const rec = all.find((a) => a.id === req.params.id)
+  if (!rec) return res.status(404).json({ error: 'not found' })
+  const b = req.body || {}
+  for (const k of APPLICANT_FIELDS) if (b[k] !== undefined) rec[k] = String(b[k] || '').trim()
+  if (b.stage && APPLICANT_STAGES.includes(b.stage) && b.stage !== rec.stage) {
+    rec.stage = b.stage
+    rec.history = [...(rec.history || []), { stage: b.stage, at: new Date().toISOString(), by: req.user.username }]
+  }
+  rec.updatedAt = new Date().toISOString()
+  db.write('applicants', all)
+  res.json({ applicant: rec })
+})
+app.delete('/api/applicants/:id', auth, requirePower('hr'), notViewAs, (req, res) => {
+  db.write('applicants', db.read('applicants', []).filter((a) => a.id !== req.params.id))
+  res.json({ ok: true })
+})
+
 seedUsers()
 seedSales()
 app.listen(PORT, () => console.log(`Damia Staff API on http://localhost:${PORT}`))
