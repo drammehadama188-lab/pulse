@@ -769,36 +769,37 @@ export default function HRTeam({
       )}
 
       {tab === 'roster' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead><tr className="border-b border-gray-200">
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider text-gray-500 font-semibold">Name</th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider text-gray-500 font-semibold">Role</th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider text-gray-500 font-semibold">Type</th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider text-gray-500 font-semibold">Status</th>
-                <th className="text-right px-6 py-4 text-xs uppercase tracking-wider text-gray-500 font-semibold">Base (D)</th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider text-gray-500 font-semibold">Ends</th>
-                <th className="px-3 py-4"></th>
-              </tr></thead>
-              <tbody>
-                {team.map((p, i) => (
-                  <tr key={i} onClick={() => openProfile(p.name)} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
-                    <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-700">{p.name.charAt(0)}</div><div><p className="text-sm font-medium text-gray-900">{p.name}</p><p className="text-xs text-gray-500">Since {p.joined}</p></div></div></td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{p.role}</td>
-                    <td className="px-6 py-4"><span className={`px-2 py-1 rounded-full text-xs font-medium ${typeBadge(p.type)}`}>{p.type}</span></td>
-                    <td className="px-6 py-4"><span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${statusBadge(p.status)}`}>{p.status}</span></td>
-                    <td className="px-6 py-4 text-sm text-gray-900 text-right font-medium">D{p.base.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{p.contractEnd ? new Date(p.contractEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
-                    <td className="px-3 py-4 text-right"><ChevronDown size={16} className="-rotate-90 text-gray-300 inline" /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {/* 12 Jun 2026 (Adama's request): removed the dead "expandedRow" detail
-              panel — its state had no setter (rows open the full profile via
-              openProfile instead), so this block could never render. */}
+        <div className="space-y-3">
+          {team.map((p, i) => {
+            const warns = (warningsByAgent[p.name] || []).length;
+            const ends = p.contractEnd ? new Date(p.contractEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+            const daysLeft = p.contractEnd ? Math.ceil((new Date(p.contractEnd) - today) / 86400000) : null;
+            return (
+              <div key={i} onClick={() => openProfile(p.name)} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white text-sm font-semibold shrink-0">{p.name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}</div>
+                    <div className="min-w-0">
+                      <p className="text-base font-semibold text-gray-900">{p.name}</p>
+                      <p className="text-sm text-gray-500">{p.role}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${statusBadge(p.status)}`}>{p.status}</span>
+                    <span className="text-sm text-gray-400 flex items-center gap-1">View profile <ChevronDown size={15} className="-rotate-90" /></span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-4 pt-4 border-t border-gray-100">
+                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Joined</p><p className="text-sm text-gray-900 mt-0.5">{p.joined || '—'}</p></div>
+                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Department</p><p className="text-sm text-gray-900 mt-0.5">{p.type || '—'}</p></div>
+                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Salary</p><p className="text-sm text-gray-900 mt-0.5">D{(p.base || 0).toLocaleString()}</p></div>
+                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Commission</p><p className="text-sm text-gray-900 mt-0.5">{p.commission > 0 ? `Up to D${p.commission.toLocaleString()}` : '—'}</p></div>
+                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Contract ends</p><p className={`text-sm mt-0.5 ${daysLeft !== null && daysLeft <= 30 ? 'text-red-600' : daysLeft !== null && daysLeft <= 90 ? 'text-amber-600' : 'text-gray-900'}`}>{ends}</p></div>
+                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Warnings</p><p className={`text-sm mt-0.5 ${warns > 0 ? 'text-red-600 font-medium' : 'text-gray-900'}`}>{warns}</p></div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
