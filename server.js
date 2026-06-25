@@ -1636,7 +1636,7 @@ app.delete('/api/agent-files/:id', auth, requirePower('hr'), notViewAs, (req, re
 // Personal/contact + HR fields the static team.js roster doesn't carry. Stored
 // per employee NAME so they survive roster edits. Read by anyone with 'hr';
 // written by 'hr'. Never holds pay (that's the roster/payroll).
-const PROFILE_FIELDS = ['phone', 'email', 'emergencyContact', 'emergencyPhone', 'manager', 'nextReview', 'address', 'notes']
+const PROFILE_FIELDS = ['phone', 'email', 'emergencyContact', 'emergencyPhone', 'manager', 'nextReview', 'address', 'notes', 'performanceScore', 'performanceStatus', 'performanceNote']
 app.get('/api/employee-profile', auth, requirePower('hr'), (req, res) => {
   const name = req.query.name
   if (!name) return res.status(400).json({ error: 'name required' })

@@ -21,7 +21,9 @@ import Team from './pages/manager/Team.jsx'
 import HRTeam from './pages/departments/HRTeam.jsx'
 import EmployeeProfile from './pages/EmployeeProfile.jsx'
 import Recruitment from './pages/Recruitment.jsx'
+import Performance from './pages/Performance.jsx'
 import DepartmentShell from './pages/departments/DepartmentShell.jsx'
+import Policies from './pages/departments/Policies.jsx'
 import { Target, Gift, BookOpen, FolderOpen } from 'lucide-react'
 
 function FullScreenLoader() {
@@ -85,7 +87,7 @@ export default function App() {
             clean "being set up" shell to be filled in Phase 2. */}
         {/* PEOPLE */}
         <Route path="/people" element={<RequireAuth power="hr"><HRTeam only={['roster', 'past', 'warnings']} title="Employees & Records" subtitle="Your team — roster, past staff and records" /></RequireAuth>} />
-        <Route path="/performance" element={<RequireAuth power="hr"><HRTeam only={['performance', 'kpi']} title="Performance" subtitle="Goals, KPIs and how the team is delivering" /></RequireAuth>} />
+        <Route path="/performance" element={<RequireAuth power="hr"><Performance /></RequireAuth>} />
         <Route path="/contracts" element={<RequireAuth power="hr"><HRTeam only={['contracts']} title="Contracts" subtitle="Contract timeline, sorted by urgency" /></RequireAuth>} />
         <Route path="/recruitment" element={<RequireAuth power="hr"><Recruitment /></RequireAuth>} />
         {/* MANAGEMENT */}
@@ -96,7 +98,7 @@ export default function App() {
         <Route path="/payroll" element={<RequireAuth power="payroll"><HRTeam only={['payroll']} title="Payroll" subtitle="Salaries, commission and payroll history" /></RequireAuth>} />
         <Route path="/benefits" element={<RequireAuth power="payroll"><DepartmentShell icon={Gift} title="Benefits" subtitle="Payroll" blurb="Allowances, bonuses and staff benefits. Being set up — coming online here soon." /></RequireAuth>} />
         {/* COMPANY */}
-        <Route path="/policies" element={<RequireAuth power="hr"><DepartmentShell icon={BookOpen} title="Policies" subtitle="Company" blurb="The Blue Book, Labour Act and company policies. Being set up — coming online here soon." /></RequireAuth>} />
+        <Route path="/policies" element={<RequireAuth power="hr"><Policies /></RequireAuth>} />
         <Route path="/documents" element={<RequireAuth power="hr"><DepartmentShell icon={FolderOpen} title="Documents" subtitle="Company" blurb="Contracts, IDs and employee documents. Being set up — coming online here soon." /></RequireAuth>} />
 
         {/* Personal self-service */}
