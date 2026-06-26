@@ -1720,4 +1720,46 @@ app.delete('/api/applicants/:id', auth, requirePower('hr'), notViewAs, (req, res
 
 seedUsers()
 seedSales()
+// ---------- performance reviews (immutable monthly records) ----------
+// A completed review is a permanent, LOCKED snapshot per employee + period
+// (YYYY-MM). Never overwritten — this is the audit trail HR can rely on for
+// pay/promotion decisions. Read/written by 'hr'. Stored in data/reviews.json
+// keyed by employee name. Ratings are manager-entered (no sampled numbers).
+app.get('/api/reviews', auth, requirePower('hr'), (req, res) => {
+  const name = req.query.name
+  const all = db.read('reviews', {})
+  if (name) {
+    const list = (all[name] || []).slice().sort((a, b) => (b.period || '').localeCompare(a.period || ''))
+    return res.json({ reviews: list })
+  }
+  res.json({ reviews: all })
+})
+app.post('/api/reviews', auth, requirePower('hr'), notViewAs, (req, res) => {
+  const { name, period, score, status, ratings, kpis, achievements, actions, notes, warningsCount } = req.body || {}
+  if (!name || !period) return res.status(400).json({ error: 'name and period required' })
+  if (!/^\d{4}-\d{2}$/.test(period)) return res.status(400).json({ error: 'period must be YYYY-MM' })
+  const all = db.read('reviews', {})
+  const list = all[name] || []
+  if (list.some((r) => r.period === period)) return res.status(409).json({ error: 'A review for this period is already locked.' })
+  const rec = {
+    id: `rev_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    name, period,
+    score: score === '' || score == null ? null : Number(score),
+    status: String(status || '').slice(0, 40),
+    ratings: ratings && typeof ratings === 'object' ? ratings : {},
+    kpis: Array.isArray(kpis) ? kpis.map((k) => ({ label: String(k.label || '').slice(0, 120), done: !!k.done })) : [],
+    achievements: Array.isArray(achievements) ? achievements.map((a) => String(a).slice(0, 80)).filter(Boolean) : [],
+    actions: Array.isArray(actions) ? actions.map((a) => String(a).slice(0, 60)).filter(Boolean) : [],
+    notes: String(notes || '').slice(0, 4000),
+    warningsCount: Number(warningsCount) || 0,
+    manager: req.user.name || req.user.username,
+    completedBy: req.user.username,
+    completedAt: new Date().toISOString(),
+    locked: true,
+  }
+  all[name] = [...list, rec]
+  db.write('reviews', all)
+  res.json({ review: rec })
+})
+
 app.listen(PORT, () => console.log(`Damia Staff API on http://localhost:${PORT}`))
