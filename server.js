@@ -1762,4 +1762,15 @@ app.post('/api/reviews', auth, requirePower('hr'), notViewAs, (req, res) => {
   res.json({ review: rec })
 })
 
+// ---------- agent sales (REAL monthly sales imported from Ya Fatou's sheet) ----------
+// Per-agent monthly tracker sales + revenue, attributed via the sheet's
+// "Sold By" column. Stored in data/agent-sales.json (gitignored — real
+// customer/financial data, never committed). Read by 'hr'.
+app.get('/api/agent-sales', auth, requirePower('hr'), (req, res) => {
+  const all = db.read('agent-sales', {})
+  const name = req.query.name
+  if (name) return res.json({ sales: all[name] || null })
+  res.json({ sales: all })
+})
+
 app.listen(PORT, () => console.log(`Damia Staff API on http://localhost:${PORT}`))

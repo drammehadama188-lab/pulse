@@ -62,6 +62,22 @@ function statusFor(score) {
 }
 const MEDALS = ['🥇', '🥈', '🥉']
 
+// Real sales summary for an agent (from data/agent-sales.json via /api/agent-sales).
+function latestSales(data) {
+  if (!data || !data.months) return null
+  const total = Object.values(data.months).reduce((s, m) => s + (m.sales || 0), 0)
+  const recorded = Object.entries(data.months).filter(([, m]) => !m.pending).sort((a, b) => a[0].localeCompare(b[0]))
+  const last = recorded[recorded.length - 1]
+  return { total, target: data.monthlyTarget, latest: last ? { period: last[0], sales: last[1].sales } : null }
+}
+function pctChip(pct) {
+  if (pct == null) return 'bg-gray-100 text-gray-500'
+  if (pct >= 100) return 'bg-emerald-100 text-emerald-700'
+  if (pct >= 60) return 'bg-green-100 text-green-700'
+  if (pct >= 40) return 'bg-amber-100 text-amber-700'
+  return 'bg-red-100 text-red-700'
+}
+
 function SampleTag() { return <span className="inline-flex items-center rounded-full bg-violet-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-500 ring-1 ring-violet-200" title="Sample data — no live source yet">Sample</span> }
 function Trend({ delta, size = 13 }) {
   if (delta == null) return <Minus size={size} className="text-gray-300" />
@@ -83,6 +99,11 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
   const [filter, setFilter] = useState('all')
   const [q, setQ] = useState('')
   const [openName, setOpenName] = useState(null)
+  const [salesByAgent, setSalesByAgent] = useState({})
+
+  useEffect(() => {
+    api('/agent-sales').then((d) => setSalesByAgent(d.sales || {})).catch(() => setSalesByAgent({}))
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -210,7 +231,7 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
                 <button key={t.name} onClick={() => setOpenName(t.name)} className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-gray-50">
                   <span className="w-6 text-center text-sm font-bold text-gray-400">{MEDALS[i] || i + 1}</span>
                   <span className={`h-2 w-2 shrink-0 rounded-full ${b.dot}`} />
-                  <div className="min-w-0 flex-1"><div className="truncate text-sm font-medium text-gray-800">{t.name}</div><div className="truncate text-[11px] text-gray-400">{t.type}</div></div>
+                  <div className="min-w-0 flex-1"><div className="truncate text-sm font-medium text-gray-800">{t.name}</div><div className="truncate text-[11px] text-gray-400">{t.type}{(() => { const ls = latestSales(salesByAgent[t.name]); return ls ? ` · ${ls.total} sales` : '' })()}</div></div>
                   <span className="text-[11px]"><Trend delta={trendOf(t.name)} /></span>
                   <span className={`w-12 text-right text-sm font-bold ${b.text}`}>{score == null ? '—' : `${score}%`}</span>
                 </button>
@@ -233,14 +254,16 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
               const b = band(score)
               const w = warningsByAgent[t.name]?.length || 0
               const nr = scores[t.name]?.nextReview
+              const ls = latestSales(salesByAgent[t.name])
+              const lsPct = ls?.latest ? Math.round((ls.latest.sales / (ls.target || 1)) * 100) : null
               const initials = t.name.split(' ').map((x) => x[0]).slice(0, 2).join('')
               return (
                 <button key={t.name} onClick={() => setOpenName(t.name)} className="flex w-full items-center gap-3 border-b border-gray-50 px-4 py-3 text-left last:border-0 hover:bg-gray-50">
                   <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[11px] font-semibold text-white ${b.bar}`}>{initials}</span>
                   <div className="min-w-0 flex-[2]">
-                    <div className="flex items-center gap-2"><span className="truncate text-sm font-semibold text-gray-900">{t.name}</span>{w > 0 && <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 px-1.5 text-[10px] font-medium text-red-600"><AlertTriangle size={9} />{w}</span>}</div>
+                    <div className="flex items-center gap-2"><span className="truncate text-sm font-semibold text-gray-900">{t.name}</span>{ls?.latest && <span className={`inline-flex items-center rounded-full px-1.5 text-[10px] font-medium ${pctChip(lsPct)}`}>{ls.latest.sales}/{ls.target} {periodLabel(ls.latest.period).split(' ')[0]}</span>}{w > 0 && <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 px-1.5 text-[10px] font-medium text-red-600"><AlertTriangle size={9} />{w}</span>}</div>
                     <div className="truncate text-xs text-gray-500">{t.role}</div>
-                    <div className="mt-0.5 truncate text-[11px] text-gray-400">{t.type}{w === 0 ? ' · 0 warnings' : ''}{nr ? ` · Next review ${fmtDate(nr) || nr}` : ''}</div>
+                    <div className="mt-0.5 truncate text-[11px] text-gray-400">{t.type}{ls ? ` · ${ls.total} sales to date` : ''}{w === 0 ? ' · 0 warnings' : ''}{nr ? ` · Next review ${fmtDate(nr) || nr}` : ''}</div>
                   </div>
                   <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-gray-100 sm:block"><div className={`h-full rounded-full ${b.bar}`} style={{ width: `${score == null ? 0 : Math.max(score, 3)}%` }} /></div>
                   <span className="text-[11px]"><Trend delta={trendOf(t.name)} /></span>
@@ -328,6 +351,7 @@ function DetailDrawer({ person, score, note, nextReview, warnings, companyRadar,
   const [reviews, setReviews] = useState(null) // null = loading
   const [reviewing, setReviewing] = useState(false)
   const [openReview, setOpenReview] = useState(null)
+  const [realSales, setRealSales] = useState(null)
 
   const b = band(draft === '' ? null : Number(draft))
   const s = draft === '' ? null : Number(draft)
@@ -342,7 +366,11 @@ function DetailDrawer({ person, score, note, nextReview, warnings, companyRadar,
   const career = Array.isArray(person.history) ? person.history : []
 
   function loadReviews() { api(`/reviews?name=${encodeURIComponent(person.name)}`).then((d) => setReviews(d.reviews || [])).catch(() => setReviews([])) }
-  useEffect(() => { loadReviews() /* eslint-disable-next-line */ }, [person.name])
+  useEffect(() => {
+    loadReviews()
+    api(`/agent-sales?name=${encodeURIComponent(person.name)}`).then((d) => setRealSales(d.sales || null)).catch(() => setRealSales(null))
+    /* eslint-disable-next-line */
+  }, [person.name])
   const hasCurrent = (reviews || []).some((r) => r.period === CUR_PERIOD)
 
   const recs = []
@@ -398,6 +426,8 @@ function DetailDrawer({ person, score, note, nextReview, warnings, companyRadar,
               <input type="range" min="0" max="100" value={draft === '' ? 0 : draft} onChange={(e) => setDraft(e.target.value)} className="mt-3 w-full accent-gray-900" />
               <div className="mt-2 flex items-center gap-2"><span className="text-[11px] text-gray-400">Live · changes daily</span><div className="flex-1" /><input type="number" min="0" max="100" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="—" className="w-20 rounded-lg border border-gray-200 px-2 py-1 text-sm" /><button onClick={() => setDraft('')} className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-gray-100">Clear</button></div>
             </div>
+
+            {realSales && <RealSalesPanel data={realSales} />}
 
             <Section title="Performance over 6 months" sample><TrendLine series={series} /></Section>
 
@@ -605,6 +635,39 @@ function ReviewForm({ person, defaultScore, defaultNotes, warningsCount, onClose
         <button onClick={onClose} className="rounded-full border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancel</button>
         <button onClick={submit} disabled={busy} className="flex-1 rounded-full bg-[var(--color-brand)] py-3 text-base font-bold text-white shadow-[0_6px_16px_rgba(214,41,79,0.30)] hover:brightness-95 disabled:opacity-50">{busy ? 'Locking…' : 'Lock review'}</button>
       </div>
+    </div>
+  )
+}
+
+// Real monthly sales, imported from Ya Fatou's sheet (the revenue source of
+// truth). NOT sampled — no Sample tag.
+function RealSalesPanel({ data }) {
+  const months = Object.entries(data.months || {}).sort((a, b) => a[0].localeCompare(b[0]))
+  const total = months.reduce((s, [, m]) => s + (m.sales || 0), 0)
+  const totalRev = months.reduce((s, [, m]) => s + (m.revenue || 0), 0)
+  return (
+    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Trophy size={15} className="text-emerald-600" />
+        <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Sales — from Ya Fatou's sheet</p>
+      </div>
+      <div className="mb-3 flex gap-8">
+        <div><p className="text-3xl font-extrabold text-gray-900">{total}</p><p className="text-[11px] text-gray-500">sales to date</p></div>
+        <div><p className="text-3xl font-extrabold text-gray-900">D{totalRev.toLocaleString()}</p><p className="text-[11px] text-gray-500">revenue</p></div>
+      </div>
+      <div className="space-y-1.5">
+        {months.map(([p, m]) => {
+          const pct = data.monthlyTarget ? Math.round((m.sales / data.monthlyTarget) * 100) : null
+          return (
+            <div key={p} className="flex items-center gap-3 text-sm">
+              <span className="w-16 shrink-0 text-gray-600">{periodLabel(p)}</span>
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(pct || 0, 100)}%` }} /></div>
+              <span className="w-32 text-right text-xs text-gray-500">{m.pending ? 'pending' : `${m.sales}/${data.monthlyTarget} · D${(m.revenue || 0).toLocaleString()}`}</span>
+            </div>
+          )
+        })}
+      </div>
+      <p className="mt-2 text-[11px] text-gray-400">Real · attributed via the sheet's “Sold By” column · as of {data.asOf}</p>
     </div>
   )
 }
