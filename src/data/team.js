@@ -69,7 +69,7 @@ export const team = [
     coreResponsibility: 'Sell Damia Tracker to new customers',
     kpi: 'Close 5 tracker sales per month',
     weeklyTarget: 'Close 2 sales, generate 5 leads',
-    target: 5, sales: 0, revenueGenerated: 0,
+    target: 5, sales: 3, revenueGenerated: 20500,
     lastCheckIn: '2026-05-04', warnings: 0,
     history: [
       { date: '2023-08-01', event: 'Joined as Senior Sales Agent' },
@@ -85,7 +85,7 @@ export const team = [
     coreResponsibility: 'Sell Damia Tracker to new customers',
     kpi: 'Close 5 tracker sales per month',
     weeklyTarget: 'Close 2 sales, generate 5 leads',
-    target: 5, sales: 5, revenueGenerated: 37500,
+    target: 5, sales: 6, revenueGenerated: 40000, // real, from Ya Fatou's sheet (Apr 5 + May 1); cumulative to date
     lastCheckIn: '2026-04-10', warnings: 0,
     history: [
       { date: '2026-04-01', event: 'Joined as Sales Agent — 3-month fixed contract (ends 30 Jun 2026)' },
