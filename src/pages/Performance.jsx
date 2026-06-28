@@ -30,7 +30,7 @@ export default function Performance() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Performance</h1>
-        <p className="mt-1 text-[var(--color-ink-soft)]">Who is performing, who isn’t, and what to do today</p>
+        <p className="mt-1 text-[var(--color-ink-soft)]">Who is performing and who isn’t — click anyone to open their full performance page</p>
       </div>
 
       <div className="flex gap-1 rounded-full bg-gray-100 p-1 w-fit">

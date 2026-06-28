@@ -21,9 +21,9 @@ const TONE = {
   scheduled: 'border-l-[var(--color-brand)] bg-[var(--color-surface)]',
   worked: 'border-l-[var(--color-good)] bg-[var(--color-good-bg)]',
   late: 'border-l-[var(--color-warn)] bg-[var(--color-warn-bg)]',
-  absent: 'border-l-[var(--color-line)] bg-[var(--color-fill)]',
+  absent: 'border-l-[var(--color-bad)] bg-[var(--color-bad-bg)]',
   sick: 'border-l-[var(--color-rest)] bg-[var(--color-rest-bg)]',
-  leave: 'border-l-[var(--color-brand)] bg-[var(--color-brand-50)]',
+  leave: 'border-l-[#2563eb] bg-[#eff6ff]',
   offex: 'border-l-[var(--color-ink-faint)] bg-[var(--color-fill)]',
 }
 const TONE_DOT = {
@@ -31,7 +31,8 @@ const TONE_DOT = {
   worked: 'var(--color-good)',
   late: 'var(--color-warn)',
   sick: 'var(--color-rest)',
-  leave: 'var(--color-brand)',
+  leave: '#2563eb',
+  absent: 'var(--color-bad)',
 }
 
 // what a day cell renders: a shift block, an absence label, or nothing (rest day)
@@ -56,6 +57,111 @@ function hoursOf(shift) {
   const [sh, sm] = shift.start.split(':').map(Number)
   const [eh, em] = shift.end.split(':').map(Number)
   return Math.max(0, (eh * 60 + em - sh * 60 - sm) / 60)
+}
+
+// ── Real derived attendance metrics (no made-up numbers) ──────────────────
+// Minutes actually worked = check-out − check-in.
+function workedMins(cell) {
+  if (!cell?.checkIn || !cell?.checkOut) return null
+  const m = (new Date(cell.checkOut) - new Date(cell.checkIn)) / 60000
+  return m > 0 ? m : null
+}
+// Minutes late = check-in clock time − shift start (Gambia = GMT, so local hours).
+function lateMins(cell) {
+  if (!cell?.checkIn || !cell?.shift || !cell.late) return 0
+  const ci = new Date(cell.checkIn)
+  const [sh, sm] = cell.shift.start.split(':').map(Number)
+  return Math.max(0, ci.getHours() * 60 + ci.getMinutes() - (sh * 60 + sm))
+}
+const fmtMins = (m) => (m == null ? '—' : m >= 60 ? `${Math.floor(m / 60)}h ${Math.round(m % 60)}m` : `${Math.round(m)}m`)
+
+// Live "right now" status for an employee — drives the status chip + today cards.
+const CHIP = {
+  working: { label: 'Working', cls: 'bg-[var(--color-good-bg)] text-[var(--color-good)]', dot: 'var(--color-good)' },
+  late: { label: 'Late', cls: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]', dot: 'var(--color-warn)' },
+  done: { label: 'Shift done', cls: 'bg-[var(--color-good-bg)] text-[var(--color-good)]', dot: 'var(--color-good)' },
+  leave: { label: 'On leave', cls: 'bg-[#eff6ff] text-[#1d4ed8]', dot: '#2563eb' },
+  sick: { label: 'Sick', cls: 'bg-[var(--color-rest-bg)] text-[var(--color-rest)]', dot: 'var(--color-rest)' },
+  notin: { label: 'Not in yet', cls: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]', dot: 'var(--color-ink-faint)' },
+  absent: { label: 'Absent', cls: 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]', dot: 'var(--color-bad)' },
+  off: { label: 'Off', cls: 'bg-[var(--color-fill)] text-[var(--color-ink-faint)]', dot: 'var(--color-ink-faint)' },
+}
+function liveStatusKey(cell) {
+  if (!cell) return 'off'
+  if (cell.leaveType) { const t = cell.leaveType.toLowerCase(); return t === 'sick' ? 'sick' : t === 'off' ? 'off' : 'leave' }
+  if (!cell.shift) return 'off'
+  if (cell.checkIn && !cell.checkOut) return cell.late ? 'late' : 'working'
+  if (cell.checkOut) return 'done'
+  return 'notin'
+}
+
+// Today's team health — real counts from the today column.
+function todayStats(people, today) {
+  const s = { scheduled: 0, present: 0, late: 0, leave: 0, notin: 0 }
+  for (const p of people) {
+    const c = p.byDate?.[today]; if (!c) continue
+    if (c.leaveType) { s.leave++; continue }
+    if (!c.shift) continue
+    s.scheduled++
+    if (c.checkIn) { s.present++; if (c.late) s.late++ } else s.notin++
+  }
+  return s
+}
+// Week health — attendance rate over elapsed scheduled days, late count, overtime, leave.
+function weekStats(people, days, today) {
+  let sched = 0, present = 0, late = 0, leaveDays = 0, otMin = 0
+  for (const p of people) for (const k of days) {
+    const c = p.byDate?.[k]; if (!c) continue
+    if (c.leaveType) { leaveDays++; continue }
+    if (!c.shift || k > today) continue
+    sched++
+    if (c.checkIn) {
+      present++; if (c.late) late++
+      const w = workedMins(c); if (w != null) { const ot = w - hoursOf(c.shift) * 60; if (ot > 0) otMin += ot }
+    }
+  }
+  return { rate: sched ? Math.round((present / sched) * 100) : null, late, otHours: Math.round(otMin / 60), leaveDays }
+}
+
+function StatCard({ label, value, tone }) {
+  const toneCls = {
+    good: 'text-[var(--color-good)]', warn: 'text-[var(--color-warn)]', bad: 'text-[var(--color-bad)]',
+    blue: 'text-[#1d4ed8]', ink: 'text-[var(--color-ink)]',
+  }[tone || 'ink']
+  return (
+    <div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
+      <p className={`mt-0.5 text-2xl font-extrabold tabular-nums ${toneCls}`}>{value}</p>
+    </div>
+  )
+}
+
+function AttendanceSummary({ people, days, today }) {
+  const t = todayStats(people, today)
+  const w = weekStats(people, days, today)
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Today</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <StatCard label="Scheduled" value={t.scheduled} tone="ink" />
+          <StatCard label="Present" value={t.present} tone="good" />
+          <StatCard label="Late" value={t.late} tone="warn" />
+          <StatCard label="On leave" value={t.leave} tone="blue" />
+          <StatCard label="Not in yet" value={t.notin} tone={t.notin ? 'bad' : 'ink'} />
+        </div>
+      </div>
+      <div>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">This week</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard label="Attendance rate" value={w.rate == null ? '—' : `${w.rate}%`} tone={w.rate == null ? 'ink' : w.rate >= 90 ? 'good' : 'warn'} />
+          <StatCard label="Late arrivals" value={w.late} tone={w.late ? 'warn' : 'ink'} />
+          <StatCard label="Overtime hours" value={`${w.otHours}h`} tone="ink" />
+          <StatCard label="Leave days" value={w.leaveDays} tone="blue" />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ───────────────────────── self check-in (shared logic) ─────────────────────────
@@ -190,7 +296,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
         <div className="min-w-[840px]">
           {/* header */}
           <div className="grid border-b border-[var(--color-line)] bg-[var(--color-surface)]" style={{ gridTemplateColumns: cols }}>
-            <div className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Staff</div>
+            <div className="sticky left-0 z-20 bg-[var(--color-surface)] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Staff</div>
             {days.map((k) => {
               const d = new Date(`${k}T00:00:00Z`)
               const dow = d.getUTCDay()
@@ -209,19 +315,26 @@ function WeekSchedule({ people, days, today, onCellClick }) {
           <div className="divide-y divide-[var(--color-line-soft)]">
             {people.map((p) => (
               <div key={p.username} className="grid items-stretch" style={{ gridTemplateColumns: cols }}>
-                <div className="flex items-center gap-2.5 px-4 py-2.5">
+                <div className="sticky left-0 z-10 flex items-center gap-2.5 bg-[var(--color-surface)] px-4 py-2.5">
                   <Avatar name={p.name} size={32} />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="truncate text-[13px] font-semibold leading-tight text-[var(--color-ink)]">{p.name}</div>
                     <div className="truncate text-[11px] text-[var(--color-ink-faint)]">{Math.round(p.weekHours)}h · {p.department}</div>
                   </div>
+                  {(() => { const c = CHIP[liveStatusKey(p.byDate?.[today])]; return (
+                    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${c.cls}`} title="Status right now">
+                      <i className="h-1.5 w-1.5 rounded-full" style={{ background: c.dot }} />{c.label}
+                    </span>
+                  ) })()}
                 </div>
                 {days.map((k) => {
                   const cell = p.byDate?.[k]
                   const isToday = k === today
+                  const dowK = new Date(`${k}T00:00:00Z`).getUTCDay()
+                  const weekendK = dowK === 0 || dowK === 6
                   const view = cellView(cell, p.department)
                   return (
-                    <div key={k} className={`border-l border-[var(--color-line-soft)] p-1.5 ${isToday ? 'bg-[var(--color-brand-50)]' : ''}`}>
+                    <div key={k} className={`border-l border-[var(--color-line-soft)] p-1.5 ${isToday ? 'bg-[var(--color-brand-50)]' : weekendK ? 'bg-[var(--color-fill)]/50' : ''}`}>
                       <button
                         disabled={!clickable}
                         onClick={() => onCellClick?.(p, k, cell || { status: 'off' })}
@@ -246,7 +359,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
 
           {/* day totals */}
           <div className="grid border-t border-[var(--color-line)] bg-[var(--color-surface)]" style={{ gridTemplateColumns: cols }}>
-            <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Totals</div>
+            <div className="sticky left-0 z-10 bg-[var(--color-surface)] px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Totals</div>
             {totals.map((t, i) => (
               <div key={i} className="border-l border-[var(--color-line-soft)] px-2 py-2 text-center">
                 <div className="text-[12px] font-bold tabular-nums text-[var(--color-ink)]">{Math.round(t.hours)}h</div>
@@ -263,7 +376,8 @@ function WeekSchedule({ people, days, today, onCellClick }) {
         <LegendDot tone="worked" label="worked" />
         <LegendDot tone="late" label="late" />
         <LegendDot tone="sick" label="sick" />
-        <LegendDot tone="leave" label="leave" />
+        <LegendDot tone="leave" label="annual leave" />
+        <LegendDot tone="absent" label="absent" />
         {clickable && <span className="ml-auto text-[var(--color-ink-faint)]">Click a shift to log worked · off · sick · leave</span>}
       </div>
     </Card>
@@ -477,7 +591,24 @@ function ManagerHours() {
   const [detail, setDetail] = useState(null) // { person, dateKey, cell }
 
   const people = w.data?.people || []
-  const shown = filter === 'all' ? people : people.filter((p) => p.username === filter)
+  const today = w.data?.today
+  const departments = [...new Set(people.map((p) => p.department).filter(Boolean))]
+  const FILTERS = [
+    { id: 'all', label: 'All' },
+    { id: 'late', label: 'Late today' },
+    { id: 'notin', label: 'Not in' },
+    { id: 'leave', label: 'On leave' },
+    ...departments.map((d) => ({ id: `dept:${d}`, label: d })),
+  ]
+  const shown = people.filter((p) => {
+    if (filter === 'all') return true
+    if (filter.startsWith('dept:')) return p.department === filter.slice(5)
+    const key = liveStatusKey(p.byDate?.[today])
+    if (filter === 'late') return key === 'late'
+    if (filter === 'notin') return key === 'notin'
+    if (filter === 'leave') return key === 'leave' || key === 'sick'
+    return true
+  })
 
   return (
     <div className="space-y-6">
@@ -491,14 +622,15 @@ function ManagerHours() {
 
       {!isCeo && <SelfCheckInCompact {...self} />}
 
+      {w.data && people.length > 0 && <AttendanceSummary people={people} days={w.data.days} today={today} />}
+
       <div>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <Select value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-[220px]">
-            <option value="all">All staff</option>
-            {people.map((p) => (
-              <option key={p.username} value={p.username}>{p.name}</option>
+          <div className="flex flex-wrap gap-1.5">
+            {FILTERS.map((f) => (
+              <button key={f.id} onClick={() => setFilter(f.id)} className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${filter === f.id ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]'}`}>{f.label}</button>
             ))}
-          </Select>
+          </div>
           <WeekNav days={w.data?.days} isThis={w.isThis} onPrev={() => w.shift(-1)} onNext={() => w.shift(1)} />
         </div>
 
