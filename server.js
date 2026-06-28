@@ -621,6 +621,23 @@ const DEFAULT_WEEK = {
   0: null,
 }
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
+
+// Effective-dated schedules (Adama 28 Jun): a person's schedule is a LIST of
+// dated entries [{ from:'YYYY-MM-DD', days:{week} }], and the one in force on a
+// given date is the latest entry whose `from` <= that date. Backward compatible:
+// a legacy single-week object is treated as one entry effective forever, so no
+// migration of existing schedules.json is needed.
+function scheduleEntries(stored) {
+  if (Array.isArray(stored)) return stored.filter((e) => e && e.from && e.days).slice().sort((a, b) => (a.from < b.from ? -1 : 1))
+  if (stored && typeof stored === 'object') return [{ from: '2000-01-01', days: stored }]
+  return []
+}
+function effectiveWeek(stored, dateKey) {
+  let chosen = null
+  for (const e of scheduleEntries(stored)) { if (e.from <= dateKey) chosen = e; else break }
+  return chosen ? chosen.days : DEFAULT_WEEK
+}
+
 // Monday (UTC) of the week containing `ref`. Gambia is GMT so local date == UTC date.
 function mondayKey(ref = new Date()) {
   const d = new Date(ref)
@@ -659,16 +676,17 @@ app.get('/api/attendance/week', auth, (req, res) => {
     : seedUsers().filter((u) => u.username === req.user.username)
 
   const people = roster.map((u) => {
-    const schedule = schedules[u.username] || DEFAULT_WEEK
+    const stored = schedules[u.username]
     const byDate = {}
     let weekHours = 0
     for (const k of days) {
-      const shift = schedule[dowOfKey(k)] || null
+      const week = effectiveWeek(stored, k)
+      const shift = week[dowOfKey(k)] || null
       const attendance = attAll.find((a) => a.username === u.username && a.date === k) || null
       const leave = leaveOnDate(leaveAll, u.username, k)
       if (shift && !leave) weekHours += shiftHours(shift)
       byDate[k] = {
-        status: dayStatus({ schedule, attendance, leave }, k, todayK),
+        status: dayStatus({ schedule: week, attendance, leave }, k, todayK),
         shift,
         checkIn: attendance?.checkIn || null,
         checkOut: attendance?.checkOut || null,
@@ -677,7 +695,14 @@ app.get('/api/attendance/week', auth, (req, res) => {
         note: leave?.note || '',
       }
     }
-    return { username: u.username, name: u.name, department: u.department, schedule, weekHours, byDate }
+    // `schedule` = the week in force TODAY (for the editor's current-schedule
+    // display); `upcoming` = the next future-dated change, if any (timeline).
+    const upcomingEntry = scheduleEntries(stored).find((e) => e.from > todayK) || null
+    return {
+      username: u.username, name: u.name, department: u.department,
+      schedule: effectiveWeek(stored, todayK), weekHours, byDate,
+      upcoming: upcomingEntry ? { from: upcomingEntry.from, days: upcomingEntry.days } : null,
+    }
   })
   res.json({ start: wkStart, days, today: todayK, people })
 })
@@ -694,16 +719,23 @@ function scheduleRoster(req) {
   return seedUsers().filter((u) => !isArchived(u) && u.username !== req.user.username)
 }
 
-// manager: set each person's weekly roster in one request.
-// body: { schedules: { username: { days: { dow: {start,end}|null } } } } — each person can differ.
+// manager: assign a schedule to people, effective from a date.
+// body: { schedules: { username: { from:'YYYY-MM-DD', days: { dow:{start,end}|null } } } }
+// Upserts a dated entry per person (replacing any entry with the same start
+// date); earlier dates keep their existing schedule automatically.
 app.put('/api/schedules', auth, requirePower('team'), notViewAs, (req, res) => {
   const incoming = req.body?.schedules || {}
   const allowed = new Set(scheduleRoster(req).map((u) => u.username))
   const all = db.read('schedules', {})
   let count = 0
-  for (const [username, week] of Object.entries(incoming)) {
+  for (const [username, payload] of Object.entries(incoming)) {
     if (!allowed.has(username)) continue
-    all[username] = cleanWeek(week?.days || week)
+    const from = /^\d{4}-\d{2}-\d{2}$/.test(payload?.from) ? payload.from : todayKey()
+    const days = cleanWeek(payload?.days || payload)
+    const entries = scheduleEntries(all[username]).filter((e) => e.from !== from)
+    entries.push({ from, days })
+    entries.sort((a, b) => (a.from < b.from ? -1 : 1))
+    all[username] = entries
     count++
   }
   db.write('schedules', all)
