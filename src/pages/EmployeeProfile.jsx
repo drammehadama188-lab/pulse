@@ -94,6 +94,22 @@ export default function EmployeeProfile() {
     ...warnings.map((w) => ({ date: w.date, text: `Warning (${w.type || 'verbal'}): ${w.reason || ''}`, warn: true })),
   ].filter((a) => a.date).sort((a, b) => (a.date < b.date ? 1 : -1));
 
+  // Contract management layer — real status + recommendation (live perf score,
+  // falling back to the roster figure; "Review" when nothing is scored yet).
+  const score = profile.performanceScore === '' || profile.performanceScore == null
+    ? (typeof agent.performance === 'number' ? agent.performance : null)
+    : Number(profile.performanceScore);
+  const contractBadge = (agent.status === 'probation' || agent.status === 'training') ? { label: 'Probation', cls: 'bg-violet-100 text-violet-700' }
+    : !agent.contractEnd ? { label: 'Permanent', cls: 'bg-emerald-100 text-emerald-700' }
+    : daysToEnd < 0 ? { label: 'Expired', cls: 'bg-red-100 text-red-700' }
+    : daysToEnd <= 30 ? { label: 'Expiring soon', cls: 'bg-amber-100 text-amber-700' }
+    : { label: 'Active', cls: 'bg-emerald-100 text-emerald-700' };
+  const recommendation = daysToEnd == null ? null
+    : daysToEnd < 0 ? 'Confirm, extend or end'
+    : (score != null && score >= 80) ? 'Renew'
+    : (score != null && score < 55) ? 'Review — underperforming'
+    : 'Review';
+
   async function saveProfile() {
     setSaving(true);
     try {
@@ -114,7 +130,7 @@ export default function EmployeeProfile() {
   }
 
   const onbDone = checklist.onboarding.filter(i => i.done).length;
-  const tabs = [['overview', 'Overview'], ['documents', `Documents${documents.length ? ` (${documents.length})` : ''}`], ['performance', 'Performance'], ['checklists', `Checklists${checklist.onboarding.length ? ` (${onbDone}/${checklist.onboarding.length})` : ''}`], ['activity', 'Activity']];
+  const tabs = [['overview', 'Overview'], ['documents', `Documents${documents.length ? ` (${documents.length})` : ''}`], ['performance', 'Performance'], ['checklists', `Checklists${checklist.onboarding.length ? ` (${onbDone}/${checklist.onboarding.length})` : ''}`], ['activity', 'History']];
 
   return (
     <div className="max-w-4xl">
@@ -144,6 +160,23 @@ export default function EmployeeProfile() {
 
       {tab === 'overview' && (
         <div className="space-y-4">
+          {/* Contract — the management layer: status + recommendation up front */}
+          <div className="bg-white rounded-3xl border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-semibold text-gray-900">Contract</h2>
+              <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${contractBadge.cls}`}>{contractBadge.label}</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+              <Field label="Type" value={agent.contract || (agent.contractEnd ? 'Fixed term' : 'Permanent')} />
+              <Field label="Start date" value={agent.joined || '—'} />
+              <Field label="End date" value={agent.contractEnd ? formatDate(agent.contractEnd) : 'No end date'} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : daysToEnd !== null && daysToEnd <= 90 ? 'text-amber-600' : 'text-gray-900'} />
+              <Field label="Days left" value={daysToEnd == null ? '—' : daysToEnd < 0 ? `${-daysToEnd} days ago` : `${daysToEnd} days`} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : 'text-gray-900'} />
+              <Field label="Performance" value={score == null ? '—' : `${score}%`} />
+              <Field label="Recommendation" value={recommendation || '—'} accent={recommendation === 'Renew' ? 'text-emerald-700' : /under|extend|end/i.test(recommendation || '') ? 'text-red-600' : 'text-gray-900'} />
+            </div>
+            <p className="mt-4 text-xs text-gray-400">Contract actions (renew · extend · convert to permanent · terminate) are coming next. Full timeline is in the History tab.</p>
+          </div>
+
           <div className="bg-white rounded-3xl border border-gray-100 p-6">
             <h2 className="text-base font-semibold text-gray-900 mb-5">Employment</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
@@ -268,8 +301,8 @@ export default function EmployeeProfile() {
 
       {tab === 'activity' && (
         <div className="bg-white rounded-3xl border border-gray-100 p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-5">Activity</h2>
-          {activity.length === 0 ? <p className="text-sm text-gray-400">No recorded activity yet.</p> : (
+          <h2 className="text-base font-semibold text-gray-900 mb-5">Employment history</h2>
+          {activity.length === 0 ? <p className="text-sm text-gray-400">No recorded history yet.</p> : (
             <div className="space-y-0">
               {activity.map((a, i) => (
                 <div key={i} className="flex gap-4 pb-4 last:pb-0">
