@@ -46,10 +46,15 @@ function cellView(cell, dept) {
   }
   if (!cell.shift) return null // rest day
   const time = `${cell.shift.start}–${cell.shift.end}`
-  if (cell.status === 'worked') return { tone: 'worked', primary: cell.checkIn && cell.checkOut ? `${timeShort(cell.checkIn)}–${timeShort(cell.checkOut)}` : time, secondary: 'Worked' }
-  if (cell.status === 'late') return { tone: 'late', primary: time, secondary: 'Late in' }
-  if (cell.status === 'absent') return { tone: 'absent', primary: time, secondary: 'No record' }
-  return { tone: 'scheduled', primary: time, secondary: dept } // planned (today / upcoming)
+  // Lean cells: one clock time + one word (Adama 28 Jun — "the less text the better").
+  if (cell.status === 'worked') {
+    return cell.checkOut
+      ? { tone: 'worked', primary: timeShort(cell.checkOut), secondary: 'Completed' }
+      : { tone: 'worked', primary: cell.checkIn ? timeShort(cell.checkIn) : time, secondary: 'Working' }
+  }
+  if (cell.status === 'late') return { tone: 'late', primary: cell.checkIn ? timeShort(cell.checkIn) : time, secondary: 'Late' }
+  if (cell.status === 'absent') return { tone: 'absent', primary: time, secondary: 'No clock in' }
+  return { tone: 'scheduled', primary: time, secondary: null } // planned — time only, no extra text
 }
 
 function hoursOf(shift) {
@@ -86,24 +91,30 @@ const CHIP = {
   absent: { label: 'Absent', cls: 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]', dot: 'var(--color-bad)' },
   off: { label: 'Off', cls: 'bg-[var(--color-fill)] text-[var(--color-ink-faint)]', dot: 'var(--color-ink-faint)' },
 }
-function liveStatusKey(cell) {
+function liveStatusKey(cell, nowMin) {
   if (!cell) return 'off'
   if (cell.leaveType) { const t = cell.leaveType.toLowerCase(); return t === 'sick' ? 'sick' : t === 'off' ? 'off' : 'leave' }
   if (!cell.shift) return 'off'
   if (cell.checkIn && !cell.checkOut) return cell.late ? 'late' : 'working'
   if (cell.checkOut) return 'done'
+  // scheduled, no check-in: absent once the shift end has passed today, else not-in-yet
+  if (nowMin != null) { const [eh, em] = cell.shift.end.split(':').map(Number); if (nowMin > eh * 60 + em) return 'absent' }
   return 'notin'
 }
 
-// Today's team health — real counts from the today column.
+// Today's team health — real counts from the today column. Splits absent (shift
+// ended, never showed) from not-started (still within/before the shift).
 function todayStats(people, today) {
-  const s = { scheduled: 0, present: 0, late: 0, leave: 0, notin: 0 }
+  const isToday = today === new Date().toISOString().slice(0, 10)
+  const nowMin = isToday ? new Date().getHours() * 60 + new Date().getMinutes() : null
+  const s = { scheduled: 0, present: 0, late: 0, leave: 0, notStarted: 0, absent: 0 }
   for (const p of people) {
     const c = p.byDate?.[today]; if (!c) continue
     if (c.leaveType) { s.leave++; continue }
     if (!c.shift) continue
     s.scheduled++
-    if (c.checkIn) { s.present++; if (c.late) s.late++ } else s.notin++
+    if (c.checkIn) { s.present++; if (c.late) s.late++; continue }
+    if (liveStatusKey(c, nowMin) === 'absent') s.absent++; else s.notStarted++
   }
   return s
 }
@@ -123,15 +134,36 @@ function weekStats(people, days, today) {
   return { rate: sched ? Math.round((present / sched) * 100) : null, late, otHours: Math.round(otMin / 60), leaveDays }
 }
 
-function StatCard({ label, value, tone }) {
-  const toneCls = {
-    good: 'text-[var(--color-good)]', warn: 'text-[var(--color-warn)]', bad: 'text-[var(--color-bad)]',
-    blue: 'text-[#1d4ed8]', ink: 'text-[var(--color-ink)]',
-  }[tone || 'ink']
+const STAT_TONE = {
+  good: { text: 'text-[var(--color-good)]', dot: 'var(--color-good)', soft: 'bg-[var(--color-good-bg)]' },
+  warn: { text: 'text-[var(--color-warn)]', dot: 'var(--color-warn)', soft: 'bg-[var(--color-warn-bg)]' },
+  bad: { text: 'text-[var(--color-bad)]', dot: 'var(--color-bad)', soft: 'bg-[var(--color-bad-bg)]' },
+  blue: { text: 'text-[#1d4ed8]', dot: '#2563eb', soft: 'bg-[#eff6ff]' },
+  rest: { text: 'text-[var(--color-rest)]', dot: 'var(--color-rest)', soft: 'bg-[var(--color-rest-bg)]' },
+  ink: { text: 'text-[var(--color-ink)]', dot: 'var(--color-ink-faint)', soft: 'bg-[var(--color-fill)]' },
+}
+
+// Hero tile — big number, small label, status dot. Built to scan in <2s.
+function HeroStat({ label, value, tone }) {
+  const c = STAT_TONE[tone] || STAT_TONE.ink
+  return (
+    <div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+      <div className="flex items-center gap-1.5">
+        <span className={`flex h-6 w-6 items-center justify-center rounded-full ${c.soft}`}><i className="h-2 w-2 rounded-full" style={{ background: c.dot }} /></span>
+        <span className="text-[12px] font-semibold text-[var(--color-ink-soft)]">{label}</span>
+      </div>
+      <p className={`mt-1.5 text-[34px] font-extrabold leading-none tabular-nums ${c.text}`}>{value}</p>
+    </div>
+  )
+}
+
+// Smaller week metric.
+function WeekStat({ label, value, tone }) {
+  const c = STAT_TONE[tone] || STAT_TONE.ink
   return (
     <div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
-      <p className={`mt-0.5 text-2xl font-extrabold tabular-nums ${toneCls}`}>{value}</p>
+      <p className={`mt-0.5 text-2xl font-extrabold tabular-nums ${c.text}`}>{value}</p>
     </div>
   )
 }
@@ -141,24 +173,18 @@ function AttendanceSummary({ people, days, today }) {
   const w = weekStats(people, days, today)
   return (
     <div className="space-y-3">
-      <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Today</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <StatCard label="Scheduled" value={t.scheduled} tone="ink" />
-          <StatCard label="Present" value={t.present} tone="good" />
-          <StatCard label="Late" value={t.late} tone="warn" />
-          <StatCard label="On leave" value={t.leave} tone="blue" />
-          <StatCard label="Not in yet" value={t.notin} tone={t.notin ? 'bad' : 'ink'} />
-        </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <HeroStat label="Present" value={`${t.present}/${t.scheduled}`} tone="good" />
+        <HeroStat label="Late" value={t.late} tone="warn" />
+        <HeroStat label="Absent" value={t.absent} tone={t.absent ? 'bad' : 'ink'} />
+        <HeroStat label="On leave" value={t.leave} tone="blue" />
+        <HeroStat label="Not started" value={t.notStarted} tone="ink" />
       </div>
-      <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">This week</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard label="Attendance rate" value={w.rate == null ? '—' : `${w.rate}%`} tone={w.rate == null ? 'ink' : w.rate >= 90 ? 'good' : 'warn'} />
-          <StatCard label="Late arrivals" value={w.late} tone={w.late ? 'warn' : 'ink'} />
-          <StatCard label="Overtime hours" value={`${w.otHours}h`} tone="ink" />
-          <StatCard label="Leave days" value={w.leaveDays} tone="blue" />
-        </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <WeekStat label="Attendance rate" value={w.rate == null ? '—' : `${w.rate}%`} tone={w.rate == null ? 'ink' : w.rate >= 90 ? 'good' : 'warn'} />
+        <WeekStat label="Late arrivals" value={w.late} tone={w.late ? 'warn' : 'ink'} />
+        <WeekStat label="Overtime hours" value={`${w.otHours}h`} tone="ink" />
+        <WeekStat label="Leave days" value={w.leaveDays} tone="blue" />
       </div>
     </div>
   )
@@ -279,7 +305,10 @@ function LegendDot({ tone, label }) {
 // by status; week hours per person; day totals at the foot. (Zoho-Shifts style.)
 function WeekSchedule({ people, days, today, onCellClick }) {
   const clickable = !!onCellClick
-  const cols = `12rem repeat(${days.length}, minmax(94px, 1fr))`
+  // Minutes-into-day now (Gambia=GMT), so the live status chip can tell
+  // "Absent" (shift ended, never came) from "Not in yet". Null off the current week.
+  const nowMin = today === new Date().toISOString().slice(0, 10) ? new Date().getHours() * 60 + new Date().getMinutes() : null
+  const cols = `14rem repeat(${days.length}, minmax(96px, 1fr))`
   const totals = days.map((k) => {
     let hours = 0
     let on = 0
@@ -303,9 +332,9 @@ function WeekSchedule({ people, days, today, onCellClick }) {
               const weekend = dow === 0 || dow === 6
               const isToday = k === today
               return (
-                <div key={k} className="px-2 py-2 text-center">
-                  <div className="text-[11px] font-medium text-[var(--color-ink-faint)]">{DAY_FULL[dow].slice(0, 3)}</div>
-                  <div className={`mx-auto mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold tabular-nums ${isToday ? 'bg-[var(--color-brand)] text-white' : weekend ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink)]'}`}>{d.getUTCDate()}</div>
+                <div key={k} className={`px-2 py-2 text-center ${isToday ? 'bg-[var(--color-good-bg)] border-x-2 border-[var(--color-good)]' : weekend ? 'bg-[var(--color-fill)]/60' : ''}`}>
+                  <div className={`text-[11px] font-semibold ${isToday ? 'text-[var(--color-good)]' : 'text-[var(--color-ink-faint)]'}`}>{isToday ? 'TODAY' : DAY_FULL[dow].slice(0, 3)}</div>
+                  <div className={`mx-auto mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold tabular-nums ${isToday ? 'bg-[var(--color-good)] text-white' : weekend ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink)]'}`}>{d.getUTCDate()}</div>
                 </div>
               )
             })}
@@ -315,17 +344,20 @@ function WeekSchedule({ people, days, today, onCellClick }) {
           <div className="divide-y divide-[var(--color-line-soft)]">
             {people.map((p) => (
               <div key={p.username} className="grid items-stretch" style={{ gridTemplateColumns: cols }}>
-                <div className="sticky left-0 z-10 flex items-center gap-2.5 bg-[var(--color-surface)] px-4 py-2.5">
-                  <Avatar name={p.name} size={32} />
+                <div className="sticky left-0 z-10 flex items-center gap-2.5 bg-[var(--color-surface)] px-4 py-3.5">
+                  <Avatar name={p.name} size={34} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-semibold leading-tight text-[var(--color-ink)]">{p.name}</div>
-                    <div className="truncate text-[11px] text-[var(--color-ink-faint)]">{Math.round(p.weekHours)}h · {p.department}</div>
+                    <div className="truncate text-[13px] font-bold leading-tight text-[var(--color-ink)]">{p.name}</div>
+                    <div className="truncate text-[11px] text-[var(--color-ink-soft)]">{p.department}</div>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      {(() => { const c = CHIP[liveStatusKey(p.byDate?.[today], nowMin)]; return (
+                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${c.cls}`} title="Status right now">
+                          <i className="h-1.5 w-1.5 rounded-full" style={{ background: c.dot }} />{c.label}
+                        </span>
+                      ) })()}
+                      <span className="text-[10px] font-medium text-[var(--color-ink-faint)]">{Math.round(p.weekHours)}h/wk</span>
+                    </div>
                   </div>
-                  {(() => { const c = CHIP[liveStatusKey(p.byDate?.[today])]; return (
-                    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${c.cls}`} title="Status right now">
-                      <i className="h-1.5 w-1.5 rounded-full" style={{ background: c.dot }} />{c.label}
-                    </span>
-                  ) })()}
                 </div>
                 {days.map((k) => {
                   const cell = p.byDate?.[k]
@@ -334,7 +366,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
                   const weekendK = dowK === 0 || dowK === 6
                   const view = cellView(cell, p.department)
                   return (
-                    <div key={k} className={`border-l border-[var(--color-line-soft)] p-1.5 ${isToday ? 'bg-[var(--color-brand-50)]' : weekendK ? 'bg-[var(--color-fill)]/50' : ''}`}>
+                    <div key={k} className={`p-1.5 ${isToday ? 'bg-[var(--color-good-bg)]/50 border-x-2 border-[var(--color-good)]' : weekendK ? 'border-l border-[var(--color-line-soft)] bg-[var(--color-fill)]/50' : 'border-l border-[var(--color-line-soft)]'}`}>
                       <button
                         disabled={!clickable}
                         onClick={() => onCellClick?.(p, k, cell || { status: 'off' })}
@@ -347,7 +379,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
                             {view.secondary && <div className={`truncate text-[10px] font-medium ${view.tone === 'absent' ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>{view.secondary}</div>}
                           </div>
                         ) : (
-                          <div className={`flex h-full min-h-[42px] items-center justify-center rounded-lg text-[15px] text-[var(--color-line)] ${clickable ? 'hover:bg-[var(--color-paper)]' : ''}`}>{clickable ? '+' : ''}</div>
+                          <div className={`flex h-full min-h-[50px] items-center justify-center rounded-lg text-[15px] text-[var(--color-line)] ${clickable ? 'hover:bg-[var(--color-paper)]' : ''}`}>{clickable ? '+' : ''}</div>
                         )}
                       </button>
                     </div>
@@ -357,15 +389,18 @@ function WeekSchedule({ people, days, today, onCellClick }) {
             ))}
           </div>
 
-          {/* day totals */}
-          <div className="grid border-t border-[var(--color-line)] bg-[var(--color-surface)]" style={{ gridTemplateColumns: cols }}>
-            <div className="sticky left-0 z-10 bg-[var(--color-surface)] px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Totals</div>
-            {totals.map((t, i) => (
-              <div key={i} className="border-l border-[var(--color-line-soft)] px-2 py-2 text-center">
-                <div className="text-[12px] font-bold tabular-nums text-[var(--color-ink)]">{Math.round(t.hours)}h</div>
-                <div className="text-[10px] text-[var(--color-ink-faint)]">{t.on} on</div>
-              </div>
-            ))}
+          {/* day totals — darker bar so weekly hours read instantly */}
+          <div className="grid border-t border-[var(--color-line)] bg-[var(--color-fill)]" style={{ gridTemplateColumns: cols }}>
+            <div className="sticky left-0 z-10 bg-[var(--color-fill)] px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">Totals</div>
+            {totals.map((t, i) => {
+              const isToday = days[i] === today
+              return (
+                <div key={i} className={`border-l border-[var(--color-line-soft)] px-2 py-2.5 text-center ${isToday ? 'bg-[var(--color-good-bg)]/60' : ''}`}>
+                  <div className="text-[13px] font-extrabold tabular-nums text-[var(--color-ink)]">{Math.round(t.hours)}h</div>
+                  <div className="text-[10px] font-medium text-[var(--color-ink-faint)]">{t.on} on</div>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -592,20 +627,23 @@ function ManagerHours() {
 
   const people = w.data?.people || []
   const today = w.data?.today
+  const nowMin = today === new Date().toISOString().slice(0, 10) ? new Date().getHours() * 60 + new Date().getMinutes() : null
   const departments = [...new Set(people.map((p) => p.department).filter(Boolean))]
+  // Urgent statuses first, departments after (Adama 28 Jun).
   const FILTERS = [
     { id: 'all', label: 'All' },
     { id: 'late', label: 'Late today' },
-    { id: 'notin', label: 'Not in' },
+    { id: 'absent', label: 'Absent' },
     { id: 'leave', label: 'On leave' },
     ...departments.map((d) => ({ id: `dept:${d}`, label: d })),
   ]
   const shown = people.filter((p) => {
     if (filter === 'all') return true
     if (filter.startsWith('dept:')) return p.department === filter.slice(5)
-    const key = liveStatusKey(p.byDate?.[today])
+    const key = liveStatusKey(p.byDate?.[today], nowMin)
     if (filter === 'late') return key === 'late'
     if (filter === 'notin') return key === 'notin'
+    if (filter === 'absent') return key === 'absent'
     if (filter === 'leave') return key === 'leave' || key === 'sick'
     return true
   })
