@@ -516,10 +516,20 @@ function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
 }
 
 // ───────────────────────────── staff / agent view ───────────────────────────────
+function useMyHistory() {
+  const [records, setRecords] = useState([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    api('/attendance/mine').then((d) => setRecords(d.records || [])).catch(() => setRecords([])).finally(() => setLoading(false))
+  }, [])
+  return { records, loading }
+}
+
 function MyHours() {
   const { isViewAs } = useAuth()
   const { today, loading, busy, locating, act, undo } = useSelfDay()
   const w = useWeekGrid()
+  const hist = useMyHistory()
   const [undoOpen, setUndoOpen] = useState(false)
 
   if (loading) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
@@ -608,6 +618,34 @@ function MyHours() {
           <Card className="flex justify-center py-12"><Spinner size={24} /></Card>
         ) : (
           <WeekSchedule people={w.data.people} days={w.data.days} today={w.data.today} />
+        )}
+      </div>
+
+      {/* history — my past attendance (real records only) */}
+      <div>
+        <SectionTitle>Recent days</SectionTitle>
+        {hist.loading ? (
+          <Card className="flex justify-center py-10"><Spinner size={22} /></Card>
+        ) : hist.records.length === 0 ? (
+          <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">No attendance recorded yet.</Card>
+        ) : (
+          <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden">
+            {hist.records.map((r) => {
+              const mins = r.checkIn && r.checkOut ? Math.max(0, (new Date(r.checkOut) - new Date(r.checkIn)) / 60000) : null
+              return (
+                <div key={r.date} className="flex items-center justify-between px-4 py-3 sm:px-5">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-[var(--color-ink)]">{new Date(`${r.date}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                    <div className="text-xs text-[var(--color-ink-faint)]">{r.checkIn ? timeShort(r.checkIn) : '—'}{r.checkOut ? ` – ${timeShort(r.checkOut)}` : ''}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {r.late && <Pill tone="warn">Late</Pill>}
+                    <span className="text-sm font-semibold text-[var(--color-ink)]">{fmtMins(mins)}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </Card>
         )}
       </div>
     </div>

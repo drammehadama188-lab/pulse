@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, TrendingUp, Clock, FileText, Target,
   ClipboardCheck, ShieldAlert, Wallet, Gift, BookOpen, FolderOpen,
-  Palmtree, User, Menu, UserPlus,
+  Palmtree, User, Menu, UserPlus, ShieldCheck,
 } from 'lucide-react'
 
 const isOwner = (u) => u?.username === 'adama' // CEO/owner — no self-service (leave, clock-in…)
@@ -31,10 +31,10 @@ export const NAV = [
   { id: 'performance', to: '/performance', label: 'Performance', icon: TrendingUp, group: 'People', show: mgr },
   { id: 'attendance-mgr', to: '/attendance', label: 'Attendance', icon: Clock, group: 'People', show: mgr },
   { id: 'recruitment', to: '/recruitment', label: 'Recruitment', icon: UserPlus, group: 'People', show: mgr },
-  { id: 'contracts', to: '/contracts', label: 'Contracts', icon: FileText, group: 'People', show: mgr },
+  { id: 'staff', to: '/team', label: 'Staff', icon: ShieldCheck, group: 'People', show: (u) => has(u, 'team') },
 
   // MANAGEMENT — goals, incoming requests, the employee record
-  { id: 'reviews', to: '/reviews', label: 'Goals & Reviews', icon: Target, group: 'Management', show: mgr },
+  { id: 'reviews', to: '/reviews', label: 'Reviews & Warnings', icon: ShieldAlert, group: 'Management', show: mgr },
   { id: 'requests', to: '/requests', label: 'Requests', icon: ClipboardCheck, group: 'Management', show: (u) => has(u, 'approvals') || has(u, 'team') },
   // 'records' (Employee Records / warnings) merged into "Employees & Records" tab.
 

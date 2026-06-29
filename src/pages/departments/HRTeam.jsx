@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Users, DollarSign, AlertTriangle, Target, Shield,
-  Plus, Edit2, Trash2, Settings, ChevronDown, UserX,
+  Plus, Edit2, Trash2, Settings, ChevronDown, UserX, RotateCcw,
 } from 'lucide-react';
 import { team, pastStaff, payrollHistory } from '../../data/team';
+import Contracts from '../Contracts.jsx';
 import TimePeriodSelector from '../../components/TimePeriodSelector';
 import { api } from '../../lib/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -167,6 +168,22 @@ export default function HRTeam({
   const [allWarnings, setAllWarnings] = useState([]);
   const [pendingLeave, setPendingLeave] = useState(null);
   const [pastFilter, setPastFilter] = useState('all');
+  // Restore lives here now (Past agents removed from the Staff page). Map a
+  // former employee's name -> username when they're a restorable archived account.
+  const [restorableMap, setRestorableMap] = useState({});
+  useEffect(() => {
+    api('/past-agents').then((d) => {
+      const m = {};
+      (d.pastAgents || []).forEach((p) => { if (p.restorable && p.username) m[p.name.toLowerCase().replace(/\s+/g, '')] = p.username; });
+      setRestorableMap(m);
+    }).catch(() => {});
+  }, []);
+  async function restorePast(username) {
+    try {
+      await api(`/staff/${username}/restore`, { method: 'POST' });
+      setRestorableMap((m) => { const n = { ...m }; for (const k of Object.keys(n)) if (n[k] === username) delete n[k]; return n; });
+    } catch { /* no-op */ }
+  }
 
   useEffect(() => {
     api('/warnings').then(d => setAllWarnings(d.warnings || [])).catch(() => setAllWarnings([]));
@@ -1133,21 +1150,7 @@ export default function HRTeam({
         </div>
       )}
 
-      {tab === 'contracts' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">Contract Timeline</h3>
-          <p className="text-sm text-gray-500 mb-4">Sorted by urgency</p>
-          <div className="space-y-2">
-            {contractDeadlines.map((c, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold ${c.daysLeft <= 21 ? 'bg-red-100 text-red-700' : c.daysLeft <= 60 ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{c.daysLeft}d</div>
-                <div className="flex-1"><p className="text-sm font-medium text-gray-900">{c.name}</p><p className="text-xs text-gray-500">{c.role} — {c.contract}</p></div>
-                <div className="text-right"><p className="text-sm font-bold">{new Date(c.contractEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p><span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${actionBadge(c.nextAction)}`}>{c.nextAction}</span></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {tab === 'contracts' && <Contracts />}
 
       {tab === 'warnings' && (() => {
         const expiring = contractDeadlines.filter(c => c.daysLeft > 0 && c.daysLeft <= 90).length;
@@ -1218,7 +1221,7 @@ export default function HRTeam({
           </div>
           <div className="space-y-3">
             {shown.map((p, i) => (
-              <div key={i} className="p-4 border border-gray-200 rounded-lg">
+              <div key={i} onClick={() => navigate(`/past/${p.name.toLowerCase().replace(/\s+/g, '-')}`)} className="p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-md transition-all">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0"><UserX size={18} className="text-gray-400" /></div>
@@ -1227,7 +1230,12 @@ export default function HRTeam({
                       <p className="text-xs text-gray-500">{p.role}</p>
                     </div>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${PAST_CAT_COLOR[p.cat] || PAST_CAT_COLOR.Other}`}>{p.cat}</span>
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    {restorableMap[p.name.toLowerCase().replace(/\s+/g, '')] && (
+                      <button onClick={() => restorePast(restorableMap[p.name.toLowerCase().replace(/\s+/g, '')])} className="flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 hover:border-emerald-500 hover:text-emerald-600"><RotateCcw size={12} /> Restore</button>
+                    )}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${PAST_CAT_COLOR[p.cat] || PAST_CAT_COLOR.Other}`}>{p.cat}</span>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-3 border-t border-gray-100">
                   <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Left</p><p className="text-sm text-gray-900 mt-0.5">{p.date || '—'}</p></div>

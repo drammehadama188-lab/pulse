@@ -24,6 +24,9 @@ import Recruitment from './pages/Recruitment.jsx'
 import Performance from './pages/Performance.jsx'
 import PerformancePerson from './pages/PerformancePerson.jsx'
 import Contracts from './pages/Contracts.jsx'
+import PastStaffProfile from './pages/PastStaffProfile.jsx'
+import ReviewsWarnings from './pages/ReviewsWarnings.jsx'
+import StaffMember from './pages/StaffMember.jsx'
 import DepartmentShell from './pages/departments/DepartmentShell.jsx'
 import Policies from './pages/departments/Policies.jsx'
 import { Target, Gift, BookOpen, FolderOpen } from 'lucide-react'
@@ -88,13 +91,14 @@ export default function App() {
             new ones (Goals & Reviews, Benefits, Policies, Documents) render a
             clean "being set up" shell to be filled in Phase 2. */}
         {/* PEOPLE */}
-        <Route path="/people" element={<RequireAuth power="hr"><HRTeam only={['roster', 'past', 'warnings']} title="Employees & Records" subtitle="Your team — roster, past staff and records" /></RequireAuth>} />
+        <Route path="/people" element={<RequireAuth power="hr"><HRTeam only={['roster', 'contracts', 'past', 'warnings']} title="Employees & Records" subtitle="Your team — roster, past staff and records" /></RequireAuth>} />
         <Route path="/performance" element={<RequireAuth power="hr"><Performance /></RequireAuth>} />
         <Route path="/performance/:slug" element={<RequireAuth power="hr"><PerformancePerson /></RequireAuth>} />
-        <Route path="/contracts" element={<RequireAuth power="hr"><Contracts /></RequireAuth>} />
+        <Route path="/past/:slug" element={<RequireAuth power="hr"><PastStaffProfile /></RequireAuth>} />
+        <Route path="/contracts" element={<Navigate to="/people?tab=contracts" replace />} />
         <Route path="/recruitment" element={<RequireAuth power="hr"><Recruitment /></RequireAuth>} />
         {/* MANAGEMENT */}
-        <Route path="/reviews" element={<RequireAuth power="hr"><DepartmentShell icon={Target} title="Goals & Reviews" subtitle="Management" blurb="Goals, monthly reviews, achievements and improvement plans. Being set up — coming online here soon." /></RequireAuth>} />
+        <Route path="/reviews" element={<RequireAuth power="hr"><ReviewsWarnings /></RequireAuth>} />
         <Route path="/requests" element={<RequireAuth power="approvals"><Approvals /></RequireAuth>} />
         <Route path="/records" element={<RequireAuth power="hr"><HRTeam only={['warnings']} title="Employee Records" subtitle="Warnings, disciplinary actions and notes" /></RequireAuth>} />
         {/* PAYROLL */}
@@ -116,6 +120,7 @@ export default function App() {
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/approvals" element={<RequireAuth power="approvals"><Approvals /></RequireAuth>} />
         <Route path="/team" element={<RequireAuth power="team"><Team /></RequireAuth>} />
+        <Route path="/staff/:username" element={<RequireAuth power="team"><StaffMember /></RequireAuth>} />
 
         {/* Back-compat: the old bundled HR page + its deep links still resolve. */}
         <Route path="/dept/hr" element={<RequireAuth power="hr"><HRTeam /></RequireAuth>} />

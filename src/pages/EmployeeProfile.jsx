@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Pencil, Upload, Download, FileText, AlertTriangle, CheckCircle2, Circle } from 'lucide-react';
+import { ArrowLeft, Pencil, Upload, Download, FileText, AlertTriangle, CheckCircle2, Circle, RefreshCw, CalendarPlus, BadgeCheck, UserX, X, Trash2 } from 'lucide-react';
 import { team } from '../data/team';
 import { api } from '../lib/api.js';
 
@@ -16,6 +16,19 @@ function formatDate(d) {
   if (isNaN(date)) return d;
   return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
+
+// Human-readable line for a contract action, used in the History timeline.
+function contractEventText(e) {
+  const end = e.toEnd ? formatDate(e.toEnd) : 'no end date';
+  if (e.action === 'renew') return `Contract renewed — ${e.toType || 'fixed term'}, now ending ${end}`;
+  if (e.action === 'extend') return `Contract extended to ${end}`;
+  if (e.action === 'convert') return `Converted to permanent (${e.toType || 'Permanent'})`;
+  if (e.action === 'terminate') return `Contract terminated — ${e.reason || 'no reason given'}`;
+  return e.action;
+}
+
+const ACTION_TITLES = { renew: 'Renew contract', extend: 'Extend contract', convert: 'Convert to permanent', terminate: 'Terminate contract' };
+const ACTION_CONFIRM = { renew: 'Renew', extend: 'Extend', convert: 'Convert', terminate: 'Terminate & deactivate' };
 
 function Field({ label, value, accent }) {
   return (
@@ -47,6 +60,11 @@ export default function EmployeeProfile() {
   const [review, setReview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [checklist, setChecklist] = useState({ onboarding: [], offboarding: [] });
+  const [contract, setContract] = useState(null);
+  const [action, setAction] = useState(null);
+  const [form, setForm] = useState({});
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionErr, setActionErr] = useState('');
 
   useEffect(() => {
     if (!agent) return;
@@ -56,6 +74,7 @@ export default function EmployeeProfile() {
     api(`/warnings?agent=${n}`).then(d => setWarnings(d.warnings || [])).catch(() => setWarnings([]));
     api(`/decisions?agent=${n}`).then(d => setReview(d.current || null)).catch(() => {});
     api(`/employee-checklist?name=${n}`).then(d => setChecklist({ onboarding: d.onboarding || [], offboarding: d.offboarding || [] })).catch(() => {});
+    api(`/contracts?name=${n}`).then(d => setContract(d.contract || null)).catch(() => {});
   }, [agent?.name]);
 
   async function toggleCheck(type, label, done) {
@@ -79,19 +98,41 @@ export default function EmployeeProfile() {
 
   const initials = agent.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
   const now = new Date();
-  const daysToEnd = agent.contractEnd ? Math.ceil((new Date(agent.contractEnd) - now) / 86400000) : null;
-  const isActive = agent.status ? agent.status === 'active' : (!agent.contractEnd || new Date(agent.contractEnd) > now);
-  const statusLabel = agent.status ? agent.status.charAt(0).toUpperCase() + agent.status.slice(1) : (isActive ? 'Active' : 'Expired');
-  const statusColor = isActive ? 'bg-emerald-100 text-emerald-700'
+
+  // Effective contract — overlay (renew/extend/convert/terminate) wins over the
+  // team.js seed once any action has been recorded. Until loaded, fall back to
+  // the seed so the page never renders blank.
+  const cLoaded = contract != null;
+  const cEnd = cLoaded ? contract.end : (agent.contractEnd || null);
+  const cType = cLoaded ? contract.type : (agent.contract || (agent.contractEnd ? 'Fixed term' : 'Permanent'));
+  const cStart = cLoaded ? contract.start : (agent.joined || null);
+  const cStatus = cLoaded ? contract.status : 'active';
+  const events = (contract && contract.events) || [];
+
+  const daysToEnd = cEnd ? Math.ceil((new Date(cEnd) - now) / 86400000) : null;
+  const terminated = cStatus === 'terminated';
+  const permanent = cStatus === 'permanent' || (!cEnd && !terminated);
+  const termEvent = events.filter((e) => e.action === 'terminate').slice(-1)[0];
+
+  const isActive = !terminated;
+  const statusLabel = terminated ? 'Terminated'
+    : agent.status === 'training' ? 'Training'
+    : agent.status === 'probation' ? 'Probation'
+    : permanent ? 'Permanent'
+    : (daysToEnd != null && daysToEnd < 0) ? 'Expired'
+    : 'Active';
+  const statusColor = terminated ? 'bg-gray-800 text-white'
     : agent.status === 'training' ? 'bg-orange-100 text-orange-700'
     : agent.status === 'probation' ? 'bg-amber-100 text-amber-700'
-    : 'bg-red-100 text-red-700';
+    : (daysToEnd != null && daysToEnd < 0) ? 'bg-red-100 text-red-700'
+    : 'bg-emerald-100 text-emerald-700';
 
   const documents = files.filter((f) => f.category !== 'monthly-review');
   const reviews = files.filter((f) => f.category === 'monthly-review');
   const activity = [
     ...(agent.history || []).map((h) => ({ date: h.date, text: h.event })),
     ...warnings.map((w) => ({ date: w.date, text: `Warning (${w.type || 'verbal'}): ${w.reason || ''}`, warn: true })),
+    ...events.map((e) => ({ date: e.at, text: contractEventText(e), warn: e.action === 'terminate' })),
   ].filter((a) => a.date).sort((a, b) => (a.date < b.date ? 1 : -1));
 
   // Contract management layer — real status + recommendation (live perf score,
@@ -99,16 +140,54 @@ export default function EmployeeProfile() {
   const score = profile.performanceScore === '' || profile.performanceScore == null
     ? (typeof agent.performance === 'number' ? agent.performance : null)
     : Number(profile.performanceScore);
-  const contractBadge = (agent.status === 'probation' || agent.status === 'training') ? { label: 'Probation', cls: 'bg-violet-100 text-violet-700' }
-    : !agent.contractEnd ? { label: 'Permanent', cls: 'bg-emerald-100 text-emerald-700' }
+  const contractBadge = terminated ? { label: 'Terminated', cls: 'bg-gray-800 text-white' }
+    : (agent.status === 'probation' || agent.status === 'training') ? { label: 'Probation', cls: 'bg-violet-100 text-violet-700' }
+    : permanent ? { label: 'Permanent', cls: 'bg-emerald-100 text-emerald-700' }
     : daysToEnd < 0 ? { label: 'Expired', cls: 'bg-red-100 text-red-700' }
     : daysToEnd <= 30 ? { label: 'Expiring soon', cls: 'bg-amber-100 text-amber-700' }
     : { label: 'Active', cls: 'bg-emerald-100 text-emerald-700' };
-  const recommendation = daysToEnd == null ? null
+  const recommendation = terminated ? null
+    : permanent ? 'Permanent — no action'
+    : daysToEnd == null ? null
     : daysToEnd < 0 ? 'Confirm, extend or end'
     : (score != null && score >= 80) ? 'Renew'
     : (score != null && score < 55) ? 'Review — underperforming'
     : 'Review';
+
+  const ACTIONS = [
+    { key: 'renew', label: 'Renew', icon: RefreshCw },
+    { key: 'extend', label: 'Extend', icon: CalendarPlus },
+    { key: 'convert', label: 'Convert to permanent', icon: BadgeCheck, hide: permanent },
+    { key: 'terminate', label: 'Terminate', icon: UserX, danger: true },
+  ];
+
+  function openAction(key) {
+    const today = new Date().toISOString().slice(0, 10);
+    setActionErr('');
+    setForm(key === 'terminate' ? { newEnd: today, reason: '', note: '' }
+      : key === 'convert' ? { newType: 'Permanent', note: '' }
+      : { newEnd: '', newStart: '', newType: cType, note: '' });
+    setAction(key);
+  }
+  const setF = (k, v) => setForm((s) => ({ ...s, [k]: v }));
+
+  async function runAction() {
+    setActionBusy(true); setActionErr('');
+    try {
+      const payload = { name: agent.name, action, note: form.note };
+      if (action === 'renew') { payload.newEnd = form.newEnd; payload.newStart = form.newStart; payload.newType = form.newType; }
+      else if (action === 'extend') { payload.newEnd = form.newEnd; }
+      else if (action === 'convert') { payload.newType = form.newType; }
+      else if (action === 'terminate') { payload.reason = form.reason; payload.newEnd = form.newEnd; }
+      const d = await api('/contracts/action', { method: 'POST', body: payload });
+      setContract(d.contract);
+      setAction(null);
+    } catch (e) {
+      setActionErr(e.message || 'Action failed');
+    } finally {
+      setActionBusy(false);
+    }
+  }
 
   async function saveProfile() {
     setSaving(true);
@@ -129,8 +208,19 @@ export default function EmployeeProfile() {
     } catch { /* ignore */ } finally { setUploading(false); e.target.value = ''; }
   }
 
+  async function deleteDoc(f) {
+    if (!window.confirm(`Delete "${f.name}"? This cannot be undone.`)) return;
+    const prev = files;
+    setFiles((s) => s.filter((x) => x.id !== f.id)); // optimistic
+    try {
+      await api(`/agent-files/${f.id}`, { method: 'DELETE' });
+    } catch {
+      setFiles(prev); // restore on failure
+    }
+  }
+
   const onbDone = checklist.onboarding.filter(i => i.done).length;
-  const tabs = [['overview', 'Overview'], ['documents', `Documents${documents.length ? ` (${documents.length})` : ''}`], ['performance', 'Performance'], ['checklists', `Checklists${checklist.onboarding.length ? ` (${onbDone}/${checklist.onboarding.length})` : ''}`], ['activity', 'History']];
+  const tabs = [['overview', 'Overview'], ['documents', `Documents${documents.length ? ` (${documents.length})` : ''}`], ['performance', 'Reviews & Warnings'], ['checklists', `Checklists${checklist.onboarding.length ? ` (${onbDone}/${checklist.onboarding.length})` : ''}`], ['activity', 'History']];
 
   return (
     <div className="max-w-4xl">
@@ -146,10 +236,22 @@ export default function EmployeeProfile() {
               <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusColor}`}>{statusLabel}</span>
             </div>
             <p className="text-gray-600">{agent.role}{agent.type ? ` · ${agent.type}` : ''}</p>
-            <p className="text-[11px] text-gray-400 mt-1">Started {agent.joined || '—'} · Ends {agent.contractEnd ? formatDate(agent.contractEnd) : '—'}{daysToEnd !== null && daysToEnd > 0 ? ` (${daysToEnd}d)` : ''}</p>
+            <p className="text-[11px] text-gray-400 mt-1">Started {cStart || '—'} · Ends {cEnd ? formatDate(cEnd) : (permanent ? 'No end date' : '—')}{daysToEnd !== null && daysToEnd > 0 ? ` (${daysToEnd}d)` : ''}</p>
           </div>
         </div>
       </div>
+
+      {/* Termination banner */}
+      {terminated && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+          <UserX size={18} className="text-red-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-red-800">Contract terminated{termEvent?.toEnd ? ` — ${formatDate(termEvent.toEnd)}` : ''}</p>
+            <p className="text-sm text-red-700">{termEvent?.reason || 'No reason recorded.'}</p>
+            <p className="text-[11px] text-red-500 mt-0.5">This employee has been deactivated across Pulse and signed out.</p>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-1 bg-white rounded-xl shadow-sm border border-gray-200 p-1.5 w-fit mb-4">
@@ -160,21 +262,32 @@ export default function EmployeeProfile() {
 
       {tab === 'overview' && (
         <div className="space-y-4">
-          {/* Contract — the management layer: status + recommendation up front */}
+          {/* Contract — the management layer: status + recommendation + actions */}
           <div className="bg-white rounded-3xl border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-gray-900">Contract</h2>
               <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${contractBadge.cls}`}>{contractBadge.label}</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
-              <Field label="Type" value={agent.contract || (agent.contractEnd ? 'Fixed term' : 'Permanent')} />
-              <Field label="Start date" value={agent.joined || '—'} />
-              <Field label="End date" value={agent.contractEnd ? formatDate(agent.contractEnd) : 'No end date'} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : daysToEnd !== null && daysToEnd <= 90 ? 'text-amber-600' : 'text-gray-900'} />
+              <Field label="Type" value={cType} />
+              <Field label="Start date" value={cStart || '—'} />
+              <Field label="End date" value={cEnd ? formatDate(cEnd) : 'No end date'} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : daysToEnd !== null && daysToEnd <= 90 ? 'text-amber-600' : 'text-gray-900'} />
               <Field label="Days left" value={daysToEnd == null ? '—' : daysToEnd < 0 ? `${-daysToEnd} days ago` : `${daysToEnd} days`} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : 'text-gray-900'} />
               <Field label="Performance" value={score == null ? '—' : `${score}%`} />
               <Field label="Recommendation" value={recommendation || '—'} accent={recommendation === 'Renew' ? 'text-emerald-700' : /under|extend|end/i.test(recommendation || '') ? 'text-red-600' : 'text-gray-900'} />
             </div>
-            <p className="mt-4 text-xs text-gray-400">Contract actions (renew · extend · convert to permanent · terminate) are coming next. Full timeline is in the History tab.</p>
+            {!terminated ? (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {ACTIONS.filter((a) => !a.hide).map((a) => (
+                  <button key={a.key} type="button" onClick={() => openAction(a.key)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${a.danger ? 'border-red-200 text-red-700 hover:bg-red-50' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
+                    <a.icon size={14} /> {a.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 text-xs text-gray-400">Contract ended. The full timeline is in the History tab.</p>
+            )}
           </div>
 
           <div className="bg-white rounded-3xl border border-gray-100 p-6">
@@ -183,9 +296,9 @@ export default function EmployeeProfile() {
               <Field label="Role" value={agent.role} />
               <Field label="Department" value={agent.type} />
               <Field label="Status" value={statusLabel} accent={isActive ? 'text-emerald-700' : 'text-gray-900'} />
-              <Field label="Start date" value={agent.joined} />
-              <Field label="Contract" value={agent.contract} />
-              <Field label="End date" value={<>{agent.contractEnd ? formatDate(agent.contractEnd) : '—'}{daysToEnd !== null && daysToEnd > 0 && <span className="text-gray-400 font-normal ml-1">({daysToEnd}d)</span>}{daysToEnd !== null && daysToEnd <= 0 && <span className="text-red-500 font-normal ml-1">(expired)</span>}</>} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : daysToEnd !== null && daysToEnd <= 90 ? 'text-amber-600' : 'text-gray-900'} />
+              <Field label="Start date" value={cStart} />
+              <Field label="Contract" value={cType} />
+              <Field label="End date" value={<>{cEnd ? formatDate(cEnd) : (permanent ? 'No end date' : '—')}{daysToEnd !== null && daysToEnd > 0 && <span className="text-gray-400 font-normal ml-1">({daysToEnd}d)</span>}{daysToEnd !== null && daysToEnd <= 0 && !terminated && <span className="text-red-500 font-normal ml-1">(expired)</span>}</>} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : daysToEnd !== null && daysToEnd <= 90 ? 'text-amber-600' : 'text-gray-900'} />
               <Field label="Base salary" value={`D${(agent.base || 0).toLocaleString()}`} />
               <Field label="Commission" value={agent.commission > 0 ? `Up to D${agent.commission.toLocaleString()}` : '—'} accent={agent.commission > 0 ? 'text-emerald-700' : 'text-gray-900'} />
               <Field label="Warnings" value={String(warnings.length)} accent={warnings.length > 0 ? 'text-red-600' : 'text-gray-900'} />
@@ -236,7 +349,10 @@ export default function EmployeeProfile() {
               {documents.map((f) => (
                 <div key={f.id} className="flex items-center justify-between py-3">
                   <div className="flex items-center gap-3 min-w-0"><FileText size={16} className="text-gray-400 shrink-0" /><div className="min-w-0"><p className="text-sm text-gray-900 truncate">{f.name}</p><p className="text-xs text-gray-400">{formatDate(f.uploadedAt)}</p></div></div>
-                  <a href={`/api/agent-files/${f.id}/download`} className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 shrink-0"><Download size={14} /> Download</a>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <a href={`/api/agent-files/${f.id}/download`} className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900"><Download size={14} /> Download</a>
+                    <button type="button" onClick={() => deleteDoc(f)} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-red-600"><Trash2 size={14} /> Delete</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -318,6 +434,79 @@ export default function EmployeeProfile() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Contract action modal */}
+      {action && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !actionBusy && setAction(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">{ACTION_TITLES[action]}</h3>
+              <button onClick={() => setAction(null)} disabled={actionBusy} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
+            </div>
+
+            <div className="space-y-4">
+              {action === 'renew' && (
+                <>
+                  <label className="block">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">New contract type</span>
+                    <input type="text" value={form.newType || ''} onChange={(e) => setF('newType', e.target.value)} placeholder="e.g. 6-month fixed" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  </label>
+                  <label className="block">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">New start date (optional)</span>
+                    <input type="date" value={form.newStart || ''} onChange={(e) => setF('newStart', e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  </label>
+                  <label className="block">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">New end date</span>
+                    <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  </label>
+                </>
+              )}
+              {action === 'extend' && (
+                <label className="block">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Extend end date to</span>
+                  <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </label>
+              )}
+              {action === 'convert' && (
+                <>
+                  <p className="text-sm text-gray-600">This makes the contract permanent — no end date, no expiry reminders.</p>
+                  <label className="block">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Contract type</span>
+                    <input type="text" value={form.newType || ''} onChange={(e) => setF('newType', e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  </label>
+                </>
+              )}
+              {action === 'terminate' && (
+                <>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                    Terminating deactivates <span className="font-semibold">{agent.name}</span> across Pulse — removed from the roster, payroll and attendance, and signed out immediately. This is recorded permanently.
+                  </div>
+                  <label className="block">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Reason (required)</span>
+                    <textarea value={form.reason || ''} onChange={(e) => setF('reason', e.target.value)} rows={3} placeholder="Why is this contract being terminated?" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  </label>
+                  <label className="block">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Termination date</span>
+                    <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  </label>
+                </>
+              )}
+              {action !== 'terminate' && (
+                <label className="block">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Note (optional)</span>
+                  <input type="text" value={form.note || ''} onChange={(e) => setF('note', e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </label>
+              )}
+            </div>
+
+            {actionErr && <p className="text-sm text-red-600 mt-3">{actionErr}</p>}
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={() => setAction(null)} disabled={actionBusy} className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+              <button onClick={runAction} disabled={actionBusy} className={`px-4 py-2 rounded-lg text-sm text-white disabled:opacity-60 ${action === 'terminate' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>{actionBusy ? 'Working…' : ACTION_CONFIRM[action]}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

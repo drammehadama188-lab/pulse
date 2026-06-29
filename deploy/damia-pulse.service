@@ -1,0 +1,22 @@
+[Unit]
+Description=Damia Pulse (staff app — pulse.damiatracker.com)
+After=network.target
+
+[Service]
+Type=simple
+# Adjust WorkingDirectory + User to match where you cloned the repo and how the
+# admin service runs on this droplet.
+WorkingDirectory=/opt/damia-pulse
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+# Distinct port so it never clashes with the admin service on this droplet.
+Environment=PORT=4010
+# ZOHO_* and other secrets are read from the repo's own .env by server.js — no
+# EnvironmentFile here (the .env may contain JSON values systemd can't parse).
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target

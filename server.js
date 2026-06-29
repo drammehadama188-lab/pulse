@@ -25,7 +25,7 @@ try {
 } catch { /* no .env — fine, bridge stays off */ }
 
 const DATA_DIR = path.join(__dirname, 'data')
-const PORT = 4003
+const PORT = process.env.PORT || 4003
 
 // Who manages people. Everyone else is staff.
 const MANAGER_NAMES = ['Ya Fatou Sawaneh', 'Kaddy Bojang']
@@ -1804,5 +1804,146 @@ app.get('/api/agent-sales', auth, requirePower('hr'), (req, res) => {
   if (name) return res.json({ sales: all[name] || null })
   res.json({ sales: all })
 })
+
+// ---------- contract management (actions + immutable event log) ----------
+// team.js stays the human-edited source of the ORIGINAL contract. Runtime
+// actions (renew / extend / convert-to-permanent / terminate) are recorded as
+// an OVERLAY in data/contracts.json keyed by employee name, plus an immutable
+// event log. Effective contract = seed merged with the overlay's `current`.
+// Read/written by 'hr'. Terminate ALSO archives the staff account via the same
+// path as /api/staff/:username/archive, so the person drops out of every
+// roster (team, payroll, attendance) and shows in Past Staff with the reason.
+function seedContractFor(name) {
+  const p = team.find((t) => t.name === name)
+  if (!p) return null
+  return {
+    type: p.contract || (p.contractEnd ? 'Fixed term' : 'Permanent'),
+    start: p.joined || null,
+    end: p.contractEnd || null,
+    status: 'active',
+  }
+}
+function effectiveContract(name) {
+  const seed = seedContractFor(name)
+  if (!seed) return null
+  const overlay = db.read('contracts', {})[name]
+  const base = overlay?.current ? { ...seed, ...overlay.current } : seed
+  return { ...base, events: overlay?.events || [] }
+}
+app.get('/api/contracts', auth, requirePower('hr'), (req, res) => {
+  const name = req.query.name
+  if (name) {
+    const c = effectiveContract(name)
+    if (!c) return res.status(404).json({ error: 'not on roster' })
+    return res.json({ contract: c })
+  }
+  const all = {}
+  for (const p of team) all[p.name] = effectiveContract(p.name)
+  res.json({ contracts: all })
+})
+app.post('/api/contracts/action', auth, requirePower('hr'), notViewAs, (req, res) => {
+  const { name, action, newStart, newEnd, newType, reason, note } = req.body || {}
+  if (!name || !action) return res.status(400).json({ error: 'name and action required' })
+  const seed = seedContractFor(name)
+  if (!seed) return res.status(404).json({ error: 'not on roster' })
+  const store = db.read('contracts', {})
+  const rec = store[name] || { current: { ...seed }, events: [] }
+  const cur = { ...seed, ...rec.current } // effective BEFORE this action
+  const ev = {
+    id: `con_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    action, at: new Date().toISOString(), by: req.user.username,
+    fromType: cur.type, fromEnd: cur.end,
+    note: String(note || '').slice(0, 2000),
+  }
+  const next = { ...cur }
+  if (action === 'renew') {
+    if (!newEnd) return res.status(400).json({ error: 'New end date is required' })
+    if (newStart) next.start = newStart
+    next.end = newEnd
+    if (newType) next.type = String(newType).slice(0, 80)
+    next.status = 'active'
+  } else if (action === 'extend') {
+    if (!newEnd) return res.status(400).json({ error: 'New end date is required' })
+    next.end = newEnd
+    next.status = 'active'
+  } else if (action === 'convert') {
+    next.type = newType ? String(newType).slice(0, 80) : 'Permanent'
+    next.end = null
+    next.status = 'permanent'
+  } else if (action === 'terminate') {
+    const why = String(reason || '').trim()
+    if (!why) return res.status(400).json({ error: 'A termination reason is required' })
+    next.status = 'terminated'
+    next.end = newEnd || todayKey()
+    ev.reason = why
+    // deactivate across Pulse via the existing archive path (reuse, don't fork)
+    const users = seedUsers()
+    const u = users.find((x) => x.name === name)
+    if (u && u.username === req.realUser.username) {
+      return res.status(400).json({ error: "You can't terminate your own contract" })
+    }
+    if (u && !isArchived(u)) {
+      u.status = 'archived'
+      u.archivedAt = ev.at
+      u.archivedBy = req.realUser.username
+      u.archivedReason = why
+      u.history = u.history || []
+      u.history.push({ date: todayKey(), event: `Left the team — ${why}` })
+      db.write('users', users)
+      for (const [tok, s] of Object.entries(sessions)) if (s.username === u.username) delete sessions[tok]
+      persistSessions()
+      ev.archived = true
+    }
+  } else {
+    return res.status(400).json({ error: 'unknown action' })
+  }
+  ev.toType = next.type
+  ev.toEnd = next.end
+  rec.current = next
+  rec.events = [...(rec.events || []), ev]
+  rec.updatedAt = ev.at
+  rec.updatedBy = req.user.username
+  store[name] = rec
+  db.write('contracts', store)
+  res.json({ contract: { ...next, events: rec.events } })
+})
+
+// ---------- my record (staff self-view: own contract + history, scoped to caller) ----------
+app.get('/api/my/record', auth, (req, res) => {
+  const name = req.user.name
+  const person = team.find((t) => t.name === name) || null
+  const u = findUser(req.user.username)
+  let contract = effectiveContract(name)
+  if (!contract && u) {
+    contract = {
+      type: u.contract || (u.contractEnd ? 'Fixed term' : 'Permanent'),
+      start: u.joined || null,
+      end: u.contractEnd || null,
+      status: isArchived(u) ? 'terminated' : 'active',
+      events: [],
+    }
+  }
+  res.json({
+    name,
+    role: person?.role || u?.title || '',
+    department: person?.type || u?.department || '',
+    joined: person?.joined || u?.joined || null,
+    contract,
+    history: person?.history || u?.history || [],
+  })
+})
+
+// ---------- serve the built frontend (production) ----------
+// One Node process serves both the API and the built SPA in production. In dev,
+// Vite serves the frontend separately (proxying /api here), so this only runs
+// when a dist/ build exists on disk.
+const DIST_DIR = path.join(__dirname, 'dist')
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR))
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api')) return next()
+    res.sendFile(path.join(DIST_DIR, 'index.html'))
+  })
+}
 
 app.listen(PORT, () => console.log(`Damia Staff API on http://localhost:${PORT}`))
