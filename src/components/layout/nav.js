@@ -48,6 +48,7 @@ export const NAV = [
 
   // PERSONAL — self-service. Staff (no 'hr' power) get their own Attendance here;
   // managers reach the team view via the PEOPLE section instead.
+  { id: 'my-progress', to: '/my-progress', label: 'My Progress', icon: Target, group: 'My work', show: (u) => !mgr(u) },
   { id: 'my-hours', to: '/attendance', label: 'My Hours', icon: Clock, group: 'My work', show: (u) => !mgr(u) },
   { id: 'my-leave', to: '/leave', label: 'Requests', icon: Palmtree, group: 'My work', show: (u) => !isOwner(u) },
   { id: 'my-reviews', to: '/my-reviews', label: 'Reviews', icon: FileText, group: 'My work', show: (u) => !mgr(u) },

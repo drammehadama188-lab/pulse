@@ -1933,6 +1933,76 @@ app.get('/api/my/record', auth, (req, res) => {
   })
 })
 
+// Staff self-view ("My Progress"): the signed-in person's OWN goals, score,
+// KPI ratings, achievements and monthly history. Self-scoped — only ever returns
+// the caller's own record. All data is real (locked reviews + live manager score
+// + real sales); nothing is sampled.
+app.get('/api/my/progress', auth, (req, res) => {
+  const name = req.user.name
+  const u = findUser(req.user.username)
+  const person = team.find((t) => t.name === name) || null
+  const profile = (db.read('profiles', {}))[name] || {}
+  const reviews = ((db.read('reviews', {}))[name] || [])
+    .slice().sort((a, b) => (a.period || '').localeCompare(b.period || ''))
+  const sales = (db.read('agent-sales', {}))[name] || null
+  const sc = profile.performanceScore === '' || profile.performanceScore == null ? null : Number(profile.performanceScore)
+
+  // ----- Scorecard: each ROLE has its own weighted KPIs (Adama 29 Jun). Targets
+  // + weights here; ACTUALS come from ADMIN once that connection is built —
+  // until then only sales has an interim actual (the sheet); every other KPI
+  // stays null ("Connecting to Admin") so nothing is ever faked. Roles covered:
+  // Sales agent, Customer Service, Team Lead. Technician = contractor, no
+  // scorecard for now.
+  const now = new Date()
+  const CUR = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const r = (person?.role || u?.title || '').toLowerCase()
+  const t = (person?.type || u?.department || '').toLowerCase()
+  let scKey = null
+  if (r.includes('team lead')) scKey = 'team-lead'
+  else if (r.includes('customer service') || t === 'customer service') scKey = 'customer-service'
+  else if (t === 'sales' || r.includes('sales agent') || r.includes('sales intern') || r.includes('senior sales')) scKey = 'sales'
+
+  let scorecard = null
+  if (scKey === 'sales') {
+    const m = sales?.months?.[CUR]
+    const salesActual = m && !m.pending ? (m.sales ?? null) : null
+    scorecard = { role: 'Sales agent', kpis: [
+      { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u?.target) || 5, weight: 40, unit: 'sales', actual: salesActual },
+      { key: 'online', label: 'Trackers online', kind: 'percent', target: 85, weight: 20, unit: '%', actual: null },
+      { key: 'retention', label: 'Customer retention', kind: 'percent', target: 80, weight: 25, unit: '%', actual: null },
+      { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: 3, weight: 15, unit: 'reviews', actual: null },
+    ] }
+  } else if (scKey === 'customer-service') {
+    scorecard = { role: 'Customer Service', kpis: [
+      { key: 'cases', label: 'Case resolution', kind: 'percent', target: 85, weight: 40, unit: '%', actual: null },
+      { key: 'install', label: 'Installation within 3 days', kind: 'percent', target: 95, weight: 35, unit: '%', actual: null },
+      { key: 'stock', label: 'Stock accountability (SIMs + trackers)', kind: 'percent', target: 100, weight: 25, unit: '% accounted', actual: null },
+    ] }
+  } else if (scKey === 'team-lead') {
+    scorecard = { role: 'Team Lead', kpis: [
+      { key: 'team-target', label: 'Team hits its target', kind: 'percent', target: 100, weight: 50, unit: '% of team goal', actual: null },
+      { key: 'team-active', label: 'Whole team contributing', kind: 'percent', target: 100, weight: 30, unit: '% on target', actual: null },
+      { key: 'coaching', label: 'Coaching & check-ins', kind: 'percent', target: 100, weight: 20, unit: '% done', actual: null },
+    ] }
+  }
+
+  res.json({
+    name,
+    role: person?.role || u?.title || '',
+    department: person?.type || u?.department || '',
+    manager: profile.manager || '',
+    liveScore: Number.isFinite(sc) ? sc : null,
+    liveStatus: profile.performanceStatus || '',
+    liveNote: profile.performanceNote || '',
+    target: Number(u?.target) || 0,
+    weeklyTarget: u?.weeklyTarget || '',
+    kpi: u?.kpi || '',
+    reviews,
+    sales,
+    scorecard,
+  })
+})
+
 // ---------- serve the built frontend (production) ----------
 // One Node process serves both the API and the built SPA in production. In dev,
 // Vite serves the frontend separately (proxying /api here), so this only runs

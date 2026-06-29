@@ -11,6 +11,7 @@ import Report from './pages/sales/Monthly.jsx'
 import DailyTracker from './pages/sales/DailyTracker.jsx'
 import Notices from './pages/sales/Notices.jsx'
 import MyReviews from './pages/MyReviews.jsx'
+import MyProgress from './pages/MyProgress.jsx'
 import Attendance from './pages/Attendance.jsx'
 import Leave from './pages/Leave.jsx'
 import Pay from './pages/Pay.jsx'
@@ -112,6 +113,7 @@ export default function App() {
         {/* Personal self-service */}
         {/* Notices repurposed → My Reviews (staff self-view) on 12 Jun 2026. */}
         <Route path="/my-reviews" element={<MyReviews />} />
+        <Route path="/my-progress" element={<MyProgress />} />
         <Route path="/notices" element={<Navigate to="/my-reviews" replace />} />
         <Route path="/attendance" element={<Attendance />} />
         <Route path="/leave" element={<Leave />} />
