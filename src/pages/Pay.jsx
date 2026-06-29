@@ -91,7 +91,7 @@ export default function Pay() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Pay &amp; payslips</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Payslips</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">
             {isManager ? 'Salary, benefits and monthly payslips.' : 'Your salary, benefits and payslips.'}
           </p>

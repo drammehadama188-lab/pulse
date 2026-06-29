@@ -29,6 +29,7 @@ import ReviewsWarnings from './pages/ReviewsWarnings.jsx'
 import StaffMember from './pages/StaffMember.jsx'
 import DepartmentShell from './pages/departments/DepartmentShell.jsx'
 import Policies from './pages/departments/Policies.jsx'
+import MyDocuments from './pages/MyDocuments.jsx'
 import { Target, Gift, BookOpen, FolderOpen } from 'lucide-react'
 
 function FullScreenLoader() {
@@ -105,7 +106,7 @@ export default function App() {
         <Route path="/payroll" element={<RequireAuth power="payroll"><HRTeam only={['payroll']} title="Payroll" subtitle="Salaries, commission and payroll history" /></RequireAuth>} />
         <Route path="/benefits" element={<RequireAuth power="payroll"><DepartmentShell icon={Gift} title="Benefits" subtitle="Payroll" blurb="Allowances, bonuses and staff benefits. Being set up — coming online here soon." /></RequireAuth>} />
         {/* COMPANY */}
-        <Route path="/policies" element={<RequireAuth power="hr"><Policies /></RequireAuth>} />
+        <Route path="/policies" element={<Policies />} />
         <Route path="/documents" element={<RequireAuth power="hr"><DepartmentShell icon={FolderOpen} title="Documents" subtitle="Company" blurb="Contracts, IDs and employee documents. Being set up — coming online here soon." /></RequireAuth>} />
 
         {/* Personal self-service */}
@@ -115,6 +116,7 @@ export default function App() {
         <Route path="/attendance" element={<Attendance />} />
         <Route path="/leave" element={<Leave />} />
         <Route path="/pay" element={<Pay />} />
+        <Route path="/my-documents" element={<MyDocuments />} />
         <Route path="/me" element={<Profile />} />
         <Route path="/profile" element={<Navigate to="/me" replace />} />
         <Route path="/change-password" element={<ChangePassword />} />

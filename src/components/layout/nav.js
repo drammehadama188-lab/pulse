@@ -48,15 +48,17 @@ export const NAV = [
 
   // PERSONAL — self-service. Staff (no 'hr' power) get their own Attendance here;
   // managers reach the team view via the PEOPLE section instead.
-  { id: 'my-hours', to: '/attendance', label: 'My Hours', icon: Clock, group: 'Personal', show: (u) => !mgr(u) },
-  { id: 'my-leave', to: '/leave', label: 'Leave', icon: Palmtree, group: 'Personal', show: (u) => !isOwner(u) },
-  { id: 'my-reviews', to: '/my-reviews', label: 'My Reviews', icon: FileText, group: 'Personal', show: (u) => !mgr(u) },
-  { id: 'my-pay', to: '/pay', label: 'Pay', icon: Wallet, group: 'Personal', show: (u) => !mgr(u) },
+  { id: 'my-hours', to: '/attendance', label: 'My Hours', icon: Clock, group: 'My work', show: (u) => !mgr(u) },
+  { id: 'my-leave', to: '/leave', label: 'Requests', icon: Palmtree, group: 'My work', show: (u) => !isOwner(u) },
+  { id: 'my-reviews', to: '/my-reviews', label: 'Reviews', icon: FileText, group: 'My work', show: (u) => !mgr(u) },
+  { id: 'my-pay', to: '/pay', label: 'Payslips', icon: Wallet, group: 'Pay', show: (u) => !mgr(u) },
+  { id: 'my-policies', to: '/policies', label: 'Policies', icon: BookOpen, group: 'Company', show: (u) => !mgr(u) },
+  { id: 'my-documents', to: '/my-documents', label: 'Documents', icon: FolderOpen, group: 'Company', show: (u) => !mgr(u) },
   { id: 'me', to: '/me', label: 'Me', icon: User, group: 'Personal', show: () => true },
 ]
 
 // Section order for the grouped sidebar.
-const GROUP_ORDER = ['People', 'Management', 'Payroll', 'Company', 'Personal']
+const GROUP_ORDER = ['People', 'Management', 'My work', 'Payroll', 'Pay', 'Company', 'Personal']
 
 export const MORE = { key: 'more', label: 'More', icon: Menu }
 

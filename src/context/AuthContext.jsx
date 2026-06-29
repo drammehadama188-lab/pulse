@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { api, getToken, setToken, setViewAs } from '../lib/api.js'
+import { api, getToken, setToken, setViewAs, getViewAs } from '../lib/api.js'
 
 const AuthContext = createContext(null)
 
@@ -20,8 +20,19 @@ export function AuthProvider({ children }) {
       }
       try {
         const { user } = await api('/me')
-        if (alive) {
-          setRealUser(user)
+        if (!alive) return
+        setRealUser(user)
+        // Restore a persisted "view as" so a refresh leaves you where you were
+        // (per-tab, manager-only). The /me call above runs as the real user
+        // because _viewAs isn't re-applied until here.
+        const pending = getViewAs()
+        if (pending && pending !== user.username && (user.powers || []).includes('viewas')) {
+          try {
+            const { users } = await api('/users')
+            const target = (users || []).find((u) => u.username === pending)
+            if (target) { setViewAs(target.username); setViewUser(target) }
+            else setViewAs(null)
+          } catch { setViewAs(null) }
         }
       } catch {
         setToken(null)

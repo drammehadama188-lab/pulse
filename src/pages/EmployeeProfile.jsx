@@ -296,9 +296,6 @@ export default function EmployeeProfile() {
               <Field label="Role" value={agent.role} />
               <Field label="Department" value={agent.type} />
               <Field label="Status" value={statusLabel} accent={isActive ? 'text-emerald-700' : 'text-gray-900'} />
-              <Field label="Start date" value={cStart} />
-              <Field label="Contract" value={cType} />
-              <Field label="End date" value={<>{cEnd ? formatDate(cEnd) : (permanent ? 'No end date' : '—')}{daysToEnd !== null && daysToEnd > 0 && <span className="text-gray-400 font-normal ml-1">({daysToEnd}d)</span>}{daysToEnd !== null && daysToEnd <= 0 && !terminated && <span className="text-red-500 font-normal ml-1">(expired)</span>}</>} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : daysToEnd !== null && daysToEnd <= 90 ? 'text-amber-600' : 'text-gray-900'} />
               <Field label="Base salary" value={`D${(agent.base || 0).toLocaleString()}`} />
               <Field label="Commission" value={agent.commission > 0 ? `Up to D${agent.commission.toLocaleString()}` : '—'} accent={agent.commission > 0 ? 'text-emerald-700' : 'text-gray-900'} />
               <Field label="Warnings" value={String(warnings.length)} accent={warnings.length > 0 ? 'text-red-600' : 'text-gray-900'} />

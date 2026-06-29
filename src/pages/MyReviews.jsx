@@ -60,8 +60,8 @@ export default function MyReviews() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)] md:text-3xl">My Reviews</h1>
-        <p className="mt-1 text-[var(--color-ink-faint)]">Your performance reviews, coaching notes and documents.</p>
+        <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)] md:text-3xl">Reviews</h1>
+        <p className="mt-1 text-[var(--color-ink-faint)]">Your performance reviews and coaching notes.</p>
       </div>
 
       {/* Reviews */}
@@ -122,31 +122,6 @@ export default function MyReviews() {
         )}
       </div>
 
-      {/* Documents */}
-      <div>
-        <SectionTitle>My documents</SectionTitle>
-        {documents.length === 0 ? (
-          <EmptyState>No documents on file.</EmptyState>
-        ) : (
-          <div className="space-y-3">
-            {documents.map((d) => (
-              <Card key={d.id} className="flex items-center gap-3 p-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-ink-soft)]" style={{ background: 'var(--color-line-soft)' }}>
-                  <FolderOpen size={18} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-bold text-[var(--color-ink)]">{d.name}</div>
-                  <div className="text-xs text-[var(--color-ink-faint)]">
-                    <Pill tone="neutral">{DOC_LABEL[d.category] || 'Document'}</Pill>
-                    <span className="ml-2">{dateLabel(d.uploadedAt)}</span>
-                  </div>
-                </div>
-                <DownloadLink id={d.id} />
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   )
 }

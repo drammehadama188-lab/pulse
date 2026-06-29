@@ -23,7 +23,8 @@ export default function Leave() {
   const [error, setError] = useState('')
 
   async function load() {
-    setData(await api('/leave/mine'))
+    const [leave, rec] = await Promise.all([api('/leave/mine'), api('/my/record').catch(() => null)])
+    setData({ ...leave, joined: rec?.joined || null })
   }
   useEffect(() => {
     load()
@@ -51,12 +52,14 @@ export default function Leave() {
 
   const pending = data.requests.filter((r) => r.status === 'pending').length
   const annualNote = data.annualEligible ? 'Eligible' : data.eligibleFrom ? `From ${fmtDate(data.eligibleFrom)}` : 'After 12 months'
+  const mw = data.joined ? Math.max(0, Math.round((Date.now() - new Date(data.joined).getTime()) / 2629800000)) : null
+  const tenureLabel = mw == null ? '—' : mw >= 12 ? `${Math.floor(mw / 12)}y ${mw % 12}m` : `${mw} mo`
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Leave</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Requests</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">Request time off and track approvals.</p>
         </div>
         {!isViewAs && (
@@ -69,11 +72,11 @@ export default function Leave() {
           icon={Palmtree}
           tone={data.annualEligible ? 'good' : 'warn'}
           label="Annual leave"
-          value={annualNote}
-          sub="Eligible after 12 months of service"
+          value={tenureLabel === '—' ? annualNote : `${tenureLabel} worked`}
+          sub={data.annualEligible ? 'Eligible now' : (data.eligibleFrom ? `Eligible from ${fmtDate(data.eligibleFrom)}` : 'Eligible after 12 months')}
         />
-        <StatCard icon={Stethoscope} tone="rest" label="Sick leave" value="Labour Act" sub="Medical certificate required" />
-        <StatCard icon={Clock} tone="warn" label="Pending" value={pending} />
+        <StatCard icon={Stethoscope} tone="rest" label="Sick leave" value="Medical certificate" sub="Required for sick leave" />
+        <StatCard icon={Clock} tone="warn" label="Pending" value={pending} sub="Requests awaiting approval" />
       </div>
 
       {/* request form */}
@@ -111,7 +114,7 @@ export default function Leave() {
             )}
             {form.type === 'Sick' && (
               <div className="sm:col-span-2 rounded-xl bg-[var(--color-rest-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-rest)]">
-                Sick leave requires a valid medical certificate (Labour Act).
+                Sick leave requires a valid medical certificate.
               </div>
             )}
             {error && (

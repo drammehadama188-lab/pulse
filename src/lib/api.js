@@ -12,9 +12,15 @@ export function setToken(t) {
 }
 
 // transient "view as" — not persisted; cleared on reload
+const VIEWAS_KEY = 'damia-staff-viewas'
 let _viewAs = null
 export function setViewAs(username) {
   _viewAs = username || null
+  if (username) sessionStorage.setItem(VIEWAS_KEY, username)
+  else sessionStorage.removeItem(VIEWAS_KEY)
+}
+export function getViewAs() {
+  return sessionStorage.getItem(VIEWAS_KEY)
 }
 
 export async function api(path, { method = 'GET', body } = {}) {
