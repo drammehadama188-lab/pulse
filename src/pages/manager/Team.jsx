@@ -92,15 +92,14 @@ export default function Team() {
           Team members
         </SectionTitle>
         <Card className="overflow-hidden p-0">
-          <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-[var(--color-line-soft)] bg-[var(--color-fill)] px-4 py-2.5 sm:px-5">
+          <div className="border-b border-[var(--color-line-soft)] bg-[var(--color-fill)] px-4 py-2.5 sm:px-5">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Member &amp; access</span>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Actions</span>
           </div>
           <div className="divide-y divide-[var(--color-line-soft)]">
             {users.map((u) => {
               const powers = u.powers || []
               return (
-                <div key={u.username} className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 sm:px-5">
+                <div key={u.username} className="px-4 py-3 sm:px-5">
                   <div onClick={() => navigate(`/staff/${u.username}`)} className="flex min-w-0 items-center gap-3 cursor-pointer group">
                     <Avatar name={u.name} size={38} />
                     <div className="min-w-0">
@@ -118,10 +117,6 @@ export default function Team() {
                         ))}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <IconBtn title="Add coaching, flag or meeting" onClick={() => setCoachTarget(u)}><Plus size={16} /></IconBtn>
-                    <IconBtn title="Open access & login" brand onClick={() => navigate(`/staff/${u.username}`)}><ArrowRight size={16} /></IconBtn>
                   </div>
                 </div>
               )
