@@ -1937,7 +1937,43 @@ app.get('/api/my/record', auth, (req, res) => {
 // KPI ratings, achievements and monthly history. Self-scoped — only ever returns
 // the caller's own record. All data is real (locked reviews + live manager score
 // + real sales); nothing is sampled.
-app.get('/api/my/progress', auth, (req, res) => {
+// Sales source by month (Adama 29 Jun): sheet = history (≤ Jun 2026); Admin =
+// truth from Jul 2026 (agents mark deals Won there). Needs ADMIN_SYNC_URL +
+// PULSE_SYNC_KEY in .env; unset/unreachable → null, shown as "Connecting to Admin".
+const SALES_ADMIN_FROM = '2026-07'
+async function fetchAdminWonCount(name, month) {
+  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
+  if (!base || !key) return null
+  try {
+    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/sales?month=${month}`, { headers: { 'x-pulse-key': key } })
+    if (!resp.ok) return null
+    const data = await resp.json()
+    const row = (data.agents || []).find((a) => a.name === name)
+    return row ? Number(row.won) || 0 : 0
+  } catch { return null }
+}
+async function fetchAdminRetention(name, month) {
+  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
+  if (!base || !key) return null
+  try {
+    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/retention?month=${month}`, { headers: { 'x-pulse-key': key } })
+    if (!resp.ok) return null
+    const data = await resp.json()
+    const row = (data.agents || []).find((a) => a.name === name)
+    return row && typeof row.retentionPct === 'number' ? row.retentionPct : null
+  } catch { return null }
+}
+async function fetchAdminStock(month) {
+  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
+  if (!base || !key) return null
+  try {
+    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/stock?month=${month}`, { headers: { 'x-pulse-key': key } })
+    if (!resp.ok) return null
+    const data = await resp.json()
+    return typeof data.accountabilityPct === 'number' ? data.accountabilityPct : null
+  } catch { return null }
+}
+app.get('/api/my/progress', auth, async (req, res) => {
   const name = req.user.name
   const u = findUser(req.user.username)
   const person = team.find((t) => t.name === name) || null
@@ -1964,19 +2000,26 @@ app.get('/api/my/progress', auth, (req, res) => {
 
   let scorecard = null
   if (scKey === 'sales') {
-    const m = sales?.months?.[CUR]
-    const salesActual = m && !m.pending ? (m.sales ?? null) : null
+    let salesActual
+    if (CUR >= SALES_ADMIN_FROM) {
+      salesActual = await fetchAdminWonCount(name, CUR) // Admin = source from Jul 2026
+    } else {
+      const m = sales?.months?.[CUR]
+      salesActual = m && !m.pending ? (m.sales ?? null) : null // sheet = history
+    }
+    const retentionPct = await fetchAdminRetention(name, CUR) // win-back recovery of expired vehicles
     scorecard = { role: 'Sales agent', kpis: [
       { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u?.target) || 5, weight: 40, unit: 'sales', actual: salesActual },
       { key: 'online', label: 'Trackers online', kind: 'percent', target: 85, weight: 20, unit: '%', actual: null },
-      { key: 'retention', label: 'Customer retention', kind: 'percent', target: 80, weight: 25, unit: '%', actual: null },
+      { key: 'retention', label: 'Customer retention', kind: 'percent', target: 80, weight: 25, unit: '%', actual: retentionPct },
       { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: 3, weight: 15, unit: 'reviews', actual: null },
     ] }
   } else if (scKey === 'customer-service') {
+    const stockPct = await fetchAdminStock(CUR) // accountability proven by weekly counts (Admin)
     scorecard = { role: 'Customer Service', kpis: [
       { key: 'cases', label: 'Case resolution', kind: 'percent', target: 85, weight: 40, unit: '%', actual: null },
       { key: 'install', label: 'Installation within 3 days', kind: 'percent', target: 95, weight: 35, unit: '%', actual: null },
-      { key: 'stock', label: 'Stock accountability (SIMs + trackers)', kind: 'percent', target: 100, weight: 25, unit: '% accounted', actual: null },
+      { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: 100, weight: 25, unit: '% verified', actual: stockPct },
     ] }
   } else if (scKey === 'team-lead') {
     scorecard = { role: 'Team Lead', kpis: [
