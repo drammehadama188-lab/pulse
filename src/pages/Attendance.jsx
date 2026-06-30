@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Clock, LogIn, LogOut, CheckCircle2, MapPin, ChevronLeft, ChevronRight, CalendarCog } from 'lucide-react'
+import { Clock, LogIn, LogOut, CheckCircle2, MapPin, ChevronLeft, ChevronRight, CalendarCog, Building2, AlertTriangle } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { getLocation, mapsUrl } from '../lib/geo.js'
@@ -375,7 +375,10 @@ function WeekSchedule({ people, days, today, onCellClick }) {
                       >
                         {view ? (
                           <div className={`rounded-md border border-[var(--color-line-soft)] border-l-[3px] px-2 py-1.5 ${TONE[view.tone]} ${clickable ? 'transition-shadow hover:shadow-sm' : ''}`}>
-                            <div className="text-[11px] font-bold leading-tight tabular-nums text-[var(--color-ink)]">{view.primary}</div>
+                            <div className="flex items-center justify-between gap-1">
+                              <div className="text-[11px] font-bold leading-tight tabular-nums text-[var(--color-ink)]">{view.primary}</div>
+                              {cell?.onOfficeNetwork === false && <span title="Checked in off the office network" className="shrink-0 text-[var(--color-bad)]"><AlertTriangle size={11} /></span>}
+                            </div>
                             {view.secondary && <div className={`truncate text-[10px] font-medium ${view.tone === 'absent' ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>{view.secondary}</div>}
                           </div>
                         ) : (
@@ -571,6 +574,12 @@ function MyHours() {
             </div>
           )}
 
+          {today?.checkIn && today?.onOfficeNetwork != null && (
+            today.onOfficeNetwork
+              ? <Pill tone="good"><Building2 size={13} /> Checked in at office</Pill>
+              : <Pill tone="bad"><AlertTriangle size={13} /> Off the office network</Pill>
+          )}
+
           {(today?.checkInLoc || today?.checkOutLoc) && (
             <div className="flex flex-wrap justify-center gap-3 text-sm">
               {today.checkInLoc && (
@@ -639,6 +648,8 @@ function MyHours() {
                     <div className="text-xs text-[var(--color-ink-faint)]">{r.checkIn ? timeShort(r.checkIn) : '—'}{r.checkOut ? ` – ${timeShort(r.checkOut)}` : ''}</div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {r.onOfficeNetwork === false && <Pill tone="bad"><AlertTriangle size={12} /> Off-site</Pill>}
+                    {r.onOfficeNetwork === true && <span title="Checked in on the office network" className="text-[var(--color-good)]"><Building2 size={15} /></span>}
                     {r.late && <Pill tone="warn">Late</Pill>}
                     <span className="text-sm font-semibold text-[var(--color-ink)]">{fmtMins(mins)}</span>
                   </div>

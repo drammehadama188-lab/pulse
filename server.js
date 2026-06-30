@@ -134,6 +134,12 @@ function createdStaffRoster() {
 const app = express()
 app.use(cors())
 app.use(express.json())
+// Behind nginx (and maybe Cloudflare) in prod, so the real client IP lives in
+// X-Forwarded-For. Trust exactly the proxy hop count (default 1 = nginx) so the
+// office-network check reads the true client IP and an X-Forwarded-For header
+// injected by the client itself isn't trusted. Bump TRUST_PROXY_HOPS to 2 if
+// Cloudflare also fronts Pulse. (Dev = direct, so req.ip is just localhost.)
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1))
 
 // ---------- auth ----------
 const sessions = db.read('sessions', {}) // token -> { username, exp }
@@ -550,6 +556,22 @@ function cleanLoc(body) {
   return null
 }
 
+// Office-network check (Adama 30 Jun): a check-in whose client IP matches the
+// office's public IP is stamped onOfficeNetwork:true — a trustworthy "at work"
+// signal that works even on laptops (no GPS needed). OFFICE_IP(S) is a
+// comma-separated list in .env (Gamtel IPs can change — edit there, no code
+// change). Unset → onOfficeNetwork stays null (unknown); it never blocks check-in.
+const OFFICE_IPS = (process.env.OFFICE_IPS || process.env.OFFICE_IP || '')
+  .split(',').map((s) => s.trim()).filter(Boolean)
+function clientIp(req) {
+  const ip = req.ip || req.socket?.remoteAddress || ''
+  return String(ip).replace(/^::ffff:/, '').replace(/%.*$/, '') // strip IPv4-mapped IPv6 + zone id
+}
+function onOfficeNetwork(req) {
+  if (!OFFICE_IPS.length) return null // not configured → unknown
+  return OFFICE_IPS.includes(clientIp(req))
+}
+
 app.post('/api/attendance/check-in', auth, notViewAs, (req, res) => {
   const all = db.read('attendance', [])
   const date = todayKey()
@@ -563,6 +585,8 @@ app.post('/api/attendance/check-in', auth, notViewAs, (req, res) => {
   rec.checkIn = now
   const loc = cleanLoc(req.body)
   if (loc) rec.checkInLoc = loc
+  rec.checkInIp = clientIp(req)
+  rec.onOfficeNetwork = onOfficeNetwork(req)
   // late if after 09:00 local
   const d = new Date(now)
   rec.late = d.getHours() > 9 || (d.getHours() === 9 && d.getMinutes() > 0)
@@ -579,6 +603,8 @@ app.post('/api/attendance/check-out', auth, notViewAs, (req, res) => {
   rec.checkOut = new Date().toISOString()
   const loc = cleanLoc(req.body)
   if (loc) rec.checkOutLoc = loc
+  rec.checkOutIp = clientIp(req)
+  rec.checkOutOnOffice = onOfficeNetwork(req)
   db.write('attendance', all)
   res.json({ record: rec })
 })
@@ -691,6 +717,7 @@ app.get('/api/attendance/week', auth, (req, res) => {
         checkIn: attendance?.checkIn || null,
         checkOut: attendance?.checkOut || null,
         late: !!attendance?.late,
+        onOfficeNetwork: attendance?.onOfficeNetwork ?? null,
         leaveType: leave?.leaveType || null,
         note: leave?.note || '',
       }
@@ -896,6 +923,7 @@ app.get('/api/attendance/month', auth, (req, res) => {
         checkIn: attendance?.checkIn || null,
         checkOut: attendance?.checkOut || null,
         late: !!attendance?.late,
+        onOfficeNetwork: attendance?.onOfficeNetwork ?? null,
         leaveType: leave?.leaveType || null,
         note: leave?.note || '',
       }
