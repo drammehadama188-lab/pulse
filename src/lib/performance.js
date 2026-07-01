@@ -34,6 +34,16 @@ export function statusFor(score) {
   return { label: 'Below expectations', tone: 'bg-red-100 text-red-700' }
 }
 
+// Attendance colour bands (Adama 1 Jul): the attendance KPI is coloured by the
+// ABSOLUTE attendance %, not attainment-vs-target — green ≥95, amber 80–94,
+// red <80. Same shape as band() so it drops into the KPI render.
+export function attendanceBand(pct) {
+  if (pct == null) return { label: 'Not tracked', dot: 'bg-gray-300', text: 'text-gray-400', bar: 'bg-gray-200', chip: 'bg-gray-100 text-gray-500' }
+  if (pct >= 95) return { label: 'On target', dot: 'bg-emerald-600', text: 'text-emerald-700', bar: 'bg-emerald-600', chip: 'bg-emerald-100 text-emerald-700' }
+  if (pct >= 80) return { label: 'Watch', dot: 'bg-amber-500', text: 'text-amber-600', bar: 'bg-amber-500', chip: 'bg-amber-100 text-amber-700' }
+  return { label: 'Below', dot: 'bg-red-500', text: 'text-red-600', bar: 'bg-red-500', chip: 'bg-red-100 text-red-700' }
+}
+
 export function pctChip(pct) {
   if (pct == null) return 'bg-gray-100 text-gray-500'
   if (pct >= 100) return 'bg-emerald-100 text-emerald-700'

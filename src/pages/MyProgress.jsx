@@ -6,7 +6,7 @@ import {
 import { api } from '../lib/api.js'
 import { Card, Pill, SectionTitle, Spinner } from '../components/ui.jsx'
 import {
-  band, statusFor, trendSeries, salesForPeriod, periodLabel, CUR_PERIOD,
+  band, attendanceBand, statusFor, trendSeries, salesForPeriod, periodLabel, CUR_PERIOD,
 } from '../lib/performance.js'
 
 // Staff self-view — "My Progress". The signed-in person's OWN goals, score,
@@ -249,7 +249,10 @@ export default function MyProgress() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {scKpis.map((k) => {
               const a = k.actual == null ? null : Math.min(100, Math.round((k.actual / k.target) * 100))
-              const kb = band(a)
+              // Attendance KPI colours by absolute % (green ≥95 / amber 80–94 / red <80);
+              // every other KPI keeps the attainment-vs-target band.
+              const isAttendance = (k.key || '').includes('attendance')
+              const kb = isAttendance ? attendanceBand(k.actual) : band(a)
               return (
                 <Card key={k.key} className="p-4">
                   <div className="flex items-center justify-between gap-2">

@@ -9,12 +9,15 @@ const STATUS_TONE = { pending: 'warn', approved: 'good', rejected: 'bad' }
 const decidedOn = (iso) =>
   iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
 
-export default function Approvals() {
+export default function Approvals({ scope }) {
+  const team = scope === 'team' // MY TEAM: a lead sees only their own team
+  const listUrl = team ? '/team/leave' : '/leave'
+  const decideUrl = (id, action) => (team ? `/team/leave/${id}/${action}` : `/leave/${id}/${action}`)
   const [requests, setRequests] = useState(null)
   const [decision, setDecision] = useState(null) // { request, action }
 
   async function load() {
-    const { requests } = await api('/leave')
+    const { requests } = await api(listUrl)
     setRequests(requests)
   }
   useEffect(() => {
@@ -34,8 +37,8 @@ export default function Approvals() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Approvals</h1>
-        <p className="mt-1 text-[var(--color-ink-soft)]">Review and decide leave requests.</p>
+        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">{team ? 'Team Requests' : 'Approvals'}</h1>
+        <p className="mt-1 text-[var(--color-ink-soft)]">{team ? 'Leave requests from your team.' : 'Review and decide leave requests.'}</p>
       </div>
 
       <div>
@@ -118,6 +121,8 @@ export default function Approvals() {
         <DecisionModal
           request={decision.request}
           action={decision.action}
+          endpoint={decideUrl(decision.request.id, decision.action)}
+          showWhy={!team}
           onClose={() => setDecision(null)}
           onDone={() => { setDecision(null); load() }}
         />
@@ -126,7 +131,7 @@ export default function Approvals() {
   )
 }
 
-function DecisionModal({ request, action, onClose, onDone }) {
+function DecisionModal({ request, action, endpoint, showWhy = true, onClose, onDone }) {
   const approve = action === 'approve'
   const [note, setNote] = useState('')
   const [why, setWhy] = useState('')
@@ -136,7 +141,7 @@ function DecisionModal({ request, action, onClose, onDone }) {
   async function submit() {
     setBusy(true)
     try {
-      await api(`/leave/${request.id}/${action}`, { method: 'POST', body: { note, why } })
+      await api(endpoint, { method: 'POST', body: { note, why } })
       onDone()
     } catch (e) {
       alert(e.message)
@@ -171,14 +176,16 @@ function DecisionModal({ request, action, onClose, onDone }) {
             placeholder={approve ? 'e.g. Approved — enjoy your time off' : 'e.g. We need cover that week, please re-request later'}
           />
         </Field>
-        <Field label="Why this decision — CEO only (private)">
-          <Textarea
-            value={why}
-            onChange={(e) => setWhy(e.target.value)}
-            rows={2}
-            placeholder="Your reasoning — only the CEO sees this, never the employee"
-          />
-        </Field>
+        {showWhy && (
+          <Field label="Why this decision — CEO only (private)">
+            <Textarea
+              value={why}
+              onChange={(e) => setWhy(e.target.value)}
+              rows={2}
+              placeholder="Your reasoning — only the CEO sees this, never the employee"
+            />
+          </Field>
+        )}
       </div>
     </Modal>
   )

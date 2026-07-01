@@ -127,6 +127,13 @@ function teamMembersFor(lead) {
     u.username !== lead.username,
   )
 }
+// Set of usernames a lead may see/act on (empty if they lead no team). Uses the
+// VIEWED identity so it works correctly under owner view-as (Adama sees the
+// lead's team). Powers are still checked separately on the full-access routes.
+function teamUsernameSet(username) {
+  const lead = findUser(username)
+  return new Set(teamMembersFor(lead).map((m) => m.username))
+}
 
 // Team attendance % for a lead's team, this month to date (Adama 1 Jul). Expected
 // days = SCHEDULED work-days MINUS APPROVED leave (approved leave is excused — for
@@ -975,9 +982,14 @@ app.get('/api/attendance/week', auth, (req, res) => {
   const attAll = db.read('attendance', [])
   const leaveAll = db.read('leave', [])
   const schedules = db.read('schedules', {})
-  const roster = can(req.realUser, 'team') && !req.isViewAs
-    ? scheduleRoster(req)
-    : seedUsers().filter((u) => u.username === req.user.username)
+  // MY TEAM (?scope=team): a lead sees only their own team's week — additive,
+  // falls through to the existing whole-roster / self-only rules otherwise.
+  const teamSet = req.query.scope === 'team' ? teamUsernameSet(req.user.username) : null
+  const roster = teamSet && teamSet.size
+    ? seedUsers().filter((u) => teamSet.has(u.username))
+    : can(req.realUser, 'team') && !req.isViewAs
+      ? scheduleRoster(req)
+      : seedUsers().filter((u) => u.username === req.user.username)
 
   const people = roster.map((u) => {
     const stored = schedules[u.username]
@@ -1155,6 +1167,48 @@ function decideLeave(status) {
 }
 app.post('/api/leave/:id/approve', auth, notViewAs, requirePower('approvals'), decideLeave('approved'))
 app.post('/api/leave/:id/reject', auth, notViewAs, requirePower('approvals'), decideLeave('rejected'))
+
+// ---------- MY TEAM · scoped leave requests (team leads) ----------
+// A team lead sees and decides ONLY their own team's leave requests, without
+// holding the company-wide 'approvals' power. Full-power approvers keep using
+// /api/leave. Additive — the existing routes above are untouched.
+app.get('/api/team/leave', auth, (req, res) => {
+  const teamSet = teamUsernameSet(req.user.username)
+  if (teamSet.size === 0) return res.status(403).json({ error: 'not-a-team-lead' })
+  const all = db.read('leave', [])
+  const status = req.query.status
+  let list = all.filter((l) => teamSet.has(l.username))
+  if (status) list = list.filter((l) => l.status === status)
+  res.json({ requests: list.map((r) => visibleLeave(r, req.realUser)) })
+})
+app.post('/api/team/leave/:id/:action', auth, notViewAs, (req, res) => {
+  const action = req.params.action
+  if (action !== 'approve' && action !== 'reject') return res.status(400).json({ error: 'invalid action' })
+  const teamSet = teamUsernameSet(req.user.username)
+  const rec = db.read('leave', []).find((l) => l.id === req.params.id)
+  if (!rec) return res.status(404).json({ error: 'not found' })
+  if (!teamSet.has(rec.username)) return res.status(403).json({ error: 'not-your-team-member' })
+  return decideLeave(action === 'approve' ? 'approved' : 'rejected')(req, res)
+})
+
+// MY TEAM · scoped reviews + warnings (read-only) for team leads. A lead sees
+// their own team's locked reviews and warnings on record without the 'hr'
+// power; issuing reviews/warnings stays with HR. Reviews/warnings are keyed by
+// NAME, so we scope by the team members' names. Additive.
+app.get('/api/team/reviews', auth, (req, res) => {
+  const lead = findUser(req.user.username)
+  const members = teamMembersFor(lead)
+  if (!members.length) return res.status(403).json({ error: 'not-a-team-lead' })
+  const names = new Set(members.map((m) => m.name))
+  const allReviews = db.read('reviews', {})
+  const reviews = {}
+  for (const [name, list] of Object.entries(allReviews)) if (names.has(name)) reviews[name] = list
+  const warnings = db.read('warnings', [])
+    .slice()
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .filter((w) => names.has(w.agent))
+  res.json({ reviews, warnings, members: members.map((m) => ({ name: m.name, role: m.title, department: m.department })) })
+})
 
 // ---------- monthly attendance calendar (schedule + attendance + leave, layered) ----------
 function monthKeys(month) {

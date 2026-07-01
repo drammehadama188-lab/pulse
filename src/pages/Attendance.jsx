@@ -10,8 +10,9 @@ import { DAY_FULL, WEEK_ORDER, weekDays, ymd } from '../lib/schedule.js'
 // Hours page. Staff see their own check-in + weekly shifts; managers see the whole
 // team's weekly shift grid (times + status per day), can log worked/off/sick/leave
 // on any day, and set each person's weekly schedule.
-export default function Attendance() {
+export default function Attendance({ scope }) {
   const { isManager } = useAuth()
+  if (scope === 'team') return <TeamHours />
   return isManager ? <ManagerHours /> : <MyHours />
 }
 
@@ -243,15 +244,16 @@ function useSelfDay() {
 }
 
 // ───────────────────────── weekly shift data (shared) ───────────────────────────
-function useWeekGrid() {
+function useWeekGrid(scope) {
   const [start, setStart] = useState(() => ymd(weekDays()[0]))
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const scopeQ = scope === 'team' ? '&scope=team' : ''
 
   async function load(s) {
     setLoading(true)
     try {
-      const d = await api(`/attendance/week?start=${s}`)
+      const d = await api(`/attendance/week?start=${s}${scopeQ}`)
       setData(d)
       setStart(d.start)
     } catch (e) {
@@ -750,6 +752,39 @@ function ManagerHours() {
           onClose={() => setDetail(null)}
           onSaved={() => { setDetail(null); w.reload() }}
         />
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────── MY TEAM · team schedule (read-only) ─────────────────
+// A team lead's scoped view of their own team's week — shifts, attendance and
+// leave. Read-only: editing schedules stays with the 'team' power (HR), so no
+// "Edit schedules" button and cells don't open the editor. Reuses the same
+// summary + week grid as the manager view; data comes from ?scope=team.
+function TeamHours() {
+  const w = useWeekGrid('team')
+  const people = w.data?.people || []
+  const today = w.data?.today
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Team Schedule</h1>
+          <p className="mt-1 text-[var(--color-ink-soft)]">Your team's shifts, attendance &amp; leave</p>
+        </div>
+        <WeekNav days={w.data?.days} isThis={w.isThis} onPrev={() => w.shift(-1)} onNext={() => w.shift(1)} />
+      </div>
+
+      {w.data && people.length > 0 && <AttendanceSummary people={people} days={w.data.days} today={today} />}
+
+      {w.loading || !w.data ? (
+        <Card className="flex justify-center py-12"><Spinner size={24} /></Card>
+      ) : !people.length ? (
+        <Card className="px-5 py-10 text-center text-[var(--color-ink-faint)]">No one on your team yet.</Card>
+      ) : (
+        <WeekSchedule people={people} days={w.data.days} today={w.data.today} />
       )}
     </div>
   )

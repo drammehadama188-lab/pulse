@@ -119,6 +119,10 @@ export default function App() {
         <Route path="/my-progress" element={<MyProgress />} />
         <Route path="/team-dashboard" element={<RequireAuth teamLead><TeamDashboard /></RequireAuth>} />
         <Route path="/team-member/:username" element={<RequireAuth teamLead><TeamMember /></RequireAuth>} />
+        {/* MY TEAM — existing pages reused, scoped to the lead's own team (Adama 1 Jul). */}
+        <Route path="/team-requests" element={<RequireAuth teamLead><Approvals scope="team" /></RequireAuth>} />
+        <Route path="/team-schedule" element={<RequireAuth teamLead><Attendance scope="team" /></RequireAuth>} />
+        <Route path="/team-reviews" element={<RequireAuth teamLead><ReviewsWarnings scope="team" /></RequireAuth>} />
         <Route path="/notices" element={<Navigate to="/my-reviews" replace />} />
         <Route path="/attendance" element={<Attendance />} />
         <Route path="/leave" element={<Leave />} />

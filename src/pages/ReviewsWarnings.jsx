@@ -26,20 +26,30 @@ function Stat({ label, value, sub, accent }) {
   );
 }
 
-export default function ReviewsWarnings() {
+export default function ReviewsWarnings({ scope }) {
+  const scoped = scope === 'team'; // MY TEAM: a lead's own team, read-only
   const navigate = useNavigate();
   const [warnings, setWarnings] = useState([]);
   const [reviews, setReviews] = useState({});
+  const [teamMembers, setTeamMembers] = useState(scoped ? null : []);
   const [adding, setAdding] = useState(null); // { agent, type, reason, date } | null
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  const roster = team.filter((t) => t.status !== 'maternity');
+  const roster = scoped
+    ? (teamMembers || [])
+    : team.filter((t) => t.status !== 'maternity');
 
   useEffect(() => {
-    api('/warnings').then((d) => setWarnings(d.warnings || [])).catch(() => setWarnings([]));
-    api('/reviews').then((d) => setReviews(d.reviews || {})).catch(() => setReviews({}));
-  }, []);
+    if (scoped) {
+      api('/team/reviews')
+        .then((d) => { setReviews(d.reviews || {}); setWarnings(d.warnings || []); setTeamMembers(d.members || []); })
+        .catch(() => { setReviews({}); setWarnings([]); setTeamMembers([]); });
+    } else {
+      api('/warnings').then((d) => setWarnings(d.warnings || [])).catch(() => setWarnings([]));
+      api('/reviews').then((d) => setReviews(d.reviews || {})).catch(() => setReviews({}));
+    }
+  }, [scoped]);
 
   const hasReview = (name) => (reviews[name] || []).some((r) => r.period === period);
   const reviewed = roster.filter((p) => hasReview(p.name));
@@ -68,10 +78,10 @@ export default function ReviewsWarnings() {
     <div className="max-w-5xl">
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Reviews &amp; Warnings</h1>
-          <p className="text-gray-500 mt-1">Who needs a review this month, and who has warnings on record.</p>
+          <h1 className="text-3xl font-semibold text-gray-900">{scoped ? 'Team Reviews' : 'Reviews & Warnings'}</h1>
+          <p className="text-gray-500 mt-1">{scoped ? "Your team's reviews and warnings on record." : 'Who needs a review this month, and who has warnings on record.'}</p>
         </div>
-        <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-full"><Plus size={14} /> Log a warning</button>
+        {!scoped && <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-full"><Plus size={14} /> Log a warning</button>}
       </div>
 
       {/* Summary */}

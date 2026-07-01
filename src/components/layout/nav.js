@@ -49,6 +49,9 @@ export const NAV = [
   // MY TEAM — a team lead's scoped workspace over the people they manage (NOT the
   // whole company). Gated on isTeamLead (server-computed); pages re-check scope.
   { id: 'team-dashboard', to: '/team-dashboard', label: 'Team Dashboard', icon: LayoutDashboard, group: 'My team', show: (u) => u?.isTeamLead },
+  { id: 'team-requests', to: '/team-requests', label: 'Team Requests', icon: ClipboardCheck, group: 'My team', show: (u) => u?.isTeamLead },
+  { id: 'team-schedule', to: '/team-schedule', label: 'Team Schedule', icon: Clock, group: 'My team', show: (u) => u?.isTeamLead },
+  { id: 'team-reviews', to: '/team-reviews', label: 'Team Reviews', icon: ShieldAlert, group: 'My team', show: (u) => u?.isTeamLead },
 
   // PERSONAL — self-service. Staff (no 'hr' power) get their own Attendance here;
   // managers reach the team view via the PEOPLE section instead.
