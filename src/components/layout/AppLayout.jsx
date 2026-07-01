@@ -7,15 +7,15 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { Avatar } from '../ui.jsx'
 
 function ViewAsBanner() {
-  const { isViewAs, user, exitViewAs } = useAuth()
+  const { impersonating, ownerActing, user, exitViewAs } = useAuth()
   const navigate = useNavigate()
-  if (!isViewAs) return null
+  if (!impersonating) return null
   return (
     <div className="sticky top-0 z-40 flex items-center gap-3 bg-[var(--color-brand)] px-4 py-2.5 text-white">
       <Eye size={18} />
       <span className="text-sm font-semibold">
-        Viewing as <span className="font-extrabold">{user.name}</span>
-        <span className="hidden opacity-75 sm:inline"> · {user.title}</span>
+        {ownerActing ? 'Acting as' : 'Viewing as'} <span className="font-extrabold">{user.name}</span>
+        <span className="hidden opacity-75 sm:inline"> · {user.title}{ownerActing ? ' · changes save as them, logged to you' : ' · read-only'}</span>
       </span>
       <button
         onClick={() => {

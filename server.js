@@ -107,6 +107,60 @@ function addMonths(isoDate, months) {
 function isArchived(u) {
   return u.status === 'archived'
 }
+
+// ---------- team scoping (Adama 30 Jun) ----------
+// "My Team" = the people a team lead manages. Structure is department-based: the
+// performance team spans Sales + Customer Service. The Cleaner (Operations) and
+// the CEO (Leadership) are support/owner — on NO team. A team lead manages every
+// active person in the performance departments except themselves. One lead today
+// (Momodou); the helper generalises if more are added.
+const PERF_DEPARTMENTS = ['Sales', 'Customer Service']
+function leadsATeam(u) {
+  if (!u || u.username === 'adama') return false
+  return u.title === 'Team Lead' || u.role === 'manager'
+}
+function teamMembersFor(lead) {
+  if (!leadsATeam(lead)) return []
+  return seedUsers().filter((u) =>
+    !isArchived(u) &&
+    PERF_DEPARTMENTS.includes(u.department) &&
+    u.username !== lead.username,
+  )
+}
+
+// Team attendance % for a lead's team, this month to date (Adama 1 Jul). Expected
+// days = SCHEDULED work-days MINUS APPROVED leave (approved leave is excused — for
+// sick that means it carried the required medical certificate, per the Blue Book).
+// Worked = a check-in that day; a LATE check-in still counts as present. Only an
+// unexcused no-show pulls it down. Real Pulse data — no Admin feed needed.
+function teamAttendancePct(lead) {
+  const members = teamMembersFor(lead)
+  if (!members.length) return null
+  const today = todayKey()
+  const CUR = today.slice(0, 7)
+  const attAll = db.read('attendance', [])
+  const leaveAll = db.read('leave', [])
+  const schedules = db.read('schedules', {})
+  const days = []
+  for (let d = 1; d <= 31; d++) {
+    const key = `${CUR}-${String(d).padStart(2, '0')}`
+    if (key > today) break
+    if (new Date(`${key}T00:00:00Z`).toISOString().slice(0, 7) !== CUR) break // guard month overflow
+    days.push(key)
+  }
+  let expected = 0, worked = 0
+  for (const u of members) {
+    const stored = schedules[u.username]
+    for (const k of days) {
+      if (!(effectiveWeek(stored, k)[dowOfKey(k)])) continue // not a scheduled work-day
+      if (leaveOnDate(leaveAll, u.username, k)) continue // approved leave = excused, drop from expected
+      expected++
+      const att = attAll.find((a) => a.username === u.username && a.date === k)
+      if (att && att.checkIn) worked++
+    }
+  }
+  return expected ? Math.round((worked / expected) * 100) : null
+}
 function archivedNameSet() {
   return new Set(seedUsers().filter(isArchived).map((u) => u.name))
 }
@@ -151,8 +205,9 @@ function publicUser(u) {
   // salary is manager-only (served via /api/staff), never via /me or /users
   const { passwordHash, salary, ...rest } = u
   // resolved powers ride along so the UI can gate sections client-side;
-  // the server re-checks every request regardless
-  return { ...rest, powers: powersFor(u) }
+  // the server re-checks every request regardless. isTeamLead unlocks the MY
+  // TEAM nav section (gated again server-side on /api/team/*).
+  return { ...rest, powers: powersFor(u), isTeamLead: leadsATeam(u) }
 }
 function findUser(username) {
   return seedUsers().find((u) => u.username === username.toLowerCase())
@@ -216,8 +271,33 @@ function requirePower(power) {
   }
 }
 // Block writes while a manager is viewing as someone else (read-only impersonation).
+// Log an action the owner takes while impersonating someone, so a future
+// Activity page can show "Adama, acting as X, did Y". Never blocks the action.
+function logImpersonatedAction(req) {
+  try {
+    const log = db.read('activity', [])
+    log.push({
+      id: crypto.randomUUID(),
+      at: new Date().toISOString(),
+      actor: req.realUser.username,
+      actorName: req.realUser.name,
+      as: req.user.username,
+      asName: req.user.name,
+      method: req.method,
+      path: req.path,
+    })
+    db.write('activity', log.slice(-2000)) // keep the most recent 2000
+  } catch { /* logging must never break the action */ }
+}
+
 function notViewAs(req, res, next) {
-  if (req.isViewAs) return res.status(403).json({ error: 'Read-only while viewing as another user' })
+  if (req.isViewAs) {
+    // The OWNER can act while impersonating (to build, test and fix any role) —
+    // every such action is logged with the real actor. Other managers stay
+    // strictly read-only while viewing as someone.
+    if (req.realUser?.username === CEO) { logImpersonatedAction(req); return next() }
+    return res.status(403).json({ error: 'Read-only while viewing as another user' })
+  }
   next()
 }
 
@@ -525,6 +605,7 @@ app.get('/api/users', auth, requirePower('team'), (req, res) => {
       title: u.title,
       email: u.email || null,
       powers: powersFor(u), // drives the Access toggles on the Team page
+      isTeamLead: leadsATeam(u), // unlocks MY TEAM nav (also when viewing-as them)
       suspended: !!u.suspended,
     }))
   res.json({ users })
@@ -633,6 +714,203 @@ app.get('/api/attendance', auth, requirePower('team'), (req, res) => {
     record: byUser[u.username] || null,
   }))
   res.json({ date, presence })
+})
+
+// ---------- My Team (team-lead workspace, Adama 30 Jun) ----------
+// A team lead's SCOPED view of the people they manage (never the whole company).
+// Real data only — sales from agent-sales, attendance from today's record, score
+// from the locked profile, contract end from the roster. Honest blanks where a
+// source doesn't exist yet (reviews.json empty, Admin KPI feed off). Self-scoped
+// to the caller's own team; 403 if they don't lead one (re-checked server-side).
+// Which role scorecard applies to a person (mirrors /api/my/progress).
+function scorecardKey(u) {
+  const r = (u.title || '').toLowerCase()
+  const t = (u.department || '').toLowerCase()
+  if (r.includes('team lead')) return 'team-lead'
+  if (r.includes('customer service') || t === 'customer service') return 'customer-service'
+  if (t === 'sales' || r.includes('sales')) return 'sales'
+  return null
+}
+// The member's weighted KPI scorecard so a team lead knows WHAT to coach on.
+// Same targets/weights as My Progress. Actuals: sales from the sheet (real);
+// every other KPI comes from the Admin feed later, so it's null until connected.
+function scorecardFor(u, salesActual) {
+  const key = scorecardKey(u)
+  if (key === 'sales') return { role: 'Sales agent', kpis: [
+    { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u.target) || 5, weight: 40, unit: 'sales', actual: salesActual ?? null },
+    { key: 'online', label: 'Trackers online', kind: 'percent', target: 85, weight: 20, unit: '%', actual: null },
+    { key: 'retention', label: 'Customer retention', kind: 'percent', target: 80, weight: 25, unit: '%', actual: null },
+    { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: 3, weight: 15, unit: 'reviews', actual: null },
+  ] }
+  if (key === 'customer-service') return { role: 'Customer Service', kpis: [
+    { key: 'cases', label: 'Case resolution', kind: 'percent', target: 85, weight: 40, unit: '%', actual: null },
+    { key: 'install', label: 'Installation within 3 days', kind: 'percent', target: 95, weight: 35, unit: '%', actual: null },
+    { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: 100, weight: 25, unit: '% verified', actual: null },
+  ] }
+  if (key === 'team-lead') return { role: 'Team Lead', kpis: [
+    { key: 'team-target', label: 'Team hits its target', kind: 'percent', target: 100, weight: 45, unit: '% of team goal', actual: null },
+    { key: 'team-active', label: 'Whole team contributing', kind: 'percent', target: 100, weight: 25, unit: '% on target', actual: null },
+    { key: 'coaching', label: 'Coaching & check-ins', kind: 'percent', target: 100, weight: 20, unit: '% done', actual: null },
+    { key: 'team-attendance', label: 'Team attendance', kind: 'percent', target: 95, weight: 10, unit: '%', actual: null },
+  ] }
+  return null
+}
+// Coaching cadence = every TWO WEEKS (Adama 1 Jul; was weekly, changed). A
+// check-in (a 'coaching' or 'meeting' log, not a 'flag') keeps a member "current"
+// for 14 days; after that the lead is due to check in again. Returns the last
+// check-in, whether they're current, and when the next one is due.
+const COACHING_INTERVAL_DAYS = 14
+function coachingStatus(coachingAll, username) {
+  let last = null
+  for (const c of coachingAll) {
+    if (c.targetUsername !== username) continue
+    if ((c.type || 'coaching') === 'flag') continue // a flag isn't a check-in
+    const d = c.datetime || c.createdAt
+    if (d && (!last || d > last)) last = d
+  }
+  const lastMs = last ? new Date(last).getTime() : null
+  const now = Date.now()
+  const current = lastMs != null && (now - lastMs) <= COACHING_INTERVAL_DAYS * 86400000
+  const nextDue = lastMs != null ? new Date(lastMs + COACHING_INTERVAL_DAYS * 86400000).toISOString() : null
+  return { lastCoachedAt: last, coachingCurrent: current, nextCoachingDue: nextDue }
+}
+
+function teamMemberCard(u, ctx) {
+  const att = ctx.attAll.find((a) => a.username === u.username && a.date === ctx.today) || null
+  const leave = leaveOnDate(ctx.leaveAll, u.username, ctx.today)
+  const person = team.find((t) => t.name === u.name) || null
+  const profile = ctx.profiles[u.name] || {}
+  const reviews = ctx.reviews[u.name] || []
+  // Sales goal applies ONLY to the Sales department. Customer Service has its own
+  // KPIs (cases/installation/stock) that come from the Admin feed — never a sales
+  // goal. So a CS person never shows "X short of the sales goal".
+  const salesRec = u.department === 'Sales' ? (ctx.sales[u.name] || null) : null
+  const m = salesRec?.months?.[ctx.CUR]
+  const sales = salesRec
+    ? { actual: m && !m.pending ? (m.sales ?? null) : null, target: salesRec.monthlyTarget ?? null }
+    : null
+  const score = profile.performanceScore === '' || profile.performanceScore == null ? null : Number(profile.performanceScore)
+  let status = 'not-in'
+  if (leave) status = 'leave'
+  else if (att?.checkIn && !att?.checkOut) status = att.late ? 'late' : 'working'
+  else if (att?.checkOut) status = 'done'
+  return {
+    username: u.username, name: u.name, title: u.title, department: u.department,
+    status,
+    checkIn: att?.checkIn || null,
+    late: !!att?.late,
+    onOfficeNetwork: att?.onOfficeNetwork ?? null,
+    leaveType: leave?.leaveType || null,
+    sales,
+    score,
+    reviewThisMonth: reviews.some((r) => r.period === ctx.CUR),
+    warnings: Array.isArray(profile.warnings) ? profile.warnings.length : 0,
+    contractEnd: person?.contractEnd || u.contractEnd || null,
+    ...coachingStatus(ctx.coaching, u.username),
+  }
+}
+
+app.get('/api/team/overview', auth, (req, res) => {
+  const lead = findUser(req.user.username)
+  const members = teamMembersFor(lead)
+  if (!members.length) return res.status(403).json({ error: 'not-a-team-lead' })
+  const today = todayKey()
+  const CUR = today.slice(0, 7)
+  const ctx = {
+    today, CUR,
+    attAll: db.read('attendance', []),
+    leaveAll: db.read('leave', []),
+    profiles: db.read('profiles', {}),
+    reviews: db.read('reviews', {}),
+    sales: db.read('agent-sales', {}),
+    coaching: db.read('coaching', []),
+  }
+  const cards = members.map((u) => teamMemberCard(u, ctx))
+
+  const present = cards.filter((c) => ['working', 'late', 'done'].includes(c.status)).length
+  const coachedCount = cards.filter((c) => c.coachingCurrent).length
+  const late = cards.filter((c) => c.status === 'late').length
+  const onLeave = cards.filter((c) => c.status === 'leave').length
+  const notIn = cards.filter((c) => c.status === 'not-in').length
+
+  const soon = []
+  for (const c of cards) {
+    if (!c.contractEnd) continue
+    const days = Math.ceil((new Date(`${c.contractEnd}T00:00:00`) - new Date(`${today}T00:00:00`)) / 86400000)
+    if (days >= 0 && days <= 45) soon.push({ name: c.name, days })
+  }
+  const reviewsDue = cards.filter((c) => !c.reviewThisMonth).length
+  const withGoal = cards.filter((c) => c.sales && c.sales.target)
+  const goalsPct = withGoal.length
+    ? Math.round(withGoal.reduce((s, c) => s + Math.min(1, (c.sales.actual || 0) / c.sales.target), 0) / withGoal.length * 100)
+    : null
+
+  // "Needs my attention" — real signals only
+  const attention = []
+  for (const c of cards) {
+    if (c.status === 'late') attention.push({ type: 'late', name: c.name, message: `${c.name} checked in late today`, to: `/team-member/${c.username}` })
+    if (c.sales && c.sales.target && (c.sales.actual ?? 0) < c.sales.target) {
+      const short = c.sales.target - (c.sales.actual ?? 0)
+      attention.push({ type: 'sales', name: c.name, message: `${c.name} is ${short} short of the sales goal (${c.sales.actual ?? 0}/${c.sales.target})`, to: `/team-member/${c.username}` })
+    }
+    if (c.warnings > 0) attention.push({ type: 'warning', name: c.name, message: `${c.name} has ${c.warnings} active warning${c.warnings === 1 ? '' : 's'}`, to: `/team-member/${c.username}` })
+  }
+  for (const s of soon) attention.push({ type: 'contract', name: s.name, message: `${s.name}'s contract ends in ${s.days} day${s.days === 1 ? '' : 's'}`, to: `/team-member/${members.find((m) => m.name === s.name)?.username || ''}` })
+  for (const l of (ctx.leaveAll || [])) {
+    if (l.status === 'pending' && members.some((m) => m.username === l.username)) {
+      // Proper home is a scoped Team Requests page (not built yet); until then
+      // open the member so the lead can see who it is.
+      attention.push({ type: 'leave', name: l.name || l.username, message: `${l.name || l.username} has a pending ${l.leaveType || 'leave'} request`, to: `/team-member/${l.username}` })
+    }
+  }
+  // Bi-weekly coaching KPI: flag every member whose check-in is due (none in the
+  // last 14 days), with when the last one was.
+  for (const c of cards) {
+    if (c.coachingCurrent) continue
+    const since = c.lastCoachedAt
+      ? `last ${new Date(c.lastCoachedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+      : 'never checked in'
+    attention.push({ type: 'coaching', name: c.name, message: `Check-in with ${c.name} is due (${since})`, to: `/team-member/${c.username}` })
+  }
+
+  res.json({
+    lead: { name: lead.name, title: lead.title },
+    today,
+    stats: { total: cards.length, present, late, notIn, onLeave, reviewsDue, contractsEndingSoon: soon.length, goalsPct, coachedThisPeriod: coachedCount, coachingIntervalDays: COACHING_INTERVAL_DAYS },
+    attention,
+    members: cards,
+  })
+})
+
+// A single team member's detail for the lead: KPI scorecard (so they know WHAT
+// to coach on), attendance/sales snapshot, and full coaching history. Uses the
+// viewed user (works under view-as for reads). 403 if not the lead's member.
+app.get('/api/team/member/:username', auth, (req, res) => {
+  const lead = findUser(req.user.username)
+  const member = teamMembersFor(lead).find((m) => m.username === String(req.params.username).toLowerCase())
+  if (!member) return res.status(403).json({ error: 'not-your-team-member' })
+  const CUR = todayKey().slice(0, 7)
+  const salesRec = member.department === 'Sales' ? (db.read('agent-sales', {})[member.name] || null) : null
+  const mm = salesRec?.months?.[CUR]
+  const salesActual = mm && !mm.pending ? (mm.sales ?? null) : null
+  const profile = (db.read('profiles', {}))[member.name] || {}
+  const coachingAll = db.read('coaching', [])
+  const history = coachingAll
+    .filter((c) => c.targetUsername === member.username)
+    .sort((a, b) => ((a.datetime || a.createdAt) < (b.datetime || b.createdAt) ? 1 : -1))
+  const person = team.find((t) => t.name === member.name) || null
+  res.json({
+    username: member.username,
+    name: member.name,
+    title: member.title,
+    department: member.department,
+    contractEnd: person?.contractEnd || null,
+    score: profile.performanceScore === '' || profile.performanceScore == null ? null : Number(profile.performanceScore),
+    scorecard: scorecardFor(member, salesActual),
+    ...coachingStatus(coachingAll, member.username),
+    coachingIntervalDays: COACHING_INTERVAL_DAYS,
+    coaching: history,
+  })
 })
 
 // ---------- schedules (per-person weekly roster) ----------
@@ -793,6 +1071,14 @@ app.get('/api/leave/mine', auth, (req, res) => {
   const annualUsed = mine
     .filter((l) => l.status === 'approved' && (l.type || 'Annual') === 'Annual')
     .reduce((s, l) => s + daysBetween(l.from, l.to), 0)
+  // Sick leave: 5 paid days/year (Adama 1 Jul), medical certificate required;
+  // beyond 5 is unpaid unless Management approves. Counted per calendar year.
+  const SICK_ALLOWANCE = 5
+  const thisYear = new Date().getFullYear()
+  const sickUsed = mine
+    .filter((l) => l.status === 'approved' && (l.type || '') === 'Sick' && new Date(l.from).getFullYear() === thisYear)
+    .reduce((s, l) => s + daysBetween(l.from, l.to), 0)
+  const sickRemaining = Math.max(0, SICK_ALLOWANCE - sickUsed)
   // Blue Book: annual leave eligible only after 12 months of continuous service.
   // joined date comes from the static roster, or the staff member's own account (created staff)
   const roster = team.find((t) => t.name === req.user.name)
@@ -809,7 +1095,7 @@ app.get('/api/leave/mine', auth, (req, res) => {
     ef.setMonth(ef.getMonth() + 12)
     eligibleFrom = ef.toISOString().slice(0, 10)
   }
-  res.json({ requests: mine.map((r) => visibleLeave(r, req.realUser)), annualUsed, annualEligible, eligibleFrom, monthsService })
+  res.json({ requests: mine.map((r) => visibleLeave(r, req.realUser)), annualUsed, annualEligible, eligibleFrom, monthsService, sickAllowance: SICK_ALLOWANCE, sickUsed, sickRemaining })
 })
 
 app.post('/api/leave', auth, notViewAs, (req, res) => {
@@ -1466,9 +1752,13 @@ app.get('/api/coaching', auth, (req, res) => {
   all = all.slice().sort((a, b) => ((a.datetime || a.createdAt) < (b.datetime || b.createdAt) ? 1 : -1))
   res.json({ coaching: all })
 })
-app.post('/api/coaching', auth, notViewAs, requirePower('team'), (req, res) => {
+app.post('/api/coaching', auth, notViewAs, (req, res) => {
   const { targetUsername, type, title, note, datetime } = req.body || {}
   if (!targetUsername) return res.status(400).json({ error: 'targetUsername required' })
+  // Allowed if you hold the global Team power OR you're a team lead logging a
+  // check-in for one of your OWN team members (their weekly-coaching KPI).
+  const allowed = can(req.realUser, 'team') || teamMembersFor(req.realUser).some((m) => m.username === targetUsername)
+  if (!allowed) return res.status(403).json({ error: 'forbidden' })
   const all = db.read('coaching', [])
   const rec = {
     id: crypto.randomUUID(),
@@ -2050,10 +2340,12 @@ app.get('/api/my/progress', auth, async (req, res) => {
       { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: 100, weight: 25, unit: '% verified', actual: stockPct },
     ] }
   } else if (scKey === 'team-lead') {
+    const teamAtt = teamAttendancePct(u) // real now — from Pulse attendance
     scorecard = { role: 'Team Lead', kpis: [
-      { key: 'team-target', label: 'Team hits its target', kind: 'percent', target: 100, weight: 50, unit: '% of team goal', actual: null },
-      { key: 'team-active', label: 'Whole team contributing', kind: 'percent', target: 100, weight: 30, unit: '% on target', actual: null },
+      { key: 'team-target', label: 'Team hits its target', kind: 'percent', target: 100, weight: 45, unit: '% of team goal', actual: null },
+      { key: 'team-active', label: 'Whole team contributing', kind: 'percent', target: 100, weight: 25, unit: '% on target', actual: null },
       { key: 'coaching', label: 'Coaching & check-ins', kind: 'percent', target: 100, weight: 20, unit: '% done', actual: null },
+      { key: 'team-attendance', label: 'Team attendance', kind: 'percent', target: 95, weight: 10, unit: '%', actual: teamAtt },
     ] }
   }
 

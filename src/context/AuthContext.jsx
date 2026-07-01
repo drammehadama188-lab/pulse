@@ -108,7 +108,13 @@ export function AuthProvider({ children }) {
         // legacy flag — "manager-ish" now means holding the Team power
         isManager: hasPower('team'),
         realIsManager: hasRealPower('team'),
-        isViewAs: !!viewUser,
+        // `impersonating` = currently viewing as someone (drives the banner).
+        // `isViewAs` = read-only impersonation — TRUE for managers, but FALSE for
+        // the owner, who can act/click/touch as the person (to build, test and
+        // fix any role). Every owner action is logged to him server-side.
+        impersonating: !!viewUser,
+        ownerActing: !!viewUser && realUser?.username === 'adama',
+        isViewAs: !!viewUser && realUser?.username !== 'adama',
         enterViewAs,
         exitViewAs,
       }}

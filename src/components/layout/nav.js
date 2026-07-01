@@ -46,6 +46,10 @@ export const NAV = [
   { id: 'policies', to: '/policies', label: 'Policies', icon: BookOpen, group: 'Company', show: mgr },
   { id: 'documents', to: '/documents', label: 'Documents', icon: FolderOpen, group: 'Company', show: mgr },
 
+  // MY TEAM — a team lead's scoped workspace over the people they manage (NOT the
+  // whole company). Gated on isTeamLead (server-computed); pages re-check scope.
+  { id: 'team-dashboard', to: '/team-dashboard', label: 'Team Dashboard', icon: LayoutDashboard, group: 'My team', show: (u) => u?.isTeamLead },
+
   // PERSONAL — self-service. Staff (no 'hr' power) get their own Attendance here;
   // managers reach the team view via the PEOPLE section instead.
   { id: 'my-progress', to: '/my-progress', label: 'My Progress', icon: Target, group: 'My work', show: (u) => !mgr(u) },
@@ -59,7 +63,7 @@ export const NAV = [
 ]
 
 // Section order for the grouped sidebar.
-const GROUP_ORDER = ['People', 'Management', 'My work', 'Payroll', 'Pay', 'Company', 'Personal']
+const GROUP_ORDER = ['People', 'Management', 'My work', 'My team', 'Payroll', 'Pay', 'Company', 'Personal']
 
 export const MORE = { key: 'more', label: 'More', icon: Menu }
 

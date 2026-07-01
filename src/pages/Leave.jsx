@@ -5,7 +5,9 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { Button, Card, Pill, SectionTitle, Spinner, StatCard } from '../components/ui.jsx'
 import { dateShort } from '../lib/format.js'
 
-const TYPES = ['Annual', 'Sick', 'Unpaid', 'Compassionate', 'Maternity']
+// Maternity removed (Adama 1 Jul). Annual is only offered once eligible (12
+// months' service) — see availableTypes in the component.
+const TYPES = ['Annual', 'Sick', 'Unpaid', 'Compassionate']
 const STATUS_TONE = { pending: 'warn', approved: 'good', rejected: 'bad' }
 
 function fmtDate(iso) {
@@ -35,9 +37,12 @@ export default function Leave() {
     setError('')
     if (!form.from || !form.to) return setError('Pick both dates')
     if (form.to < form.from) return setError('End date is before start date')
+    // Annual leave is only available after 12 months — clamp so it can't be sent.
+    const allowed = TYPES.filter((t) => t !== 'Annual' || data?.annualEligible)
+    const type = allowed.includes(form.type) ? form.type : allowed[0]
     setBusy(true)
     try {
-      await api('/leave', { method: 'POST', body: form })
+      await api('/leave', { method: 'POST', body: { ...form, type } })
       setForm({ type: 'Annual', from: '', to: '', reason: '' })
       setOpen(false)
       await load()
@@ -54,6 +59,9 @@ export default function Leave() {
   const annualNote = data.annualEligible ? 'Eligible' : data.eligibleFrom ? `From ${fmtDate(data.eligibleFrom)}` : 'After 12 months'
   const mw = data.joined ? Math.max(0, Math.round((Date.now() - new Date(data.joined).getTime()) / 2629800000)) : null
   const tenureLabel = mw == null ? '—' : mw >= 12 ? `${Math.floor(mw / 12)}y ${mw % 12}m` : `${mw} mo`
+  // Annual only appears once the person has passed 12 months' service.
+  const availableTypes = TYPES.filter((t) => t !== 'Annual' || data.annualEligible)
+  const effectiveType = availableTypes.includes(form.type) ? form.type : availableTypes[0]
 
   return (
     <div className="space-y-6">
@@ -75,7 +83,13 @@ export default function Leave() {
           value={tenureLabel === '—' ? annualNote : `${tenureLabel} worked`}
           sub={data.annualEligible ? 'Eligible now' : (data.eligibleFrom ? `Eligible from ${fmtDate(data.eligibleFrom)}` : 'Eligible after 12 months')}
         />
-        <StatCard icon={Stethoscope} tone="rest" label="Sick leave" value="Medical certificate" sub="Required for sick leave" />
+        <StatCard
+          icon={Stethoscope}
+          tone={data.sickRemaining > 0 ? 'rest' : 'warn'}
+          label="Sick leave"
+          value={data.sickAllowance != null ? `${data.sickUsed} / ${data.sickAllowance} used` : 'Medical certificate'}
+          sub={data.sickAllowance != null ? `${data.sickRemaining} paid day${data.sickRemaining === 1 ? '' : 's'} left · certificate required` : 'Required for sick leave'}
+        />
         <StatCard icon={Clock} tone="warn" label="Pending" value={pending} sub="Requests awaiting approval" />
       </div>
 
@@ -87,11 +101,11 @@ export default function Leave() {
             <div>
               <label className="mb-1.5 block text-sm font-semibold">Type</label>
               <select
-                value={form.type}
+                value={effectiveType}
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
                 className="focus-ring w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none"
               >
-                {TYPES.map((t) => <option key={t}>{t}</option>)}
+                {availableTypes.map((t) => <option key={t}>{t}</option>)}
               </select>
             </div>
             <div className="hidden sm:block" />
@@ -107,14 +121,9 @@ export default function Leave() {
               <label className="mb-1.5 block text-sm font-semibold">Reason (optional)</label>
               <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} className="focus-ring w-full resize-none rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" placeholder="A short note for your manager" />
             </div>
-            {form.type === 'Annual' && !data.annualEligible && (
-              <div className="sm:col-span-2 rounded-xl bg-[var(--color-warn-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-warn)]">
-                Annual leave is available after 12 months of service{data.eligibleFrom ? ` (from ${fmtDate(data.eligibleFrom)})` : ''}. You can still submit — your manager will decide.
-              </div>
-            )}
             {form.type === 'Sick' && (
               <div className="sm:col-span-2 rounded-xl bg-[var(--color-rest-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-rest)]">
-                Sick leave requires a valid medical certificate.
+                Valid medical certificate required.{data.sickAllowance != null ? ` ${data.sickRemaining} of ${data.sickAllowance} paid sick days left this year — beyond that is unpaid unless approved.` : ''}
               </div>
             )}
             {error && (

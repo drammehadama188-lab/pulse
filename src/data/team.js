@@ -92,7 +92,7 @@ export const team = [
     ],
   }),
   { // Momodou Lamin Keita — Team Lead, 3-month fixed-term contract (27 Jun–27 Sep 2026) following training. Per signed agreement: D16,000 base + up to D10,000 commission (potential D26,000).
-    name: 'Momodou Lamin Keita', role: 'Team Lead', type: 'Operations',
+    name: 'Momodou Lamin Keita', role: 'Team Lead', type: 'Management',
     base: 16000, commission: 10000, transport: 0, total: 26000,
     status: 'active', joined: 'Jun 2026', contract: '3-month Team Lead (fixed term)', contractEnd: '2026-09-27',
     coreResponsibility: 'Lead and organise the team through the app launch; coordinate operations and team performance',

@@ -12,6 +12,8 @@ import DailyTracker from './pages/sales/DailyTracker.jsx'
 import Notices from './pages/sales/Notices.jsx'
 import MyReviews from './pages/MyReviews.jsx'
 import MyProgress from './pages/MyProgress.jsx'
+import TeamDashboard from './pages/TeamDashboard.jsx'
+import TeamMember from './pages/TeamMember.jsx'
 import Attendance from './pages/Attendance.jsx'
 import Leave from './pages/Leave.jsx'
 import Pay from './pages/Pay.jsx'
@@ -45,7 +47,7 @@ function FullScreenLoader() {
 // power="ceo" marks CEO-only pages (unbuilt department shells). The legacy
 // `manager` prop now means holding the Team power. The server independently
 // enforces every check per request — this is presentation only.
-function RequireAuth({ children, manager = false, power = null }) {
+function RequireAuth({ children, manager = false, power = null, teamLead = false }) {
   const { user, realUser, loading, isManager, hasPower } = useAuth()
   const location = useLocation()
   if (loading) return <FullScreenLoader />
@@ -56,6 +58,7 @@ function RequireAuth({ children, manager = false, power = null }) {
   if (power === 'ceo' && user?.username !== 'adama') return <Navigate to="/" replace />
   if (power && power !== 'ceo' && !hasPower(power)) return <Navigate to="/" replace />
   if (manager && !isManager) return <Navigate to="/" replace />
+  if (teamLead && !user?.isTeamLead) return <Navigate to="/" replace />
   return children
 }
 
@@ -114,6 +117,8 @@ export default function App() {
         {/* Notices repurposed → My Reviews (staff self-view) on 12 Jun 2026. */}
         <Route path="/my-reviews" element={<MyReviews />} />
         <Route path="/my-progress" element={<MyProgress />} />
+        <Route path="/team-dashboard" element={<RequireAuth teamLead><TeamDashboard /></RequireAuth>} />
+        <Route path="/team-member/:username" element={<RequireAuth teamLead><TeamMember /></RequireAuth>} />
         <Route path="/notices" element={<Navigate to="/my-reviews" replace />} />
         <Route path="/attendance" element={<Attendance />} />
         <Route path="/leave" element={<Leave />} />
