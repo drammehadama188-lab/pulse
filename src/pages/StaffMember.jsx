@@ -7,8 +7,13 @@ import { Avatar, Button, Spinner, Modal, Field, Input } from '../components/ui.j
 
 // Staff member — the per-person access page (admin Staff parity). Email + login,
 // reset password, and the permission toggles that save instantly and are logged.
-// Pulse's powers are flat (no sub-permissions), so each power is one toggle card.
+// Each people-scoped power card carries named sub-toggles (Adama 3 Jul): the
+// staff this grant covers, so the toggle always says exactly who is affected.
 // Kept in Pulse's light theme (dark sidebar) per the house style.
+
+// Powers whose grant covers specific people (all except 'grant', which is a
+// yes/no capability). The CEO is never in any list — server enforces too.
+const PEOPLE_SCOPED = ['approvals', 'team', 'staffadmin', 'payroll', 'hr', 'viewas']
 
 function Toggle({ on, disabled, onClick }) {
   return (
@@ -19,6 +24,20 @@ function Toggle({ on, disabled, onClick }) {
       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${on ? 'bg-emerald-500' : 'bg-gray-300'} ${disabled ? 'opacity-50' : ''}`}
     >
       <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
+    </button>
+  )
+}
+
+// compact toggle for the capability sub-rows inside a power card
+function MiniToggle({ on, disabled, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${on ? 'bg-emerald-500' : 'bg-gray-300'} ${disabled ? 'opacity-50' : ''}`}
+    >
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-4' : 'translate-x-0.5'}`} />
     </button>
   )
 }
@@ -39,6 +58,7 @@ export default function StaffMember() {
   const isCeo = realUser?.username === 'adama'
 
   const [user, setUser] = useState(null)
+  const [roster, setRoster] = useState([]) // everyone this grant could cover (no CEO, no self)
   const [catalogue, setCatalogue] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [savingKey, setSavingKey] = useState(null)
@@ -52,6 +72,7 @@ export default function StaffMember() {
     Promise.all([api('/users'), api('/powers')]).then(([u, pw]) => {
       const found = (u.users || []).find((x) => x.username === username) || null
       setUser(found)
+      setRoster((u.users || []).filter((x) => x.username !== username))
       setEmail(found?.email || '')
       setCatalogue(pw.powers || [])
       setLoaded(true)
@@ -72,15 +93,45 @@ export default function StaffMember() {
   const powers = new Set(user.powers || [])
   const canSignIn = !user.suspended
 
-  // Persist the full powers set + sign-in flag. Optimistic; reverts on failure.
-  async function persist(nextPowers, nextCanSignIn, key) {
-    const prev = { powers: user.powers || [], suspended: user.suspended }
+  // Named sub-toggles: who each power covers. No stored list = all staff.
+  const coverage = (key) => {
+    const stored = (user.permissionScopes || {})[key]
+    return new Set(Array.isArray(stored) ? stored : roster.map((r) => r.username))
+  }
+  // Capability sub-toggles: what they can DO inside a power. No list = all.
+  const subsOf = (key) => catalogue.find((c) => c.key === key)?.subs || []
+  const subCoverage = (key) => {
+    const stored = (user.permissionSubs || {})[key]
+    return new Set(Array.isArray(stored) ? stored : subsOf(key).map((s) => s.key))
+  }
+  // Explicit lists for every held power, so what you see is exactly what
+  // gets stored.
+  const scopesPayload = (powerSet, overrideKey, overrideSet) => {
+    const out = {}
+    for (const k of PEOPLE_SCOPED) {
+      if (!powerSet.has(k)) continue
+      out[k] = [...(k === overrideKey ? overrideSet : coverage(k))]
+    }
+    return out
+  }
+  const subsPayload = (powerSet, overrideKey, overrideSet) => {
+    const out = {}
+    for (const k of PEOPLE_SCOPED) {
+      if (!powerSet.has(k) || !subsOf(k).length) continue
+      out[k] = [...(k === overrideKey ? overrideSet : subCoverage(k))]
+    }
+    return out
+  }
+
+  // Persist powers + scopes + subs + sign-in flag. Optimistic; reverts on failure.
+  async function persist(nextPowers, nextCanSignIn, key, nextScopes, nextSubs) {
+    const prev = { powers: user.powers || [], suspended: user.suspended, permissionScopes: user.permissionScopes, permissionSubs: user.permissionSubs }
     setSavingKey(key)
-    setUser((u) => ({ ...u, powers: nextPowers, suspended: !nextCanSignIn }))
+    setUser((u) => ({ ...u, powers: nextPowers, suspended: !nextCanSignIn, ...(nextScopes ? { permissionScopes: nextScopes } : {}), ...(nextSubs ? { permissionSubs: nextSubs } : {}) }))
     try {
-      await api(`/staff/${username}/access`, { method: 'POST', body: { powers: nextPowers, canSignIn: nextCanSignIn } })
+      await api(`/staff/${username}/access`, { method: 'POST', body: { powers: nextPowers, canSignIn: nextCanSignIn, ...(nextScopes ? { scopes: nextScopes } : {}), ...(nextSubs ? { subs: nextSubs } : {}) } })
     } catch {
-      setUser((u) => ({ ...u, powers: prev.powers, suspended: prev.suspended }))
+      setUser((u) => ({ ...u, powers: prev.powers, suspended: prev.suspended, permissionScopes: prev.permissionScopes, permissionSubs: prev.permissionSubs }))
     } finally {
       setSavingKey(null)
     }
@@ -88,7 +139,21 @@ export default function StaffMember() {
   function togglePower(key) {
     const next = new Set(powers)
     if (next.has(key)) next.delete(key); else next.add(key)
-    persist([...next], canSignIn, key)
+    persist([...next], canSignIn, key, scopesPayload(next), subsPayload(next))
+  }
+  function toggleScope(key, un) {
+    const cov = coverage(key)
+    if (cov.has(un)) cov.delete(un); else cov.add(un)
+    persist([...powers], canSignIn, `${key}:${un}`, scopesPayload(powers, key, cov), subsPayload(powers))
+  }
+  function setScopeAll(key, on) {
+    const cov = new Set(on ? roster.map((r) => r.username) : [])
+    persist([...powers], canSignIn, key, scopesPayload(powers, key, cov), subsPayload(powers))
+  }
+  function toggleSubCap(key, subKey) {
+    const cov = subCoverage(key)
+    if (cov.has(subKey)) cov.delete(subKey); else cov.add(subKey)
+    persist([...powers], canSignIn, `${key}.${subKey}`, scopesPayload(powers), subsPayload(powers, key, cov))
   }
   function toggleSignIn() {
     persist([...powers], !canSignIn, '__signin')
@@ -131,7 +196,7 @@ export default function StaffMember() {
         </div>
         <div className="flex items-center gap-2">
           {hasRealPower('viewas') && <Button variant="outline" icon={ArrowRight} onClick={viewAs}>Open their view</Button>}
-          <Button variant="outline" icon={Archive} onClick={() => setArchiveOpen(true)}>Archive</Button>
+          {hasRealPower('staffadmin') && <Button variant="outline" icon={Archive} onClick={() => setArchiveOpen(true)}>Archive</Button>}
         </div>
       </div>
 
@@ -151,7 +216,7 @@ export default function StaffMember() {
             <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setEmailMsg('') }} placeholder="name@damiatracker.com" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
           </div>
           <Button onClick={saveEmail} disabled={emailBusy || email.trim() === (user.email || '')}>{emailBusy ? <Spinner size={16} /> : 'Save email'}</Button>
-          <Button variant="outline" icon={KeyRound} onClick={() => setResetOpen(true)}>Reset password</Button>
+          {hasRealPower('staffadmin') && <Button variant="outline" icon={KeyRound} onClick={() => setResetOpen(true)}>Reset password</Button>}
         </div>
         {emailMsg && <p className={`text-xs mt-2 ${emailMsg === 'Saved' ? 'text-emerald-600' : 'text-red-600'}`}>{emailMsg}</p>}
         <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3">
@@ -163,7 +228,9 @@ export default function StaffMember() {
         </div>
       </div>
 
-      {/* Access — permission toggles, save instantly */}
+      {/* Access — permission toggles, save instantly. CEO-only: Grant access
+          was removed 3 Jul — nobody else manages who can do what. */}
+      {isCeo && (
       <div className="bg-white rounded-2xl border border-gray-100 p-6">
         <h2 className="text-base font-semibold text-gray-900">Access</h2>
         <p className="text-sm text-gray-500 mt-1 mb-5">What {user.name.split(' ')[0]} can open in Pulse — all yours to grant. Changes save instantly and are logged.</p>
@@ -171,18 +238,65 @@ export default function StaffMember() {
           {catalogue.map((p) => {
             const on = powers.has(p.key)
             const locked = p.key === 'grant' && !isCeo
+            const scoped = on && PEOPLE_SCOPED.includes(p.key)
+            const cov = scoped ? coverage(p.key) : null
             return (
-              <div key={p.key} className={`rounded-2xl border p-4 ${on ? 'border-emerald-200 bg-emerald-50/40' : 'border-gray-200'}`}>
+              <div key={p.key} className={`self-start rounded-2xl border p-4 ${on ? 'border-emerald-200 bg-emerald-50/40' : 'border-gray-200'}`}>
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-semibold text-gray-900">{p.label}{locked && <span className="ml-1.5 text-[10px] font-medium text-gray-400">CEO only</span>}</p>
                   <Toggle on={on} disabled={locked || savingKey === p.key} onClick={() => !locked && togglePower(p.key)} />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">{p.detail}</p>
+                {on && (p.subs || []).length > 0 && (
+                  <div className="mt-3 border-t border-emerald-100 pt-2">
+                    <p className="mb-1 text-[10px] uppercase tracking-wider font-bold text-gray-400">They can</p>
+                    {p.subs.map((s) => {
+                      const subOn = subCoverage(p.key).has(s.key)
+                      return (
+                        <div key={s.key} className="flex items-center justify-between gap-2 py-1">
+                          <div className="min-w-0">
+                            <p className={`text-sm ${subOn ? 'text-gray-800' : 'text-gray-400'}`}>{s.label}</p>
+                            <p className="text-[11px] text-gray-400">{s.detail}</p>
+                          </div>
+                          <MiniToggle on={subOn} disabled={savingKey === `${p.key}.${s.key}`} onClick={() => toggleSubCap(p.key, s.key)} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                {scoped && (
+                  <div className="mt-3 border-t border-emerald-100 pt-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Applies to</p>
+                      <button
+                        className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700"
+                        onClick={() => setScopeAll(p.key, cov.size !== roster.length)}
+                      >
+                        {cov.size === roster.length ? 'Clear all' : 'All staff'}
+                      </button>
+                    </div>
+                    {roster.map((s) => (
+                      <label key={s.username} className="flex cursor-pointer items-center gap-2 py-0.5 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={cov.has(s.username)}
+                          onChange={() => toggleScope(p.key, s.username)}
+                          className="accent-emerald-500"
+                        />
+                        <span className="truncate">{s.name}</span>
+                      </label>
+                    ))}
+                    <p className={`mt-1 text-[11px] font-medium ${cov.size ? 'text-gray-400' : 'text-red-500'}`}>
+                      {cov.size === roster.length ? `Affects all ${roster.length} staff` : cov.size ? `Affects ${cov.size} of ${roster.length} staff` : 'Affects no one — pick staff below'}
+                    </p>
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
       </div>
+      )}
 
       {resetOpen && <ResetDialog username={username} name={user.name} onClose={() => setResetOpen(false)} />}
       {archiveOpen && <ArchiveDialog username={username} name={user.name} onClose={() => setArchiveOpen(false)} onDone={() => navigate('/team')} />}

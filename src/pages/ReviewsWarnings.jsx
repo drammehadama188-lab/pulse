@@ -56,6 +56,19 @@ export default function ReviewsWarnings({ scope }) {
   const needsReview = roster.filter((p) => !hasReview(p.name));
   const sortedWarnings = [...warnings].sort((a, b) => (a.date < b.date ? 1 : -1));
 
+  // In team scope a lead can't reach the HR pages (/performance, /agents), so
+  // clicks open the Team Member page they DO have — where they log coaching /
+  // check-ins. Formal reviews + warnings stay with HR/CEO.
+  const usernameByName = Object.fromEntries((scoped ? roster : []).map((p) => [p.name, p.username]));
+  const openProfile = (name) => {
+    if (scoped) { const un = usernameByName[name]; if (un) return navigate(`/team-member/${un}`); }
+    navigate(`/agents/${slugify(name)}`);
+  };
+  const openReview = (name) => {
+    if (scoped) return openProfile(name);
+    navigate(`/performance/${slugify(name)}`);
+  };
+
   function openAdd() {
     setErr('');
     setAdding({ agent: roster[0]?.name || '', type: 'verbal', reason: '', date: new Date().toISOString().slice(0, 10) });
@@ -100,11 +113,11 @@ export default function ReviewsWarnings({ scope }) {
           <div className="divide-y divide-gray-100">
             {needsReview.map((p) => (
               <div key={p.name} className="flex items-center justify-between gap-4 py-3">
-                <button onClick={() => navigate(`/agents/${slugify(p.name)}`)} className="flex items-center gap-3 min-w-0 text-left group">
+                <button onClick={() => openProfile(p.name)} className="flex items-center gap-3 min-w-0 text-left group">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white text-xs font-semibold shrink-0">{p.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</div>
                   <div className="min-w-0"><p className="text-sm font-medium text-gray-900 group-hover:underline truncate">{p.name}</p><p className="text-xs text-gray-500 truncate">{p.role}</p></div>
                 </button>
-                <button onClick={() => navigate(`/performance/${slugify(p.name)}`)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 shrink-0">Review <ChevronRight size={14} /></button>
+                <button onClick={() => openReview(p.name)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 shrink-0">{scoped ? 'Coach' : 'Review'} <ChevronRight size={14} /></button>
               </div>
             ))}
           </div>
@@ -127,7 +140,7 @@ export default function ReviewsWarnings({ scope }) {
         ) : (
           <div className="space-y-2">
             {sortedWarnings.map((w) => (
-              <button key={w.id} onClick={() => navigate(`/agents/${slugify(w.agent)}`)} className="w-full flex items-start gap-3 p-4 border border-gray-200 rounded-lg text-left hover:border-gray-300 hover:shadow-sm transition-all">
+              <button key={w.id} onClick={() => openProfile(w.agent)} className="w-full flex items-start gap-3 p-4 border border-gray-200 rounded-lg text-left hover:border-gray-300 hover:shadow-sm transition-all">
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 mt-0.5 ${typeCls(w.type)}`}>{w.type}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">{w.agent}</p>

@@ -87,7 +87,7 @@ export default function Team() {
       {/* team members — a clean table with access shown inline (admin-style) */}
       <div>
         <SectionTitle
-          action={<Button size="sm" icon={UserPlus} onClick={() => setAddOpen(true)}>Add staff</Button>}
+          action={hasRealPower('staffadmin') ? <Button size="sm" icon={UserPlus} onClick={() => setAddOpen(true)}>Add staff</Button> : null}
         >
           Team members
         </SectionTitle>

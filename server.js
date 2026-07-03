@@ -229,7 +229,7 @@ function auth(req, res, next) {
   let effective = real
   let isViewAs = false
   const va = req.headers['x-view-as']
-  if (va && can(real, 'viewas')) {
+  if (va && can(real, 'viewas') && inScope(real, 'viewas', va)) {
     const target = findUser(va)
     if (target) {
       effective = target
@@ -250,13 +250,11 @@ function auth(req, res, next) {
 // staff-profile route it used to gate (/agents/:slug) was re-pointed to 'hr'.
 const POWERS = [
   ['approvals', 'Leave approvals', 'Approve or reject leave requests'],
-  ['team', 'Team', 'Presence, schedules, coaching, add/archive staff'],
+  ['team', 'Team', 'Presence, schedules and coaching'],
+  ['staffadmin', 'Manage staff', 'Add, archive and restore staff; reset passwords'],
   ['payroll', 'Payroll', 'Salaries, payslips and benefits'],
   ['hr', 'HR', 'KPI rules, contracts, warnings, agent files'],
-  ['marketing', 'Marketing', 'Marketing department page'],
-  ['notices', 'Notices', 'Post and remove announcements'],
   ['viewas', 'View as', 'See the app as another staff member (read-only)'],
-  ['grant', 'Grant access', 'Give or take powers (not their own, not the CEO’s)'],
 ]
 const POWER_KEYS = POWERS.map(([k]) => k)
 const CEO = 'adama'
@@ -269,6 +267,69 @@ function powersFor(u) {
 function can(u, power) {
   return powersFor(u).includes(power)
 }
+// ---------- per-power people scope (named sub-toggles — Adama 3 Jul) ----------
+// A grant may carry an explicit staff list: permissionScopes = { power: [usernames] }.
+// No stored list = covers all active staff. The CEO is NEVER in any scope — the
+// owner has no team association, appears in no rosters and cannot be targeted
+// or impersonated. The CEO's own powers always cover everyone (except himself).
+function scopeCandidates(holder) {
+  return seedUsers().filter((x) => !isArchived(x) && x.username !== CEO && x.username !== holder?.username)
+}
+function powerScopeSet(holder, power) {
+  if (!holder || !can(holder, power)) return new Set()
+  const all = scopeCandidates(holder).map((x) => x.username)
+  const stored = holder.username === CEO ? null : holder.permissionScopes?.[power]
+  if (!Array.isArray(stored)) return new Set(all)
+  const ok = new Set(all)
+  return new Set(stored.filter((s) => ok.has(s)))
+}
+// Target check for actions — stored-list semantics so archived targets
+// (restore) still resolve. Never the CEO, never yourself.
+function inScope(holder, power, targetUsername) {
+  const target = String(targetUsername || '').toLowerCase()
+  if (!holder || !can(holder, power) || target === CEO || target === holder.username) return false
+  if (holder.username === CEO) return true
+  const stored = holder.permissionScopes?.[power]
+  return !Array.isArray(stored) || stored.includes(target)
+}
+// ---------- capability sub-toggles (nested powers — Adama 3 Jul) ----------
+// Parent toggle = see the area. Each sub = one specific action inside it.
+// No stored list = all subs on (legacy grants keep working unchanged).
+const SUBPOWERS = {
+  approvals: [
+    ['decide', 'Approve & reject', 'Decide requests — without this, view only'],
+  ],
+  team: [
+    ['schedules', 'Edit schedules', 'Assign shifts and correct attendance days'],
+    ['coaching', 'Coaching & flags', 'Log coaching sessions, flags and meetings'],
+  ],
+  staffadmin: [
+    ['add', 'Add staff', 'Create new staff accounts'],
+    ['archive', 'Archive staff', 'Move someone to Past Staff'],
+    ['restore', 'Restore staff', 'Bring someone back from Past Staff'],
+    ['password', 'Reset passwords', 'Set a temporary password'],
+  ],
+  payroll: [
+    ['edit', 'Edit pay', 'Create and delete payslips and benefits'],
+  ],
+  hr: [
+    ['records', 'Records', 'Profiles, contracts, checklists, applicants'],
+    ['performance', 'Performance', 'KPI rules, reviews, warnings, agent files'],
+  ],
+  viewas: [],
+}
+function canSub(u, power, sub) {
+  if (!can(u, power)) return false
+  if (u.username === CEO) return true
+  if (!(SUBPOWERS[power] || []).some(([k]) => k === sub)) return false
+  const stored = u.permissionSubs?.[power]
+  return !Array.isArray(stored) || stored.includes(sub)
+}
+// HR + payroll records are keyed by display NAME in places.
+function hrNamesSet(holder) {
+  const scope = powerScopeSet(holder, 'hr')
+  return new Set(seedUsers().filter((x) => scope.has(x.username)).map((x) => x.name))
+}
 // Powers are always checked on the REAL user — "view as" never changes
 // what you're allowed to do, only what you're looking at.
 function requirePower(power) {
@@ -276,6 +337,17 @@ function requirePower(power) {
     if (!can(req.realUser, power)) return res.status(403).json({ error: 'forbidden' })
     next()
   }
+}
+function requireSub(power, sub) {
+  return (req, res, next) => {
+    if (!canSub(req.realUser, power, sub)) return res.status(403).json({ error: 'forbidden' })
+    next()
+  }
+}
+// Access management is the CEO's alone (Grant power removed 3 Jul).
+function requireCeo(req, res, next) {
+  if (req.realUser.username !== CEO) return res.status(403).json({ error: 'forbidden' })
+  next()
 }
 // Block writes while a manager is viewing as someone else (read-only impersonation).
 // Log an action the owner takes while impersonating someone, so a future
@@ -331,7 +403,7 @@ app.get('/api/me', auth, (req, res) =>
 // ---------- access powers: list + grant/revoke ----------
 // The catalogue, for building the toggle UI.
 app.get('/api/powers', auth, (req, res) => {
-  res.json({ powers: POWERS.map(([key, label, detail]) => ({ key, label, detail })) })
+  res.json({ powers: POWERS.map(([key, label, detail]) => ({ key, label, detail, subs: (SUBPOWERS[key] || []).map(([k, l, d]) => ({ key: k, label: l, detail: d })) })) })
 })
 
 // Set someone's powers. Holder of 'grant' required. Guardrails:
@@ -339,7 +411,7 @@ app.get('/api/powers', auth, (req, res) => {
 //   - non-CEO granters cannot edit their OWN powers
 //   - only the CEO can give or take the 'grant' power itself
 // Every change is appended to the target's accessLog: who, when, before, after.
-app.post('/api/staff/:username/access', auth, notViewAs, requirePower('grant'), (req, res) => {
+app.post('/api/staff/:username/access', auth, notViewAs, requireCeo, (req, res) => {
   const target = String(req.params.username).toLowerCase()
   const requested = Array.isArray(req.body?.powers) ? req.body.powers : null
   if (!requested) return res.status(400).json({ error: 'powers must be an array' })
@@ -360,6 +432,27 @@ app.post('/api/staff/:username/access', auth, notViewAs, requirePower('grant'), 
     return res.status(403).json({ error: 'Only the CEO can give or take Grant access' })
 
   user.permissions = [...new Set(requested)]
+  // Named sub-toggles: which staff each power covers. Cleaned against the
+  // roster — never the CEO, never themselves. No stored list = all staff.
+  if (req.body?.scopes && typeof req.body.scopes === 'object') {
+    const valid = new Set(seedUsers().filter((x) => x.username !== CEO && x.username !== target).map((x) => x.username))
+    const clean = {}
+    for (const [k, v] of Object.entries(req.body.scopes)) {
+      if (!POWER_KEYS.includes(k) || !Array.isArray(v)) continue
+      clean[k] = [...new Set(v.map((s) => String(s).toLowerCase()))].filter((s) => valid.has(s))
+    }
+    user.permissionScopes = clean
+  }
+  // Capability sub-toggles: which actions inside each power. No list = all.
+  if (req.body?.subs && typeof req.body.subs === 'object') {
+    const cleanSubs = {}
+    for (const [k, v] of Object.entries(req.body.subs)) {
+      if (!SUBPOWERS[k] || !Array.isArray(v)) continue
+      const valid = new Set(SUBPOWERS[k].map(([sk]) => sk))
+      cleanSubs[k] = [...new Set(v.map(String))].filter((s) => valid.has(s))
+    }
+    user.permissionSubs = cleanSubs
+  }
   // Optional: set their email here too (seeded accounts have none, and the
   // Open Admin hand-off needs one to identify them in the admin system).
   if (typeof req.body?.email === 'string' && req.body.email.trim()) {
@@ -390,6 +483,8 @@ app.post('/api/staff/:username/access', auth, notViewAs, requirePower('grant'), 
       by: req.realUser.username,
       before,
       after: user.permissions,
+      scopes: user.permissionScopes || {},
+      subs: user.permissionSubs || {},
       ...(signInChange ? { signIn: signInChange } : {}),
     },
   ]
@@ -427,7 +522,7 @@ app.post('/api/change-password', auth, notViewAs, (req, res) => {
 // Manager resets a forgotten password to a temporary one the staff member
 // must change at next sign-in. Managers can reset staff; only the CEO
 // account can reset another manager. All their sessions are signed out.
-app.post('/api/staff/:username/reset-password', auth, requirePower('team'), notViewAs, (req, res) => {
+app.post('/api/staff/:username/reset-password', auth, requireSub('staffadmin', 'password'), notViewAs, (req, res) => {
   const { tempPassword } = req.body || {}
   if (!tempPassword || String(tempPassword).length < 8)
     return res.status(400).json({ error: 'Temporary password must be at least 8 characters' })
@@ -436,6 +531,7 @@ app.post('/api/staff/:username/reset-password', auth, requirePower('team'), notV
   if (!target) return res.status(404).json({ error: 'No such user' })
   if (target.role === 'manager' && req.realUser.username !== 'adama')
     return res.status(403).json({ error: 'Only the CEO can reset a manager password' })
+  if (!inScope(req.realUser, 'staffadmin', target.username)) return res.status(403).json({ error: 'Not in your Manage-staff scope' })
   target.passwordHash = bcrypt.hashSync(String(tempPassword), 10)
   target.mustChangePassword = true
   db.write('users', users)
@@ -456,9 +552,10 @@ app.post('/api/logout', auth, (req, res) => {
 app.get('/api/team', auth, (req, res) => {
   const archived = archivedNameSet()
   const merged = [...team, ...createdStaffRoster()].filter((p) => !archived.has(p.name))
-  // private manager notes never go to staff clients
+  // private manager notes never go to staff clients. Scoped by the VIEWED user
+  // so view-as renders exactly what that person sees.
   const roster =
-    can(req.realUser, 'team')
+    can(req.user, 'team')
       ? merged
       : merged.map(({ nextActionNote, ...p }) => p)
   res.json({ team: roster })
@@ -489,7 +586,7 @@ app.get('/api/staff', auth, requirePower('team'), (req, res) => {
 })
 
 // create a sales staff account
-app.post('/api/staff', auth, requirePower('team'), notViewAs, (req, res) => {
+app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, (req, res) => {
   const { type, name, email, title, salary, target, contractMonths } = req.body || {}
   if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name is required' })
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'A valid email is required' })
@@ -540,12 +637,13 @@ app.post('/api/staff', auth, requirePower('team'), notViewAs, (req, res) => {
 })
 
 // archive a staff member — keeps the record forever, blocks login, removes from active lists
-app.post('/api/staff/:username/archive', auth, requirePower('team'), notViewAs, (req, res) => {
+app.post('/api/staff/:username/archive', auth, requireSub('staffadmin', 'archive'), notViewAs, (req, res) => {
   const users = seedUsers()
   const u = users.find((x) => x.username === req.params.username)
   if (!u) return res.status(404).json({ error: 'not found' })
   if (u.username === req.realUser.username) return res.status(400).json({ error: "You can't archive your own account" })
   if (isArchived(u)) return res.status(409).json({ error: 'Already archived' })
+  if (!inScope(req.realUser, 'staffadmin', u.username)) return res.status(403).json({ error: 'Not in your Manage-staff scope' })
   const reason = String(req.body?.reason || '').trim()
   u.status = 'archived'
   u.archivedAt = new Date().toISOString()
@@ -561,11 +659,12 @@ app.post('/api/staff/:username/archive', auth, requirePower('team'), notViewAs, 
 })
 
 // restore an archived staff member
-app.post('/api/staff/:username/restore', auth, requirePower('team'), notViewAs, (req, res) => {
+app.post('/api/staff/:username/restore', auth, requireSub('staffadmin', 'restore'), notViewAs, (req, res) => {
   const users = seedUsers()
   const u = users.find((x) => x.username === req.params.username)
   if (!u) return res.status(404).json({ error: 'not found' })
   if (!isArchived(u)) return res.status(409).json({ error: 'Not archived' })
+  if (!inScope(req.realUser, 'staffadmin', u.username)) return res.status(403).json({ error: 'Not in your Manage-staff scope' })
   u.status = 'active'
   delete u.archivedAt
   delete u.archivedBy
@@ -603,7 +702,7 @@ app.get('/api/past-agents', auth, requirePower('team'), (req, res) => {
 // who a manager can "view as" (everyone but themselves)
 app.get('/api/users', auth, requirePower('team'), (req, res) => {
   const users = seedUsers()
-    .filter((u) => u.username !== req.realUser.username && !isArchived(u))
+    .filter((u) => u.username !== req.realUser.username && u.username !== CEO && !isArchived(u))
     .map((u) => ({
       username: u.username,
       name: u.name,
@@ -612,6 +711,8 @@ app.get('/api/users', auth, requirePower('team'), (req, res) => {
       title: u.title,
       email: u.email || null,
       powers: powersFor(u), // drives the Access toggles on the Team page
+      permissionScopes: u.permissionScopes || {}, // named sub-toggles: who each power affects
+      permissionSubs: u.permissionSubs || {}, // capability sub-toggles: what they can do inside it
       isTeamLead: leadsATeam(u), // unlocks MY TEAM nav (also when viewing-as them)
       suspended: !!u.suspended,
     }))
@@ -987,7 +1088,7 @@ app.get('/api/attendance/week', auth, (req, res) => {
   const teamSet = req.query.scope === 'team' ? teamUsernameSet(req.user.username) : null
   const roster = teamSet && teamSet.size
     ? seedUsers().filter((u) => teamSet.has(u.username))
-    : can(req.realUser, 'team') && !req.isViewAs
+    : can(req.user, 'team')
       ? scheduleRoster(req)
       : seedUsers().filter((u) => u.username === req.user.username)
 
@@ -1033,14 +1134,17 @@ function cleanWeek(incoming = {}) {
   return clean
 }
 function scheduleRoster(req) {
-  return seedUsers().filter((u) => !isArchived(u) && u.username !== req.user.username)
+  // the people the VIEWED user's Team power covers (named sub-toggles);
+  // the CEO is never in anyone's roster.
+  const scope = powerScopeSet(req.user, 'team')
+  return seedUsers().filter((u) => scope.has(u.username))
 }
 
 // manager: assign a schedule to people, effective from a date.
 // body: { schedules: { username: { from:'YYYY-MM-DD', days: { dow:{start,end}|null } } } }
 // Upserts a dated entry per person (replacing any entry with the same start
 // date); earlier dates keep their existing schedule automatically.
-app.put('/api/schedules', auth, requirePower('team'), notViewAs, (req, res) => {
+app.put('/api/schedules', auth, requireSub('team', 'schedules'), notViewAs, (req, res) => {
   const incoming = req.body?.schedules || {}
   const allowed = new Set(scheduleRoster(req).map((u) => u.username))
   const all = db.read('schedules', {})
@@ -1060,7 +1164,7 @@ app.put('/api/schedules', auth, requirePower('team'), notViewAs, (req, res) => {
 })
 
 // manager: set one person's weekly roster (in/off + hours per weekday)
-app.put('/api/schedules/:username', auth, requirePower('team'), notViewAs, (req, res) => {
+app.put('/api/schedules/:username', auth, requireSub('team', 'schedules'), notViewAs, (req, res) => {
   const target = findUser(req.params.username)
   if (!target) return res.status(404).json({ error: 'No such user' })
   const schedule = cleanWeek(req.body?.days)
@@ -1107,7 +1211,7 @@ app.get('/api/leave/mine', auth, (req, res) => {
     ef.setMonth(ef.getMonth() + 12)
     eligibleFrom = ef.toISOString().slice(0, 10)
   }
-  res.json({ requests: mine.map((r) => visibleLeave(r, req.realUser)), annualUsed, annualEligible, eligibleFrom, monthsService, sickAllowance: SICK_ALLOWANCE, sickUsed, sickRemaining })
+  res.json({ requests: mine.map((r) => visibleLeave(r, req.user)), annualUsed, annualEligible, eligibleFrom, monthsService, sickAllowance: SICK_ALLOWANCE, sickUsed, sickRemaining })
 })
 
 app.post('/api/leave', auth, notViewAs, (req, res) => {
@@ -1135,8 +1239,10 @@ app.post('/api/leave', auth, notViewAs, (req, res) => {
 app.get('/api/leave', auth, requirePower('approvals'), (req, res) => {
   const all = db.read('leave', [])
   const status = req.query.status
-  const list = status ? all.filter((l) => l.status === status) : all
-  res.json({ requests: list.map((r) => visibleLeave(r, req.realUser)) })
+  const scope = powerScopeSet(req.user, 'approvals')
+  let list = all.filter((l) => scope.has(l.username))
+  if (status) list = list.filter((l) => l.status === status)
+  res.json({ requests: list.map((r) => visibleLeave(r, req.user)) })
 })
 
 // The CEO/owner is the only one who reads the private "why" note on a decision.
@@ -1155,6 +1261,7 @@ function decideLeave(status) {
     const all = db.read('leave', [])
     const rec = all.find((l) => l.id === req.params.id)
     if (!rec) return res.status(404).json({ error: 'not found' })
+    if (!inScope(req.realUser, 'approvals', rec.username)) return res.status(403).json({ error: 'Not in your approval scope' })
     rec.status = status
     rec.decidedBy = req.user.name
     rec.decidedByUsername = req.user.username
@@ -1165,8 +1272,8 @@ function decideLeave(status) {
     res.json({ request: rec })
   }
 }
-app.post('/api/leave/:id/approve', auth, notViewAs, requirePower('approvals'), decideLeave('approved'))
-app.post('/api/leave/:id/reject', auth, notViewAs, requirePower('approvals'), decideLeave('rejected'))
+app.post('/api/leave/:id/approve', auth, notViewAs, requireSub('approvals', 'decide'), decideLeave('approved'))
+app.post('/api/leave/:id/reject', auth, notViewAs, requireSub('approvals', 'decide'), decideLeave('rejected'))
 
 // ---------- MY TEAM · scoped leave requests (team leads) ----------
 // A team lead sees and decides ONLY their own team's leave requests, without
@@ -1179,7 +1286,7 @@ app.get('/api/team/leave', auth, (req, res) => {
   const status = req.query.status
   let list = all.filter((l) => teamSet.has(l.username))
   if (status) list = list.filter((l) => l.status === status)
-  res.json({ requests: list.map((r) => visibleLeave(r, req.realUser)) })
+  res.json({ requests: list.map((r) => visibleLeave(r, req.user)) })
 })
 app.post('/api/team/leave/:id/:action', auth, notViewAs, (req, res) => {
   const action = req.params.action
@@ -1207,7 +1314,7 @@ app.get('/api/team/reviews', auth, (req, res) => {
     .slice()
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
     .filter((w) => names.has(w.agent))
-  res.json({ reviews, warnings, members: members.map((m) => ({ name: m.name, role: m.title, department: m.department })) })
+  res.json({ reviews, warnings, members: members.map((m) => ({ username: m.username, name: m.name, role: m.title, department: m.department })) })
 })
 
 // ---------- monthly attendance calendar (schedule + attendance + leave, layered) ----------
@@ -1248,7 +1355,7 @@ app.get('/api/attendance/month', auth, (req, res) => {
   const attAll = db.read('attendance', [])
   const leaveAll = db.read('leave', [])
   const schedules = db.read('schedules', {})
-  const roster = can(req.realUser, 'team') && !req.isViewAs
+  const roster = can(req.user, 'team')
     ? scheduleRoster(req)
     : seedUsers().filter((u) => u.username === req.user.username)
 
@@ -1278,7 +1385,7 @@ app.get('/api/attendance/month', auth, (req, res) => {
 // person+date (including a real mistaken check-in). `worked` accepts optional
 // checkIn/checkOut times ("HH:MM") to override the recorded clock times; `clear`
 // removes everything for the date (undo).
-app.put('/api/attendance/day', auth, requirePower('team'), notViewAs, (req, res) => {
+app.put('/api/attendance/day', auth, requireSub('team', 'schedules'), notViewAs, (req, res) => {
   const { username, date, status, note, checkIn, checkOut } = req.body || {}
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return res.status(400).json({ error: 'Valid date required' })
   if (!['worked', 'off', 'sick', 'leave', 'clear'].includes(status)) return res.status(400).json({ error: 'Invalid status' })
@@ -1370,15 +1477,16 @@ seedBenefits()
 
 // benefits — staff see their own; managers may read anyone's (?username=)
 app.get('/api/benefits', auth, (req, res) => {
-  const who = can(req.realUser, 'payroll') && req.query.username ? req.query.username : req.user.username
+  const who = req.query.username && inScope(req.user, 'payroll', req.query.username) ? req.query.username : req.user.username
   const list = db.read('benefits', []).filter((b) => b.username === who)
   res.json({ benefits: list })
 })
 
-app.post('/api/benefits', auth, requirePower('payroll'), notViewAs, (req, res) => {
+app.post('/api/benefits', auth, requireSub('payroll', 'edit'), notViewAs, (req, res) => {
   const { username, title, detail, amount, status, from, to, note } = req.body || {}
   const target = rosterFor(username) || findUser(username)
   if (!target) return res.status(404).json({ error: 'No such staff member' })
+  if (!inScope(req.realUser, 'payroll', username)) return res.status(403).json({ error: 'Not in your payroll scope' })
   if (!title) return res.status(400).json({ error: 'Title required' })
   const all = db.read('benefits', [])
   const rec = {
@@ -1399,7 +1507,7 @@ app.post('/api/benefits', auth, requirePower('payroll'), notViewAs, (req, res) =
   res.json({ benefit: rec })
 })
 
-app.delete('/api/benefits/:id', auth, requirePower('payroll'), notViewAs, (req, res) => {
+app.delete('/api/benefits/:id', auth, requireSub('payroll', 'edit'), notViewAs, (req, res) => {
   db.write('benefits', db.read('benefits', []).filter((b) => b.id !== req.params.id))
   res.json({ ok: true })
 })
@@ -1421,12 +1529,13 @@ app.get('/api/payroll/people', auth, requirePower('payroll'), (req, res) => {
       total: Number(p.total) || 0,
     }
   }).filter((p) => p.username)
-  res.json({ people })
+  const scope = powerScopeSet(req.user, 'payroll')
+  res.json({ people: people.filter((p) => scope.has(p.username)) })
 })
 
 // payslips — staff see their own; managers may read anyone's (?username=)
 app.get('/api/payslips', auth, (req, res) => {
-  const who = can(req.realUser, 'payroll') && req.query.username ? req.query.username : req.user.username
+  const who = req.query.username && inScope(req.user, 'payroll', req.query.username) ? req.query.username : req.user.username
   const list = db.read('payslips', [])
     .filter((p) => p.username === who)
     .map((p) => ({ ...p, net: netOf(p) }))
@@ -1445,10 +1554,11 @@ app.get('/api/payslips/draft', auth, requirePower('payroll'), (req, res) => {
   res.json({ draft: { username, period: /^\d{4}-\d{2}$/.test(period || '') ? period : '', earnings, deductions: [] } })
 })
 
-app.post('/api/payslips', auth, requirePower('payroll'), notViewAs, (req, res) => {
+app.post('/api/payslips', auth, requireSub('payroll', 'edit'), notViewAs, (req, res) => {
   const { username, period, earnings, deductions, note } = req.body || {}
   const target = rosterFor(username) || findUser(username)
   if (!target) return res.status(404).json({ error: 'No such staff member' })
+  if (!inScope(req.realUser, 'payroll', username)) return res.status(403).json({ error: 'Not in your payroll scope' })
   if (!/^\d{4}-\d{2}$/.test(period || '')) return res.status(400).json({ error: 'Valid month required' })
   const clean = (lines) => (Array.isArray(lines) ? lines : [])
     .filter((l) => l && l.label && Number(l.amount) > 0)
@@ -1472,7 +1582,7 @@ app.post('/api/payslips', auth, requirePower('payroll'), notViewAs, (req, res) =
   res.json({ payslip: { ...rec, net: netOf(rec) } })
 })
 
-app.delete('/api/payslips/:id', auth, requirePower('payroll'), notViewAs, (req, res) => {
+app.delete('/api/payslips/:id', auth, requireSub('payroll', 'edit'), notViewAs, (req, res) => {
   db.write('payslips', db.read('payslips', []).filter((p) => p.id !== req.params.id))
   res.json({ ok: true })
 })
@@ -1798,7 +1908,9 @@ app.delete('/api/announcements/:id', auth, notViewAs, requirePower('notices'), (
 // type: 'coaching' | 'flag' | 'meeting'. Staff see their own; managers manage all.
 app.get('/api/coaching', auth, (req, res) => {
   let all = db.read('coaching', [])
-  if (can(req.realUser, 'team') && !req.isViewAs) {
+  if (can(req.user, 'team')) {
+    const scope = powerScopeSet(req.user, 'team')
+    all = all.filter((c) => scope.has(c.targetUsername) || c.targetUsername === req.user.username)
     if (req.query.user) all = all.filter((c) => c.targetUsername === req.query.user)
   } else {
     all = all.filter((c) => c.targetUsername === req.user.username)
@@ -1811,7 +1923,7 @@ app.post('/api/coaching', auth, notViewAs, (req, res) => {
   if (!targetUsername) return res.status(400).json({ error: 'targetUsername required' })
   // Allowed if you hold the global Team power OR you're a team lead logging a
   // check-in for one of your OWN team members (their weekly-coaching KPI).
-  const allowed = can(req.realUser, 'team') || teamMembersFor(req.realUser).some((m) => m.username === targetUsername)
+  const allowed = (inScope(req.realUser, 'team', targetUsername) && canSub(req.realUser, 'team', 'coaching')) || teamMembersFor(req.realUser).some((m) => m.username === targetUsername)
   if (!allowed) return res.status(403).json({ error: 'forbidden' })
   const all = db.read('coaching', [])
   const rec = {
@@ -1828,7 +1940,7 @@ app.post('/api/coaching', auth, notViewAs, (req, res) => {
   db.write('coaching', all)
   res.json({ record: rec })
 })
-app.delete('/api/coaching/:id', auth, notViewAs, requirePower('team'), (req, res) => {
+app.delete('/api/coaching/:id', auth, notViewAs, requireSub('team', 'coaching'), (req, res) => {
   db.write('coaching', db.read('coaching', []).filter((c) => c.id !== req.params.id))
   res.json({ ok: true })
 })
@@ -1856,7 +1968,7 @@ app.post('/api/marketing/:section', auth, requirePower('marketing'), notViewAs, 
 app.get('/api/kpi-rules', auth, (req, res) => {
   res.json({ rules: db.read('kpi-rules', []) })
 })
-app.post('/api/kpi-rules', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.post('/api/kpi-rules', auth, requireSub('hr', 'performance'), notViewAs, (req, res) => {
   const b = req.body || {}
   const rules = db.read('kpi-rules', [])
   const fields = {
@@ -1885,7 +1997,7 @@ app.post('/api/kpi-rules', auth, requirePower('hr'), notViewAs, (req, res) => {
   db.write('kpi-rules', rules)
   res.json({ rule })
 })
-app.delete('/api/kpi-rules/:id', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.delete('/api/kpi-rules/:id', auth, requireSub('hr', 'performance'), notViewAs, (req, res) => {
   const rules = db.read('kpi-rules', []).filter((r) => r.id !== req.params.id)
   db.write('kpi-rules', rules)
   res.json({ ok: true })
@@ -1935,20 +2047,24 @@ app.post('/api/decisions', auth, requirePower('sales'), notViewAs, (req, res) =>
 // Warnings (per agent; HR view lists all).
 app.get('/api/warnings', auth, (req, res) => {
   let all = db.read('warnings', []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+  // HR-performance holders see their scoped people (+ themselves); others own only.
+  const hrNames = canSub(req.user, 'hr', 'performance') ? hrNamesSet(req.user) : null
+  all = all.filter((w) => (hrNames ? hrNames.has(w.agent) : false) || w.agent === req.user.name)
   if (req.query.agent) all = all.filter((w) => w.agent === req.query.agent)
   res.json({ warnings: all })
 })
-app.post('/api/warnings', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.post('/api/warnings', auth, requireSub('hr', 'performance'), notViewAs, (req, res) => {
   const { agent, type, reason, date } = req.body || {}
   if (!agent || !type) return res.status(400).json({ error: 'agent and type required' })
   if (!['verbal', 'formal', 'final'].includes(type)) return res.status(400).json({ error: 'type must be verbal/formal/final' })
+  if (!hrNamesSet(req.realUser).has(agent)) return res.status(403).json({ error: 'Not in your HR scope' })
   const all = db.read('warnings', [])
   const entry = { id: 'w_' + crypto.randomUUID(), agent, type, reason: reason || '', date: date || new Date().toISOString().slice(0, 10), issuedBy: req.user.name || 'Manager', createdAt: new Date().toISOString() }
   all.push(entry)
   db.write('warnings', all)
   res.json({ success: true, warning: entry })
 })
-app.delete('/api/warnings/:id', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.delete('/api/warnings/:id', auth, requireSub('hr', 'performance'), notViewAs, (req, res) => {
   const before = db.read('warnings', [])
   const after = before.filter((w) => w.id !== req.params.id)
   if (after.length === before.length) return res.status(404).json({ error: 'not found' })
@@ -1966,6 +2082,8 @@ function ensureAgentDir(agent) {
 }
 app.get('/api/agent-files', auth, (req, res) => {
   let files = db.read('agent-files', [])
+  const hrNames = canSub(req.user, 'hr', 'performance') ? hrNamesSet(req.user) : null
+  files = files.filter((f) => (hrNames ? hrNames.has(f.agent) : false) || f.agent === req.user.name)
   if (req.query.agent) files = files.filter((f) => f.agent === req.query.agent)
   res.json({ files: files.slice().sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || '')) })
 })
@@ -1985,9 +2103,10 @@ app.get('/api/my/file', auth, (req, res) => {
     .sort((a, b) => ((a.datetime || a.createdAt) < (b.datetime || b.createdAt) ? 1 : -1))
   res.json({ reviews, documents, coaching })
 })
-app.post('/api/agent-files', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.post('/api/agent-files', auth, requireSub('hr', 'performance'), notViewAs, (req, res) => {
   const { agent, name, mimeType, base64, category } = req.body || {}
   if (!agent || !name || !base64) return res.status(400).json({ error: 'agent, name, base64 required' })
+  if (!hrNamesSet(req.realUser).has(agent)) return res.status(403).json({ error: 'Not in your HR scope' })
   const dir = ensureAgentDir(agent)
   const id = 'f_' + crypto.randomUUID()
   const cleanBase64 = base64.includes(',') ? base64.split(',').pop() : base64
@@ -2001,7 +2120,7 @@ app.post('/api/agent-files', auth, requirePower('hr'), notViewAs, (req, res) => 
   db.write('agent-files', files)
   res.json({ success: true, file: meta })
 })
-app.post('/api/agent-files/generate-review', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.post('/api/agent-files/generate-review', auth, requireSub('hr', 'performance'), notViewAs, (req, res) => {
   const { agent, period, reviewText, category } = req.body || {}
   if (!agent || !period || !reviewText) return res.status(400).json({ error: 'agent, period, reviewText required' })
   const dir = ensureAgentDir(agent)
@@ -2027,7 +2146,7 @@ app.get('/api/agent-files/:id/download', (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${meta.name.replace(/"/g, '')}"`)
   res.sendFile(filePath)
 })
-app.delete('/api/agent-files/:id', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.delete('/api/agent-files/:id', auth, requireSub('hr', 'performance'), notViewAs, (req, res) => {
   const files = db.read('agent-files', [])
   const meta = files.find((f) => f.id === req.params.id)
   if (!meta) return res.status(404).json({ error: 'not found' })
@@ -2041,13 +2160,13 @@ app.delete('/api/agent-files/:id', auth, requirePower('hr'), notViewAs, (req, re
 // per employee NAME so they survive roster edits. Read by anyone with 'hr';
 // written by 'hr'. Never holds pay (that's the roster/payroll).
 const PROFILE_FIELDS = ['phone', 'email', 'emergencyContact', 'emergencyPhone', 'manager', 'nextReview', 'address', 'notes', 'performanceScore', 'performanceStatus', 'performanceNote']
-app.get('/api/employee-profile', auth, requirePower('hr'), (req, res) => {
+app.get('/api/employee-profile', auth, requireSub('hr', 'records'), (req, res) => {
   const name = req.query.name
   if (!name) return res.status(400).json({ error: 'name required' })
   const all = db.read('profiles', {})
   res.json({ profile: all[name] || {} })
 })
-app.put('/api/employee-profile', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.put('/api/employee-profile', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
   const { name, fields } = req.body || {}
   if (!name) return res.status(400).json({ error: 'name required' })
   const all = db.read('profiles', {})
@@ -2064,13 +2183,13 @@ const OFFBOARDING_ITEMS = ['Equipment returned', 'Accounts disabled', 'Final sal
 function mergeChecklist(items, stored) {
   return items.map((label) => ({ label, ...(stored && stored[label] ? stored[label] : { done: false }) }))
 }
-app.get('/api/employee-checklist', auth, requirePower('hr'), (req, res) => {
+app.get('/api/employee-checklist', auth, requireSub('hr', 'records'), (req, res) => {
   const name = req.query.name
   if (!name) return res.status(400).json({ error: 'name required' })
   const c = (db.read('checklists', {}))[name] || {}
   res.json({ onboarding: mergeChecklist(ONBOARDING_ITEMS, c.onboarding), offboarding: mergeChecklist(OFFBOARDING_ITEMS, c.offboarding) })
 })
-app.put('/api/employee-checklist', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.put('/api/employee-checklist', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
   const { name, type, label, done } = req.body || {}
   const items = type === 'onboarding' ? ONBOARDING_ITEMS : type === 'offboarding' ? OFFBOARDING_ITEMS : null
   if (!name || !items) return res.status(400).json({ error: 'name and valid type required' })
@@ -2088,11 +2207,11 @@ app.put('/api/employee-checklist', auth, requirePower('hr'), notViewAs, (req, re
 // ---------- recruitment: applicants pipeline ----------
 const APPLICANT_STAGES = ['cv_received', 'interviewed', 'hired', 'rejected']
 const APPLICANT_FIELDS = ['name', 'role', 'email', 'phone', 'source', 'notes']
-app.get('/api/applicants', auth, requirePower('hr'), (req, res) => {
+app.get('/api/applicants', auth, requireSub('hr', 'records'), (req, res) => {
   const list = db.read('applicants', []).slice().sort((a, b) => ((a.updatedAt || a.createdAt) < (b.updatedAt || b.createdAt) ? 1 : -1))
   res.json({ applicants: list })
 })
-app.post('/api/applicants', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.post('/api/applicants', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
   const b = req.body || {}
   if (!b.name) return res.status(400).json({ error: 'name required' })
   const now = new Date().toISOString()
@@ -2103,7 +2222,7 @@ app.post('/api/applicants', auth, requirePower('hr'), notViewAs, (req, res) => {
   db.write('applicants', all)
   res.json({ applicant: rec })
 })
-app.put('/api/applicants/:id', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.put('/api/applicants/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
   const all = db.read('applicants', [])
   const rec = all.find((a) => a.id === req.params.id)
   if (!rec) return res.status(404).json({ error: 'not found' })
@@ -2117,7 +2236,7 @@ app.put('/api/applicants/:id', auth, requirePower('hr'), notViewAs, (req, res) =
   db.write('applicants', all)
   res.json({ applicant: rec })
 })
-app.delete('/api/applicants/:id', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.delete('/api/applicants/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
   db.write('applicants', db.read('applicants', []).filter((a) => a.id !== req.params.id))
   res.json({ ok: true })
 })
@@ -2129,7 +2248,7 @@ seedSales()
 // (YYYY-MM). Never overwritten — this is the audit trail HR can rely on for
 // pay/promotion decisions. Read/written by 'hr'. Stored in data/reviews.json
 // keyed by employee name. Ratings are manager-entered (no sampled numbers).
-app.get('/api/reviews', auth, requirePower('hr'), (req, res) => {
+app.get('/api/reviews', auth, requireSub('hr', 'performance'), (req, res) => {
   const name = req.query.name
   const all = db.read('reviews', {})
   if (name) {
@@ -2138,7 +2257,7 @@ app.get('/api/reviews', auth, requirePower('hr'), (req, res) => {
   }
   res.json({ reviews: all })
 })
-app.post('/api/reviews', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.post('/api/reviews', auth, requireSub('hr', 'performance'), notViewAs, (req, res) => {
   const { name, period, score, status, ratings, kpis, achievements, actions, notes, warningsCount } = req.body || {}
   if (!name || !period) return res.status(400).json({ error: 'name and period required' })
   if (!/^\d{4}-\d{2}$/.test(period)) return res.status(400).json({ error: 'period must be YYYY-MM' })
@@ -2170,7 +2289,7 @@ app.post('/api/reviews', auth, requirePower('hr'), notViewAs, (req, res) => {
 // Per-agent monthly tracker sales + revenue, attributed via the sheet's
 // "Sold By" column. Stored in data/agent-sales.json (gitignored — real
 // customer/financial data, never committed). Read by 'hr'.
-app.get('/api/agent-sales', auth, requirePower('hr'), (req, res) => {
+app.get('/api/agent-sales', auth, requireSub('hr', 'performance'), (req, res) => {
   const all = db.read('agent-sales', {})
   const name = req.query.name
   if (name) return res.json({ sales: all[name] || null })
@@ -2202,7 +2321,7 @@ function effectiveContract(name) {
   const base = overlay?.current ? { ...seed, ...overlay.current } : seed
   return { ...base, events: overlay?.events || [] }
 }
-app.get('/api/contracts', auth, requirePower('hr'), (req, res) => {
+app.get('/api/contracts', auth, requireSub('hr', 'records'), (req, res) => {
   const name = req.query.name
   if (name) {
     const c = effectiveContract(name)
@@ -2213,7 +2332,7 @@ app.get('/api/contracts', auth, requirePower('hr'), (req, res) => {
   for (const p of team) all[p.name] = effectiveContract(p.name)
   res.json({ contracts: all })
 })
-app.post('/api/contracts/action', auth, requirePower('hr'), notViewAs, (req, res) => {
+app.post('/api/contracts/action', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
   const { name, action, newStart, newEnd, newType, reason, note } = req.body || {}
   if (!name || !action) return res.status(400).json({ error: 'name and action required' })
   const seed = seedContractFor(name)
