@@ -163,7 +163,7 @@ export default function KpiTargets() {
                     </td>
                     <td className="py-2.5 pr-4">
                       <span className="inline-flex items-center gap-2">
-                        {k.custom && <Pill tone="warning" dot>custom</Pill>}
+                        {k.custom && <Pill tone="warn" dot>custom</Pill>}
                         {k.setFrom && <Pill tone="brand" dot>set from {ymLabel(k.setFrom)}</Pill>}
                       </span>
                     </td>
@@ -208,7 +208,7 @@ export default function KpiTargets() {
                     {e.target != null && e.weight != null && ' · '}
                     {e.weight != null && <>weight → <strong>{e.weight}%</strong></>}
                   </span>
-                  <Pill tone={upcoming ? 'success' : 'neutral'} dot>{upcoming ? `from ${ymLabel(e.effectiveFrom)}` : `since ${ymLabel(e.effectiveFrom)}`}</Pill>
+                  <Pill tone={upcoming ? 'good' : 'neutral'} dot>{upcoming ? `from ${ymLabel(e.effectiveFrom)}` : `since ${ymLabel(e.effectiveFrom)}`}</Pill>
                   <span className="ml-auto text-xs text-gray-400">by {e.setBy}</span>
                   {upcoming && (
                     <button onClick={() => removeEntry(e.id)} title="Remove this scheduled change" className="text-gray-400 hover:text-red-600">
@@ -237,8 +237,10 @@ export default function KpiTargets() {
               </Field>
               <div className="grid grid-cols-3 gap-3">
                 <Field label="Type">
-                  <Select value={addFor.kind} onChange={(e) => setAddFor({ ...addFor, kind: e.target.value })}
-                    options={[{ value: 'percent', label: 'Percent' }, { value: 'count', label: 'Count' }]} />
+                  <Select value={addFor.kind} onChange={(e) => setAddFor({ ...addFor, kind: e.target.value })}>
+                    <option value="percent">Percent</option>
+                    <option value="count">Count</option>
+                  </Select>
                 </Field>
                 <Field label={addFor.kind === 'percent' ? 'Target (%)' : 'Target (count)'}>
                   <Input type="number" min="0" value={addFor.target} onChange={(e) => setAddFor({ ...addFor, target: e.target.value })} />
