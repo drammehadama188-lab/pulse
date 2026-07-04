@@ -34,6 +34,10 @@ export const NAV = [
   { id: 'staff', to: '/team', label: 'Staff', icon: ShieldCheck, group: 'People', show: (u) => has(u, 'staffadmin') },
 
   // MANAGEMENT — goals, incoming requests, the employee record
+  // KPI Targets = where the company's goals are SET (CEO-only; Adama 3 Jul —
+  // "Pulse should be responsible for changing the goals and it reflects in
+  // admin"). Scorecards + Admin's goal numbers all read from it.
+  { id: 'kpi-targets', to: '/kpi-targets', label: 'KPI Targets', icon: Target, group: 'Management', show: isOwner },
   { id: 'reviews', to: '/reviews', label: 'Reviews & Warnings', icon: ShieldAlert, group: 'Management', show: mgr },
   // Hidden for a team lead whose approvals stay inside their own team — Team
   // Requests already covers those, so this would be a duplicate page.

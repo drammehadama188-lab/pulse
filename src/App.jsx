@@ -30,6 +30,7 @@ import PerformancePerson from './pages/PerformancePerson.jsx'
 import Contracts from './pages/Contracts.jsx'
 import PastStaffProfile from './pages/PastStaffProfile.jsx'
 import ReviewsWarnings from './pages/ReviewsWarnings.jsx'
+import KpiTargets from './pages/KpiTargets.jsx'
 import StaffMember from './pages/StaffMember.jsx'
 import DepartmentShell from './pages/departments/DepartmentShell.jsx'
 import Policies from './pages/departments/Policies.jsx'
@@ -105,6 +106,9 @@ export default function App() {
         <Route path="/recruitment" element={<RequireAuth power="hr"><Recruitment /></RequireAuth>} />
         {/* MANAGEMENT */}
         <Route path="/reviews" element={<RequireAuth power="hr"><ReviewsWarnings /></RequireAuth>} />
+        {/* KPI Targets — CEO sets the company's goals here; Pulse scorecards
+            and Admin's goal numbers follow (Adama 3 Jul). */}
+        <Route path="/kpi-targets" element={<RequireAuth power="ceo"><KpiTargets /></RequireAuth>} />
         <Route path="/requests" element={<RequireAuth power="approvals"><Approvals /></RequireAuth>} />
         {/* Reports self-composes on the server from the viewer's powers. */}
         <Route path="/reports" element={<RequireAuth><Reports /></RequireAuth>} />

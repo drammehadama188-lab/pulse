@@ -851,19 +851,139 @@ function scorecardKey(u) {
 // The member's weighted KPI scorecard so a team lead knows WHAT to coach on.
 // Same targets/weights as My Progress. Actuals: sales from the sheet (real);
 // every other KPI comes from the Admin feed later, so it's null until connected.
+// ---------- KPI targets (Adama 3 Jul: "Pulse should be responsible for
+// changing the goals and it reflects in admin") ----------
+// The catalog = the canonical role scorecards with their DEFAULT numbers —
+// exactly the ones walked through with Adama (sales 5/agent, retention 80%,
+// team 12, …). The CEO schedules changes per KPI with an EFFECTIVE MONTH on
+// the KPI Targets page; nothing moves until that month arrives, and history
+// stays intact (each change is an appended entry, resolved by month — same
+// idea as the admin's pricing history). Admin reads the resolved numbers over
+// /api/integrations/kpi-targets with the shared PULSE_SYNC_KEY.
+const KPI_CATALOG = {
+  'sales': { role: 'Sales agent', kpis: [
+    { key: 'sales', label: 'Tracker sales', kind: 'count', unit: 'sales', target: 5, weight: 40 },
+    { key: 'online', label: 'Trackers online', kind: 'percent', unit: '%', target: 85, weight: 20 },
+    { key: 'retention', label: 'Customer retention', kind: 'percent', unit: '%', target: 80, weight: 25 },
+    { key: 'reviews', label: '5-star Google reviews', kind: 'count', unit: 'reviews', target: 3, weight: 15 },
+  ] },
+  'customer-service': { role: 'Customer Service', kpis: [
+    { key: 'cases', label: 'Case resolution', kind: 'percent', unit: '%', target: 85, weight: 40 },
+    { key: 'install', label: 'Installation within 3 days', kind: 'percent', unit: '%', target: 95, weight: 35 },
+    { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', unit: '% verified', target: 100, weight: 25 },
+  ] },
+  'team-lead': { role: 'Team Lead', kpis: [
+    { key: 'team-sales', label: 'Team tracker sales', kind: 'count', unit: 'sales', target: 12, weight: 50 },
+    { key: 'team-active', label: 'Whole team contributing', kind: 'percent', unit: '% of sellers with a sale', target: 100, weight: 25 },
+    { key: 'team-attendance', label: 'Team attendance', kind: 'percent', unit: '%', target: 90, weight: 25 },
+    // Parked until Admin feeds them — visible, weight 0 (Adama 3 Jul).
+    { key: 'team-retention', label: 'Team retention', kind: 'percent', unit: '%', target: 80, weight: 0 },
+    { key: 'team-online', label: 'Trackers online', kind: 'percent', unit: '%', target: 85, weight: 0 },
+    { key: 'team-reviews', label: 'Five-star reviews (team)', kind: 'count', unit: 'reviews', target: null, weight: 0 },
+  ] },
+}
+// Resolve a role's plan for a month: catalog defaults unless the CEO scheduled
+// a change effective on or before that month (the latest such change wins).
+function kpiPlanFor(roleKey, month) {
+  const cat = KPI_CATALOG[roleKey]
+  if (!cat) return null
+  const entries = db.read('kpi-targets', [])
+  return { role: cat.role, kpis: cat.kpis.map((k) => {
+    const eligible = entries
+      .filter((e) => e.role === roleKey && e.kpi === k.key && e.effectiveFrom <= month)
+      .sort((a, b) => (a.effectiveFrom || '').localeCompare(b.effectiveFrom || ''))
+    const set = eligible[eligible.length - 1] || null
+    return {
+      ...k,
+      target: set && set.target != null ? set.target : k.target,
+      weight: set && set.weight != null ? set.weight : k.weight,
+      setFrom: set?.effectiveFrom || null,
+    }
+  }) }
+}
+// One KPI's resolved numbers for a month ({target, weight}, catalog fallback).
+function kpiNumber(roleKey, kpiKey, month) {
+  const plan = kpiPlanFor(roleKey, month)
+  return plan?.kpis.find((k) => k.key === kpiKey) || null
+}
+
+// KPI Targets — CEO-only management (the goals ARE the company's standards).
+app.get('/api/kpi-targets', auth, requireCeo, (req, res) => {
+  const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? String(req.query.month) : todayKey().slice(0, 7)
+  const roles = Object.keys(KPI_CATALOG).map((k) => ({ key: k, ...kpiPlanFor(k, month) }))
+  const entries = db.read('kpi-targets', []).slice()
+    .sort((a, b) => (b.effectiveFrom || '').localeCompare(a.effectiveFrom || '') || (b.setAt || '').localeCompare(a.setAt || ''))
+  res.json({ month, roles, entries })
+})
+app.post('/api/kpi-targets', auth, notViewAs, requireCeo, (req, res) => {
+  const { role, kpi, target, weight, effectiveFrom } = req.body || {}
+  const cat = KPI_CATALOG[role]
+  const def = cat?.kpis.find((k) => k.key === kpi)
+  if (!def) return res.status(400).json({ error: 'unknown role or KPI' })
+  if (!/^\d{4}-\d{2}$/.test(String(effectiveFrom || ''))) return res.status(400).json({ error: 'effectiveFrom must be YYYY-MM' })
+  if (String(effectiveFrom) < todayKey().slice(0, 7)) return res.status(400).json({ error: 'The effective month is in the past — goals change forward, not backward.' })
+  const t = target === '' || target == null ? null : Number(target)
+  const w = weight === '' || weight == null ? null : Number(weight)
+  if (t == null && w == null) return res.status(400).json({ error: 'Set a target, a weight, or both.' })
+  if (t != null && (!Number.isFinite(t) || t < 0)) return res.status(400).json({ error: 'Target must be a number ≥ 0.' })
+  if (w != null && (!Number.isFinite(w) || w < 0 || w > 100)) return res.status(400).json({ error: 'Weight must be 0–100.' })
+  const entry = {
+    id: crypto.randomUUID(),
+    role, kpi,
+    target: t, weight: w,
+    effectiveFrom: String(effectiveFrom),
+    setBy: req.user.username,
+    setAt: new Date().toISOString(),
+  }
+  const all = db.read('kpi-targets', [])
+  all.push(entry)
+  db.write('kpi-targets', all)
+  res.json({ entry })
+})
+app.delete('/api/kpi-targets/:id', auth, notViewAs, requireCeo, (req, res) => {
+  const all = db.read('kpi-targets', [])
+  const idx = all.findIndex((e) => e.id === req.params.id)
+  if (idx === -1) return res.status(404).json({ error: 'not found' })
+  all.splice(idx, 1)
+  db.write('kpi-targets', all)
+  res.json({ ok: true })
+})
+// Admin reads the resolved targets here (shared key, no session) — how a goal
+// set in Pulse ("retention 85% from August") shows up on admin's pages.
+app.get('/api/integrations/kpi-targets', (req, res) => {
+  const key = req.headers['x-pulse-key']
+  if (!process.env.PULSE_SYNC_KEY || key !== process.env.PULSE_SYNC_KEY) return res.status(401).json({ error: 'bad key' })
+  const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? String(req.query.month) : todayKey().slice(0, 7)
+  res.json({ month, roles: Object.keys(KPI_CATALOG).map((k) => ({ key: k, ...kpiPlanFor(k, month) })) })
+})
+
 function scorecardFor(u, salesActual) {
   const key = scorecardKey(u)
-  if (key === 'sales') return { role: 'Sales agent', kpis: [
-    { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u.target) || 5, weight: 40, unit: 'sales', actual: salesActual ?? null },
-    { key: 'online', label: 'Trackers online', kind: 'percent', target: 85, weight: 20, unit: '%', actual: null },
-    { key: 'retention', label: 'Customer retention', kind: 'percent', target: 80, weight: 25, unit: '%', actual: null },
-    { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: 3, weight: 15, unit: 'reviews', actual: null },
-  ] }
-  if (key === 'customer-service') return { role: 'Customer Service', kpis: [
-    { key: 'cases', label: 'Case resolution', kind: 'percent', target: 85, weight: 40, unit: '%', actual: null },
-    { key: 'install', label: 'Installation within 3 days', kind: 'percent', target: 95, weight: 35, unit: '%', actual: null },
-    { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: 100, weight: 25, unit: '% verified', actual: null },
-  ] }
+  const MONTH = todayKey().slice(0, 7)
+  // Sales + CS numbers resolve through the KPI Targets store (CEO-set,
+  // effective by month); the per-person sales target (u.target) still wins
+  // for that one person when set.
+  const N = (kpi, dflt) => kpiNumber(key, kpi, MONTH) || dflt
+  if (key === 'sales') {
+    const s = N('sales', { target: 5, weight: 40 }), o = N('online', { target: 85, weight: 20 })
+    const r = N('retention', { target: 80, weight: 25 }), v = N('reviews', { target: 3, weight: 15 })
+    return { role: 'Sales agent', kpis: [
+      { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u.target) || s.target, weight: s.weight, unit: 'sales', actual: salesActual ?? null },
+      { key: 'online', label: 'Trackers online', kind: 'percent', target: o.target, weight: o.weight, unit: '%', actual: null },
+      { key: 'retention', label: 'Customer retention', kind: 'percent', target: r.target, weight: r.weight, unit: '%', actual: null },
+      { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: v.target, weight: v.weight, unit: 'reviews', actual: null },
+    ] }
+  }
+  if (key === 'customer-service') {
+    const c = N('cases', { target: 85, weight: 40 }), i = N('install', { target: 95, weight: 35 }), st = N('stock', { target: 100, weight: 25 })
+    return { role: 'Customer Service', kpis: [
+      { key: 'cases', label: 'Case resolution', kind: 'percent', target: c.target, weight: c.weight, unit: '%', actual: null },
+      { key: 'install', label: 'Installation within 3 days', kind: 'percent', target: i.target, weight: i.weight, unit: '%', actual: null },
+      { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: st.target, weight: st.weight, unit: '% verified', actual: null },
+    ] }
+  }
+  // Team-lead member-card kept as-is (the canonical lead scorecard lives on
+  // My Progress and resolves through the catalog's team-lead entry there).
   if (key === 'team-lead') return { role: 'Team Lead', kpis: [
     { key: 'team-target', label: 'Team hits its target', kind: 'percent', target: 100, weight: 45, unit: '% of team goal', actual: null },
     { key: 'team-active', label: 'Whole team contributing', kind: 'percent', target: 100, weight: 25, unit: '% on target', actual: null },
@@ -2624,6 +2744,9 @@ app.get('/api/my/progress', auth, async (req, res) => {
   else if (t === 'sales' || r.includes('sales agent') || r.includes('sales intern') || r.includes('senior sales')) scKey = 'sales'
 
   let scorecard = null
+  // Targets/weights resolve through the KPI Targets store (CEO-set on the
+  // KPI Targets page, effective by month — Adama 3 Jul). Actuals unchanged.
+  const kpiN = (kpi, dfltTarget, dfltWeight) => kpiNumber(scKey, kpi, CUR) || { target: dfltTarget, weight: dfltWeight }
   if (scKey === 'sales') {
     let salesActual
     if (CUR >= SALES_ADMIN_FROM) {
@@ -2633,34 +2756,39 @@ app.get('/api/my/progress', auth, async (req, res) => {
       salesActual = m && !m.pending ? (m.sales ?? null) : null // sheet = history
     }
     const retentionPct = await fetchAdminRetention(name, CUR) // win-back recovery of expired vehicles
+    const kS = kpiN('sales', 5, 40), kO = kpiN('online', 85, 20), kR = kpiN('retention', 80, 25), kV = kpiN('reviews', 3, 15)
     scorecard = { role: 'Sales agent', kpis: [
-      { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u?.target) || 5, weight: 40, unit: 'sales', actual: salesActual },
-      { key: 'online', label: 'Trackers online', kind: 'percent', target: 85, weight: 20, unit: '%', actual: null },
-      { key: 'retention', label: 'Customer retention', kind: 'percent', target: 80, weight: 25, unit: '%', actual: retentionPct },
-      { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: 3, weight: 15, unit: 'reviews', actual: null },
+      { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u?.target) || kS.target, weight: kS.weight, unit: 'sales', actual: salesActual },
+      { key: 'online', label: 'Trackers online', kind: 'percent', target: kO.target, weight: kO.weight, unit: '%', actual: null },
+      { key: 'retention', label: 'Customer retention', kind: 'percent', target: kR.target, weight: kR.weight, unit: '%', actual: retentionPct },
+      { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: kV.target, weight: kV.weight, unit: 'reviews', actual: null },
     ] }
   } else if (scKey === 'customer-service') {
     const stockPct = await fetchAdminStock(CUR) // accountability proven by weekly counts (Admin)
+    const kC = kpiN('cases', 85, 40), kI = kpiN('install', 95, 35), kSt = kpiN('stock', 100, 25)
     scorecard = { role: 'Customer Service', kpis: [
-      { key: 'cases', label: 'Case resolution', kind: 'percent', target: 85, weight: 40, unit: '%', actual: null },
-      { key: 'install', label: 'Installation within 3 days', kind: 'percent', target: 95, weight: 35, unit: '%', actual: null },
-      { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: 100, weight: 25, unit: '% verified', actual: stockPct },
+      { key: 'cases', label: 'Case resolution', kind: 'percent', target: kC.target, weight: kC.weight, unit: '%', actual: null },
+      { key: 'install', label: 'Installation within 3 days', kind: 'percent', target: kI.target, weight: kI.weight, unit: '%', actual: null },
+      { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: kSt.target, weight: kSt.weight, unit: '% verified', actual: stockPct },
     ] }
   } else if (scKey === 'team-lead') {
     const teamAtt = teamAttendancePct(u) // real now — from Pulse attendance
     // Month-one ramp (Adama 2 Jul): keep the standard, ramp the man. Score
     // sales + attendance only; coaching stays an activity, NOT a scored KPI;
-    // Admin-fed KPIs stay parked. Team target 10 with today's two confirmed
-    // sellers — snaps to the full 15 standard after ~3 months.
+    // Admin-fed KPIs stay parked. Numbers come from the KPI Targets store —
+    // the ramp's 12 is the catalog default; the snap to 15 later is one
+    // scheduled change on the KPI Targets page, no code.
+    const kTS = kpiN('team-sales', 12, 50), kTA = kpiN('team-active', 100, 25), kAt = kpiN('team-attendance', 90, 25)
+    const kTR = kpiN('team-retention', 80, 0), kTO = kpiN('team-online', 85, 0), kTV = kpiN('team-reviews', null, 0)
     scorecard = { role: 'Team Lead', kpis: [
-      { key: 'team-sales', label: 'Team tracker sales', kind: 'count', target: 12, weight: 50, unit: 'sales', actual: null },
-      { key: 'team-active', label: 'Whole team contributing', kind: 'percent', target: 100, weight: 25, unit: '% of sellers with a sale', actual: null },
-      { key: 'team-attendance', label: 'Team attendance', kind: 'percent', target: 90, weight: 25, unit: '%', actual: teamAtt },
+      { key: 'team-sales', label: 'Team tracker sales', kind: 'count', target: kTS.target, weight: kTS.weight, unit: 'sales', actual: null },
+      { key: 'team-active', label: 'Whole team contributing', kind: 'percent', target: kTA.target, weight: kTA.weight, unit: '% of sellers with a sale', actual: null },
+      { key: 'team-attendance', label: 'Team attendance', kind: 'percent', target: kAt.target, weight: kAt.weight, unit: '%', actual: teamAtt },
       // Visible on the card but unscored until Admin feeds them — weights get
       // decided THEN, with real numbers in hand (Adama 3 Jul).
-      { key: 'team-retention', label: 'Team retention', kind: 'percent', target: 80, weight: 0, unit: '%', actual: null },
-      { key: 'team-online', label: 'Trackers online', kind: 'percent', target: 85, weight: 0, unit: '%', actual: null },
-      { key: 'team-reviews', label: 'Five-star reviews (team)', kind: 'count', target: null, weight: 0, unit: 'reviews', actual: null },
+      { key: 'team-retention', label: 'Team retention', kind: 'percent', target: kTR.target, weight: kTR.weight, unit: '%', actual: null },
+      { key: 'team-online', label: 'Trackers online', kind: 'percent', target: kTO.target, weight: kTO.weight, unit: '%', actual: null },
+      { key: 'team-reviews', label: 'Five-star reviews (team)', kind: 'count', target: kTV.target, weight: kTV.weight, unit: 'reviews', actual: null },
     ] }
   }
 
