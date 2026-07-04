@@ -2815,6 +2815,30 @@ async function fetchAdminStock(month) {
     return typeof data.accountabilityPct === 'number' ? data.accountabilityPct : null
   } catch { return null }
 }
+// Trackers-online rate for the agent's BOOK (live snapshot from Admin — same
+// rules as Admin's own online meter). No book yet → null, never faked.
+async function fetchAdminOnline(name) {
+  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
+  if (!base || !key) return null
+  try {
+    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/online`, { headers: { 'x-pulse-key': key } })
+    if (!resp.ok) return null
+    const row = ((await resp.json()).agents || []).find((a) => a.name === name)
+    return row && typeof row.pct === 'number' ? row.pct : null
+  } catch { return null }
+}
+// Verified 5-star Google reviews credited to the agent this month. An agent
+// absent from the feed simply has none yet — that's a real 0, not "unknown".
+async function fetchAdminReviews(name, month) {
+  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
+  if (!base || !key) return null
+  try {
+    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/reviews?month=${month}`, { headers: { 'x-pulse-key': key } })
+    if (!resp.ok) return null
+    const row = ((await resp.json()).agents || []).find((a) => a.name === name)
+    return row ? Number(row.verified) || 0 : 0
+  } catch { return null }
+}
 app.get('/api/my/progress', auth, async (req, res) => {
   const name = req.user.name
   const u = findUser(req.user.username)
@@ -2852,13 +2876,18 @@ app.get('/api/my/progress', auth, async (req, res) => {
       const m = sales?.months?.[CUR]
       salesActual = m && !m.pending ? (m.sales ?? null) : null // sheet = history
     }
-    const retentionPct = await fetchAdminRetention(name, CUR) // win-back recovery of expired vehicles
+    // All four actuals now flow from Admin (connected 4 Jul): retention =
+    // renewal events on the agent's book, online = live book rate, reviews =
+    // verified 5-star log. Unreachable → null ("Connecting to Admin").
+    const retentionPct = await fetchAdminRetention(name, CUR)
+    const onlinePct = await fetchAdminOnline(name)
+    const reviewsCount = await fetchAdminReviews(name, CUR)
     const kS = kpiN('sales', 5, 40), kO = kpiN('online', 85, 20), kR = kpiN('retention', 80, 25), kV = kpiN('reviews', 3, 15)
     scorecard = { role: 'Sales agent', kpis: [
       { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u?.target) || kS.target, weight: kS.weight, unit: 'sales', actual: salesActual },
-      { key: 'online', label: 'Trackers online', kind: 'percent', target: kO.target, weight: kO.weight, unit: '%', actual: null },
+      { key: 'online', label: 'Trackers online', kind: 'percent', target: kO.target, weight: kO.weight, unit: '%', actual: onlinePct },
       { key: 'retention', label: 'Customer retention', kind: 'percent', target: kR.target, weight: kR.weight, unit: '%', actual: retentionPct },
-      { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: kV.target, weight: kV.weight, unit: 'reviews', actual: null },
+      { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: kV.target, weight: kV.weight, unit: 'reviews', actual: reviewsCount },
     ] }
   } else if (scKey === 'customer-service') {
     const stockPct = await fetchAdminStock(CUR) // accountability proven by weekly counts (Admin)
@@ -2891,6 +2920,36 @@ app.get('/api/my/progress', auth, async (req, res) => {
 
   // Normalized weights + any CEO-added custom KPIs join the card (Adama 3 Jul).
   if (scorecard && scKey) scorecard.kpis = overlayPlan(scorecard.kpis, scKey, CUR)
+
+  // ----- MY HISTORY (Adama 4 Jul: the page showed only "now", nothing about
+  // past performance). Month-by-month sales record: the SHEET is the truth
+  // before Jul 2026 (Ya Fatou's New_Customers), ADMIN (Won deals) from Jul on
+  // — same cutover as the live number. The target resolves per month through
+  // the KPI Targets store (5 before Jul, 6 from Jul — his effective-month
+  // change). Locked review scores ride along when they exist.
+  let history = null
+  if (scKey === 'sales') {
+    const nextMonth = (ym) => { const [y, m] = ym.split('-').map(Number); return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}` }
+    const monthsSet = new Set(Object.keys(sales?.months || {}))
+    for (let m = SALES_ADMIN_FROM; m < CUR; m = nextMonth(m)) monthsSet.add(m)
+    const list = [...monthsSet].filter((m) => /^\d{4}-\d{2}$/.test(m) && m < CUR).sort().reverse()
+    history = []
+    for (const mo of list) {
+      let actual = null, customers = null, pending = false
+      if (mo >= SALES_ADMIN_FROM) {
+        actual = await fetchAdminWonCount(name, mo) // null when Admin unreachable — never faked
+      } else {
+        const rec = sales?.months?.[mo]
+        pending = !!rec?.pending
+        actual = rec && !rec.pending ? (rec.sales ?? null) : null
+        customers = rec?.customers || null
+      }
+      const kk = kpiNumber(scKey, 'sales', mo) || { target: 5 }
+      const review = reviews.find((rv) => rv.period === mo) || null
+      history.push({ month: mo, sales: actual, pending, target: kk.target, customers, reviewScore: review?.score ?? null })
+    }
+    if (!history.length) history = null
+  }
 
   // Goals mirror the scorecard (Adama 2 Jul): a KPI is the measure, the goal
   // is the actionable objective with the number. Professional register. The
@@ -2935,6 +2994,7 @@ app.get('/api/my/progress', auth, async (req, res) => {
     reviews,
     sales,
     scorecard,
+    history,
   })
 })
 

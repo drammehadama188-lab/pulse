@@ -63,7 +63,9 @@ function Empty({ children }) {
 
 // One automatic status sentence — the employee's "headline" for the month.
 // Built only from real signals (score, goal %, improving streak); never invents.
-function statusLine({ score, goalPct, series }) {
+// Early in the month a low % is normal, not a failure — no nagging before a
+// third of the month is gone (Adama 4 Jul: "behind, push!" on the 4th is noise).
+function statusLine({ score, goalPct, series, monthElapsedPct, daysLeft }) {
   if (series && series.length >= 3) {
     let run = 1
     for (let i = series.length - 1; i > 0; i--) { if (series[i].v > series[i - 1].v) run++; else break }
@@ -71,6 +73,9 @@ function statusLine({ score, goalPct, series }) {
   }
   if (goalPct != null) {
     if (goalPct >= 70) return { tone: 'green', text: `You're having a strong month — you've completed ${goalPct}% of your goals.` }
+    if (goalPct < 40 && monthElapsedPct != null && monthElapsedPct <= 33) {
+      return { tone: 'blue', text: `The month is young — ${daysLeft} days to hit your goals.` }
+    }
     if (goalPct < 40) return { tone: 'amber', text: `You're behind on your goals — ${goalPct}% done. Push to finish them this month.` }
     return { tone: 'amber', text: `You're making progress — ${goalPct}% of your goals done. Keep going.` }
   }
@@ -90,6 +95,10 @@ const TONE = {
 
 export default function MyProgress() {
   const [data, setData] = useState(null)
+  // Two tabs (Adama 4 Jul: "5 different things all in one page" — split it):
+  // THIS MONTH = the live push (banner, score, KPI cards, still-to-do);
+  // MY RECORD = the past (history, ratings, recognition, feedback).
+  const [tab, setTab] = useState('now')
 
   useEffect(() => {
     api('/my/progress')
@@ -162,7 +171,13 @@ export default function MyProgress() {
   if (salesGoal && salesGoal.value < salesGoal.target) actions.push(`Close ${salesGoal.target - salesGoal.value} more tracker sales`)
   if (!currentReview) actions.push(`Complete your ${periodLabel(CUR_PERIOD)} review with your manager`)
 
-  const line = statusLine({ score, goalPct, series })
+  // How far into the month we are — lets the headline stay calm early on.
+  const nowD = new Date()
+  const daysInMonth = new Date(nowD.getFullYear(), nowD.getMonth() + 1, 0).getDate()
+  const monthElapsedPct = Math.round((nowD.getDate() / daysInMonth) * 100)
+  const daysLeft = daysInMonth - nowD.getDate()
+
+  const line = statusLine({ score, goalPct, series, monthElapsedPct, daysLeft })
   const tone = TONE[line.tone]
 
   return (
@@ -170,9 +185,23 @@ export default function MyProgress() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)] md:text-3xl">My Progress</h1>
-        <p className="mt-1 text-[var(--color-ink-faint)]">{periodLabel(CUR_PERIOD)} · your goals, score and how you're doing.</p>
+        <p className="mt-1 text-[var(--color-ink-faint)]">{periodLabel(CUR_PERIOD)} · this month's goals, and your record before.</p>
       </div>
 
+      {/* Now vs before — the page's two halves as tabs */}
+      <div className="flex w-fit gap-1 rounded-full bg-gray-100 p-1">
+        {[{ id: 'now', label: 'This month' }, { id: 'record', label: 'My record' }].map((tb) => (
+          <button
+            key={tb.id}
+            onClick={() => setTab(tb.id)}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${tab === tb.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            {tb.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'now' && (<>
       {/* Auto status sentence — the employee's headline for the month */}
       <div className={`flex items-start gap-3 rounded-2xl border ${tone.ring} ${tone.bg} px-4 py-3.5`}>
         <span className="text-lg leading-none">{tone.dot}</span>
@@ -220,28 +249,55 @@ export default function MyProgress() {
         </div>
       </Card>
 
-      {/* My Goals checklist */}
+      {/* THIS MONTH — one card per KPI: the goal sentence, the live number,
+          the bar and the weight, said ONCE (Adama 4 Jul: "My goals" and "My
+          KPIs" were the same four things twice — merged; the record moved to
+          My history below). Manager-added checklist items keep their rows. */}
       <div>
-        <SectionTitle>My goals</SectionTitle>
-        {(derivedGoals.length || kpiGoals.length || salesGoal) ? (
-          <div className="space-y-2.5">
-            {derivedGoals.map((g) => (
-              <Card key={g.key} className="flex items-center gap-3 p-4">
-                {g.done === true
-                  ? <CircleCheck size={20} className="shrink-0 text-emerald-500" />
-                  : <Circle size={20} className={`shrink-0 ${g.done === false ? 'text-amber-500' : 'text-[var(--color-ink-faint)]'}`} />}
-                <span className={`flex-1 text-sm font-semibold ${g.done === true ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>{g.text}</span>
-                {g.done === true && <Pill tone="good">Done</Pill>}
-                {g.done === false && (
-                  <span className="shrink-0 text-sm font-bold text-[var(--color-ink)]">
-                    {g.actual}{g.unit === '%' ? '%' : ''} / {g.target}{g.unit === '%' ? '%' : ''}
-                  </span>
-                )}
-                {g.done == null && <Pill tone="rest" dot>Connecting to Admin</Pill>}
-              </Card>
-            ))}
-            {kpiGoals.length > 0 && derivedGoals.length > 0 && (
-              <p className="pt-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink-faint)]">Added by your manager</p>
+        <SectionTitle>This month</SectionTitle>
+        {(scKpis.length || kpiGoals.length || salesGoal) ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {scKpis.map((k) => {
+              const g = derivedGoals.find((x) => x.key === k.key)
+              const a = k.actual == null ? null : Math.min(100, Math.round((k.actual / k.target) * 100))
+              // Attendance KPI colours by absolute % (green ≥95 / amber 80–94 / red <80);
+              // every other KPI keeps the attainment-vs-target band.
+              const isAttendance = (k.key || '').includes('attendance')
+              const kb = isAttendance ? attendanceBand(k.actual) : band(a)
+              const met = k.actual != null && k.actual >= k.target
+              return (
+                <Card key={k.key} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-sm font-semibold text-[var(--color-ink)]">{g?.text || k.label}</span>
+                    <span className="shrink-0 rounded-full bg-[var(--color-line-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-faint)]">weight {k.weight}%</span>
+                  </div>
+                  {k.actual == null ? (
+                    <div className="mt-2.5">
+                      <Pill tone="rest" dot>Connecting to Admin</Pill>
+                      <div className="mt-1.5 text-xs text-[var(--color-ink-faint)]">Target {k.kind === 'percent' ? `≥ ${k.target}%` : `${k.target} ${k.unit}`}</div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mt-2 flex items-end justify-between">
+                        <span className={`text-2xl font-extrabold ${kb.text}`}>{k.kind === 'percent' ? `${k.actual}%` : `${k.actual}/${k.target}`}</span>
+                        {met
+                          ? <Pill tone="good">Done</Pill>
+                          : <span className="text-xs text-[var(--color-ink-faint)]">target {k.kind === 'percent' ? `≥ ${k.target}%` : k.target}</span>}
+                      </div>
+                      <div className="mt-2"><Bar pct={a} tone={kb.bar} /></div>
+                    </>
+                  )}
+                </Card>
+              )
+            })}
+          </div>
+        ) : (
+          <Empty>Your goals come from your role's KPIs and will appear here.</Empty>
+        )}
+        {(kpiGoals.length > 0 || salesGoal) && (
+          <div className="mt-3 space-y-2.5">
+            {kpiGoals.length > 0 && (
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink-faint)]">Added by your manager</p>
             )}
             {salesGoal && (
               <Card className="flex items-center gap-3 p-4">
@@ -263,54 +319,70 @@ export default function MyProgress() {
               </Card>
             ))}
           </div>
-        ) : (
-          <Empty>Your goals come from your role's KPIs and will appear here.</Empty>
         )}
-        {data.weeklyTarget && <p className="mt-2 text-xs text-[var(--color-ink-faint)]">Weekly focus: {data.weeklyTarget}</p>}
-      </div>
-
-      {/* Scorecard — the role's weighted KPIs (real targets; actuals from Admin) */}
-      {scKpis.length > 0 && (
-        <div>
-          <SectionTitle>My KPIs</SectionTitle>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {scKpis.map((k) => {
-              const a = k.actual == null ? null : Math.min(100, Math.round((k.actual / k.target) * 100))
-              // Attendance KPI colours by absolute % (green ≥95 / amber 80–94 / red <80);
-              // every other KPI keeps the attainment-vs-target band.
-              const isAttendance = (k.key || '').includes('attendance')
-              const kb = isAttendance ? attendanceBand(k.actual) : band(a)
-              return (
-                <Card key={k.key} className="p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-[var(--color-ink)]">{k.label}</span>
-                    <span className="rounded-full bg-[var(--color-line-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-faint)]">weight {k.weight}%</span>
-                  </div>
-                  {k.actual == null ? (
-                    <div className="mt-2">
-                      <Pill tone="rest" dot>Connecting to Admin</Pill>
-                      <div className="mt-1.5 text-xs text-[var(--color-ink-faint)]">Target {k.kind === 'percent' ? `≥ ${k.target}%` : `${k.target} ${k.unit}`}</div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="mt-1 flex items-end justify-between">
-                        <span className={`text-2xl font-extrabold ${kb.text}`}>{k.kind === 'percent' ? `${k.actual}%` : `${k.actual}/${k.target}`}</span>
-                        <span className="text-xs text-[var(--color-ink-faint)]">target {k.kind === 'percent' ? `≥ ${k.target}%` : k.target}</span>
-                      </div>
-                      <div className="mt-2"><Bar pct={a} tone={kb.bar} /></div>
-                    </>
-                  )}
-                </Card>
-              )
-            })}
-          </div>
+        {scKpis.length > 0 && (
           <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
             {scLive === scKpis.length
               ? 'Your KPIs, weighted into your overall score.'
               : 'Sales is live now. Online trackers, retention and Google reviews switch on once Admin is connected.'}
           </p>
-        </div>
-      )}
+        )}
+        {data.weeklyTarget && <p className="mt-2 text-xs text-[var(--color-ink-faint)]">Weekly focus: {data.weeklyTarget}</p>}
+      </div>
+      </>)}
+
+      {tab === 'record' && (<>
+      {/* MY HISTORY — the record, month by month (Adama 4 Jul: the page only
+          talked about "now"; performance means now AND before). Sales come
+          from Ya Fatou's sheet before Jul 2026 and from Admin after — the
+          same cutover as the live number. Review scores join as managers
+          lock monthly reviews. */}
+      <div>
+        <SectionTitle>My history</SectionTitle>
+        {(data.history?.length || series.length >= 1) ? (
+          <div className="space-y-3">
+            {data.history?.length > 0 && (
+              <Card className="divide-y divide-[var(--color-line-soft)] p-0">
+                {data.history.map((h) => {
+                  const met = h.sales != null && h.sales >= h.target
+                  return (
+                    <div key={h.month} className="flex items-center gap-3 px-4 py-3">
+                      <span className="w-24 shrink-0 text-sm font-semibold text-[var(--color-ink)]">{periodLabel(h.month)}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-extrabold ${h.sales == null ? 'text-[var(--color-ink-faint)]' : met ? 'text-emerald-600' : 'text-[var(--color-ink)]'}`}>
+                            {h.sales == null ? (h.pending ? 'not entered yet' : '—') : `${h.sales} of ${h.target} sales`}
+                          </span>
+                          {met && <Pill tone="good">Goal met</Pill>}
+                        </div>
+                        {h.customers?.length > 0 && (
+                          <div className="mt-0.5 truncate text-xs text-[var(--color-ink-faint)]" title={h.customers.join(' · ')}>{h.customers.join(' · ')}</div>
+                        )}
+                      </div>
+                      {h.reviewScore != null && <span className="shrink-0 text-sm font-bold text-[var(--color-ink)]">{h.reviewScore}%</span>}
+                    </div>
+                  )
+                })}
+              </Card>
+            )}
+            {series.length >= 1 && (
+              <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap gap-x-6 gap-y-2">
+                  {series.map((s) => (
+                    <div key={s.period} className="text-center">
+                      <div className="text-xs text-[var(--color-ink-faint)]">{periodLabel(s.period).split(' ')[0]}</div>
+                      <div className="text-base font-bold text-[var(--color-ink)]">{s.v}%</div>
+                    </div>
+                  ))}
+                </div>
+                <Sparkline series={series} />
+              </Card>
+            )}
+          </div>
+        ) : (
+          <Empty>Your record builds here month by month — sales, scores and reviews.</Empty>
+        )}
+      </div>
 
       {/* Manager ratings — subjective 0–100 ratings entered in a review */}
       <div>
@@ -331,26 +403,6 @@ export default function MyProgress() {
           </div>
         ) : (
           <Empty>Your KPI scores show here once your manager rates them in a review.</Empty>
-        )}
-      </div>
-
-      {/* Progress history */}
-      <div>
-        <SectionTitle>Progress history</SectionTitle>
-        {series.length >= 1 ? (
-          <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {series.map((s) => (
-                <div key={s.period} className="text-center">
-                  <div className="text-xs text-[var(--color-ink-faint)]">{periodLabel(s.period).split(' ')[0]}</div>
-                  <div className="text-base font-bold text-[var(--color-ink)]">{s.v}%</div>
-                </div>
-              ))}
-            </div>
-            <Sparkline series={series} />
-          </Card>
-        ) : (
-          <Empty>Your monthly score history builds up as reviews are completed.</Empty>
         )}
       </div>
 
@@ -382,9 +434,10 @@ export default function MyProgress() {
           <Empty>No feedback shared yet.</Empty>
         )}
       </div>
+      </>)}
 
       {/* Next actions */}
-      {actions.length > 0 && (
+      {tab === 'now' && actions.length > 0 && (
         <div>
           <SectionTitle>This month — still to do</SectionTitle>
           <Card className="p-5">
