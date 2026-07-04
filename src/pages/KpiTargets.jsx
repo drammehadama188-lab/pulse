@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Target, Trash2, CalendarClock } from 'lucide-react';
+import { Target, Trash2, CalendarClock, Plus } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { Card, SectionTitle, Button, Field, Input, Select, Pill, Spinner } from '../components/ui.jsx';
 
@@ -76,6 +76,36 @@ export default function KpiTargets() {
     catch (e) { setErr(e.message); }
   }
 
+  // Add a custom KPI (Adama 3 Jul: "I should be able to add a KPI if I want
+  // and it recalculates the weight") — the new KPI takes the weight given and
+  // the catalog KPIs rebalance proportionally so the total stays 100.
+  const [addFor, setAddFor] = useState(null); // { role, roleLabel, label, kind, target, weight, effectiveFrom }
+  const [confirmRemove, setConfirmRemove] = useState(null); // customId pending confirm
+  function openAdd(role, roleLabel) {
+    setErr('');
+    setAddFor({ role, roleLabel, label: '', kind: 'percent', target: '', weight: '10', effectiveFrom: nextYm() });
+  }
+  async function saveAdd() {
+    if (!addFor) return;
+    setSaving(true);
+    setErr('');
+    try {
+      await api('/kpi-custom', { method: 'POST', body: {
+        role: addFor.role, label: addFor.label, kind: addFor.kind,
+        target: addFor.target === '' ? null : Number(addFor.target),
+        weight: addFor.weight === '' ? null : Number(addFor.weight),
+        effectiveFrom: addFor.effectiveFrom,
+      } });
+      setAddFor(null);
+      load();
+    } catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
+  }
+  async function removeCustom(id) {
+    try { await api(`/kpi-custom/${id}`, { method: 'DELETE' }); setConfirmRemove(null); load(); }
+    catch (e) { setErr(e.message); }
+  }
+
   const kpiName = (role, kpi) => {
     const r = (data?.roles || []).find((x) => x.key === role);
     return r?.kpis.find((k) => k.key === kpi)?.label || kpi;
@@ -102,7 +132,13 @@ export default function KpiTargets() {
 
       {(data?.roles || []).map((role) => (
         <Card key={role.key} className="p-5">
-          <SectionTitle>{role.role}</SectionTitle>
+          <div className="flex items-center justify-between">
+            <SectionTitle>{role.role}</SectionTitle>
+            <Button variant="ghost" size="sm" onClick={() => openAdd(role.key, role.role)}>
+              <Plus size={15} className="mr-1" /> Add KPI
+            </Button>
+          </div>
+          <p className="mt-1 text-xs text-gray-400">Weights auto-balance to total 100% — add or reweight a KPI and the others scale around it.</p>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -126,10 +162,25 @@ export default function KpiTargets() {
                       {k.weight}% {k.weight === 0 && <span className="text-xs text-gray-400">(shown, not scored)</span>}
                     </td>
                     <td className="py-2.5 pr-4">
-                      {k.setFrom && <Pill tone="brand" dot>set from {ymLabel(k.setFrom)}</Pill>}
+                      <span className="inline-flex items-center gap-2">
+                        {k.custom && <Pill tone="warning" dot>custom</Pill>}
+                        {k.setFrom && <Pill tone="brand" dot>set from {ymLabel(k.setFrom)}</Pill>}
+                      </span>
                     </td>
                     <td className="py-2.5 text-right">
-                      <Button variant="ghost" size="sm" onClick={() => openDraft(role.key, k)}>Change…</Button>
+                      <span className="inline-flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openDraft(role.key, k)}>Change…</Button>
+                        {k.custom && (confirmRemove === k.customId ? (
+                          <span className="inline-flex items-center gap-1">
+                            <button onClick={() => removeCustom(k.customId)} className="rounded bg-red-600 px-2 py-1 text-xs font-bold text-white">Remove?</button>
+                            <button onClick={() => setConfirmRemove(null)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-500">Keep</button>
+                          </span>
+                        ) : (
+                          <button onClick={() => setConfirmRemove(k.customId)} title="Remove this custom KPI" className="p-1 text-gray-400 hover:text-red-600">
+                            <Trash2 size={15} />
+                          </button>
+                        ))}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -171,6 +222,47 @@ export default function KpiTargets() {
           </div>
         )}
       </Card>
+
+      {/* Add-KPI dialog — a new KPI for the role; weights rebalance around it. */}
+      {addFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => !saving && setAddFor(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center gap-2">
+              <Plus size={18} className="text-emerald-600" />
+              <h2 className="text-lg font-bold text-gray-900">Add a KPI · {addFor.roleLabel}</h2>
+            </div>
+            <div className="space-y-4">
+              <Field label="What is measured">
+                <Input value={addFor.label} placeholder="e.g. Customer visits" onChange={(e) => setAddFor({ ...addFor, label: e.target.value })} />
+              </Field>
+              <div className="grid grid-cols-3 gap-3">
+                <Field label="Type">
+                  <Select value={addFor.kind} onChange={(e) => setAddFor({ ...addFor, kind: e.target.value })}
+                    options={[{ value: 'percent', label: 'Percent' }, { value: 'count', label: 'Count' }]} />
+                </Field>
+                <Field label={addFor.kind === 'percent' ? 'Target (%)' : 'Target (count)'}>
+                  <Input type="number" min="0" value={addFor.target} onChange={(e) => setAddFor({ ...addFor, target: e.target.value })} />
+                </Field>
+                <Field label="Weight (%)">
+                  <Input type="number" min="0" max="90" value={addFor.weight} onChange={(e) => setAddFor({ ...addFor, weight: e.target.value })} />
+                </Field>
+              </div>
+              <Field label="Takes effect from">
+                <Input type="month" min={thisYm()} value={addFor.effectiveFrom} onChange={(e) => setAddFor({ ...addFor, effectiveFrom: e.target.value })} />
+              </Field>
+              <p className="text-xs text-gray-500">
+                The new KPI takes {addFor.weight || '—'}% of the score; the role's other KPIs scale down around it so everything still totals 100%.
+                It shows on scorecards as unmeasured until a data feed exists — nothing is ever faked.
+              </p>
+              {err && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => !saving && setAddFor(null)}>Cancel</Button>
+                <Button onClick={saveAdd} disabled={saving || !addFor.label.trim()}>{saving ? 'Adding…' : 'Add KPI'}</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Change drawer — schedule one KPI's new number. */}
       {draft && (

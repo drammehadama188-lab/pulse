@@ -882,29 +882,83 @@ const KPI_CATALOG = {
     { key: 'team-reviews', label: 'Five-star reviews (team)', kind: 'count', unit: 'reviews', target: null, weight: 0 },
   ] },
 }
-// Resolve a role's plan for a month: catalog defaults unless the CEO scheduled
-// a change effective on or before that month (the latest such change wins).
+// Custom KPIs the CEO added on top of the catalog (Adama 3 Jul: "I should be
+// able to add a KPI if I want and it recalculates the weight"). Stored in
+// data/kpi-custom.json; each takes effect from its month like everything else.
+function customKpisFor(roleKey, month) {
+  return db.read('kpi-custom', [])
+    .filter((c) => c.role === roleKey && c.effectiveFrom <= month)
+}
+// Weights auto-balance to 100 (Adama 3 Jul): custom KPIs keep the weight the
+// CEO gave them; the catalog's scored KPIs share what's left, scaled in
+// proportion to their own weights. Weight-0 (parked) KPIs stay at 0.
+function normalizeWeights(kpis) {
+  const customs = kpis.filter((k) => k.custom && k.weight > 0)
+  const cw = customs.reduce((s, k) => s + k.weight, 0)
+  const base = kpis.filter((k) => !k.custom && k.weight > 0)
+  const bw = base.reduce((s, k) => s + k.weight, 0)
+  const room = Math.max(0, 100 - Math.min(cw, 100))
+  if (bw > 0) {
+    let acc = 0
+    let biggest = null
+    for (const k of base) {
+      k.weight = Math.round((k.weight * room) / bw)
+      acc += k.weight
+      if (!biggest || k.weight > biggest.weight) biggest = k
+    }
+    if (biggest) biggest.weight += room - acc // absorb rounding drift
+  }
+  return kpis
+}
+// Resolve a role's plan for a month: catalog defaults + the CEO's custom KPIs,
+// with any scheduled change effective on or before that month (latest wins),
+// then weights normalized to total 100.
 function kpiPlanFor(roleKey, month) {
   const cat = KPI_CATALOG[roleKey]
   if (!cat) return null
   const entries = db.read('kpi-targets', [])
-  return { role: cat.role, kpis: cat.kpis.map((k) => {
+  const resolve = (k, isCustom) => {
     const eligible = entries
       .filter((e) => e.role === roleKey && e.kpi === k.key && e.effectiveFrom <= month)
       .sort((a, b) => (a.effectiveFrom || '').localeCompare(b.effectiveFrom || ''))
     const set = eligible[eligible.length - 1] || null
     return {
-      ...k,
+      key: k.key, label: k.label, kind: k.kind, unit: k.unit,
       target: set && set.target != null ? set.target : k.target,
       weight: set && set.weight != null ? set.weight : k.weight,
       setFrom: set?.effectiveFrom || null,
+      custom: !!isCustom,
+      customId: isCustom ? k.id : undefined,
     }
-  }) }
+  }
+  const kpis = [
+    ...cat.kpis.map((k) => resolve(k, false)),
+    ...customKpisFor(roleKey, month).map((k) => resolve(k, true)),
+  ]
+  return { role: cat.role, kpis: normalizeWeights(kpis) }
 }
 // One KPI's resolved numbers for a month ({target, weight}, catalog fallback).
 function kpiNumber(roleKey, kpiKey, month) {
   const plan = kpiPlanFor(roleKey, month)
   return plan?.kpis.find((k) => k.key === kpiKey) || null
+}
+// Overlay the resolved plan onto a built scorecard: the normalized weights
+// win, and the CEO's custom KPIs join the card (actual null — nothing feeds
+// them yet, so they show unmeasured, never faked).
+function overlayPlan(kpis, roleKey, month) {
+  const plan = kpiPlanFor(roleKey, month)
+  if (!plan) return kpis
+  const byKey = new Map(plan.kpis.map((k) => [k.key, k]))
+  const out = kpis.map((k) => {
+    const p = byKey.get(k.key)
+    return p ? { ...k, weight: p.weight } : k
+  })
+  for (const p of plan.kpis) {
+    if (p.custom && !out.some((k) => k.key === p.key)) {
+      out.push({ key: p.key, label: p.label, kind: p.kind, target: p.target, weight: p.weight, unit: p.unit, actual: null, custom: true })
+    }
+  }
+  return out
 }
 
 // KPI Targets — CEO-only management (the goals ARE the company's standards).
@@ -919,6 +973,7 @@ app.post('/api/kpi-targets', auth, notViewAs, requireCeo, (req, res) => {
   const { role, kpi, target, weight, effectiveFrom } = req.body || {}
   const cat = KPI_CATALOG[role]
   const def = cat?.kpis.find((k) => k.key === kpi)
+    || db.read('kpi-custom', []).find((c) => c.role === role && c.key === kpi)
   if (!def) return res.status(400).json({ error: 'unknown role or KPI' })
   if (!/^\d{4}-\d{2}$/.test(String(effectiveFrom || ''))) return res.status(400).json({ error: 'effectiveFrom must be YYYY-MM' })
   if (String(effectiveFrom) < todayKey().slice(0, 7)) return res.status(400).json({ error: 'The effective month is in the past — goals change forward, not backward.' })
@@ -948,6 +1003,48 @@ app.delete('/api/kpi-targets/:id', auth, notViewAs, requireCeo, (req, res) => {
   db.write('kpi-targets', all)
   res.json({ ok: true })
 })
+// Add a custom KPI to a role (Adama 3 Jul) — it joins the scorecard from its
+// effective month with the weight given; the catalog KPIs rebalance around it.
+app.post('/api/kpi-custom', auth, notViewAs, requireCeo, (req, res) => {
+  const { role, label, kind, unit, target, weight, effectiveFrom } = req.body || {}
+  if (!KPI_CATALOG[role]) return res.status(400).json({ error: 'unknown role' })
+  const name = String(label || '').trim()
+  if (!name) return res.status(400).json({ error: 'Give the KPI a name.' })
+  if (!['count', 'percent'].includes(kind)) return res.status(400).json({ error: 'kind must be count or percent' })
+  if (!/^\d{4}-\d{2}$/.test(String(effectiveFrom || ''))) return res.status(400).json({ error: 'effectiveFrom must be YYYY-MM' })
+  if (String(effectiveFrom) < todayKey().slice(0, 7)) return res.status(400).json({ error: 'The effective month is in the past.' })
+  const t = Number(target)
+  const w = Number(weight)
+  if (!Number.isFinite(t) || t < 0) return res.status(400).json({ error: 'Target must be a number ≥ 0.' })
+  if (!Number.isFinite(w) || w < 0 || w > 90) return res.status(400).json({ error: 'Weight must be 0–90 so the other KPIs keep room.' })
+  const key = 'c-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
+  const all = db.read('kpi-custom', [])
+  if (all.some((c) => c.role === role && c.key === key) || KPI_CATALOG[role].kpis.some((k) => k.key === key)) {
+    return res.status(409).json({ error: 'A KPI with this name already exists for the role.' })
+  }
+  const entry = {
+    id: crypto.randomUUID(),
+    role, key, label: name, kind,
+    unit: String(unit || (kind === 'percent' ? '%' : '')).trim(),
+    target: t, weight: w,
+    effectiveFrom: String(effectiveFrom),
+    addedBy: req.user.username,
+    addedAt: new Date().toISOString(),
+  }
+  all.push(entry)
+  db.write('kpi-custom', all)
+  res.json({ entry })
+})
+// Remove a custom KPI (CEO). Its scheduled target/weight changes go with it.
+app.delete('/api/kpi-custom/:id', auth, notViewAs, requireCeo, (req, res) => {
+  const all = db.read('kpi-custom', [])
+  const idx = all.findIndex((c) => c.id === req.params.id)
+  if (idx === -1) return res.status(404).json({ error: 'not found' })
+  const [removed] = all.splice(idx, 1)
+  db.write('kpi-custom', all)
+  db.write('kpi-targets', db.read('kpi-targets', []).filter((e) => !(e.role === removed.role && e.kpi === removed.key)))
+  res.json({ ok: true })
+})
 // Admin reads the resolved targets here (shared key, no session) — how a goal
 // set in Pulse ("retention 85% from August") shows up on admin's pages.
 app.get('/api/integrations/kpi-targets', (req, res) => {
@@ -967,20 +1064,20 @@ function scorecardFor(u, salesActual) {
   if (key === 'sales') {
     const s = N('sales', { target: 5, weight: 40 }), o = N('online', { target: 85, weight: 20 })
     const r = N('retention', { target: 80, weight: 25 }), v = N('reviews', { target: 3, weight: 15 })
-    return { role: 'Sales agent', kpis: [
+    return { role: 'Sales agent', kpis: overlayPlan([
       { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u.target) || s.target, weight: s.weight, unit: 'sales', actual: salesActual ?? null },
       { key: 'online', label: 'Trackers online', kind: 'percent', target: o.target, weight: o.weight, unit: '%', actual: null },
       { key: 'retention', label: 'Customer retention', kind: 'percent', target: r.target, weight: r.weight, unit: '%', actual: null },
       { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: v.target, weight: v.weight, unit: 'reviews', actual: null },
-    ] }
+    ], 'sales', MONTH) }
   }
   if (key === 'customer-service') {
     const c = N('cases', { target: 85, weight: 40 }), i = N('install', { target: 95, weight: 35 }), st = N('stock', { target: 100, weight: 25 })
-    return { role: 'Customer Service', kpis: [
+    return { role: 'Customer Service', kpis: overlayPlan([
       { key: 'cases', label: 'Case resolution', kind: 'percent', target: c.target, weight: c.weight, unit: '%', actual: null },
       { key: 'install', label: 'Installation within 3 days', kind: 'percent', target: i.target, weight: i.weight, unit: '%', actual: null },
       { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: st.target, weight: st.weight, unit: '% verified', actual: null },
-    ] }
+    ], 'customer-service', MONTH) }
   }
   // Team-lead member-card kept as-is (the canonical lead scorecard lives on
   // My Progress and resolves through the catalog's team-lead entry there).
@@ -2791,6 +2888,9 @@ app.get('/api/my/progress', auth, async (req, res) => {
       { key: 'team-reviews', label: 'Five-star reviews (team)', kind: 'count', target: kTV.target, weight: kTV.weight, unit: 'reviews', actual: null },
     ] }
   }
+
+  // Normalized weights + any CEO-added custom KPIs join the card (Adama 3 Jul).
+  if (scorecard && scKey) scorecard.kpis = overlayPlan(scorecard.kpis, scKey, CUR)
 
   // Goals mirror the scorecard (Adama 2 Jul): a KPI is the measure, the goal
   // is the actionable objective with the number. Professional register. The
