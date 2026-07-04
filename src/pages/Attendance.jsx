@@ -11,9 +11,12 @@ import { DAY_FULL, WEEK_ORDER, weekDays, ymd } from '../lib/schedule.js'
 // team's weekly shift grid (times + status per day), can log worked/off/sick/leave
 // on any day, and set each person's weekly schedule.
 export default function Attendance({ scope }) {
-  const { isManager } = useAuth()
+  const { hasPower } = useAuth()
   if (scope === 'team') return <TeamHours />
-  return isManager ? <ManagerHours /> : <MyHours />
+  // MY WORK stays personal: the company-wide grid belongs to the HR control
+  // centre (Attendance under PEOPLE). Holding the Team power alone no longer
+  // turns "My Hours" into a manager page — leads manage via MY TEAM instead.
+  return hasPower('hr') ? <ManagerHours /> : <MyHours />
 }
 
 // Shift-block tones: a defined card with a solid colour left-accent bar so blocks
@@ -757,15 +760,17 @@ function ManagerHours() {
   )
 }
 
-// ─────────────────────── MY TEAM · team schedule (read-only) ─────────────────
+// ─────────────────────── MY TEAM · team schedule ─────────────────────────────
 // A team lead's scoped view of their own team's week — shifts, attendance and
-// leave. Read-only: editing schedules stays with the 'team' power (HR), so no
+// leave. Editing is team-scoped too (PUT /api/team/schedules — the lead lane,
+// like Team Requests deciding leave), so no company-wide power is needed; the
 // "Edit schedules" button and cells don't open the editor. Reuses the same
 // summary + week grid as the manager view; data comes from ?scope=team.
 function TeamHours() {
   const w = useWeekGrid('team')
   const people = w.data?.people || []
   const today = w.data?.today
+  const [editorOpen, setEditorOpen] = useState(false)
 
   return (
     <div className="space-y-6">
@@ -774,8 +779,20 @@ function TeamHours() {
           <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Team Schedule</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">Your team's shifts, attendance &amp; leave</p>
         </div>
-        <WeekNav days={w.data?.days} isThis={w.isThis} onPrev={() => w.shift(-1)} onNext={() => w.shift(1)} />
+        <div className="flex items-center gap-2">
+          <WeekNav days={w.data?.days} isThis={w.isThis} onPrev={() => w.shift(-1)} onNext={() => w.shift(1)} />
+          <Button icon={CalendarCog} onClick={() => setEditorOpen(true)} disabled={!people.length}>Edit schedules</Button>
+        </div>
       </div>
+
+      {editorOpen && (
+        <TeamScheduleEditor
+          people={people}
+          endpoint="/team/schedules"
+          onClose={() => setEditorOpen(false)}
+          onSaved={() => { setEditorOpen(false); w.reload() }}
+        />
+      )}
 
       {w.data && people.length > 0 && <AttendanceSummary people={people} days={w.data.days} today={today} />}
 
@@ -855,7 +872,7 @@ function summarizeSchedule(schedule) {
   return `${days} • ${first.start}–${first.end}`
 }
 
-function TeamScheduleEditor({ people, onClose, onSaved }) {
+function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved }) {
   const [days, setDays] = useState({ 1: true, 2: true, 3: true, 4: true, 5: true, 6: false, 0: false })
   const [start, setStart] = useState('09:00')
   const [end, setEnd] = useState('17:00')
@@ -893,7 +910,7 @@ function TeamScheduleEditor({ people, onClose, onSaved }) {
       // Each selected person gets this schedule effective from startDate; earlier
       // weeks keep their existing schedule automatically (server is date-aware).
       for (const u of selected) schedules[u] = { from: startDate, days: dayMap }
-      await api('/schedules', { method: 'PUT', body: { schedules } })
+      await api(endpoint, { method: 'PUT', body: { schedules } })
       onSaved()
     } catch (e) { alert(e.message) } finally { setSaving(false) }
   }

@@ -20,6 +20,7 @@ import Pay from './pages/Pay.jsx'
 import Profile from './pages/Profile.jsx'
 import ChangePassword from './pages/ChangePassword.jsx'
 import Approvals from './pages/manager/Approvals.jsx'
+import Reports from './pages/Reports.jsx'
 import Team from './pages/manager/Team.jsx'
 import HRTeam from './pages/departments/HRTeam.jsx'
 import EmployeeProfile from './pages/EmployeeProfile.jsx'
@@ -105,6 +106,8 @@ export default function App() {
         {/* MANAGEMENT */}
         <Route path="/reviews" element={<RequireAuth power="hr"><ReviewsWarnings /></RequireAuth>} />
         <Route path="/requests" element={<RequireAuth power="approvals"><Approvals /></RequireAuth>} />
+        {/* Reports self-composes on the server from the viewer's powers. */}
+        <Route path="/reports" element={<RequireAuth><Reports /></RequireAuth>} />
         <Route path="/records" element={<RequireAuth power="hr"><HRTeam only={['warnings']} title="Employee Records" subtitle="Warnings, disciplinary actions and notes" /></RequireAuth>} />
         {/* PAYROLL */}
         <Route path="/payroll" element={<RequireAuth power="payroll"><HRTeam only={['payroll']} title="Payroll" subtitle="Salaries, commission and payroll history" /></RequireAuth>} />
@@ -132,8 +135,8 @@ export default function App() {
         <Route path="/profile" element={<Navigate to="/me" replace />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/approvals" element={<RequireAuth power="approvals"><Approvals /></RequireAuth>} />
-        <Route path="/team" element={<RequireAuth power="team"><Team /></RequireAuth>} />
-        <Route path="/staff/:username" element={<RequireAuth power="team"><StaffMember /></RequireAuth>} />
+        <Route path="/team" element={<RequireAuth power="staffadmin"><Team /></RequireAuth>} />
+        <Route path="/staff/:username" element={<RequireAuth power="staffadmin"><StaffMember /></RequireAuth>} />
 
         {/* Back-compat: the old bundled HR page + its deep links still resolve. */}
         <Route path="/dept/hr" element={<RequireAuth power="hr"><HRTeam /></RequireAuth>} />

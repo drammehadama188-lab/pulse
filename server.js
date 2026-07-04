@@ -214,7 +214,7 @@ function publicUser(u) {
   // resolved powers ride along so the UI can gate sections client-side;
   // the server re-checks every request regardless. isTeamLead unlocks the MY
   // TEAM nav section (gated again server-side on /api/team/*).
-  return { ...rest, powers: powersFor(u), isTeamLead: leadsATeam(u) }
+  return { ...rest, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u) }
 }
 function findUser(username) {
   return seedUsers().find((u) => u.username === username.toLowerCase())
@@ -324,6 +324,14 @@ function canSub(u, power, sub) {
   if (!(SUBPOWERS[power] || []).some(([k]) => k === sub)) return false
   const stored = u.permissionSubs?.[power]
   return !Array.isArray(stored) || stored.includes(sub)
+}
+// True when someone's Leave-approvals grant reaches OUTSIDE their own team —
+// only then does the company Approvals page show anything Team Requests
+// doesn't. Drives the nav dedupe (Adama 3 Jul).
+function approvalsBeyondTeam(u) {
+  if (!can(u, 'approvals')) return false
+  const team = teamUsernameSet(u.username)
+  return [...powerScopeSet(u, 'approvals')].some((x) => !team.has(x))
 }
 // HR + payroll records are keyed by display NAME in places.
 function hrNamesSet(holder) {
@@ -714,6 +722,7 @@ app.get('/api/users', auth, requirePower('team'), (req, res) => {
       permissionScopes: u.permissionScopes || {}, // named sub-toggles: who each power affects
       permissionSubs: u.permissionSubs || {}, // capability sub-toggles: what they can do inside it
       isTeamLead: leadsATeam(u), // unlocks MY TEAM nav (also when viewing-as them)
+      approvalsBeyondTeam: approvalsBeyondTeam(u), // nav dedupe: company Requests vs Team Requests
       suspended: !!u.suspended,
     }))
   res.json({ users })
@@ -1163,6 +1172,29 @@ app.put('/api/schedules', auth, requireSub('team', 'schedules'), notViewAs, (req
   res.json({ count })
 })
 
+// MY TEAM: a team lead assigns schedules to their OWN team members, without
+// the company-wide Team power (same lead lane as /api/team/leave). Targets
+// outside the lead's team are silently skipped, like the manager route above.
+app.put('/api/team/schedules', auth, notViewAs, (req, res) => {
+  const teamSet = teamUsernameSet(req.user.username)
+  if (teamSet.size === 0) return res.status(403).json({ error: 'not-a-team-lead' })
+  const incoming = req.body?.schedules || {}
+  const all = db.read('schedules', {})
+  let count = 0
+  for (const [username, payload] of Object.entries(incoming)) {
+    if (!teamSet.has(username)) continue
+    const from = /^\d{4}-\d{2}-\d{2}$/.test(payload?.from) ? payload.from : todayKey()
+    const days = cleanWeek(payload?.days || payload)
+    const entries = scheduleEntries(all[username]).filter((e) => e.from !== from)
+    entries.push({ from, days })
+    entries.sort((a, b) => (a.from < b.from ? -1 : 1))
+    all[username] = entries
+    count++
+  }
+  db.write('schedules', all)
+  res.json({ count })
+})
+
 // manager: set one person's weekly roster (in/off + hours per weekday)
 app.put('/api/schedules/:username', auth, requireSub('team', 'schedules'), notViewAs, (req, res) => {
   const target = findUser(req.params.username)
@@ -1172,6 +1204,108 @@ app.put('/api/schedules/:username', auth, requireSub('team', 'schedules'), notVi
   all[target.username] = schedule
   db.write('schedules', all)
   res.json({ username: target.username, schedule })
+})
+
+// ---------- Reports (Adama 3 Jul) ----------
+// The month's story: who came to work (and who didn't, with the exact days),
+// coaching word-for-word, who's doing what (sales/review/warnings), leave and
+// payroll cost. Sections compose from the VIEWED user's powers + named scopes.
+app.get('/api/reports/month', auth, (req, res) => {
+  const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : todayKey().slice(0, 7)
+  const days = monthKeys(month)
+  const todayK = todayKey()
+  const u = req.user
+  const out = { month }
+  const nameOf = (un) => seedUsers().find((x) => x.username === un)?.name || un
+
+  // WHO CAME TO WORK — Team power, named scope
+  if (can(u, 'team')) {
+    const scope = powerScopeSet(u, 'team')
+    const attAll = db.read('attendance', [])
+    const leaveAll = db.read('leave', [])
+    const schedules = db.read('schedules', {})
+    out.attendance = seedUsers().filter((x) => scope.has(x.username)).map((p) => {
+      const stored = schedules[p.username]
+      let scheduled = 0, worked = 0, late = 0, onLeave = 0
+      const absentDays = []
+      for (const k of days) {
+        if (k > todayK) break
+        const shift = effectiveWeek(stored, k)[dowOfKey(k)]
+        if (!shift) continue
+        if (leaveOnDate(leaveAll, p.username, k)) { onLeave++; continue }
+        scheduled++
+        const a = attAll.find((r) => r.username === p.username && r.date === k)
+        if (a?.checkIn) { worked++; if (a.late) late++ }
+        else if (k < todayK) absentDays.push(k)
+      }
+      const pct = scheduled ? Math.round((worked / scheduled) * 100) : null
+      return { username: p.username, name: p.name, department: p.department, scheduled, worked, late, onLeave, absent: absentDays.length, absentDays, pct }
+    })
+  }
+
+  // COACHING — when and what was said (Team power, named scope; own included)
+  if (can(u, 'team')) {
+    const scope = powerScopeSet(u, 'team')
+    out.coaching = db.read('coaching', [])
+      .filter((c) => scope.has(c.targetUsername) && ((c.datetime || c.createdAt) || '').slice(0, 7) === month)
+      .sort((a, b) => ((a.datetime || a.createdAt) < (b.datetime || b.createdAt) ? 1 : -1))
+      .map((c) => ({ date: ((c.datetime || c.createdAt) || '').slice(0, 10), person: nameOf(c.targetUsername), type: c.type, title: c.title, note: c.note, by: c.createdBy }))
+  }
+
+  // LEAVE — Approvals power, named scope
+  if (can(u, 'approvals')) {
+    const SICK_ALLOWANCE = 5 // Blue Book: 5 paid sick days/yr (same as /api/leave/mine)
+    const scope = powerScopeSet(u, 'approvals')
+    const leaveAll = db.read('leave', []).filter((l) => l.status === 'approved')
+    out.leave = seedUsers().filter((x) => scope.has(x.username)).map((p) => {
+      const mine = leaveAll.filter((l) => l.username === p.username)
+      const inMonth = mine.filter((l) => (l.from || '').slice(0, 7) <= month && (l.to || '').slice(0, 7) >= month)
+      const byType = {}
+      for (const l of inMonth) byType[l.type || 'Annual'] = (byType[l.type || 'Annual'] || 0) + daysBetween(l.from, l.to)
+      const taken = Object.values(byType).reduce((s, n) => s + n, 0)
+      const sickUsed = mine
+        .filter((l) => (l.type || '') === 'Sick' && (l.from || '').slice(0, 4) === month.slice(0, 4))
+        .reduce((s, l) => s + daysBetween(l.from, l.to), 0)
+      const upcoming = mine.filter((l) => l.from > todayK).map((l) => ({ type: l.type, from: l.from, to: l.to }))
+      return { username: p.username, name: p.name, taken, byType, sickUsed, sickAllowance: SICK_ALLOWANCE, upcoming }
+    })
+  }
+
+  // WHO'S DOING WHAT — hr.performance, named scope: sales + review + coaching + warnings
+  if (canSub(u, 'hr', 'performance')) {
+    const names = hrNamesSet(u)
+    const salesAll = db.read('agent-sales', {})
+    const reviewsAll = db.read('reviews', {})
+    const warnAll = db.read('warnings', [])
+    const coach = db.read('coaching', [])
+    out.performance = [...names].sort().map((name) => {
+      const un = seedUsers().find((x) => x.name === name)?.username
+      const m = salesAll[name]?.months?.[month]
+      const rev = (Array.isArray(reviewsAll[name]) ? reviewsAll[name] : []).find((r) => r.period === month) || null
+      const warns = (Array.isArray(warnAll) ? warnAll : []).filter((w) => w.agent === name)
+      const coachingCount = coach.filter((c) => c.targetUsername === un && ((c.datetime || c.createdAt) || '').slice(0, 7) === month).length
+      return {
+        name,
+        sales: m ? m.sales : null,
+        revenue: m ? m.revenue : null,
+        customers: m?.customers || [],
+        reviewScore: rev?.score ?? null,
+        reviewStatus: rev?.status || null,
+        coachingCount,
+        warnings: warns.map((w) => ({ type: w.type, reason: w.reason, date: w.date })),
+      }
+    })
+  }
+
+  // PAYROLL COST — Payroll power, named scope
+  if (can(u, 'payroll')) {
+    const scope = powerScopeSet(u, 'payroll')
+    const scopeNames = new Set(seedUsers().filter((x) => scope.has(x.username)).map((x) => x.name))
+    const rows = db.read('payroll', []).filter((r) => r.period === month && scopeNames.has(r.name))
+    out.payroll = rows.map((r) => ({ name: r.name, base: Number(r.base) || 0, commission: Number(r.commission) || 0, total: Number(r.total) || 0 }))
+  }
+
+  res.json(out)
 })
 
 // ---------- leave ----------
@@ -2514,19 +2648,56 @@ app.get('/api/my/progress', auth, async (req, res) => {
     ] }
   } else if (scKey === 'team-lead') {
     const teamAtt = teamAttendancePct(u) // real now — from Pulse attendance
+    // Month-one ramp (Adama 2 Jul): keep the standard, ramp the man. Score
+    // sales + attendance only; coaching stays an activity, NOT a scored KPI;
+    // Admin-fed KPIs stay parked. Team target 10 with today's two confirmed
+    // sellers — snaps to the full 15 standard after ~3 months.
     scorecard = { role: 'Team Lead', kpis: [
-      { key: 'team-target', label: 'Team hits its target', kind: 'percent', target: 100, weight: 45, unit: '% of team goal', actual: null },
-      { key: 'team-active', label: 'Whole team contributing', kind: 'percent', target: 100, weight: 25, unit: '% on target', actual: null },
-      { key: 'coaching', label: 'Coaching & check-ins', kind: 'percent', target: 100, weight: 20, unit: '% done', actual: null },
-      { key: 'team-attendance', label: 'Team attendance', kind: 'percent', target: 95, weight: 10, unit: '%', actual: teamAtt },
+      { key: 'team-sales', label: 'Team tracker sales', kind: 'count', target: 12, weight: 50, unit: 'sales', actual: null },
+      { key: 'team-active', label: 'Whole team contributing', kind: 'percent', target: 100, weight: 25, unit: '% of sellers with a sale', actual: null },
+      { key: 'team-attendance', label: 'Team attendance', kind: 'percent', target: 90, weight: 25, unit: '%', actual: teamAtt },
+      // Visible on the card but unscored until Admin feeds them — weights get
+      // decided THEN, with real numbers in hand (Adama 3 Jul).
+      { key: 'team-retention', label: 'Team retention', kind: 'percent', target: 80, weight: 0, unit: '%', actual: null },
+      { key: 'team-online', label: 'Trackers online', kind: 'percent', target: 85, weight: 0, unit: '%', actual: null },
+      { key: 'team-reviews', label: 'Five-star reviews (team)', kind: 'count', target: null, weight: 0, unit: 'reviews', actual: null },
     ] }
   }
+
+  // Goals mirror the scorecard (Adama 2 Jul): a KPI is the measure, the goal
+  // is the actionable objective with the number. Professional register. The
+  // manager's locked-review checklist rides along separately as additions.
+  const GOAL_TEXT = {
+    sales: (t) => `Close your ${t} tracker sales for the month.`,
+    online: (t) => `Keep your customers' trackers online — ${t}% or above.`,
+    retention: (t) => `Keep customer retention at ${t}% or above.`,
+    reviews: (t) => `Bring in ${t} five-star Google reviews.`,
+    cases: (t) => `Resolve ${t}% of customer cases.`,
+    install: (t) => `Complete ${t}% of installations within 3 days.`,
+    stock: () => 'Keep tracker stock fully accounted for.',
+    'team-sales': (t) => `Deliver the team's overall target of ${t} trackers this month.`,
+    'team-retention': (t) => `Keep customer retention at ${t}% or above.`,
+    'team-online': (t) => `Keep the fleet's trackers online — ${t}% or above.`,
+    'team-reviews': () => 'Bring in five-star Google reviews from the team.',
+    'team-active': () => 'Keep every seller contributing — no zero months on the team.',
+    'team-attendance': (t) => `Keep team attendance at ${t}% or above.`,
+  }
+  const goals = (scorecard?.kpis || []).map((k) => ({
+    key: k.key,
+    text: (GOAL_TEXT[k.key] || ((t) => `${k.label}: ${t}${k.unit === '%' ? '%' : ''}`))(k.target),
+    target: k.target,
+    unit: k.unit,
+    actual: k.actual,
+    // null = not measurable yet (Connecting to Admin) — never faked
+    done: k.actual == null ? null : k.actual >= k.target,
+  }))
 
   res.json({
     name,
     role: person?.role || u?.title || '',
     department: person?.type || u?.department || '',
     manager: profile.manager || '',
+    goals,
     liveScore: Number.isFinite(sc) ? sc : null,
     liveStatus: profile.performanceStatus || '',
     liveNote: profile.performanceNote || '',

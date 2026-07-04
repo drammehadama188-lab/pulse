@@ -78,7 +78,7 @@ function statusLine({ score, goalPct, series }) {
     if (score >= 70) return { tone: 'green', text: `You're on track this month. Keep it up.` }
     return { tone: 'amber', text: `There's room to improve this month — talk to your manager about your goals.` }
   }
-  return { tone: 'blue', text: `Your progress will show here as your manager sets your goals and reviews your work.` }
+  return { tone: 'blue', text: `Your score builds here as your KPIs connect and your monthly reviews are locked.` }
 }
 
 const TONE = {
@@ -119,16 +119,25 @@ export default function MyProgress() {
   const b = band(score)
   const st = data.liveStatus || latest?.status || statusFor(score).label
 
-  // Goals: prefer the locked review's KPI checklist; always add the live sales
-  // goal as its own row when this person carries real sales data.
+  // Goals mirror the scorecard (server-derived — Adama 2 Jul: "if you have the
+  // KPIs you have the goals"). The locked review's checklist rides along as the
+  // manager's own additions; the live sales row stays for people with sales
+  // data but no scorecard.
+  const derivedGoals = data.goals || []
   const kpiGoals = (latest?.kpis || []).map((k) => ({ label: k.label, done: !!k.done }))
-  const salesGoal = (liveSales && liveSales.target)
+  const salesGoal = (liveSales && liveSales.target && !derivedGoals.some((g) => g.key === 'sales'))
     ? { label: data.kpi || `Close ${liveSales.target} tracker sales`, value: liveSales.sales, target: liveSales.target }
     : null
 
-  // Goal completion % for the status row — from the checklist, else from sales.
+  // Goal completion % for the status row — measurable derived goals first,
+  // then the checklist, then sales. Unmeasurable (Connecting) never counts.
   let goalPct = null, goalText = null
-  if (kpiGoals.length) {
+  const measurable = derivedGoals.filter((g) => g.done != null)
+  if (measurable.length) {
+    const done = measurable.filter((g) => g.done).length
+    goalPct = Math.round((done / measurable.length) * 100)
+    goalText = `${done}/${measurable.length}`
+  } else if (kpiGoals.length) {
     const done = kpiGoals.filter((g) => g.done).length
     goalPct = Math.round((done / kpiGoals.length) * 100)
     goalText = `${done}/${kpiGoals.length}`
@@ -214,8 +223,26 @@ export default function MyProgress() {
       {/* My Goals checklist */}
       <div>
         <SectionTitle>My goals</SectionTitle>
-        {(kpiGoals.length || salesGoal) ? (
+        {(derivedGoals.length || kpiGoals.length || salesGoal) ? (
           <div className="space-y-2.5">
+            {derivedGoals.map((g) => (
+              <Card key={g.key} className="flex items-center gap-3 p-4">
+                {g.done === true
+                  ? <CircleCheck size={20} className="shrink-0 text-emerald-500" />
+                  : <Circle size={20} className={`shrink-0 ${g.done === false ? 'text-amber-500' : 'text-[var(--color-ink-faint)]'}`} />}
+                <span className={`flex-1 text-sm font-semibold ${g.done === true ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>{g.text}</span>
+                {g.done === true && <Pill tone="good">Done</Pill>}
+                {g.done === false && (
+                  <span className="shrink-0 text-sm font-bold text-[var(--color-ink)]">
+                    {g.actual}{g.unit === '%' ? '%' : ''} / {g.target}{g.unit === '%' ? '%' : ''}
+                  </span>
+                )}
+                {g.done == null && <Pill tone="rest" dot>Connecting to Admin</Pill>}
+              </Card>
+            ))}
+            {kpiGoals.length > 0 && derivedGoals.length > 0 && (
+              <p className="pt-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink-faint)]">Added by your manager</p>
+            )}
             {salesGoal && (
               <Card className="flex items-center gap-3 p-4">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--color-brand)]" style={{ background: 'var(--color-brand-50)' }}><TrendingUp size={16} /></span>
@@ -237,7 +264,7 @@ export default function MyProgress() {
             ))}
           </div>
         ) : (
-          <Empty>Your manager hasn't set your goals yet. They'll appear here once added.</Empty>
+          <Empty>Your goals come from your role's KPIs and will appear here.</Empty>
         )}
         {data.weeklyTarget && <p className="mt-2 text-xs text-[var(--color-ink-faint)]">Weekly focus: {data.weeklyTarget}</p>}
       </div>
