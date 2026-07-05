@@ -259,12 +259,14 @@ export default function MyProgress() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {scKpis.map((k) => {
               const g = derivedGoals.find((x) => x.key === k.key)
-              const a = k.actual == null ? null : Math.min(100, Math.round((k.actual / k.target) * 100))
+              // Null target = not set yet (team reviews until Adama picks one):
+              // show the real count, but no attainment %, no bar, never "Done".
+              const a = k.actual == null || k.target == null ? null : Math.min(100, Math.round((k.actual / k.target) * 100))
               // Attendance KPI colours by absolute % (green ≥95 / amber 80–94 / red <80);
               // every other KPI keeps the attainment-vs-target band.
               const isAttendance = (k.key || '').includes('attendance')
               const kb = isAttendance ? attendanceBand(k.actual) : band(a)
-              const met = k.actual != null && k.actual >= k.target
+              const met = k.actual != null && k.target != null && k.actual >= k.target
               return (
                 <Card key={k.key} className="p-4">
                   <div className="flex items-start justify-between gap-2">
@@ -279,12 +281,17 @@ export default function MyProgress() {
                   ) : (
                     <>
                       <div className="mt-2 flex items-end justify-between">
-                        <span className={`text-2xl font-extrabold ${kb.text}`}>{k.kind === 'percent' ? `${k.actual}%` : `${k.actual}/${k.target}`}</span>
+                        <span className={`text-2xl font-extrabold ${kb.text}`}>{k.kind === 'percent' ? `${k.actual}%` : k.target == null ? `${k.actual}` : `${k.actual}/${k.target}`}</span>
                         {met
                           ? <Pill tone="good">Done</Pill>
-                          : <span className="text-xs text-[var(--color-ink-faint)]">target {k.kind === 'percent' ? `≥ ${k.target}%` : k.target}</span>}
+                          : <span className="text-xs text-[var(--color-ink-faint)]">{k.target == null ? 'no target yet' : `target ${k.kind === 'percent' ? `≥ ${k.target}%` : k.target}`}</span>}
                       </div>
-                      <div className="mt-2"><Bar pct={a} tone={kb.bar} /></div>
+                      {/* The counts behind the % (Adama 4 Jul: numbers, not
+                          only percentage) — e.g. "1 on time of 6 · 5 open past SLA". */}
+                      {k.detail && (
+                        <div className="mt-1 text-xs font-medium text-[var(--color-ink-soft)]">{k.detail}</div>
+                      )}
+                      {a != null && <div className="mt-2"><Bar pct={a} tone={kb.bar} /></div>}
                     </>
                   )}
                 </Card>

@@ -874,7 +874,7 @@ const KPI_CATALOG = {
   ] },
   'team-lead': { role: 'Team Lead', kpis: [
     { key: 'team-sales', label: 'Team tracker sales', kind: 'count', unit: 'sales', target: 12, weight: 50 },
-    { key: 'team-active', label: 'Whole team contributing', kind: 'percent', unit: '% of sellers with a sale', target: 100, weight: 25 },
+    { key: 'team-active', label: 'Whole team contributing', kind: 'percent', unit: '% of agents with a sale', target: 100, weight: 25 },
     { key: 'team-attendance', label: 'Team attendance', kind: 'percent', unit: '%', target: 90, weight: 25 },
     // Parked until Admin feeds them — visible, weight 0 (Adama 3 Jul).
     { key: 'team-retention', label: 'Team retention', kind: 'percent', unit: '%', target: 80, weight: 0 },
@@ -2794,15 +2794,16 @@ async function fetchAdminWonCount(name, month) {
     return row ? Number(row.won) || 0 : 0
   } catch { return null }
 }
+// The percent helpers return the WHOLE row (Adama 4 Jul: "I like to see
+// numbers, not only percentage") — the scorecard shows the % plus the real
+// counts behind it. null = Admin unreachable / no row.
 async function fetchAdminRetention(name, month) {
   const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
   if (!base || !key) return null
   try {
     const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/retention?month=${month}`, { headers: { 'x-pulse-key': key } })
     if (!resp.ok) return null
-    const data = await resp.json()
-    const row = (data.agents || []).find((a) => a.name === name)
-    return row && typeof row.retentionPct === 'number' ? row.retentionPct : null
+    return ((await resp.json()).agents || []).find((a) => a.name === name) || null
   } catch { return null }
 }
 async function fetchAdminStock(month) {
@@ -2812,7 +2813,30 @@ async function fetchAdminStock(month) {
     const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/stock?month=${month}`, { headers: { 'x-pulse-key': key } })
     if (!resp.ok) return null
     const data = await resp.json()
-    return typeof data.accountabilityPct === 'number' ? data.accountabilityPct : null
+    return typeof data.accountabilityPct === 'number' ? data : null
+  } catch { return null }
+}
+// Case-resolution from Admin (Ya Fatou's KPI): resolved on time ÷
+// (resolved that month + open cases past their SLA). null = unreachable.
+async function fetchAdminCases(name, month) {
+  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
+  if (!base || !key) return null
+  try {
+    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/cases?month=${month}`, { headers: { 'x-pulse-key': key } })
+    if (!resp.ok) return null
+    return ((await resp.json()).agents || []).find((a) => a.name === name) || null
+  } catch { return null }
+}
+// Installations-within-3-days from Admin (company-wide — Ya Fatou coordinates
+// the process): onTime ÷ (completed this month + open past 3 days).
+async function fetchAdminInstall(month) {
+  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
+  if (!base || !key) return null
+  try {
+    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/install?month=${month}`, { headers: { 'x-pulse-key': key } })
+    if (!resp.ok) return null
+    const data = await resp.json()
+    return typeof data.installPct === 'number' || data.completed != null ? data : null
   } catch { return null }
 }
 // Trackers-online rate for the agent's BOOK (live snapshot from Admin — same
@@ -2823,8 +2847,7 @@ async function fetchAdminOnline(name) {
   try {
     const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/online`, { headers: { 'x-pulse-key': key } })
     if (!resp.ok) return null
-    const row = ((await resp.json()).agents || []).find((a) => a.name === name)
-    return row && typeof row.pct === 'number' ? row.pct : null
+    return ((await resp.json()).agents || []).find((a) => a.name === name) || null
   } catch { return null }
 }
 // Verified 5-star Google reviews credited to the agent this month. An agent
@@ -2837,6 +2860,17 @@ async function fetchAdminReviews(name, month) {
     if (!resp.ok) return null
     const row = ((await resp.json()).agents || []).find((a) => a.name === name)
     return row ? Number(row.verified) || 0 : 0
+  } catch { return null }
+}
+// Whole feed, unfiltered — the Team Lead card aggregates ACROSS the team's
+// books, so it needs every agent row, not one name. null = unreachable.
+async function fetchAdminFeed(pathWithQuery) {
+  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
+  if (!base || !key) return null
+  try {
+    const resp = await fetch(`${base.replace(/\/$/, '')}${pathWithQuery}`, { headers: { 'x-pulse-key': key } })
+    if (!resp.ok) return null
+    return await resp.json()
   } catch { return null }
 }
 app.get('/api/my/progress', auth, async (req, res) => {
@@ -2879,42 +2913,98 @@ app.get('/api/my/progress', auth, async (req, res) => {
     // All four actuals now flow from Admin (connected 4 Jul): retention =
     // renewal events on the agent's book, online = live book rate, reviews =
     // verified 5-star log. Unreachable → null ("Connecting to Admin").
-    const retentionPct = await fetchAdminRetention(name, CUR)
-    const onlinePct = await fetchAdminOnline(name)
+    // Percent KPIs carry a `detail` line — the counts behind the % (Adama
+    // 4 Jul: "I like to see numbers, not only percentage").
+    const ret = await fetchAdminRetention(name, CUR)
+    const onl = await fetchAdminOnline(name)
     const reviewsCount = await fetchAdminReviews(name, CUR)
     const kS = kpiN('sales', 5, 40), kO = kpiN('online', 85, 20), kR = kpiN('retention', 80, 25), kV = kpiN('reviews', 3, 15)
     scorecard = { role: 'Sales agent', kpis: [
       { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u?.target) || kS.target, weight: kS.weight, unit: 'sales', actual: salesActual },
-      { key: 'online', label: 'Trackers online', kind: 'percent', target: kO.target, weight: kO.weight, unit: '%', actual: onlinePct },
-      { key: 'retention', label: 'Customer retention', kind: 'percent', target: kR.target, weight: kR.weight, unit: '%', actual: retentionPct },
+      { key: 'online', label: 'Trackers online', kind: 'percent', target: kO.target, weight: kO.weight, unit: '%',
+        actual: typeof onl?.pct === 'number' ? onl.pct : null,
+        detail: onl && onl.total ? `${onl.online} of ${onl.total} trackers online` : null },
+      { key: 'retention', label: 'Customer retention', kind: 'percent', target: kR.target, weight: kR.weight, unit: '%',
+        actual: typeof ret?.retentionPct === 'number' ? ret.retentionPct : null,
+        detail: ret && ret.due ? `${ret.renewed} renewed of ${ret.due} due` : null },
       { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: kV.target, weight: kV.weight, unit: 'reviews', actual: reviewsCount },
     ] }
   } else if (scKey === 'customer-service') {
-    const stockPct = await fetchAdminStock(CUR) // accountability proven by weekly counts (Admin)
+    const stock = await fetchAdminStock(CUR) // accountability proven by weekly counts (Admin)
+    const cas = await fetchAdminCases(name, CUR) // on-time resolution ÷ (resolved + open-overdue)
+    const inst = await fetchAdminInstall(CUR) // company-wide: within 3 days of opening
     const kC = kpiN('cases', 85, 40), kI = kpiN('install', 95, 35), kSt = kpiN('stock', 100, 25)
     scorecard = { role: 'Customer Service', kpis: [
-      { key: 'cases', label: 'Case resolution', kind: 'percent', target: kC.target, weight: kC.weight, unit: '%', actual: null },
-      { key: 'install', label: 'Installation within 3 days', kind: 'percent', target: kI.target, weight: kI.weight, unit: '%', actual: null },
-      { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: kSt.target, weight: kSt.weight, unit: '% verified', actual: stockPct },
+      { key: 'cases', label: 'Case resolution', kind: 'percent', target: kC.target, weight: kC.weight, unit: '%',
+        actual: typeof cas?.casesPct === 'number' ? cas.casesPct : null,
+        detail: cas ? `${cas.onTime} on time of ${cas.resolved + cas.openOverdue}${cas.openOverdue ? ` · ${cas.openOverdue} open past SLA` : ''}` : null },
+      { key: 'install', label: 'Installation within 3 days', kind: 'percent', target: kI.target, weight: kI.weight, unit: '%',
+        actual: typeof inst?.installPct === 'number' ? inst.installPct : null,
+        detail: inst && (inst.completed || inst.openLate)
+          ? `${inst.onTime} within 3 days of ${inst.completed + inst.openLate}${inst.openLate ? ` · ${inst.openLate} open past 3 days` : ''}`
+          : (inst ? 'no installations this month yet' : null) },
+      { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: kSt.target, weight: kSt.weight, unit: '% verified',
+        actual: typeof stock?.accountabilityPct === 'number' ? stock.accountabilityPct : null,
+        detail: stock ? `${stock.cleanThisMonth ?? 0} clean counts of ${stock.weeksExpected ?? 4} weeks${stock.outstandingMissing ? ` · ${stock.outstandingMissing} missing` : ''}` : null },
     ] }
   } else if (scKey === 'team-lead') {
     const teamAtt = teamAttendancePct(u) // real now — from Pulse attendance
     // Month-one ramp (Adama 2 Jul): keep the standard, ramp the man. Score
-    // sales + attendance only; coaching stays an activity, NOT a scored KPI;
-    // Admin-fed KPIs stay parked. Numbers come from the KPI Targets store —
-    // the ramp's 12 is the catalog default; the snap to 15 later is one
-    // scheduled change on the KPI Targets page, no code.
+    // sales + attendance only; coaching stays an activity, NOT a scored KPI.
+    // Numbers come from the KPI Targets store — the ramp's 12 is the catalog
+    // default; the snap to 15 later is one scheduled change, no code.
+    // Actuals (Adama 5 Jul: "the team's target has to be connected from the
+    // team itself") = the SAME Admin feeds the agents' own cards read,
+    // aggregated across the lead's roster. Feed unreachable → null, never 0.
+    const members = teamMembersFor(u)
+    const teamNames = new Set(members.map((m) => m.name))
+    const sellers = members.filter((m) => m.department === 'Sales')
+    const [salesF, retF, onlF, revF] = await Promise.all([
+      fetchAdminFeed(`/api/integrations/pulse/sales?month=${CUR}`),
+      fetchAdminFeed(`/api/integrations/pulse/retention?month=${CUR}`),
+      fetchAdminFeed('/api/integrations/pulse/online'),
+      fetchAdminFeed(`/api/integrations/pulse/reviews?month=${CUR}`),
+    ])
+    const teamRows = (feed) => (feed?.agents || []).filter((a) => teamNames.has(a.name))
+    const rowFor = (feed, m) => (feed?.agents || []).find((a) => a.name === m.name) || null
+    const first = (m) => m.name.split(' ')[0]
+    // Team sales: verified customers only (same rule as the agents' tiles).
+    // A seller absent from a reachable feed has a real 0.
+    const wonBy = (m) => Number(rowFor(salesF, m)?.won) || 0
+    const teamWon = salesF ? teamRows(salesF).reduce((s, a) => s + (Number(a.won) || 0), 0) : null
+    const withSale = sellers.filter((m) => wonBy(m) > 0).length
+    // Retention/online: one combined book — sum the raw counts, then rate.
+    const retDue = teamRows(retF).reduce((s, a) => s + (Number(a.due) || 0), 0)
+    const retRen = teamRows(retF).reduce((s, a) => s + (Number(a.renewed) || 0), 0)
+    const onlTotal = teamRows(onlF).reduce((s, a) => s + (Number(a.total) || 0), 0)
+    const onlOn = teamRows(onlF).reduce((s, a) => s + (Number(a.online) || 0), 0)
+    const revCount = revF ? teamRows(revF).reduce((s, a) => s + (Number(a.verified) || 0), 0) : null
     const kTS = kpiN('team-sales', 12, 50), kTA = kpiN('team-active', 100, 25), kAt = kpiN('team-attendance', 90, 25)
     const kTR = kpiN('team-retention', 80, 0), kTO = kpiN('team-online', 85, 0), kTV = kpiN('team-reviews', null, 0)
+    // Team reviews target STEMS from the agents' own target (Adama 5 Jul):
+    // each seller owes 3 five-star reviews, so the team owes 3 × sellers.
+    // An explicit team-reviews entry on KPI Targets still wins if he sets one.
+    const perSellerReviews = (kpiNumber('sales', 'reviews', CUR) || { target: 3 }).target
+    const teamReviewsTarget = kTV.target ?? (perSellerReviews != null && sellers.length ? perSellerReviews * sellers.length : null)
     scorecard = { role: 'Team Lead', kpis: [
-      { key: 'team-sales', label: 'Team tracker sales', kind: 'count', target: kTS.target, weight: kTS.weight, unit: 'sales', actual: null },
-      { key: 'team-active', label: 'Whole team contributing', kind: 'percent', target: kTA.target, weight: kTA.weight, unit: '% of sellers with a sale', actual: null },
+      { key: 'team-sales', label: 'Team tracker sales', kind: 'count', target: kTS.target, weight: kTS.weight, unit: 'sales', actual: teamWon,
+        detail: salesF && sellers.length ? sellers.map((m) => `${first(m)} ${wonBy(m)}`).join(' · ') : null },
+      { key: 'team-active', label: 'Whole team contributing', kind: 'percent', target: kTA.target, weight: kTA.weight, unit: '% of agents with a sale',
+        actual: salesF && sellers.length ? Math.round((withSale / sellers.length) * 100) : null,
+        detail: salesF && sellers.length ? `${sellers.map(first).join(' and ')} each need at least 1 — so far ${withSale} of ${sellers.length} have one` : null },
       { key: 'team-attendance', label: 'Team attendance', kind: 'percent', target: kAt.target, weight: kAt.weight, unit: '%', actual: teamAtt },
-      // Visible on the card but unscored until Admin feeds them — weights get
-      // decided THEN, with real numbers in hand (Adama 3 Jul).
-      { key: 'team-retention', label: 'Team retention', kind: 'percent', target: kTR.target, weight: kTR.weight, unit: '%', actual: null },
-      { key: 'team-online', label: 'Trackers online', kind: 'percent', target: kTO.target, weight: kTO.weight, unit: '%', actual: null },
-      { key: 'team-reviews', label: 'Five-star reviews (team)', kind: 'count', target: kTV.target, weight: kTV.weight, unit: 'reviews', actual: null },
+      // Real team numbers now visible — still weight 0 until Adama sets
+      // weights on the KPI Targets page (decided WITH numbers in hand, 3 Jul).
+      { key: 'team-retention', label: 'Team retention', kind: 'percent', target: kTR.target, weight: kTR.weight, unit: '%',
+        actual: retF && retDue ? Math.round((retRen / retDue) * 100) : null,
+        due: retF ? retDue : null, // goal text says "renew N of the M due" — real dues, not an abstract %
+        detail: retF && retDue ? `${retRen} renewed of ${retDue} due` : null },
+      { key: 'team-online', label: 'Trackers online', kind: 'percent', target: kTO.target, weight: kTO.weight, unit: '%',
+        actual: onlF && onlTotal ? Math.round((onlOn / onlTotal) * 100) : null,
+        detail: onlF && onlTotal ? `${onlOn} of ${onlTotal} trackers online` : null },
+      { key: 'team-reviews', label: 'Five-star reviews (team)', kind: 'count', target: teamReviewsTarget, weight: kTV.weight, unit: 'reviews', actual: revCount,
+        perSeller: perSellerReviews, // goal text explains where the team number comes from
+        detail: revF && sellers.length ? sellers.map((m) => `${first(m)} ${Number(rowFor(revF, m)?.verified) || 0}`).join(' · ') : null },
     ] }
   }
 
@@ -2962,21 +3052,30 @@ app.get('/api/my/progress', auth, async (req, res) => {
     cases: (t) => `Resolve ${t}% of customer cases.`,
     install: (t) => `Complete ${t}% of installations within 3 days.`,
     stock: () => 'Keep tracker stock fully accounted for.',
-    'team-sales': (t) => `Deliver the team's overall target of ${t} trackers this month.`,
-    'team-retention': (t) => `Keep customer retention at ${t}% or above.`,
-    'team-online': (t) => `Keep the fleet's trackers online — ${t}% or above.`,
-    'team-reviews': () => 'Bring in five-star Google reviews from the team.',
-    'team-active': () => 'Keep every seller contributing — no zero months on the team.',
-    'team-attendance': (t) => `Keep team attendance at ${t}% or above.`,
+    // Team Lead lines written for Momodou, not for whoever designed the KPIs
+    // (Adama 5 Jul: "if I do not get it, do you think Momodou will").
+    'team-sales': (t) => `Sell ${t} trackers as a team this month.`,
+    // Concrete dues, not an abstract % — "renew 4 of the 5 due", recomputed
+    // from whatever is actually due each month (Adama 5 Jul).
+    'team-retention': (t, k) => k?.due
+      ? `Renew at least ${Math.ceil(k.due * t / 100)} of the ${k.due} customers due this month.`
+      : `Customers due this month renew — at least ${t}%.`,
+    'team-online': (t) => `Keep your team's customers' trackers online — at least ${t}%.`,
+    'team-reviews': (t, k) => t != null
+      ? `The team brings in ${t} five-star Google reviews${k?.perSeller != null ? ` — ${k.perSeller} per agent` : ''}.`
+      : 'Get happy customers to leave five-star Google reviews.',
+    'team-active': () => 'Every agent makes at least one sale this month.',
+    'team-attendance': (t) => `Your team shows up — at least ${t}% of scheduled days.`,
   }
   const goals = (scorecard?.kpis || []).map((k) => ({
     key: k.key,
-    text: (GOAL_TEXT[k.key] || ((t) => `${k.label}: ${t}${k.unit === '%' ? '%' : ''}`))(k.target),
+    text: (GOAL_TEXT[k.key] || ((t) => `${k.label}: ${t}${k.unit === '%' ? '%' : ''}`))(k.target, k),
     target: k.target,
     unit: k.unit,
     actual: k.actual,
-    // null = not measurable yet (Connecting to Admin) — never faked
-    done: k.actual == null ? null : k.actual >= k.target,
+    // null = not measurable yet (Connecting to Admin), or no target set yet
+    // (team-reviews until Adama picks one) — never faked either way
+    done: k.actual == null || k.target == null ? null : k.actual >= k.target,
   }))
 
   res.json({
