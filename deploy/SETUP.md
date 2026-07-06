@@ -18,9 +18,20 @@ cd /opt/damia-pulse
 different path, edit `WorkingDirectory` in the service file in step 4.)
 
 ## 3. Secrets + data
-Create `/opt/damia-pulse/.env` with the same `ZOHO_*` keys as your local `.env`
-(copy them over — they are gitignored and never committed). `data/` is created
-automatically and seeds from the roster; it is gitignored too.
+Create `/opt/damia-pulse/.env` with (copy values over on the droplet — the file
+is gitignored and never committed):
+- the same `ZOHO_*` keys as your local `.env` (payroll/Books)
+- `RESEND_API_KEY=` — same key as the admin app's `.env` on this droplet
+  (powers the set-password emails; sender is noreply@damiatracker.com, already
+  verified on Resend, nothing new to set up)
+- `OFFICE_IP=` — the office's public IP (check-in network stamp)
+- `PULSE_SYNC_KEY=` + `ADMIN_SYNC_URL=` — same key pair as the admin prod
+  `.env` (KPI bridge)
+
+Do **NOT** add `OUTBOUND_EMAIL=off` here — that line is the local-dev guard
+that blocks all email; on prod it would silently kill invites and resets.
+
+`data/` is created automatically and seeds from the roster; gitignored too.
 
 ## 4. Install deps + build
 ```bash
