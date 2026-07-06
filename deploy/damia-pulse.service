@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-# Adjust WorkingDirectory + User to match where you cloned the repo and how the
-# admin service runs on this droplet.
-WorkingDirectory=/opt/damia-pulse
+# Same layout as damia-admin: files pushed from the Mac by deploy/deploy.sh,
+# never cloned/edited on the server.
+WorkingDirectory=/var/www/damia-pulse
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=5
