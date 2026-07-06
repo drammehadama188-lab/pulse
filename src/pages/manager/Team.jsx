@@ -225,7 +225,7 @@ function AddStaffForm({ onClose, onCreated }) {
           <div>
             <div className="text-lg font-bold text-[var(--color-ink)]">{created.name} is set up</div>
             <div className="mt-1 text-[var(--color-ink-soft)]">
-              Username: <span className="font-bold text-[var(--color-ink)]">{created.username}</span>
+              They sign in with: <span className="font-bold text-[var(--color-ink)]">{created.email}</span>
             </div>
           </div>
           <p className="rounded-xl bg-[var(--color-fill)] px-4 py-3 text-left text-sm text-[var(--color-ink-soft)]">

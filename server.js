@@ -220,8 +220,12 @@ function publicUser(u) {
   // TEAM nav section (gated again server-side on /api/team/*).
   return { ...rest, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u) }
 }
-function findUser(username) {
-  return seedUsers().find((u) => u.username === username.toLowerCase())
+// Accepts a username OR an email (Adama 6 Jul: staff know their email, not the
+// internal username — Momodou typed his email and got "Unknown username").
+// Usernames never contain '@', so the two can't collide.
+function findUser(id) {
+  const q = String(id || '').trim().toLowerCase()
+  return seedUsers().find((u) => u.username === q || (u.email || '').toLowerCase() === q)
 }
 function auth(req, res, next) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
@@ -395,7 +399,7 @@ function notViewAs(req, res, next) {
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body || {}
   const user = username ? findUser(username) : null
-  if (!user) return res.status(401).json({ error: 'Unknown username' })
+  if (!user) return res.status(401).json({ error: 'No account with that email' })
   if (isArchived(user)) return res.status(403).json({ error: 'This account is archived' })
   if (user.suspended) return res.status(403).json({ error: 'Your sign-in is paused. Speak to Adama.' })
   if (REQUIRE_PASSWORD && !bcrypt.compareSync(password || '', user.passwordHash)) {
@@ -470,6 +474,9 @@ app.post('/api/staff/:username/access', auth, notViewAs, requireCeo, (req, res) 
   if (typeof req.body?.email === 'string' && req.body.email.trim()) {
     const email = req.body.email.trim().toLowerCase()
     if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'Invalid email' })
+    // Emails must stay unique — they're a login identifier now (findUser).
+    if (seedUsers().some((u) => u.username !== user.username && (u.email || '').toLowerCase() === email))
+      return res.status(409).json({ error: 'Another staff member already uses that email' })
     user.email = email
   }
   // Master switch: pause/resume their Pulse sign-in entirely (reversible —
@@ -589,12 +596,12 @@ async function sendSetPasswordEmail(user, { isNew, createdBy }) {
     <div style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#8a8f9c;margin-top:2px">by Damia Tracker</div>
     <p style="margin-top:22px;font-size:15px;line-height:1.6">Hi ${first},</p>
     <p style="font-size:15px;line-height:1.6">${intro}</p>
-    <p style="font-size:15px;line-height:1.6">Your username is <strong>${user.username}</strong>. Click the button to choose your password:</p>
+    <p style="font-size:15px;line-height:1.6">You'll sign in with this email address (<strong>${user.email}</strong>). Click the button to choose your password:</p>
     <p style="margin:26px 0"><a href="${url}" style="background:#d6294f;color:#ffffff;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:12px;display:inline-block">Set my password</a></p>
     <p style="font-size:13px;line-height:1.6;color:#8a8f9c">This link works for 60 minutes and can be used once. If it expires, ask your manager to send a new one. If you didn't expect this email, you can ignore it.</p>
     <p style="font-size:13px;color:#8a8f9c">Damia Security Solutions Ltd</p>
   </div>`
-  const text = `Hi ${first},\n\n${intro}\n\nYour username is ${user.username}. Set your password here (works for 60 minutes):\n${url}\n\nIf you didn't expect this email, you can ignore it.`
+  const text = `Hi ${first},\n\n${intro}\n\nYou'll sign in with this email address (${user.email}). Set your password here (works for 60 minutes):\n${url}\n\nIf you didn't expect this email, you can ignore it.`
   const result = await sendMail({ to: user.email, subject, text, html })
   if (result.blocked) console.log(`[email] set-password link for ${user.username}: ${url}`)
   return result
@@ -631,7 +638,7 @@ app.get('/api/password-link/:token', (req, res) => {
   if (!link) return res.status(410).json({ error: 'This link has expired or was already used. Ask your manager to send a new one.' })
   const user = findUser(link.username)
   if (!user || isArchived(user)) return res.status(410).json({ error: 'This account is no longer active.' })
-  res.json({ name: user.name, username: user.username })
+  res.json({ name: user.name, username: user.username, email: user.email || null })
 })
 
 app.post('/api/password-link/:token', (req, res) => {

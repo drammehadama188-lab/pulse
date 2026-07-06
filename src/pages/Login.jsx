@@ -80,19 +80,19 @@ export default function Login() {
           <h2 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">
             Welcome back
           </h2>
-          <p className="mt-1.5 text-[var(--color-ink-soft)]">Sign in with your username and password.</p>
+          <p className="mt-1.5 text-[var(--color-ink-soft)]">Sign in with your email and password.</p>
 
           <form onSubmit={onSubmit} className="mt-7 space-y-4">
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-[var(--color-ink)]">
-                Username
+                Email
               </label>
               <input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoCapitalize="none"
                 autoCorrect="off"
-                placeholder="e.g. kaddy"
+                placeholder="name@gmail.com"
                 className="focus-ring w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]"
               />
             </div>

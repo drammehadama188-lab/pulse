@@ -81,7 +81,7 @@ export default function SetPassword() {
             </div>
             <h2 className="mt-4 text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">Password saved</h2>
             <p className="mt-2 text-[var(--color-ink-soft)]">
-              Sign in with your username <span className="font-bold text-[var(--color-ink)]">{who.username}</span> and your new password.
+              Sign in with your email <span className="font-bold text-[var(--color-ink)]">{who.email || who.username}</span> and your new password.
             </p>
             <Link to="/login">
               <Button className="mt-6 w-full" icon={KeyRound}>Go to sign in</Button>
@@ -93,7 +93,7 @@ export default function SetPassword() {
               Hi {who.name.split(' ')[0]}, choose your password
             </h2>
             <p className="mt-1.5 text-[var(--color-ink-soft)]">
-              Your username is <span className="font-bold text-[var(--color-ink)]">{who.username}</span>. Pick a password only you know — at least 8 characters.
+              You'll sign in with <span className="font-bold text-[var(--color-ink)]">{who.email || who.username}</span>. Pick a password only you know — at least 8 characters.
             </p>
 
             <form onSubmit={onSubmit} className="mt-7 space-y-4">
