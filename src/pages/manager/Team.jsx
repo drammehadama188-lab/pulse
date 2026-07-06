@@ -303,7 +303,6 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   // Reset-password sub-state
-  const [tempPw, setTempPw] = useState('')
   const [pwBusy, setPwBusy] = useState(false)
   const [pwDone, setPwDone] = useState('')
   const [pwError, setPwError] = useState('')
@@ -335,12 +334,15 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
     }
   }
 
+  // Email-first reset, same as the profile page: one-time 60-min link, they
+  // choose their own password. No temp passwords passed around.
   async function resetPassword() {
-    if (tempPw.trim().length < 8) { setPwError('At least 8 characters'); return }
     setPwBusy(true); setPwError(''); setPwDone('')
     try {
-      await api(`/staff/${target.username}/reset-password`, { method: 'POST', body: { tempPassword: tempPw.trim() } })
-      setPwDone(`Done. Share this temporary password with ${target.name.split(' ')[0]} — they'll be asked to change it at next login.`)
+      const r = await api(`/staff/${target.username}/send-password-link`, { method: 'POST' })
+      setPwDone(r.blocked
+        ? `Email sending is switched off on this machine (test mode) — nothing was sent. On the live server the link goes to ${r.email}.`
+        : `Done. ${target.name.split(' ')[0]} got an email at ${r.email} with a link to choose a new password. The link works for 60 minutes.`)
     } catch (e) {
       setPwError(e.message)
     } finally {
@@ -384,14 +386,11 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@damiatracker.com" />
           </Field>
 
-          {/* Reset password */}
+          {/* Reset password — email-first, matches the profile page dialog */}
           <div className="rounded-2xl border border-[var(--color-line)] px-4 py-3">
             <div className="text-sm font-semibold text-[var(--color-ink)]">Reset password</div>
-            <p className="mb-2 text-xs text-[var(--color-ink-faint)]">Set a temporary password (min 8). They’ll be signed out and asked to change it at next login.</p>
-            <div className="flex gap-2">
-              <Input value={tempPw} onChange={(e) => setTempPw(e.target.value)} placeholder="Temporary password" />
-              <Button variant="outline" onClick={resetPassword} disabled={pwBusy}>{pwBusy ? <Spinner size={16} /> : 'Set'}</Button>
-            </div>
+            <p className="mb-2 text-xs text-[var(--color-ink-faint)]">Emails {target.name.split(' ')[0]} a link to choose a new password. Works for 60 minutes, one use.</p>
+            <Button variant="outline" onClick={resetPassword} disabled={pwBusy}>{pwBusy ? <Spinner size={16} /> : 'Send reset email'}</Button>
             {pwDone && <div className="mt-2 rounded-xl bg-[var(--color-good-bg)] px-3 py-2 text-xs font-medium text-[var(--color-good)]">{pwDone}</div>}
             {pwError && <div className="mt-2 rounded-xl bg-[var(--color-bad-bg)] px-3 py-2 text-xs font-medium text-[var(--color-bad)]">{pwError}</div>}
           </div>
