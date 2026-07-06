@@ -991,7 +991,7 @@ function scorecardKey(u) {
 const KPI_CATALOG = {
   'sales': { role: 'Sales agent', kpis: [
     { key: 'sales', label: 'Tracker sales', kind: 'count', unit: 'sales', target: 5, weight: 40 },
-    { key: 'online', label: 'Trackers online', kind: 'percent', unit: '%', target: 85, weight: 20 },
+    { key: 'online', label: 'Trackers online', kind: 'percent', unit: '%', target: 75, weight: 20 },
     { key: 'retention', label: 'Customer retention', kind: 'percent', unit: '%', target: 80, weight: 25 },
     { key: 'reviews', label: '5-star Google reviews', kind: 'count', unit: 'reviews', target: 3, weight: 15 },
   ] },
@@ -1006,7 +1006,7 @@ const KPI_CATALOG = {
     { key: 'team-attendance', label: 'Team attendance', kind: 'percent', unit: '%', target: 90, weight: 25 },
     // Parked until Admin feeds them — visible, weight 0 (Adama 3 Jul).
     { key: 'team-retention', label: 'Team retention', kind: 'percent', unit: '%', target: 80, weight: 0 },
-    { key: 'team-online', label: 'Trackers online', kind: 'percent', unit: '%', target: 85, weight: 0 },
+    { key: 'team-online', label: 'Trackers online', kind: 'percent', unit: '%', target: 75, weight: 0 },
     { key: 'team-reviews', label: 'Five-star reviews (team)', kind: 'count', unit: 'reviews', target: null, weight: 0 },
   ] },
 }
@@ -1190,7 +1190,7 @@ function scorecardFor(u, salesActual) {
   // for that one person when set.
   const N = (kpi, dflt) => kpiNumber(key, kpi, MONTH) || dflt
   if (key === 'sales') {
-    const s = N('sales', { target: 5, weight: 40 }), o = N('online', { target: 85, weight: 20 })
+    const s = N('sales', { target: 5, weight: 40 }), o = N('online', { target: 75, weight: 20 })
     const r = N('retention', { target: 80, weight: 25 }), v = N('reviews', { target: 3, weight: 15 })
     return { role: 'Sales agent', kpis: overlayPlan([
       { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u.target) || s.target, weight: s.weight, unit: 'sales', actual: salesActual ?? null },
@@ -1437,14 +1437,17 @@ app.get('/api/attendance/week', auth, (req, res) => {
   const attAll = db.read('attendance', [])
   const leaveAll = db.read('leave', [])
   const schedules = db.read('schedules', {})
-  // MY TEAM (?scope=team): a lead sees only their own team's week — additive,
-  // falls through to the existing whole-roster / self-only rules otherwise.
+  // Scopes: ?scope=self → just your own week (My Hours — personal even for
+  // team leads, Adama 6 Jul); ?scope=team → a lead's own team; otherwise the
+  // Team-power roster (manager Attendance page) or self as the fallback.
   const teamSet = req.query.scope === 'team' ? teamUsernameSet(req.user.username) : null
-  const roster = teamSet && teamSet.size
-    ? seedUsers().filter((u) => teamSet.has(u.username))
-    : can(req.user, 'team')
-      ? scheduleRoster(req)
-      : seedUsers().filter((u) => u.username === req.user.username)
+  const roster = req.query.scope === 'self'
+    ? seedUsers().filter((u) => u.username === req.user.username)
+    : teamSet && teamSet.size
+      ? seedUsers().filter((u) => teamSet.has(u.username))
+      : can(req.user, 'team')
+        ? scheduleRoster(req)
+        : seedUsers().filter((u) => u.username === req.user.username)
 
   const people = roster.map((u) => {
     const stored = schedules[u.username]
@@ -3046,7 +3049,7 @@ app.get('/api/my/progress', auth, async (req, res) => {
     const ret = await fetchAdminRetention(name, CUR)
     const onl = await fetchAdminOnline(name)
     const reviewsCount = await fetchAdminReviews(name, CUR)
-    const kS = kpiN('sales', 5, 40), kO = kpiN('online', 85, 20), kR = kpiN('retention', 80, 25), kV = kpiN('reviews', 3, 15)
+    const kS = kpiN('sales', 5, 40), kO = kpiN('online', 75, 20), kR = kpiN('retention', 80, 25), kV = kpiN('reviews', 3, 15)
     scorecard = { role: 'Sales agent', kpis: [
       { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u?.target) || kS.target, weight: kS.weight, unit: 'sales', actual: salesActual },
       { key: 'online', label: 'Trackers online', kind: 'percent', target: kO.target, weight: kO.weight, unit: '%',
@@ -3108,7 +3111,7 @@ app.get('/api/my/progress', auth, async (req, res) => {
     const onlOn = teamRows(onlF).reduce((s, a) => s + (Number(a.online) || 0), 0)
     const revCount = revF ? teamRows(revF).reduce((s, a) => s + (Number(a.verified) || 0), 0) : null
     const kTS = kpiN('team-sales', 12, 50), kTA = kpiN('team-active', 100, 25), kAt = kpiN('team-attendance', 90, 25)
-    const kTR = kpiN('team-retention', 80, 0), kTO = kpiN('team-online', 85, 0), kTV = kpiN('team-reviews', null, 0)
+    const kTR = kpiN('team-retention', 80, 0), kTO = kpiN('team-online', 75, 0), kTV = kpiN('team-reviews', null, 0)
     // Team reviews target STEMS from the agents' own target (Adama 5 Jul):
     // each seller owes 3 five-star reviews, so the team owes 3 × sellers.
     // An explicit team-reviews entry on KPI Targets still wins if he sets one.

@@ -251,7 +251,7 @@ function useWeekGrid(scope) {
   const [start, setStart] = useState(() => ymd(weekDays()[0]))
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const scopeQ = scope === 'team' ? '&scope=team' : ''
+  const scopeQ = scope ? `&scope=${scope}` : ''
 
   async function load(s) {
     setLoading(true)
@@ -536,7 +536,9 @@ function useMyHistory() {
 function MyHours() {
   const { isViewAs } = useAuth()
   const { today, loading, busy, locating, act, undo } = useSelfDay()
-  const w = useWeekGrid()
+  // 'self': My Hours is personal — always just your own week, even for a team
+  // lead with the Team power (Adama 6 Jul). The team's week = Team Schedule.
+  const w = useWeekGrid('self')
   const hist = useMyHistory()
   const [undoOpen, setUndoOpen] = useState(false)
 
