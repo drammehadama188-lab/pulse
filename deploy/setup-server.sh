@@ -57,9 +57,11 @@ if "${SSH_CMD}" "${SSH_TARGET}" "test -f ${SERVER_PATH}/.env"; then
   warn "Prod .env already exists — leaving it untouched"
 else
   TMP_ENV="$(mktemp)"
-  # Everything from the local .env EXCEPT the dev kill-switch. On prod that
-  # line would silently block every invite and reset email.
-  grep -v '^OUTBOUND_EMAIL' .env > "${TMP_ENV}"
+  # Everything from the local .env EXCEPT the dev kill-switch (on prod it
+  # would silently block every invite email) and the two keys that must come
+  # from admin's server .env instead — the env loader keeps the FIRST
+  # occurrence of a name, so local leftovers would beat the server values.
+  grep -v -e '^OUTBOUND_EMAIL' -e '^PULSE_SYNC_KEY' -e '^RESEND_API_KEY' .env > "${TMP_ENV}"
 
   # Same Resend key as the admin app (one company, one sender address).
   # The key itself never leaves the droplet — copied server-side below.
