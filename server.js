@@ -12,6 +12,7 @@ import bcrypt from 'bcryptjs'
 import { team, pastStaff } from './src/data/team.js'
 import { sallyCustomers, sallyMonthlyHistory } from './src/data/sally-sales-seed.js'
 import { buildPayrollHistory, zohoConfigured, paySources, recordSalaryPayment, resolveVendor, getExpense, deleteExpense, updateSalaryExpense } from './lib/zoho-books.js'
+import { sendMail, emailConfigured } from './lib/email.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -26,6 +27,9 @@ try {
 
 const DATA_DIR = path.join(__dirname, 'data')
 const PORT = process.env.PORT || 4003
+// Public address used inside set-password emails. Prod = pulse.damiatracker.com;
+// local dev can override in .env (emails are blocked locally anyway).
+const PULSE_PUBLIC_URL = (process.env.PULSE_PUBLIC_URL || 'https://pulse.damiatracker.com').replace(/\/$/, '')
 
 // Who manages people. Everyone else is staff.
 const MANAGER_NAMES = ['Ya Fatou Sawaneh', 'Kaddy Bojang']
@@ -550,6 +554,109 @@ app.post('/api/staff/:username/reset-password', auth, requireSub('staffadmin', '
   res.json({ ok: true })
 })
 
+// ---------- set-password links (emailed; one-time, 60 minutes) ----------
+// The staff member clicks the emailed link and chooses their own password —
+// nobody has to share a temporary one over WhatsApp. Links are stored in
+// data/password-links.json: {token, username, exp}. One link per person at a
+// time; using it (or requesting a new one) kills the old one.
+const LINK_TTL_MS = 60 * 60 * 1000
+
+function readLinks() {
+  // prune expired links on every read so the file never grows
+  const now = Date.now()
+  return db.read('password-links', []).filter((l) => l.exp > now)
+}
+
+function createPasswordLink(username, createdBy) {
+  const token = crypto.randomBytes(24).toString('hex')
+  const links = readLinks().filter((l) => l.username !== username)
+  links.push({ token, username, exp: Date.now() + LINK_TTL_MS, createdBy, createdAt: new Date().toISOString() })
+  db.write('password-links', links)
+  return token
+}
+
+async function sendSetPasswordEmail(user, { isNew, createdBy }) {
+  const token = createPasswordLink(user.username, createdBy)
+  const url = `${PULSE_PUBLIC_URL}/set-password?token=${token}`
+  const first = String(user.name || '').split(' ')[0] || 'there'
+  const intro = isNew
+    ? 'Your Pulse account is ready. Pulse is the Damia team app — check in, request leave, and follow your targets and pay.'
+    : 'A new password was requested for your Pulse account.'
+  const subject = isNew ? 'Welcome to Pulse — set your password' : 'Set a new Pulse password'
+  const html = `
+  <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:28px 20px;color:#1f2430">
+    <div style="font-size:22px;font-weight:800;color:#d6294f">Pulse</div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#8a8f9c;margin-top:2px">by Damia Tracker</div>
+    <p style="margin-top:22px;font-size:15px;line-height:1.6">Hi ${first},</p>
+    <p style="font-size:15px;line-height:1.6">${intro}</p>
+    <p style="font-size:15px;line-height:1.6">Your username is <strong>${user.username}</strong>. Click the button to choose your password:</p>
+    <p style="margin:26px 0"><a href="${url}" style="background:#d6294f;color:#ffffff;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:12px;display:inline-block">Set my password</a></p>
+    <p style="font-size:13px;line-height:1.6;color:#8a8f9c">This link works for 60 minutes and can be used once. If it expires, ask your manager to send a new one. If you didn't expect this email, you can ignore it.</p>
+    <p style="font-size:13px;color:#8a8f9c">Damia Security Solutions Ltd</p>
+  </div>`
+  const text = `Hi ${first},\n\n${intro}\n\nYour username is ${user.username}. Set your password here (works for 60 minutes):\n${url}\n\nIf you didn't expect this email, you can ignore it.`
+  const result = await sendMail({ to: user.email, subject, text, html })
+  if (result.blocked) console.log(`[email] set-password link for ${user.username}: ${url}`)
+  return result
+}
+
+// Manager emails someone a set-password link. Same guards as reset-password:
+// managers handle staff, only the CEO handles managers.
+app.post('/api/staff/:username/send-password-link', auth, requireSub('staffadmin', 'password'), notViewAs, async (req, res) => {
+  const users = seedUsers()
+  const target = users.find((u) => u.username === String(req.params.username).toLowerCase())
+  if (!target) return res.status(404).json({ error: 'No such user' })
+  if (isArchived(target)) return res.status(400).json({ error: 'This account is archived' })
+  if (!target.email) return res.status(400).json({ error: 'This person has no email on file — add one first' })
+  if (target.role === 'manager' && req.realUser.username !== 'adama')
+    return res.status(403).json({ error: 'Only the CEO can reset a manager password' })
+  if (!inScope(req.realUser, 'staffadmin', target.username)) return res.status(403).json({ error: 'Not in your Manage-staff scope' })
+  if (!emailConfigured() && String(process.env.OUTBOUND_EMAIL || '').toLowerCase() !== 'off')
+    return res.status(400).json({ error: 'Email is not set up on this server yet' })
+  try {
+    const result = await sendSetPasswordEmail(target, { isNew: false, createdBy: req.realUser.username })
+    target.history = target.history || []
+    target.history.push({ date: todayKey(), event: `Set-password link emailed to ${target.email} by ${req.realUser.username}` })
+    db.write('users', users)
+    res.json({ ok: true, blocked: !!result.blocked, email: target.email })
+  } catch (e) {
+    res.status(502).json({ error: `Could not send the email: ${e.message}` })
+  }
+})
+
+// The two public endpoints behind the emailed link. No auth — the token IS
+// the proof. GET validates and names the person; POST sets the password.
+app.get('/api/password-link/:token', (req, res) => {
+  const link = readLinks().find((l) => l.token === req.params.token)
+  if (!link) return res.status(410).json({ error: 'This link has expired or was already used. Ask your manager to send a new one.' })
+  const user = findUser(link.username)
+  if (!user || isArchived(user)) return res.status(410).json({ error: 'This account is no longer active.' })
+  res.json({ name: user.name, username: user.username })
+})
+
+app.post('/api/password-link/:token', (req, res) => {
+  const links = readLinks()
+  const link = links.find((l) => l.token === req.params.token)
+  if (!link) return res.status(410).json({ error: 'This link has expired or was already used. Ask your manager to send a new one.' })
+  const { password } = req.body || {}
+  if (!password || String(password).length < 8)
+    return res.status(400).json({ error: 'Password must be at least 8 characters' })
+  const users = seedUsers()
+  const user = users.find((u) => u.username === link.username)
+  if (!user || isArchived(user)) return res.status(410).json({ error: 'This account is no longer active.' })
+  user.passwordHash = bcrypt.hashSync(String(password), 10)
+  user.mustChangePassword = false
+  user.history = user.history || []
+  user.history.push({ date: todayKey(), event: 'Set their password via emailed link' })
+  db.write('users', users)
+  db.write('password-links', links.filter((l) => l.username !== link.username))
+  for (const [tok, s] of Object.entries(sessions)) {
+    if (s.username === user.username) delete sessions[tok]
+  }
+  persistSessions()
+  res.json({ ok: true, username: user.username })
+})
+
 app.post('/api/logout', auth, (req, res) => {
   delete sessions[req.token]
   persistSessions()
@@ -594,7 +701,7 @@ app.get('/api/staff', auth, requirePower('team'), (req, res) => {
 })
 
 // create a sales staff account
-app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, (req, res) => {
+app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (req, res) => {
   const { type, name, email, title, salary, target, contractMonths } = req.body || {}
   if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name is required' })
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'A valid email is required' })
@@ -641,7 +748,21 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, (req, r
   }
   users.push(rec)
   db.write('users', users)
-  res.json({ staff: { username, name: rec.name, email: rec.email, title: rec.title } })
+
+  // Email the invite (a set-password link) right away — best effort: the
+  // account exists either way, and the modal tells the manager what happened.
+  let invited = false
+  if (emailConfigured() || String(process.env.OUTBOUND_EMAIL || '').toLowerCase() === 'off') {
+    try {
+      const result = await sendSetPasswordEmail(rec, { isNew: true, createdBy: req.user.username })
+      invited = !result.blocked
+      rec.history.push({ date: joined, event: `Invite emailed to ${rec.email}` })
+      db.write('users', users)
+    } catch (e) {
+      console.log(`[email] invite to ${rec.email} failed: ${e.message}`)
+    }
+  }
+  res.json({ staff: { username, name: rec.name, email: rec.email, title: rec.title }, invited })
 })
 
 // archive a staff member — keeps the record forever, blocks login, removes from active lists

@@ -305,17 +305,36 @@ export default function StaffMember() {
 }
 
 function ResetDialog({ username, name, onClose }) {
+  const first = name.split(' ')[0]
   const [tempPw, setTempPw] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState(false) // 'email' | 'manual' | false
   const [done, setDone] = useState('')
   const [error, setError] = useState('')
 
+  // Preferred: email them a one-time link (60 min) and they choose their own
+  // password — nothing to pass around on WhatsApp.
+  async function sendLink() {
+    setBusy('email'); setError(''); setDone('')
+    try {
+      const r = await api(`/staff/${username}/send-password-link`, { method: 'POST' })
+      setDone(r.blocked
+        ? `Email sending is switched off on this machine (test mode) — nothing was sent. On the live server the link goes to ${r.email}.`
+        : `Done. ${first} got an email at ${r.email} with a link to choose a new password. The link works for 60 minutes.`)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Fallback when email is not an option: set a temporary password and share
+  // it yourself. They're signed out and must change it at next login.
   async function reset() {
     if (tempPw.trim().length < 8) { setError('At least 8 characters'); return }
-    setBusy(true); setError(''); setDone('')
+    setBusy('manual'); setError(''); setDone('')
     try {
       await api(`/staff/${username}/reset-password`, { method: 'POST', body: { tempPassword: tempPw.trim() } })
-      setDone(`Done. Share this temporary password with ${name.split(' ')[0]} — they'll be asked to change it at next login.`)
+      setDone(`Done. Share this temporary password with ${first} — they'll be asked to change it at next login.`)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -324,10 +343,21 @@ function ResetDialog({ username, name, onClose }) {
   }
 
   return (
-    <Modal open onClose={onClose} title={`Reset password — ${name}`} footer={<><Button variant="ghost" onClick={onClose}>Close</Button>{!done && <Button onClick={reset} disabled={busy}>{busy ? <Spinner size={16} /> : 'Set password'}</Button>}</>}>
-      <div className="space-y-3">
-        <p className="text-sm text-[var(--color-ink-soft)]">Set a temporary password (min 8). They’ll be signed out and asked to change it at next login.</p>
-        <Field label="Temporary password"><Input value={tempPw} onChange={(e) => setTempPw(e.target.value)} placeholder="e.g. Welcome2026" /></Field>
+    <Modal open onClose={onClose} title={`Reset password — ${name}`} footer={<Button variant="ghost" onClick={onClose}>Close</Button>}>
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-[var(--color-line)] p-4">
+          <div className="font-semibold text-[var(--color-ink)]">Email {first} a link</div>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">They click it and choose their own password. The link works for 60 minutes and can be used once.</p>
+          <Button className="mt-3" onClick={sendLink} disabled={!!busy}>{busy === 'email' ? <Spinner size={16} /> : 'Send the link'}</Button>
+        </div>
+        <div className="rounded-2xl border border-[var(--color-line)] p-4">
+          <div className="font-semibold text-[var(--color-ink)]">Or set a temporary password yourself</div>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Min 8 characters. You share it with them; they'll be signed out and asked to change it at next login.</p>
+          <div className="mt-3 flex gap-2">
+            <div className="flex-1"><Input value={tempPw} onChange={(e) => setTempPw(e.target.value)} placeholder="e.g. Welcome2026" /></div>
+            <Button variant="outline" onClick={reset} disabled={!!busy}>{busy === 'manual' ? <Spinner size={16} /> : 'Set it'}</Button>
+          </div>
+        </div>
         {done && <div className="rounded-xl bg-[var(--color-good-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-good)]">{done}</div>}
         {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
       </div>

@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext.jsx'
 import { AppLayout } from './components/layout/AppLayout.jsx'
 import { Spinner } from './components/ui.jsx'
 import Login from './pages/Login.jsx'
+import SetPassword from './pages/SetPassword.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Sales from './pages/sales/Sales.jsx'
 import CustomerDetail from './pages/sales/CustomerDetail.jsx'
@@ -73,6 +74,8 @@ export default function App() {
         path="/login"
         element={loading ? <FullScreenLoader /> : user ? <Navigate to="/" replace /> : <Login />}
       />
+      {/* Public — reached from the emailed set-password link; the token is the auth. */}
+      <Route path="/set-password" element={<SetPassword />} />
       <Route
         element={
           <RequireAuth>

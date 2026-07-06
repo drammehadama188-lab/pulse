@@ -202,7 +202,7 @@ function AddStaffForm({ onClose, onCreated }) {
           contractMonths: v.contractMonths,
         },
       })
-      setCreated(r.staff)
+      setCreated({ ...r.staff, invited: r.invited })
       onCreated()
     } catch (e) {
       setError(e.message)
@@ -229,8 +229,9 @@ function AddStaffForm({ onClose, onCreated }) {
             </div>
           </div>
           <p className="rounded-xl bg-[var(--color-fill)] px-4 py-3 text-left text-sm text-[var(--color-ink-soft)]">
-            They can log in now with that username (no password yet). The invite email with the login link
-            comes in the next step.
+            {created.invited
+              ? `We emailed ${created.email} a link to choose their password. The link works for 60 minutes — if it expires, open their profile and press Reset password to send a new one.`
+              : `The invite email could not be sent right now. Open their profile and press Reset password to email them a link, or set a temporary password there.`}
           </p>
         </div>
       </Modal>
