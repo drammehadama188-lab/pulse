@@ -44,7 +44,7 @@ const REQUIRE_PASSWORD = true
 // the record restarts clean the next morning (Adama 6 Jul: "restart the
 // check-in from tomorrow"). Days before this are treated as unscheduled —
 // no absences, no totals, everywhere.
-const ATTENDANCE_START = '2026-07-07'
+const ATTENDANCE_START = process.env.ATTENDANCE_START || '2026-07-07'
 
 // ---------- tiny JSON "db" (swap this module for Postgres later) ----------
 fs.mkdirSync(DATA_DIR, { recursive: true })
@@ -943,6 +943,42 @@ app.post('/api/attendance/check-out', auth, notViewAs, (req, res) => {
   res.json({ record: rec })
 })
 
+// Manager fixes a check-in (Adama 6 Jul): when someone couldn't check in or
+// was wrongly marked late (network down, phone trouble), whoever holds the
+// schedule permission sets the real time WITH a reason — from the Team
+// Schedule page, not the person's profile. The original time stays on the
+// record: it's a correction on top, never a rewrite.
+app.post('/api/team/attendance-fix', auth, requireSub('team', 'schedules'), notViewAs, (req, res) => {
+  const { username, date, checkIn, checkOut, reason } = req.body || {}
+  const target = seedUsers().find((x) => x.username === String(username || '').toLowerCase())
+  if (!target || isArchived(target)) return res.status(404).json({ error: 'No such staff member' })
+  if (!powerScopeSet(req.realUser, 'team').has(target.username))
+    return res.status(403).json({ error: 'Not in your Team scope' })
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return res.status(400).json({ error: 'Pick a date' })
+  if (date > todayKey()) return res.status(400).json({ error: 'That day has not happened yet' })
+  if (date < ATTENDANCE_START) return res.status(400).json({ error: `Attendance starts ${ATTENDANCE_START} — nothing to fix before that` })
+  if (!HHMM.test(checkIn || '')) return res.status(400).json({ error: 'Check-in time must look like 09:05' })
+  if (checkOut && !HHMM.test(checkOut)) return res.status(400).json({ error: 'Check-out time must look like 17:00' })
+  if (!reason || !String(reason).trim()) return res.status(400).json({ error: 'Say why — the reason shows on the record' })
+
+  const all = db.read('attendance', [])
+  let rec = all.find((a) => a.username === target.username && a.date === date)
+  if (!rec) {
+    rec = { id: crypto.randomUUID(), username: target.username, name: target.name, date }
+    all.push(rec)
+  }
+  if (rec.fixedBy === undefined) rec.originalCheckIn = rec.checkIn || null
+  rec.checkIn = `${date}T${checkIn}:00.000Z` // Gambia is GMT — local HH:MM == UTC
+  if (checkOut) rec.checkOut = `${date}T${checkOut}:00.000Z`
+  rec.late = checkIn > '09:00' // same rule as self check-in
+  rec.fixedBy = req.realUser.username
+  rec.fixedByName = req.realUser.name
+  rec.fixedAt = new Date().toISOString()
+  rec.fixReason = String(reason).trim().slice(0, 300)
+  db.write('attendance', all)
+  res.json({ record: rec })
+})
+
 // self: undo a mistaken check-in — wipes TODAY's own record so they're "not
 // checked in" again and can re-check-in. Only today, only your own.
 app.post('/api/attendance/undo-checkin', auth, notViewAs, (req, res) => {
@@ -1476,6 +1512,8 @@ app.get('/api/attendance/week', auth, (req, res) => {
         onOfficeNetwork: attendance?.onOfficeNetwork ?? null,
         leaveType: leave?.leaveType || null,
         note: leave?.note || '',
+        fixedBy: attendance?.fixedByName || attendance?.fixedBy || null,
+        fixReason: attendance?.fixReason || null,
       }
     }
     // `schedule` = the week in force TODAY (for the editor's current-schedule
@@ -1865,6 +1903,8 @@ app.get('/api/attendance/month', auth, (req, res) => {
         onOfficeNetwork: attendance?.onOfficeNetwork ?? null,
         leaveType: leave?.leaveType || null,
         note: leave?.note || '',
+        fixedBy: attendance?.fixedByName || attendance?.fixedBy || null,
+        fixReason: attendance?.fixReason || null,
       }
     }
     return { username: u.username, name: u.name, department: u.department, schedule, byDate }

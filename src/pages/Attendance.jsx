@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Clock, LogIn, LogOut, CheckCircle2, MapPin, ChevronLeft, ChevronRight, CalendarCog, Building2, AlertTriangle } from 'lucide-react'
+import { Clock, LogIn, LogOut, CheckCircle2, MapPin, ChevronLeft, ChevronRight, CalendarCog, Building2, AlertTriangle, Wrench } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { getLocation, mapsUrl } from '../lib/geo.js'
-import { Avatar, Button, Card, ConfirmDialog, Modal, Pill, Select, SectionTitle, Spinner } from '../components/ui.jsx'
+import { Avatar, Button, Card, ConfirmDialog, Field, Input, Modal, Pill, Select, SectionTitle, Spinner } from '../components/ui.jsx'
 import { timeShort, dateLong } from '../lib/format.js'
 import { DAY_FULL, WEEK_ORDER, weekDays, ymd } from '../lib/schedule.js'
 
@@ -383,6 +383,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
                             <div className="flex items-center justify-between gap-1">
                               <div className="text-[11px] font-bold leading-tight tabular-nums text-[var(--color-ink)]">{view.primary}</div>
                               {cell?.onOfficeNetwork === false && <span title="Checked in off the office network" className="shrink-0 text-[var(--color-bad)]"><AlertTriangle size={11} /></span>}
+                              {cell?.fixedBy && <span title={`Time fixed by ${cell.fixedBy}: ${cell.fixReason || ''}`} className="shrink-0 text-[var(--color-ink-faint)]"><Wrench size={11} /></span>}
                             </div>
                             {view.secondary && <div className={`truncate text-[10px] font-medium ${view.tone === 'absent' ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>{view.secondary}</div>}
                           </div>
@@ -653,6 +654,11 @@ function MyHours() {
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-[var(--color-ink)]">{new Date(`${r.date}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
                     <div className="text-xs text-[var(--color-ink-faint)]">{r.checkIn ? timeShort(r.checkIn) : '—'}{r.checkOut ? ` – ${timeShort(r.checkOut)}` : ''}</div>
+                    {r.fixReason && (
+                      <div className="mt-0.5 flex items-center gap-1 text-xs text-[var(--color-ink-faint)]">
+                        <Wrench size={11} /> Time fixed by {r.fixedByName || r.fixedBy} — {r.fixReason}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {r.onOfficeNetwork === false && <Pill tone="bad"><AlertTriangle size={12} /> Off-site</Pill>}
@@ -773,6 +779,7 @@ function TeamHours() {
   const people = w.data?.people || []
   const today = w.data?.today
   const [editorOpen, setEditorOpen] = useState(false)
+  const [fixOpen, setFixOpen] = useState(false)
 
   return (
     <div className="space-y-6">
@@ -783,6 +790,7 @@ function TeamHours() {
         </div>
         <div className="flex items-center gap-2">
           <WeekNav days={w.data?.days} isThis={w.isThis} onPrev={() => w.shift(-1)} onNext={() => w.shift(1)} />
+          <Button variant="outline" icon={Wrench} onClick={() => setFixOpen(true)} disabled={!people.length}>Fix a check-in</Button>
           <Button icon={CalendarCog} onClick={() => setEditorOpen(true)} disabled={!people.length}>Edit schedules</Button>
         </div>
       </div>
@@ -796,6 +804,14 @@ function TeamHours() {
         />
       )}
 
+      {fixOpen && (
+        <FixCheckInDialog
+          people={people}
+          onClose={() => setFixOpen(false)}
+          onSaved={() => { setFixOpen(false); w.reload() }}
+        />
+      )}
+
       {w.data && people.length > 0 && <AttendanceSummary people={people} days={w.data.days} today={today} />}
 
       {w.loading || !w.data ? (
@@ -806,6 +822,55 @@ function TeamHours() {
         <WeekSchedule people={people} days={w.data.days} today={w.data.today} />
       )}
     </div>
+  )
+}
+
+// Fix a check-in (Adama 6 Jul): lives on the schedule pages, not the profile.
+// The lead sets the true time + a required reason; the server keeps the
+// original time on the record and stamps who fixed it and when.
+function FixCheckInDialog({ people, onClose, onSaved }) {
+  const todayYmd = new Date().toISOString().slice(0, 10)
+  const [v, setV] = useState({ username: people[0]?.username || '', date: todayYmd, checkIn: '09:00', checkOut: '', reason: '' })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const set = (k) => (e) => setV({ ...v, [k]: e.target.value })
+  const first = (people.find((p) => p.username === v.username)?.name || '').split(' ')[0]
+
+  async function save() {
+    if (!v.reason.trim()) { setError('Say why — the reason shows on the record'); return }
+    setBusy(true); setError('')
+    try {
+      await api('/team/attendance-fix', { method: 'POST', body: { username: v.username, date: v.date, checkIn: v.checkIn, checkOut: v.checkOut || undefined, reason: v.reason.trim() } })
+      onSaved()
+    } catch (e) {
+      setError(e.message)
+      setBusy(false)
+    }
+  }
+
+  const inputCls = 'focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)] outline-none'
+  return (
+    <Modal open onClose={onClose} title="Fix a check-in" footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={save} disabled={busy}>{busy ? <Spinner size={16} /> : 'Save fix'}</Button></>}>
+      <div className="space-y-4">
+        <p className="text-sm text-[var(--color-ink-soft)]">
+          For when someone was at work but couldn't check in, or was wrongly marked late. The real time counts everywhere; the record keeps who fixed it and why.
+        </p>
+        <Field label="Who">
+          <Select value={v.username} onChange={set('username')}>
+            {people.map((p) => <option key={p.username} value={p.username}>{p.name}</option>)}
+          </Select>
+        </Field>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="Day"><input type="date" max={todayYmd} value={v.date} onChange={set('date')} className={inputCls} /></Field>
+          <Field label="Checked in at"><input type="time" value={v.checkIn} onChange={set('checkIn')} className={inputCls} /></Field>
+          <Field label="Out (optional)"><input type="time" value={v.checkOut} onChange={set('checkOut')} className={inputCls} /></Field>
+        </div>
+        <Field label={`Why couldn't ${first || 'they'} check in?`}>
+          <Input value={v.reason} onChange={set('reason')} placeholder="e.g. office network was down, phone broken" />
+        </Field>
+        {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+      </div>
+    </Modal>
   )
 }
 
