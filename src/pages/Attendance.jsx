@@ -75,12 +75,14 @@ function workedMins(cell) {
   const m = (new Date(cell.checkOut) - new Date(cell.checkIn)) / 60000
   return m > 0 ? m : null
 }
-// Minutes late = check-in clock time − shift start (Gambia = GMT, so local hours).
+// Minutes late = check-in clock time − shift start. Company clock = Gambia =
+// GMT, so use UTC parts — the viewer's own timezone (e.g. Adama in the US)
+// must never change the math.
 function lateMins(cell) {
   if (!cell?.checkIn || !cell?.shift || !cell.late) return 0
   const ci = new Date(cell.checkIn)
   const [sh, sm] = cell.shift.start.split(':').map(Number)
-  return Math.max(0, ci.getHours() * 60 + ci.getMinutes() - (sh * 60 + sm))
+  return Math.max(0, ci.getUTCHours() * 60 + ci.getUTCMinutes() - (sh * 60 + sm))
 }
 const fmtMins = (m) => (m == null ? '—' : m >= 60 ? `${Math.floor(m / 60)}h ${Math.round(m % 60)}m` : `${Math.round(m)}m`)
 
@@ -110,7 +112,7 @@ function liveStatusKey(cell, nowMin) {
 // ended, never showed) from not-started (still within/before the shift).
 function todayStats(people, today) {
   const isToday = today === new Date().toISOString().slice(0, 10)
-  const nowMin = isToday ? new Date().getHours() * 60 + new Date().getMinutes() : null
+  const nowMin = isToday ? new Date().getUTCHours() * 60 + new Date().getUTCMinutes() : null
   const s = { scheduled: 0, present: 0, late: 0, leave: 0, notStarted: 0, absent: 0 }
   for (const p of people) {
     const c = p.byDate?.[today]; if (!c) continue
@@ -312,7 +314,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
   const clickable = !!onCellClick
   // Minutes-into-day now (Gambia=GMT), so the live status chip can tell
   // "Absent" (shift ended, never came) from "Not in yet". Null off the current week.
-  const nowMin = today === new Date().toISOString().slice(0, 10) ? new Date().getHours() * 60 + new Date().getMinutes() : null
+  const nowMin = today === new Date().toISOString().slice(0, 10) ? new Date().getUTCHours() * 60 + new Date().getUTCMinutes() : null
   const cols = `14rem repeat(${days.length}, minmax(96px, 1fr))`
   const totals = days.map((k) => {
     let hours = 0
@@ -689,7 +691,7 @@ function ManagerHours() {
 
   const people = w.data?.people || []
   const today = w.data?.today
-  const nowMin = today === new Date().toISOString().slice(0, 10) ? new Date().getHours() * 60 + new Date().getMinutes() : null
+  const nowMin = today === new Date().toISOString().slice(0, 10) ? new Date().getUTCHours() * 60 + new Date().getUTCMinutes() : null
   const departments = [...new Set(people.map((p) => p.department).filter(Boolean))]
   // Urgent statuses first, departments after (Adama 28 Jun).
   const FILTERS = [

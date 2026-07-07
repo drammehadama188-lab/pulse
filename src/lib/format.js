@@ -11,7 +11,9 @@ export function firstName(name = '') {
 
 export function timeShort(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  // Company clock = Gambia = GMT. Render in UTC so a 09:05 check-in reads
+  // 09:05 for everyone — including Adama viewing from the US.
+  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
 }
 
 export function dateLong(d = new Date()) {
