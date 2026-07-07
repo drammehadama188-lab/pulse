@@ -39,6 +39,13 @@ const DEFAULT_PASSWORD = 'damia2026'
 // forced to set their own at first sign-in.
 const REQUIRE_PASSWORD = true
 
+// Attendance counts from this date. Pulse went live on the internet on 6 Jul
+// and that day was setup chaos (data migration wiped mid-day check-ins), so
+// the record restarts clean the next morning (Adama 6 Jul: "restart the
+// check-in from tomorrow"). Days before this are treated as unscheduled —
+// no absences, no totals, everywhere.
+const ATTENDANCE_START = '2026-07-07'
+
 // ---------- tiny JSON "db" (swap this module for Postgres later) ----------
 fs.mkdirSync(DATA_DIR, { recursive: true })
 const db = {
@@ -157,6 +164,7 @@ function teamAttendancePct(lead) {
     const key = `${CUR}-${String(d).padStart(2, '0')}`
     if (key > today) break
     if (new Date(`${key}T00:00:00Z`).toISOString().slice(0, 7) !== CUR) break // guard month overflow
+    if (key < ATTENDANCE_START) continue // pre-restart days don't count
     days.push(key)
   }
   let expected = 0, worked = 0
@@ -1455,7 +1463,7 @@ app.get('/api/attendance/week', auth, (req, res) => {
     let weekHours = 0
     for (const k of days) {
       const week = effectiveWeek(stored, k)
-      const shift = week[dowOfKey(k)] || null
+      const shift = k < ATTENDANCE_START ? null : (week[dowOfKey(k)] || null)
       const attendance = attAll.find((a) => a.username === u.username && a.date === k) || null
       const leave = leaveOnDate(leaveAll, u.username, k)
       if (shift && !leave) weekHours += shiftHours(shift)
@@ -1578,6 +1586,7 @@ app.get('/api/reports/month', auth, (req, res) => {
       const absentDays = []
       for (const k of days) {
         if (k > todayK) break
+        if (k < ATTENDANCE_START) continue // pre-restart days don't count
         const shift = effectiveWeek(stored, k)[dowOfKey(k)]
         if (!shift) continue
         if (leaveOnDate(leaveAll, p.username, k)) { onLeave++; continue }
@@ -1816,6 +1825,7 @@ function leaveOnDate(leaveAll, username, dateKey) {
 }
 // layered status: leave > attendance > schedule > calendar position
 function dayStatus({ schedule, attendance, leave }, dateKey, todayK) {
+  if (dateKey < ATTENDANCE_START) return 'off' // before the clean restart — never absent
   if (leave) {
     const t = (leave.leaveType || '').toLowerCase()
     if (t === 'sick') return 'sick'
