@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, AlertTriangle, CheckCircle2, ChevronRight, Plus, X } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, CheckCircle2, ChevronRight, Plus, X, GraduationCap, Calendar, Flag } from 'lucide-react';
 import { team } from '../data/team';
 import { api } from '../lib/api.js';
 
@@ -15,6 +15,13 @@ const period = new Date().toISOString().slice(0, 7); // YYYY-MM
 const periodLabel = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 const fmtDate = (d) => { if (!d) return '—'; const x = new Date(d); return isNaN(x) ? d : x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
 const typeCls = (t) => t === 'final' ? 'bg-red-200 text-red-900' : t === 'formal' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
+// coaching / flags / meetings share one store; each type gets its own look
+const COACH_META = {
+  coaching: { icon: GraduationCap, label: 'Coaching', cls: 'bg-emerald-50 text-emerald-700' },
+  meeting: { icon: Calendar, label: 'Meeting', cls: 'bg-blue-50 text-blue-700' },
+  flag: { icon: Flag, label: 'Flag', cls: 'bg-red-100 text-red-700' },
+};
+const COACHING_SHOWN = 15;
 
 function Stat({ label, value, sub, accent }) {
   return (
@@ -31,6 +38,7 @@ export default function ReviewsWarnings({ scope }) {
   const navigate = useNavigate();
   const [warnings, setWarnings] = useState([]);
   const [reviews, setReviews] = useState({});
+  const [coaching, setCoaching] = useState([]);
   const [teamMembers, setTeamMembers] = useState(scoped ? null : []);
   const [adding, setAdding] = useState(null); // { agent, type, reason, date } | null
   const [busy, setBusy] = useState(false);
@@ -49,12 +57,17 @@ export default function ReviewsWarnings({ scope }) {
       api('/warnings').then((d) => setWarnings(d.warnings || [])).catch(() => setWarnings([]));
       api('/reviews').then((d) => setReviews(d.reviews || {})).catch(() => setReviews({}));
     }
+    // the API scopes this by viewer: CEO/HR see everyone, a lead sees their team
+    api('/coaching').then((d) => setCoaching(d.coaching || [])).catch(() => setCoaching([]));
   }, [scoped]);
 
   const hasReview = (name) => (reviews[name] || []).some((r) => r.period === period);
   const reviewed = roster.filter((p) => hasReview(p.name));
   const needsReview = roster.filter((p) => !hasReview(p.name));
   const sortedWarnings = [...warnings].sort((a, b) => (a.date < b.date ? 1 : -1));
+  // coaching arrives newest-first from the API; sessions logged this month drive the count
+  const coachedThisMonth = coaching.filter((c) => ((c.datetime || c.createdAt) || '').slice(0, 7) === period).length;
+  const coachingShown = coaching.slice(0, COACHING_SHOWN);
 
   // In team scope a lead can't reach the HR pages (/performance, /agents), so
   // clicks open the Team Member page they DO have — where they log coaching /
@@ -127,6 +140,40 @@ export default function ReviewsWarnings({ scope }) {
             {reviewed.map((p) => (
               <span key={p.name} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700"><CheckCircle2 size={12} /> {p.name}</span>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Coaching & check-ins — logged by team leads on the Team Member pages */}
+      <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-4">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Coaching &amp; check-ins</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          {coaching.length === 0
+            ? 'No coaching sessions logged yet.'
+            : `${coachedThisMonth} logged in ${periodLabel} · ${coaching.length} total on record.`}
+        </p>
+        {coaching.length === 0 ? (
+          <div className="p-10 text-center text-gray-400 text-sm">Sessions appear here the moment a team lead logs them on a Team Member page.</div>
+        ) : (
+          <div className="space-y-2">
+            {coachingShown.map((c) => {
+              const m = COACH_META[c.type] || COACH_META.coaching;
+              return (
+                <div key={c.id} className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg">
+                  <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 mt-0.5 ${m.cls}`}>
+                    <m.icon size={11} /> {m.label}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{c.targetName || c.targetUsername}{c.title ? ` — ${c.title}` : ''}</p>
+                    {c.note && <p className="text-sm text-gray-700 mt-0.5">{c.note}</p>}
+                    <p className="text-[11px] text-gray-500 mt-1">{fmtDate(c.datetime || c.createdAt)} · by {c.createdBy}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {coaching.length > COACHING_SHOWN && (
+              <p className="text-[11px] text-gray-400 pt-1">Showing the latest {COACHING_SHOWN} of {coaching.length}. The full month-by-month record lives in Reports.</p>
+            )}
           </div>
         )}
       </div>

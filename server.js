@@ -2448,6 +2448,9 @@ app.get('/api/coaching', auth, (req, res) => {
     all = all.filter((c) => c.targetUsername === req.user.username)
   }
   all = all.slice().sort((a, b) => ((a.datetime || a.createdAt) < (b.datetime || b.createdAt) ? 1 : -1))
+  // Records store the username; pages (Reviews & Warnings) show the person's name.
+  const users = seedUsers()
+  all = all.map((c) => ({ ...c, targetName: users.find((x) => x.username === c.targetUsername)?.name || c.targetUsername }))
   res.json({ coaching: all })
 })
 app.post('/api/coaching', auth, notViewAs, (req, res) => {
