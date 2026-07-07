@@ -277,8 +277,15 @@ function useWeekGrid(scope) {
     base.setUTCDate(base.getUTCDate() + delta * 7)
     load(base.toISOString().slice(0, 10))
   }
+  // Jump straight to the week containing a date (e.g. "show me the week the
+  // new schedule starts"). Aligns to that week's Monday.
+  function go(dateKey) {
+    const d = new Date(`${dateKey}T00:00:00Z`)
+    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7))
+    load(d.toISOString().slice(0, 10))
+  }
   const isThis = start === ymd(weekDays()[0])
-  return { start, data, loading, shift, reload: () => load(start), isThis }
+  return { start, data, loading, shift, go, reload: () => load(start), isThis }
 }
 
 function WeekNav({ days, isThis, onPrev, onNext }) {
@@ -754,7 +761,7 @@ function ManagerHours() {
         <TeamScheduleEditor
           people={people}
           onClose={() => setEditorOpen(false)}
-          onSaved={() => { setEditorOpen(false); w.reload() }}
+          onSaved={(gotoDate) => { setEditorOpen(false); gotoDate ? w.go(gotoDate) : w.reload() }}
         />
       )}
       {detail && (
@@ -802,7 +809,7 @@ function TeamHours() {
           people={people}
           endpoint="/team/schedules"
           onClose={() => setEditorOpen(false)}
-          onSaved={() => { setEditorOpen(false); w.reload() }}
+          onSaved={(gotoDate) => { setEditorOpen(false); gotoDate ? w.go(gotoDate) : w.reload() }}
         />
       )}
 
@@ -949,6 +956,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10)) // schedule effective from
   const [collapsed, setCollapsed] = useState(() => new Set()) // collapsed departments
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(null) // { count, from } after a successful assign
 
   const byDept = {}
   for (const p of people) (byDept[p.department || 'Other'] ||= []).push(p)
@@ -980,7 +988,9 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
       // weeks keep their existing schedule automatically (server is date-aware).
       for (const u of selected) schedules[u] = { from: startDate, days: dayMap }
       await api(endpoint, { method: 'PUT', body: { schedules } })
-      onSaved()
+      // Don't just vanish (Adama 7 Jul: "it kicked me out, it did not show it
+      // was assigned") — confirm what was saved and offer to show that week.
+      setSaved({ count: selected.size, from: startDate })
     } catch (e) { alert(e.message) } finally { setSaving(false) }
   }
 
@@ -1000,6 +1010,35 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
     const fmt = (x) => x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
     return { map, label: `${fmt(first)} – ${fmt(last)}` }
   })()
+
+  // Success step — say exactly what was saved and offer to jump to that week.
+  if (saved) {
+    return (
+      <Modal
+        open
+        onClose={() => onSaved()}
+        title="Team schedule"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => onSaved()}>Close</Button>
+            <Button onClick={() => onSaved(saved.from)}>Show that week</Button>
+          </>
+        }
+      >
+        <div className="space-y-4 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-good-bg)] text-[var(--color-good)]">
+            <CheckCircle2 size={30} />
+          </div>
+          <div>
+            <div className="text-lg font-bold text-[var(--color-ink)]">Schedule saved</div>
+            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+              {start}–{end} starts {prettyDate(saved.from)} for {saved.count === 1 ? '1 person' : `${saved.count} people`}. Earlier weeks stay as they are.
+            </p>
+          </div>
+        </div>
+      </Modal>
+    )
+  }
 
   return (
     <Modal
