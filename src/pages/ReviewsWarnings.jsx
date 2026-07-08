@@ -46,9 +46,10 @@ export default function ReviewsWarnings({ scope }) {
   const [coachErr, setCoachErr] = useState('');
   const [confirmDelC, setConfirmDelC] = useState(null); // coaching id pending delete confirm
   const [delCBusy, setDelCBusy] = useState(false);
-  // Who may edit/delete coaching: the "Edit & delete coaching" permission only
-  // (Team power sub-toggle; CEO always) — resolved server-side, never in view-as.
-  const canManageCoaching = !isViewAs && !!user?.canCoachingManage;
+  // Edit and delete are separate permissions (Team power sub-toggles; CEO
+  // always) — each button follows its own grant, never in view-as.
+  const canEditCoaching = !isViewAs && !!user?.canCoachingEdit;
+  const canDeleteCoaching = !isViewAs && !!user?.canCoachingDelete;
   const [teamMembers, setTeamMembers] = useState(scoped ? null : []);
   const [adding, setAdding] = useState(null); // { agent, type, reason, date } | null
   const [busy, setBusy] = useState(false);
@@ -197,14 +198,16 @@ export default function ReviewsWarnings({ scope }) {
                     {c.note && <p className="text-sm text-gray-700 mt-0.5">{c.note}</p>}
                     <p className="text-[11px] text-gray-500 mt-1">{fmtDate(c.datetime || c.createdAt)} · by {c.createdBy}{c.editedBy ? ` · edited by ${c.editedBy}` : ''}</p>
                   </div>
-                  {canManageCoaching && (
+                  {(canEditCoaching || canDeleteCoaching) && (
                     <div className="flex shrink-0 items-start gap-1">
-                      <button onClick={() => { setCoachErr(''); setConfirmDelC(null); setEditCoach({ id: c.id, type: c.type || 'coaching', title: c.title || '', note: c.note || '', datetime: c.datetime || '' }); }} title="Edit" className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700"><Pencil size={14} /></button>
-                      {confirmDelC === c.id ? (
+                      {canEditCoaching && (
+                        <button onClick={() => { setCoachErr(''); setConfirmDelC(null); setEditCoach({ id: c.id, type: c.type || 'coaching', title: c.title || '', note: c.note || '', datetime: c.datetime || '' }); }} title="Edit" className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700"><Pencil size={14} /></button>
+                      )}
+                      {canDeleteCoaching && (confirmDelC === c.id ? (
                         <button onClick={() => deleteCoach(c.id)} disabled={delCBusy} className="rounded-lg bg-red-600 px-2 py-1 text-xs font-bold text-white disabled:opacity-60">{delCBusy ? 'Deleting…' : 'Delete?'}</button>
                       ) : (
                         <button onClick={() => setConfirmDelC(c.id)} title="Delete" className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-red-600"><Trash2 size={14} /></button>
-                      )}
+                      ))}
                     </div>
                   )}
                 </div>

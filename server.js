@@ -226,7 +226,7 @@ function publicUser(u) {
   // resolved powers ride along so the UI can gate sections client-side;
   // the server re-checks every request regardless. isTeamLead unlocks the MY
   // TEAM nav section (gated again server-side on /api/team/*).
-  return { ...rest, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u), canCoachingManage: canSub(u, 'team', 'coaching-manage') }
+  return { ...rest, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u), canCoachingEdit: canSub(u, 'team', 'coaching-edit'), canCoachingDelete: canSub(u, 'team', 'coaching-delete') }
 }
 // Accepts a username OR an email (Adama 6 Jul: staff know their email, not the
 // internal username — Momodou typed his email and got "Unknown username").
@@ -318,7 +318,8 @@ const SUBPOWERS = {
   team: [
     ['schedules', 'Edit schedules', 'Assign shifts and correct attendance days'],
     ['coaching', 'Coaching & flags', 'Log coaching sessions, flags and meetings'],
-    ['coaching-manage', 'Edit & delete coaching', 'Change or remove logged coaching entries'],
+    ['coaching-edit', 'Edit coaching', 'Change logged coaching entries'],
+    ['coaching-delete', 'Delete coaching', 'Remove logged coaching entries'],
   ],
   staffadmin: [
     ['add', 'Add staff', 'Create new staff accounts'],
@@ -2456,14 +2457,17 @@ app.get('/api/coaching', auth, (req, res) => {
 })
 // LOGGING: the Team power's "Coaching & flags" sub within your named scope, OR
 // the target is on your OWN team (a lead's built-in right — coaching your team
-// is the job). CHANGING HISTORY is different: edit/delete need the explicit
-// "Edit & delete coaching" sub — no built-in bypass, so Adama controls exactly
-// who can rewrite or remove what was logged (CEO always can).
+// is the job). CHANGING HISTORY is different: edit and delete are each their
+// OWN sub-toggle — no built-in bypass, grantable independently (Adama 7 Jul:
+// "i can give someone to delete and not edit"). CEO always can.
 function canLogCoaching(realUser, targetUsername) {
   return (inScope(realUser, 'team', targetUsername) && canSub(realUser, 'team', 'coaching')) || teamMembersFor(realUser).some((m) => m.username === targetUsername)
 }
-function canManageCoaching(realUser, targetUsername) {
-  return inScope(realUser, 'team', targetUsername) && canSub(realUser, 'team', 'coaching-manage')
+function canEditCoaching(realUser, targetUsername) {
+  return inScope(realUser, 'team', targetUsername) && canSub(realUser, 'team', 'coaching-edit')
+}
+function canDeleteCoaching(realUser, targetUsername) {
+  return inScope(realUser, 'team', targetUsername) && canSub(realUser, 'team', 'coaching-delete')
 }
 app.post('/api/coaching', auth, notViewAs, (req, res) => {
   const { targetUsername, type, title, note, datetime } = req.body || {}
@@ -2489,7 +2493,7 @@ app.put('/api/coaching/:id', auth, notViewAs, (req, res) => {
   const all = db.read('coaching', [])
   const rec = all.find((c) => c.id === req.params.id)
   if (!rec) return res.status(404).json({ error: 'not-found' })
-  if (!canManageCoaching(req.realUser, rec.targetUsername)) return res.status(403).json({ error: 'forbidden' })
+  if (!canEditCoaching(req.realUser, rec.targetUsername)) return res.status(403).json({ error: 'forbidden' })
   const { type, title, note, datetime } = req.body || {}
   if (type != null) rec.type = type
   if (title != null) rec.title = title
@@ -2504,7 +2508,7 @@ app.delete('/api/coaching/:id', auth, notViewAs, (req, res) => {
   const all = db.read('coaching', [])
   const rec = all.find((c) => c.id === req.params.id)
   if (!rec) return res.status(404).json({ error: 'not-found' })
-  if (!canManageCoaching(req.realUser, rec.targetUsername)) return res.status(403).json({ error: 'forbidden' })
+  if (!canDeleteCoaching(req.realUser, rec.targetUsername)) return res.status(403).json({ error: 'forbidden' })
   db.write('coaching', all.filter((c) => c.id !== req.params.id))
   res.json({ ok: true })
 })

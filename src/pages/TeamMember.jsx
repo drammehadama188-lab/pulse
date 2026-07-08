@@ -30,9 +30,10 @@ export default function TeamMember() {
   const { username } = useParams()
   const navigate = useNavigate()
   const { user, isViewAs } = useAuth()
-  // Edit/delete need the explicit "Edit & delete coaching" permission (Team →
-  // sub-toggle; CEO always) — logging stays a lead's built-in right.
-  const canManageCoaching = !isViewAs && !!user?.canCoachingManage
+  // Edit and delete are separate permissions (Team → sub-toggles; CEO always)
+  // — logging stays a lead's built-in right.
+  const canEditCoaching = !isViewAs && !!user?.canCoachingEdit
+  const canDeleteCoaching = !isViewAs && !!user?.canCoachingDelete
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -161,14 +162,16 @@ export default function TeamMember() {
                       {new Date(c.datetime || c.createdAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · {c.createdBy}{c.editedBy ? ` · edited by ${c.editedBy}` : ''}
                     </div>
                   </div>
-                  {canManageCoaching && (
+                  {(canEditCoaching || canDeleteCoaching) && (
                     <div className="flex shrink-0 items-start gap-1">
-                      <button onClick={() => { setEditing(c.id); setConfirmDel(null) }} title="Edit" className="rounded-lg p-1.5 text-[var(--color-ink-faint)] hover:bg-[var(--color-paper)] hover:text-[var(--color-ink)]"><Pencil size={14} /></button>
-                      {confirmDel === c.id ? (
+                      {canEditCoaching && (
+                        <button onClick={() => { setEditing(c.id); setConfirmDel(null) }} title="Edit" className="rounded-lg p-1.5 text-[var(--color-ink-faint)] hover:bg-[var(--color-paper)] hover:text-[var(--color-ink)]"><Pencil size={14} /></button>
+                      )}
+                      {canDeleteCoaching && (confirmDel === c.id ? (
                         <button onClick={() => removeCoaching(c.id)} disabled={delBusy} className="rounded-lg bg-[var(--color-bad)] px-2 py-1 text-xs font-bold text-white disabled:opacity-60">{delBusy ? 'Deleting…' : 'Delete?'}</button>
                       ) : (
                         <button onClick={() => setConfirmDel(c.id)} title="Delete" className="rounded-lg p-1.5 text-[var(--color-ink-faint)] hover:bg-[var(--color-paper)] hover:text-[var(--color-bad)]"><Trash2 size={14} /></button>
-                      )}
+                      ))}
                     </div>
                   )}
                 </div>
