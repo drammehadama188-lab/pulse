@@ -111,9 +111,13 @@ export default function HRTeam({
   const [payEdit, setPayEdit] = useState(null);          // { rec, salary, bonus, source, date } edit modal
   const [payUndo, setPayUndo] = useState(null);          // { rec } undo-confirm modal
   const todayISO = new Date().toISOString().slice(0, 10);
+  // Which month the payroll run applies to — defaults to this month, but any
+  // month can be picked (Adama 8 Jul: enter June's payroll late, or fix an
+  // error in a past month). The server takes ?period= and pays into it.
+  const [payPeriod, setPayPeriod] = useState(() => new Date().toISOString().slice(0, 7));
 
-  function loadPayRun() {
-    api('/payroll/run')
+  function loadPayRun(period = payPeriod) {
+    api(`/payroll/run?period=${period}`)
       .then(d => {
         setPayRun(d);
         const draft = {};
@@ -121,6 +125,12 @@ export default function HRTeam({
         setPayDraft(draft);
       })
       .catch(() => setPayRun({ error: true }));
+  }
+  function changePayPeriod(period) {
+    if (!/^\d{4}-\d{2}$/.test(period)) return;
+    setPayPeriod(period);
+    setPayRun(null); // show fresh state while the month loads
+    loadPayRun(period);
   }
   const openProfile = (name) => navigate(`/agents/${name.toLowerCase().replace(/\s+/g, '-')}`);
   const urlTab = new URLSearchParams(location.search).get('tab');
@@ -788,11 +798,20 @@ export default function HRTeam({
           </div>
           {paySec === 'run' && canSeePayDetail && payRun && !payRun.error && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-start justify-between mb-1">
-                <h3 className="text-lg font-semibold text-gray-900">Run Payroll — {payRun.period && new Date(Number(payRun.period.slice(0, 4)), Number(payRun.period.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
+              <div className="flex items-start justify-between mb-1 flex-wrap gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h3 className="text-lg font-semibold text-gray-900">Run Payroll — {payRun.period && new Date(Number(payRun.period.slice(0, 4)), Number(payRun.period.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
+                  <input
+                    type="month"
+                    value={payPeriod}
+                    onChange={(e) => changePayPeriod(e.target.value)}
+                    className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700"
+                    title="Pick which month this payroll applies to — go back to enter or correct a past month"
+                  />
+                </div>
                 <span className="text-[11px] text-gray-400 flex items-center gap-1 mt-1"><DollarSign size={11} /> Records to Zoho Books</span>
               </div>
-              <p className="text-xs text-gray-500 mb-4">Enter what each person receives, pick how you paid them, then mark paid. Nothing posts until you confirm.</p>
+              <p className="text-xs text-gray-500 mb-4">Enter what each person receives, pick how you paid them, then mark paid. Nothing posts until you confirm.{payPeriod !== new Date().toISOString().slice(0, 7) && <span className="font-semibold text-amber-600"> You are paying into a past month — payments record under that month.</span>}</p>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead><tr className="border-b border-gray-200 text-xs uppercase text-gray-500">
