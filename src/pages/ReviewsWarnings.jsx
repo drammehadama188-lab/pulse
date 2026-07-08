@@ -37,7 +37,7 @@ function Stat({ label, value, sub, accent }) {
 export default function ReviewsWarnings({ scope }) {
   const scoped = scope === 'team'; // MY TEAM: a lead's own team, read-only
   const navigate = useNavigate();
-  const { hasPower, isViewAs } = useAuth();
+  const { user, isViewAs } = useAuth();
   const [warnings, setWarnings] = useState([]);
   const [reviews, setReviews] = useState({});
   const [coaching, setCoaching] = useState([]);
@@ -46,10 +46,9 @@ export default function ReviewsWarnings({ scope }) {
   const [coachErr, setCoachErr] = useState('');
   const [confirmDelC, setConfirmDelC] = useState(null); // coaching id pending delete confirm
   const [delCBusy, setDelCBusy] = useState(false);
-  // Who may edit/delete coaching here: never under view-as; on the team page any
-  // lead manages their own team; on the HR page you need the Team power. The
-  // server enforces the same rule (Coaching & flags sub, per person).
-  const canManageCoaching = !isViewAs && (scoped || hasPower('team'));
+  // Who may edit/delete coaching: the "Edit & delete coaching" permission only
+  // (Team power sub-toggle; CEO always) — resolved server-side, never in view-as.
+  const canManageCoaching = !isViewAs && !!user?.canCoachingManage;
   const [teamMembers, setTeamMembers] = useState(scoped ? null : []);
   const [adding, setAdding] = useState(null); // { agent, type, reason, date } | null
   const [busy, setBusy] = useState(false);
