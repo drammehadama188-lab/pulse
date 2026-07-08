@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, AlertTriangle, CheckCircle2, ChevronRight, Plus, X, GraduationCap, Calendar, Flag } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, CheckCircle2, ChevronRight, Plus, X, GraduationCap, Calendar, Flag, Pencil, Trash2 } from 'lucide-react';
 import { team } from '../data/team';
 import { api } from '../lib/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 // Reviews & Warnings — the team-wide ACTION page (sibling to Contracts).
 // Answers "who needs a review this month, and who has warnings on record?"
@@ -36,9 +37,19 @@ function Stat({ label, value, sub, accent }) {
 export default function ReviewsWarnings({ scope }) {
   const scoped = scope === 'team'; // MY TEAM: a lead's own team, read-only
   const navigate = useNavigate();
+  const { hasPower, isViewAs } = useAuth();
   const [warnings, setWarnings] = useState([]);
   const [reviews, setReviews] = useState({});
   const [coaching, setCoaching] = useState([]);
+  const [editCoach, setEditCoach] = useState(null); // coaching record being edited
+  const [coachBusy, setCoachBusy] = useState(false);
+  const [coachErr, setCoachErr] = useState('');
+  const [confirmDelC, setConfirmDelC] = useState(null); // coaching id pending delete confirm
+  const [delCBusy, setDelCBusy] = useState(false);
+  // Who may edit/delete coaching here: never under view-as; on the team page any
+  // lead manages their own team; on the HR page you need the Team power. The
+  // server enforces the same rule (Coaching & flags sub, per person).
+  const canManageCoaching = !isViewAs && (scoped || hasPower('team'));
   const [teamMembers, setTeamMembers] = useState(scoped ? null : []);
   const [adding, setAdding] = useState(null); // { agent, type, reason, date } | null
   const [busy, setBusy] = useState(false);
@@ -81,6 +92,25 @@ export default function ReviewsWarnings({ scope }) {
     if (scoped) return openProfile(name);
     navigate(`/performance/${slugify(name)}`);
   };
+
+  async function saveCoach() {
+    setCoachBusy(true); setCoachErr('');
+    try {
+      const d = await api(`/coaching/${editCoach.id}`, { method: 'PUT', body: { type: editCoach.type, title: editCoach.title, note: editCoach.note, datetime: editCoach.datetime } });
+      setCoaching((list) => list.map((c) => (c.id === d.record.id ? { ...c, ...d.record } : c)));
+      setEditCoach(null);
+    } catch (e) { setCoachErr(e.message || 'Could not save'); }
+    finally { setCoachBusy(false); }
+  }
+  async function deleteCoach(id) {
+    setDelCBusy(true);
+    try {
+      await api(`/coaching/${id}`, { method: 'DELETE' });
+      setCoaching((list) => list.filter((c) => c.id !== id));
+      setConfirmDelC(null);
+    } catch (e) { setCoachErr(e.message || 'Could not delete'); }
+    finally { setDelCBusy(false); }
+  }
 
   function openAdd() {
     setErr('');
@@ -166,8 +196,18 @@ export default function ReviewsWarnings({ scope }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">{c.targetName || c.targetUsername}{c.title ? ` — ${c.title}` : ''}</p>
                     {c.note && <p className="text-sm text-gray-700 mt-0.5">{c.note}</p>}
-                    <p className="text-[11px] text-gray-500 mt-1">{fmtDate(c.datetime || c.createdAt)} · by {c.createdBy}</p>
+                    <p className="text-[11px] text-gray-500 mt-1">{fmtDate(c.datetime || c.createdAt)} · by {c.createdBy}{c.editedBy ? ` · edited by ${c.editedBy}` : ''}</p>
                   </div>
+                  {canManageCoaching && (
+                    <div className="flex shrink-0 items-start gap-1">
+                      <button onClick={() => { setCoachErr(''); setConfirmDelC(null); setEditCoach({ id: c.id, type: c.type || 'coaching', title: c.title || '', note: c.note || '', datetime: c.datetime || '' }); }} title="Edit" className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700"><Pencil size={14} /></button>
+                      {confirmDelC === c.id ? (
+                        <button onClick={() => deleteCoach(c.id)} disabled={delCBusy} className="rounded-lg bg-red-600 px-2 py-1 text-xs font-bold text-white disabled:opacity-60">{delCBusy ? 'Deleting…' : 'Delete?'}</button>
+                      ) : (
+                        <button onClick={() => setConfirmDelC(c.id)} title="Delete" className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-red-600"><Trash2 size={14} /></button>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -200,6 +240,47 @@ export default function ReviewsWarnings({ scope }) {
           </div>
         )}
       </div>
+
+      {/* Edit a coaching entry modal */}
+      {editCoach && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !coachBusy && setEditCoach(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><GraduationCap size={18} className="text-emerald-600" /> Edit entry</h3>
+              <button onClick={() => setEditCoach(null)} disabled={coachBusy} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
+            </div>
+            <div className="space-y-4">
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Type</span>
+                <select value={editCoach.type} onChange={(e) => setEditCoach((s) => ({ ...s, type: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                  <option value="coaching">Coaching</option>
+                  <option value="meeting">Meeting</option>
+                  <option value="flag">Flag</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Title</span>
+                <input value={editCoach.title} onChange={(e) => setEditCoach((s) => ({ ...s, title: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              </label>
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Note</span>
+                <textarea value={editCoach.note} onChange={(e) => setEditCoach((s) => ({ ...s, note: e.target.value }))} rows={3} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              </label>
+              {editCoach.type === 'meeting' && (
+                <label className="block">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">When</span>
+                  <input type="datetime-local" value={editCoach.datetime} onChange={(e) => setEditCoach((s) => ({ ...s, datetime: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </label>
+              )}
+            </div>
+            {coachErr && <p className="text-sm text-red-600 mt-3">{coachErr}</p>}
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={() => setEditCoach(null)} disabled={coachBusy} className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+              <button onClick={saveCoach} disabled={coachBusy} className="px-4 py-2 rounded-lg text-sm text-white bg-gray-900 hover:bg-gray-800 disabled:opacity-60">{coachBusy ? 'Saving…' : 'Save changes'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Log a warning modal */}
       {adding && (
