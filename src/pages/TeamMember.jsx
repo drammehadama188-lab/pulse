@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MessageSquare, Flag, CalendarClock, CheckCircle2, Plus } from 'lucide-react'
+import { ArrowLeft, MessageSquare, Flag, CalendarClock, CheckCircle2, Plus, Pencil, Trash2 } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Avatar, Button, Card, Field, Input, Pill, Select, SectionTitle, Spinner, Textarea } from '../components/ui.jsx'
@@ -33,6 +33,16 @@ export default function TeamMember() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [editing, setEditing] = useState(null) // coaching record id being edited
+  const [confirmDel, setConfirmDel] = useState(null) // record id waiting for delete confirm
+  const [delBusy, setDelBusy] = useState(false)
+
+  async function removeCoaching(id) {
+    setDelBusy(true)
+    try { await api(`/coaching/${id}`, { method: 'DELETE' }); setConfirmDel(null); await load() }
+    catch (e) { setError(e.message) }
+    finally { setDelBusy(false) }
+  }
 
   async function load() {
     try { setData(await api(`/team/member/${username}`)) }
@@ -125,16 +135,39 @@ export default function TeamMember() {
             {data.coaching.map((c) => {
               const T = TYPES.find((t) => t.key === c.type) || TYPES[0]
               const Icon = T.icon
+              if (editing === c.id) {
+                return (
+                  <div key={c.id} className="px-4 py-3.5 sm:px-5">
+                    <CoachingForm
+                      username={data.username}
+                      name={data.name}
+                      record={c}
+                      onSaved={async () => { setEditing(null); await load() }}
+                      onCancel={() => setEditing(null)}
+                    />
+                  </div>
+                )
+              }
               return (
                 <div key={c.id} className="flex gap-3 px-4 py-3.5 sm:px-5">
                   <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-brand-50)] text-[var(--color-brand)]"><Icon size={15} /></span>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold text-[var(--color-ink)]">{c.title || T.label}</div>
                     {c.note && <div className="mt-0.5 text-sm text-[var(--color-ink-soft)]">{c.note}</div>}
                     <div className="mt-1 text-xs text-[var(--color-ink-faint)]">
-                      {new Date(c.datetime || c.createdAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · {c.createdBy}
+                      {new Date(c.datetime || c.createdAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · {c.createdBy}{c.editedBy ? ` · edited by ${c.editedBy}` : ''}
                     </div>
                   </div>
+                  {!isViewAs && (
+                    <div className="flex shrink-0 items-start gap-1">
+                      <button onClick={() => { setEditing(c.id); setConfirmDel(null) }} title="Edit" className="rounded-lg p-1.5 text-[var(--color-ink-faint)] hover:bg-[var(--color-paper)] hover:text-[var(--color-ink)]"><Pencil size={14} /></button>
+                      {confirmDel === c.id ? (
+                        <button onClick={() => removeCoaching(c.id)} disabled={delBusy} className="rounded-lg bg-[var(--color-bad)] px-2 py-1 text-xs font-bold text-white disabled:opacity-60">{delBusy ? 'Deleting…' : 'Delete?'}</button>
+                      ) : (
+                        <button onClick={() => setConfirmDel(c.id)} title="Delete" className="rounded-lg p-1.5 text-[var(--color-ink-faint)] hover:bg-[var(--color-paper)] hover:text-[var(--color-bad)]"><Trash2 size={14} /></button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -145,8 +178,11 @@ export default function TeamMember() {
   )
 }
 
-function CoachingForm({ username, name, onSaved }) {
-  const [v, setV] = useState({ type: 'coaching', title: '', note: '', datetime: '' })
+function CoachingForm({ username, name, record = null, onSaved, onCancel }) {
+  // With a record this same form edits it in place (PUT); without, it logs a new one.
+  const [v, setV] = useState(record
+    ? { type: record.type || 'coaching', title: record.title || '', note: record.note || '', datetime: record.datetime || '' }
+    : { type: 'coaching', title: '', note: '', datetime: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const set = (k) => (e) => setV((s) => ({ ...s, [k]: e.target.value }))
@@ -156,8 +192,12 @@ function CoachingForm({ username, name, onSaved }) {
     if (v.type === 'meeting' && !v.datetime) return setError('Pick a date & time for the meeting')
     setBusy(true)
     try {
-      await api('/coaching', { method: 'POST', body: { targetUsername: username, ...v } })
-      setV({ type: 'coaching', title: '', note: '', datetime: '' })
+      if (record) {
+        await api(`/coaching/${record.id}`, { method: 'PUT', body: v })
+      } else {
+        await api('/coaching', { method: 'POST', body: { targetUsername: username, ...v } })
+        setV({ type: 'coaching', title: '', note: '', datetime: '' })
+      }
       await onSaved()
     } catch (e) { setError(e.message) }
     finally { setBusy(false) }
@@ -178,7 +218,10 @@ function CoachingForm({ username, name, onSaved }) {
       <Field label="Title"><Input value={v.title} onChange={set('title')} placeholder={v.type === 'meeting' ? 'e.g. Weekly 1:1' : v.type === 'flag' ? 'e.g. Missed Saturday shift' : `e.g. Coached ${name.split(' ')[0]} on pipeline`} /></Field>
       <Field label="Note"><Textarea rows={3} value={v.note} onChange={set('note')} placeholder="What did you discuss / agree?" /></Field>
       {error && <div className="text-sm font-medium text-[var(--color-bad)]">{error}</div>}
-      <Button onClick={submit} disabled={busy} icon={busy ? undefined : Plus}>{busy ? <Spinner size={18} /> : 'Log check-in'}</Button>
+      <div className="flex items-center gap-2">
+        <Button onClick={submit} disabled={busy} icon={busy || record ? undefined : Plus}>{busy ? <Spinner size={18} /> : record ? 'Save changes' : 'Log check-in'}</Button>
+        {record && <Button variant="ghost" onClick={onCancel} disabled={busy}>Cancel</Button>}
+      </div>
     </Card>
   )
 }

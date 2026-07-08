@@ -2453,12 +2453,15 @@ app.get('/api/coaching', auth, (req, res) => {
   all = all.map((c) => ({ ...c, targetName: users.find((x) => x.username === c.targetUsername)?.name || c.targetUsername }))
   res.json({ coaching: all })
 })
+// One rule for log/edit/delete: the Team power's "Coaching & flags" sub within
+// your named scope, OR the target is on your OWN team (a lead's built-in right).
+function canManageCoaching(realUser, targetUsername) {
+  return (inScope(realUser, 'team', targetUsername) && canSub(realUser, 'team', 'coaching')) || teamMembersFor(realUser).some((m) => m.username === targetUsername)
+}
 app.post('/api/coaching', auth, notViewAs, (req, res) => {
   const { targetUsername, type, title, note, datetime } = req.body || {}
   if (!targetUsername) return res.status(400).json({ error: 'targetUsername required' })
-  // Allowed if you hold the global Team power OR you're a team lead logging a
-  // check-in for one of your OWN team members (their weekly-coaching KPI).
-  const allowed = (inScope(req.realUser, 'team', targetUsername) && canSub(req.realUser, 'team', 'coaching')) || teamMembersFor(req.realUser).some((m) => m.username === targetUsername)
+  const allowed = canManageCoaching(req.realUser, targetUsername)
   if (!allowed) return res.status(403).json({ error: 'forbidden' })
   const all = db.read('coaching', [])
   const rec = {
@@ -2475,8 +2478,27 @@ app.post('/api/coaching', auth, notViewAs, (req, res) => {
   db.write('coaching', all)
   res.json({ record: rec })
 })
-app.delete('/api/coaching/:id', auth, notViewAs, requireSub('team', 'coaching'), (req, res) => {
-  db.write('coaching', db.read('coaching', []).filter((c) => c.id !== req.params.id))
+app.put('/api/coaching/:id', auth, notViewAs, (req, res) => {
+  const all = db.read('coaching', [])
+  const rec = all.find((c) => c.id === req.params.id)
+  if (!rec) return res.status(404).json({ error: 'not-found' })
+  if (!canManageCoaching(req.realUser, rec.targetUsername)) return res.status(403).json({ error: 'forbidden' })
+  const { type, title, note, datetime } = req.body || {}
+  if (type != null) rec.type = type
+  if (title != null) rec.title = title
+  if (note != null) rec.note = note
+  if (datetime != null) rec.datetime = datetime
+  rec.editedBy = req.user.name
+  rec.editedAt = new Date().toISOString()
+  db.write('coaching', all)
+  res.json({ record: rec })
+})
+app.delete('/api/coaching/:id', auth, notViewAs, (req, res) => {
+  const all = db.read('coaching', [])
+  const rec = all.find((c) => c.id === req.params.id)
+  if (!rec) return res.status(404).json({ error: 'not-found' })
+  if (!canManageCoaching(req.realUser, rec.targetUsername)) return res.status(403).json({ error: 'forbidden' })
+  db.write('coaching', all.filter((c) => c.id !== req.params.id))
   res.json({ ok: true })
 })
 
