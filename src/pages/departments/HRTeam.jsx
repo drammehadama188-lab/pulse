@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { team, pastStaff, payrollHistory } from '../../data/team';
 import Contracts from '../Contracts.jsx';
-import TimePeriodSelector from '../../components/TimePeriodSelector';
 import { api } from '../../lib/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -40,41 +39,10 @@ const contractDeadlines = team.filter(t => t.contractEnd).sort((a, b) => a.contr
   ...t, daysLeft: Math.ceil((new Date(t.contractEnd) - today) / 86400000)
 }));
 
-function periodRange(mode, custom, ref = new Date()) {
-  const r = new Date(ref);
-  if (mode === 'this_month') {
-    const start = new Date(r.getFullYear(), r.getMonth(), 1);
-    const end = new Date(r.getFullYear(), r.getMonth() + 1, 0, 23, 59, 59);
-    return { start, end, label: start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
-  }
-  if (mode === 'last_month') {
-    const start = new Date(r.getFullYear(), r.getMonth() - 1, 1);
-    const end = new Date(r.getFullYear(), r.getMonth(), 0, 23, 59, 59);
-    return { start, end, label: start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
-  }
-  if (mode === 'this_quarter') {
-    const q = Math.floor(r.getMonth() / 3);
-    const start = new Date(r.getFullYear(), q * 3, 1);
-    const end = new Date(r.getFullYear(), q * 3 + 3, 0, 23, 59, 59);
-    return { start, end, label: `Q${q + 1} ${r.getFullYear()}` };
-  }
-  if (mode === 'this_year') {
-    const start = new Date(r.getFullYear(), 0, 1);
-    const end = new Date(r.getFullYear(), 11, 31, 23, 59, 59);
-    return { start, end, label: String(r.getFullYear()) };
-  }
-  if (mode === 'all_time') {
-    return { start: new Date(2000, 0, 1), end: new Date(r.getFullYear() + 10, 11, 31), label: 'All Time' };
-  }
-  if (mode === 'custom' && custom?.from && custom?.to) {
-    const start = new Date(custom.from);
-    const end = new Date(custom.to + 'T23:59:59');
-    return { start, end, label: `${start.toLocaleDateString('en-GB')} – ${end.toLocaleDateString('en-GB')}` };
-  }
-  const start = new Date(r.getFullYear(), r.getMonth(), 1);
-  const end = new Date(r.getFullYear(), r.getMonth() + 1, 0, 23, 59, 59);
-  return { start, end, label: start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
-}
+// The "Last Month / This Month" TimePeriodSelector and its periodRange helper
+// were removed 8 Jul 2026 (Adama): the computed range was discarded — the
+// dropdown controlled nothing and mislabelled pages like Run Payroll (July
+// shown under a "Last Month" chip). Payroll's month comes from the server.
 
 const perfColor = p => p >= 80 ? 'text-emerald-600' : p >= 50 ? 'text-amber-600' : p > 0 ? 'text-red-600' : 'text-gray-400';
 const perfBg = p => p >= 80 ? 'bg-emerald-500' : p >= 50 ? 'bg-amber-500' : p > 0 ? 'bg-red-500' : 'bg-gray-300';
@@ -163,8 +131,6 @@ export default function HRTeam({
   const showOverview = !only || only.includes('dashboard');
   // expandedRow state removed 12 Jun 2026 — the roster detail panel it gated
   // was dead code (no setter); rows now open the full profile via openProfile.
-  const [periodMode, setPeriodMode] = useState('last_month');
-  const [customRange, setCustomRange] = useState(null);
   const [allWarnings, setAllWarnings] = useState([]);
   const [pendingLeave, setPendingLeave] = useState(null);
   const [pastFilter, setPastFilter] = useState('all');
@@ -274,8 +240,6 @@ export default function HRTeam({
     return map;
   }, [allWarnings]);
 
-  periodRange(periodMode, customRange);
-
   // 12 Jun 2026 (Adama's request): the `liveMetrics` map (per-person sales +
   // revenue from team.js) was removed here — its only consumers were the
   // sales-derived Revenue/Avg-Performance cards and the Cost-vs-Value panel,
@@ -367,11 +331,6 @@ export default function HRTeam({
           <h1 className="text-3xl font-semibold text-gray-900">{title}</h1>
           <p className="text-gray-500 mt-1">{subtitle}</p>
         </div>
-        <TimePeriodSelector
-          selected={periodMode}
-          onChange={(value, custom) => { setPeriodMode(value); if (value === 'custom') setCustomRange(custom); }}
-          showExport={false}
-        />
       </div>
 
       {showOverview && alerts.length > 0 && (

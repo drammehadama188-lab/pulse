@@ -226,7 +226,7 @@ function publicUser(u) {
   // resolved powers ride along so the UI can gate sections client-side;
   // the server re-checks every request regardless. isTeamLead unlocks the MY
   // TEAM nav section (gated again server-side on /api/team/*).
-  return { ...rest, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u), canCoachingEdit: canSub(u, 'team', 'coaching-edit'), canCoachingDelete: canSub(u, 'team', 'coaching-delete') }
+  return { ...rest, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u), canCoachingEdit: canSub(u, 'team', 'coaching-edit'), canCoachingDelete: canSub(u, 'team', 'coaching-delete'), canDocsEdit: canSub(u, 'hr', 'files-edit'), canDocsDelete: canSub(u, 'hr', 'files-delete') }
 }
 // Accepts a username OR an email (Adama 6 Jul: staff know their email, not the
 // internal username — Momodou typed his email and got "Unknown username").
@@ -333,6 +333,8 @@ const SUBPOWERS = {
   hr: [
     ['records', 'Records', 'Profiles, contracts, checklists, applicants'],
     ['performance', 'Performance', 'KPI rules, reviews, warnings, agent files'],
+    ['files-edit', 'Edit documents', "Rename a document or change its type"],
+    ['files-delete', 'Delete documents', "Remove uploaded documents from someone's file"],
   ],
   viewas: [],
 }
@@ -981,16 +983,9 @@ app.post('/api/team/attendance-fix', auth, requireSub('team', 'schedules'), notV
   res.json({ record: rec })
 })
 
-// self: undo a mistaken check-in — wipes TODAY's own record so they're "not
-// checked in" again and can re-check-in. Only today, only your own.
-app.post('/api/attendance/undo-checkin', auth, notViewAs, (req, res) => {
-  const date = todayKey()
-  const all = db.read('attendance', [])
-  const rec = all.find((a) => a.username === req.user.username && a.date === date)
-  if (!rec || !rec.checkIn) return res.status(409).json({ error: 'No check-in to undo today' })
-  db.write('attendance', all.filter((a) => !(a.username === req.user.username && a.date === date)))
-  res.json({ ok: true, record: null })
-})
+// Self "undo check-in" REMOVED 8 Jul 2026 (Adama): staff can't wipe their own
+// attendance record. Corrections are manager work — "Fix a check-in" on Team
+// Schedule, or the Attendance day editor's "Clear · no record".
 
 // manager: today's presence for whole team
 app.get('/api/attendance', auth, requirePower('team'), (req, res) => {
@@ -2714,10 +2709,26 @@ app.get('/api/agent-files/:id/download', (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${meta.name.replace(/"/g, '')}"`)
   res.sendFile(filePath)
 })
-app.delete('/api/agent-files/:id', auth, requireSub('hr', 'performance'), notViewAs, (req, res) => {
+// Edit (rename / re-categorise) and delete are each their OWN sub-toggle
+// (Adama 8 Jul) — grantable independently, both scoped to the holder's HR names.
+app.put('/api/agent-files/:id', auth, requireSub('hr', 'files-edit'), notViewAs, (req, res) => {
   const files = db.read('agent-files', [])
   const meta = files.find((f) => f.id === req.params.id)
   if (!meta) return res.status(404).json({ error: 'not found' })
+  if (!hrNamesSet(req.realUser).has(meta.agent)) return res.status(403).json({ error: 'Not in your HR scope' })
+  const { name, category } = req.body || {}
+  if (name != null && String(name).trim()) meta.name = String(name).trim().slice(0, 200)
+  if (category != null) meta.category = category
+  meta.editedBy = req.user.name
+  meta.editedAt = new Date().toISOString()
+  db.write('agent-files', files)
+  res.json({ success: true, file: meta })
+})
+app.delete('/api/agent-files/:id', auth, requireSub('hr', 'files-delete'), notViewAs, (req, res) => {
+  const files = db.read('agent-files', [])
+  const meta = files.find((f) => f.id === req.params.id)
+  if (!meta) return res.status(404).json({ error: 'not found' })
+  if (!hrNamesSet(req.realUser).has(meta.agent)) return res.status(403).json({ error: 'Not in your HR scope' })
   try { const fp = path.join(FILES_DIR, fileSlug(meta.agent), meta.storedAs); if (fs.existsSync(fp)) fs.unlinkSync(fp) } catch { /* ignore */ }
   db.write('agent-files', files.filter((f) => f.id !== req.params.id))
   res.json({ success: true })

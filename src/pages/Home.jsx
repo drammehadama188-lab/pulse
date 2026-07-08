@@ -4,7 +4,7 @@ import { Clock, Palmtree, Target, TrendingUp, ClipboardCheck, ChevronRight, LogI
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import { getLocation } from '../lib/geo.js'
-import { Avatar, Button, Card, ConfirmDialog, Pill, SectionTitle, Spinner, StatCard } from '../components/ui.jsx'
+import { Avatar, Button, Card, Pill, SectionTitle, Spinner, StatCard } from '../components/ui.jsx'
 import CoachingFeed from '../components/CoachingFeed.jsx'
 import { greeting, firstName, timeShort, dateLong, dalasi } from '../lib/format.js'
 
@@ -20,8 +20,6 @@ export default function Home() {
   const [mgr, setMgr] = useState({ pending: 0, present: 0, total: 0 })
   const [loading, setLoading] = useState(true)
   const [checking, setChecking] = useState(false)
-  const [undoOpen, setUndoOpen] = useState(false)
-  const [undoing, setUndoing] = useState(false)
 
   async function load() {
     const [a, l, t] = await Promise.all([
@@ -91,19 +89,6 @@ export default function Home() {
       alert(e.message)
     } finally {
       setChecking(false)
-    }
-  }
-
-  async function undoCheckIn() {
-    setUndoing(true)
-    try {
-      await api('/attendance/undo-checkin', { method: 'POST' })
-      setAtt(null)
-      setUndoOpen(false)
-    } catch (e) {
-      alert(e.message)
-    } finally {
-      setUndoing(false)
     }
   }
 
@@ -181,20 +166,12 @@ export default function Home() {
             <Button
               onClick={toggleCheck}
               disabled={checking || isViewAs}
-              variant={checkedIn ? 'outline' : 'primary'}
+              variant="primary"
               icon={checking ? undefined : checkedIn ? LogOut : LogIn}
               className="mt-1 w-full"
             >
               {checking ? <Spinner size={16} /> : checkedIn ? 'Check out' : 'Check in'}
             </Button>
-          )}
-          {checkedIn && !isViewAs && (
-            <button
-              onClick={() => setUndoOpen(true)}
-              className="-mt-1 text-xs font-semibold text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-brand)]"
-            >
-              Checked in by mistake? Undo
-            </button>
           )}
         </Card>
 
@@ -361,15 +338,6 @@ export default function Home() {
         </div>
       </div>
 
-      <ConfirmDialog
-        open={undoOpen}
-        onCancel={() => setUndoOpen(false)}
-        onConfirm={undoCheckIn}
-        busy={undoing}
-        title="Undo check-in?"
-        message="This removes today's check-in so you can start again. Your hours for today reset."
-        confirmLabel="Undo check-in"
-      />
     </div>
   )
 }

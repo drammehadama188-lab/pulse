@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText, Upload, Download, Trash2, Plus, Mail, FileSignature } from 'lucide-react';
+import { FileText, Upload, Download, Trash2, Plus, Mail, FileSignature, Pencil } from 'lucide-react';
 import { getToken } from '../lib/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 // Pulse API is token-authenticated (the founder app had none). Wrap fetch to
 // attach the bearer token so these calls pass Pulse's auth middleware.
@@ -40,11 +41,30 @@ function formatSize(bytes) {
 }
 
 export default function AgentFiles({ agentName, agentEmail, generateReviewFn, defaultCategory = 'general' }) {
+  const { user, isViewAs } = useAuth();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [pickedCategory, setPickedCategory] = useState(defaultCategory);
+  const [editing, setEditing] = useState(null); // { id, name, category }
+  const [savingEdit, setSavingEdit] = useState(false);
   const fileInputRef = useRef(null);
+  // Edit and delete are separate permissions (HR power sub-toggles; CEO always).
+  const canEdit = !isViewAs && !!user?.canDocsEdit;
+  const canDelete = !isViewAs && !!user?.canDocsDelete;
+
+  async function saveEdit() {
+    setSavingEdit(true);
+    try {
+      const res = await authFetch(`/api/agent-files/${editing.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editing.name, category: editing.category }),
+      }).then(r => r.json());
+      if (res.file) setFiles(prev => prev.map(f => (f.id === res.file.id ? res.file : f)));
+      setEditing(null);
+    } catch (e) {}
+    setSavingEdit(false);
+  }
 
   useEffect(() => {
     if (!agentName) return;
@@ -144,6 +164,30 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
       ) : (
         <div className="space-y-2">
           {files.map(f => (
+            editing?.id === f.id ? (
+              <div key={f.id} className="flex flex-wrap items-center gap-2 p-3 bg-gray-50 rounded-2xl">
+                <input
+                  value={editing.name}
+                  onChange={e => setEditing(s => ({ ...s, name: e.target.value }))}
+                  className="flex-1 min-w-[180px] text-sm border border-gray-200 rounded-lg px-3 py-2"
+                />
+                <select
+                  value={editing.category}
+                  onChange={e => setEditing(s => ({ ...s, category: e.target.value }))}
+                  className="text-xs border border-gray-200 rounded-full px-3 py-2"
+                >
+                  {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+                <button onClick={saveEdit} disabled={savingEdit || !editing.name.trim()}
+                  className="px-3 py-2 text-xs font-medium bg-gray-900 hover:bg-gray-800 text-white rounded-full disabled:bg-gray-300">
+                  {savingEdit ? 'Saving…' : 'Save'}
+                </button>
+                <button onClick={() => setEditing(null)} disabled={savingEdit}
+                  className="px-3 py-2 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full">
+                  Cancel
+                </button>
+              </div>
+            ) : (
             <div key={f.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl group">
               <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0">
                 <FileText size={14} className="text-gray-500" />
@@ -156,7 +200,7 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
                   </span>
                 </div>
                 <p className="text-[11px] text-gray-400 mt-0.5">
-                  {formatDate(f.uploadedAt)} · {formatSize(f.sizeBytes)} · by {f.uploadedBy || 'Damia'}
+                  {formatDate(f.uploadedAt)} · {formatSize(f.sizeBytes)} · by {f.uploadedBy || 'Damia'}{f.editedBy ? ` · edited by ${f.editedBy}` : ''}
                 </p>
               </div>
               <a href={`/api/agent-files/${f.id}/download?t=${getToken()}`} target="_blank" rel="noopener noreferrer"
@@ -168,11 +212,21 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
                 title="Email this to the agent">
                 <Mail size={14} />
               </button>
-              <button onClick={() => deleteFile(f.id)}
-                className="flex items-center gap-1 p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Trash2 size={14} />
-              </button>
+              {canEdit && (
+                <button onClick={() => setEditing({ id: f.id, name: f.name, category: f.category || 'general' })}
+                  title="Edit name or type"
+                  className="flex items-center gap-1 p-2 text-gray-400 hover:text-gray-900 rounded-full hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Pencil size={14} />
+                </button>
+              )}
+              {canDelete && (
+                <button onClick={() => deleteFile(f.id)}
+                  className="flex items-center gap-1 p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Trash2 size={14} />
+                </button>
+              )}
             </div>
+            )
           ))}
         </div>
       )}
