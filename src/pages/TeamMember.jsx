@@ -31,9 +31,10 @@ export default function TeamMember() {
   const navigate = useNavigate()
   const { user, isViewAs } = useAuth()
   // Edit and delete are separate permissions (Team → sub-toggles; CEO always)
-  // — logging stays a lead's built-in right.
-  const canEditCoaching = !isViewAs && !!user?.canCoachingEdit
-  const canDeleteCoaching = !isViewAs && !!user?.canCoachingDelete
+  // — logging stays a lead's built-in right. Follows the VIEWED user under
+  // view-as (faithful rule); the server refuses read-only impersonated writes.
+  const canEditCoaching = !!user?.canCoachingEdit
+  const canDeleteCoaching = !!user?.canCoachingDelete
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')

@@ -41,7 +41,7 @@ function formatSize(bytes) {
 }
 
 export default function AgentFiles({ agentName, agentEmail, generateReviewFn, defaultCategory = 'general' }) {
-  const { user, isViewAs } = useAuth();
+  const { user } = useAuth();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -50,8 +50,9 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
   const [savingEdit, setSavingEdit] = useState(false);
   const fileInputRef = useRef(null);
   // Edit and delete are separate permissions (HR power sub-toggles; CEO always).
-  const canEdit = !isViewAs && !!user?.canDocsEdit;
-  const canDelete = !isViewAs && !!user?.canDocsDelete;
+  // Follows the VIEWED user under view-as — faithful to their exact screen.
+  const canEdit = !!user?.canDocsEdit;
+  const canDelete = !!user?.canDocsDelete;
 
   async function saveEdit() {
     setSavingEdit(true);

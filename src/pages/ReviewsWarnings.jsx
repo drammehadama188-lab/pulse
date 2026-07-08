@@ -37,7 +37,7 @@ function Stat({ label, value, sub, accent }) {
 export default function ReviewsWarnings({ scope }) {
   const scoped = scope === 'team'; // MY TEAM: a lead's own team, read-only
   const navigate = useNavigate();
-  const { user, isViewAs } = useAuth();
+  const { user } = useAuth();
   const [warnings, setWarnings] = useState([]);
   const [reviews, setReviews] = useState({});
   const [coaching, setCoaching] = useState([]);
@@ -47,9 +47,10 @@ export default function ReviewsWarnings({ scope }) {
   const [confirmDelC, setConfirmDelC] = useState(null); // coaching id pending delete confirm
   const [delCBusy, setDelCBusy] = useState(false);
   // Edit and delete are separate permissions (Team power sub-toggles; CEO
-  // always) — each button follows its own grant, never in view-as.
-  const canEditCoaching = !isViewAs && !!user?.canCoachingEdit;
-  const canDeleteCoaching = !isViewAs && !!user?.canCoachingDelete;
+  // always). Follows the VIEWED user under view-as — Adama must see exactly
+  // their buttons; the server still refuses read-only impersonated writes.
+  const canEditCoaching = !!user?.canCoachingEdit;
+  const canDeleteCoaching = !!user?.canCoachingDelete;
   const [teamMembers, setTeamMembers] = useState(scoped ? null : []);
   const [adding, setAdding] = useState(null); // { agent, type, reason, date } | null
   const [busy, setBusy] = useState(false);

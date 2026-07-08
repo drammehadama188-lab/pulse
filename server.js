@@ -863,6 +863,12 @@ app.get('/api/users', auth, requirePower('team'), (req, res) => {
       permissionSubs: u.permissionSubs || {}, // capability sub-toggles: what they can do inside it
       isTeamLead: leadsATeam(u), // unlocks MY TEAM nav (also when viewing-as them)
       approvalsBeyondTeam: approvalsBeyondTeam(u), // nav dedupe: company Requests vs Team Requests
+      // resolved action flags — view-as must show EXACTLY the viewed user's
+      // buttons (Adama's standing rule), so these ride along like in /me
+      canCoachingEdit: canSub(u, 'team', 'coaching-edit'),
+      canCoachingDelete: canSub(u, 'team', 'coaching-delete'),
+      canDocsEdit: canSub(u, 'hr', 'files-edit'),
+      canDocsDelete: canSub(u, 'hr', 'files-delete'),
       suspended: !!u.suspended,
     }))
   res.json({ users })
