@@ -50,13 +50,15 @@ function cellView(cell, dept) {
   }
   if (!cell.shift) return null // rest day
   const time = `${cell.shift.start}–${cell.shift.end}`
-  // Lean cells: one clock time + one word (Adama 28 Jun — "the less text the better").
+  // Lean cells: clock times + one word. A finished day shows the real span
+  // (in–out) so "who started when" reads without opening the day (Adama 7 Jul).
+  const span = cell.checkIn && cell.checkOut ? `${timeShort(cell.checkIn)}–${timeShort(cell.checkOut)}` : null
   if (cell.status === 'worked') {
     return cell.checkOut
-      ? { tone: 'worked', primary: timeShort(cell.checkOut), secondary: 'Completed' }
+      ? { tone: 'worked', primary: span || timeShort(cell.checkOut), secondary: 'Completed' }
       : { tone: 'worked', primary: cell.checkIn ? timeShort(cell.checkIn) : time, secondary: 'Working' }
   }
-  if (cell.status === 'late') return { tone: 'late', primary: cell.checkIn ? timeShort(cell.checkIn) : time, secondary: 'Late' }
+  if (cell.status === 'late') return { tone: 'late', primary: span || (cell.checkIn ? timeShort(cell.checkIn) : time), secondary: 'Late' }
   if (cell.status === 'absent') return { tone: 'absent', primary: time, secondary: 'No clock in' }
   return { tone: 'scheduled', primary: time, secondary: null } // planned — time only, no extra text
 }
