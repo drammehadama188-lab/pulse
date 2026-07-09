@@ -2188,41 +2188,99 @@ app.get('/api/payroll/paysources', auth, requireOwner, (req, res) => {
   res.json({ paySources: paySources().map((s) => ({ key: s.key, label: s.label })) })
 })
 
+// Which month someone joined ('YYYY-MM'), from the roster's mixed date
+// formats ('2026-04-01', 'Jun 2026', 'Oct 2025'). Null = unknown, keep them.
+function joinedYM(p) {
+  const j = String(p.joined || '')
+  if (/^\d{4}-\d{2}/.test(j)) return j.slice(0, 7)
+  const d = new Date(j)
+  return isNaN(d) ? null : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
 // The roster to run for a month + what's already been paid (local record).
 // `?period=YYYY-MM` (defaults to the current month). Suggested salary/bonus
 // pre-fill from the roster; the owner edits them before paying.
 app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
   const period = /^\d{4}-\d{2}$/.test(req.query.period || '') ? req.query.period : new Date().toISOString().slice(0, 7)
   const archived = archivedNameSet()
-  const merged = [...team, ...createdStaffRoster()].filter((p) => !archived.has(p.name))
+  // Only people who had ALREADY joined by this month — Momodou joined in June,
+  // so he doesn't belong on March's run (Adama 9 Jul: "misleading"). Anyone
+  // with an actual payment recorded for the month stays visible regardless
+  // (Sally's March training allowance predates her April joining).
   let paidRecords = db.read('payroll', []).filter((r) => r.period === period)
+  const paidNames = new Set(paidRecords.map((r) => r.name))
+  const merged = [...team, ...createdStaffRoster()].filter((p) => !archived.has(p.name) && (paidNames.has(p.name) || joinedYM(p) === null || joinedYM(p) <= period))
   // Reconcile each recorded payment against Books (Books is the truth): if the
   // expense was deleted in Zoho, drop the local record; if its total changed,
   // sync ours + flag it. Keeps the "Paid" badge honest no matter where edited.
   // Checks run in PARALLEL and at most once per period per 5 minutes — the old
   // one-at-a-time loop on every load made month switching crawl (Adama 8 Jul).
   const fresh = Date.now() - (_runReconciledAt[period] || 0) < 5 * 60 * 1000
-  if (zohoConfigured() && paidRecords.length && !fresh) {
-    const checks = await Promise.all(paidRecords.filter((r) => r.expenseId).map((r) =>
-      getExpense(r.expenseId).then((exp) => ({ r, exp })).catch(() => null) // null = transient hiccup, leave as-is
-    ))
-    const all = db.read('payroll', [])
-    let changed = false
-    for (const c of checks) {
-      if (!c) continue
-      const { r, exp } = c
-      if (!exp) { // deleted in Zoho
-        const i = all.findIndex((x) => x.id === r.id)
-        if (i >= 0) { all.splice(i, 1); changed = true; r._deleted = true }
-      } else if (Math.round(exp.total) !== Math.round(r.total)) {
-        r.total = Math.round(exp.total); r.editedInZoho = true
-        const i = all.findIndex((x) => x.id === r.id)
-        if (i >= 0) { all[i] = { ...all[i], total: r.total, editedInZoho: true }; changed = true }
+  if (zohoConfigured() && !fresh) {
+    if (paidRecords.length) {
+      const checks = await Promise.all(paidRecords.filter((r) => r.expenseId).map((r) =>
+        getExpense(r.expenseId).then((exp) => ({ r, exp })).catch(() => null) // null = transient hiccup, leave as-is
+      ))
+      const all = db.read('payroll', [])
+      let changed = false
+      for (const c of checks) {
+        if (!c) continue
+        const { r, exp } = c
+        if (!exp) { // deleted in Zoho
+          const i = all.findIndex((x) => x.id === r.id)
+          if (i >= 0) { all.splice(i, 1); changed = true; r._deleted = true }
+        } else if (Math.round(exp.total) !== Math.round(r.total)) {
+          r.total = Math.round(exp.total); r.editedInZoho = true
+          const i = all.findIndex((x) => x.id === r.id)
+          if (i >= 0) { all[i] = { ...all[i], total: r.total, editedInZoho: true }; changed = true }
+        }
+      }
+      if (changed) { db.write('payroll', all); _payrollCache = null }
+      paidRecords = paidRecords.filter((r) => !r._deleted)
+    }
+    // AUTO-ADOPT (Adama 9 Jul: "you know what we have paid — why leave it Mark
+    // paid"): anyone with no record this month gets their Books Salaries
+    // expense looked up in parallel; a hit is linked as an adopted record, so
+    // months paid straight into Zoho load as Paid without any clicking.
+    const haveRecord = new Set(paidRecords.map((r) => r.name))
+    const toFind = merged.filter((p, i, arr) => !haveRecord.has(p.name) && arr.findIndex((x) => x.name === p.name) === i)
+    if (toFind.length) {
+      const found = await Promise.all(toFind.map(async (p) => {
+        try {
+          const { match: vendor } = await resolveVendor(p.name)
+          if (!vendor) return null
+          const exp = await existingSalaryExpense(vendor.id, period)
+          return exp ? { p, vendor, exp } : null
+        } catch { return null }
+      }))
+      const hits = found.filter(Boolean)
+      if (hits.length) {
+        const all = db.read('payroll', [])
+        for (const { p, vendor, exp } of hits) {
+          const rec = {
+            id: crypto.randomUUID(),
+            period,
+            name: p.name,
+            salary: Math.round(Number(exp.total) || 0), // Books holds one total; fix the split in Edit if needed
+            bonus: 0,
+            total: Math.round(Number(exp.total) || 0),
+            paySource: null,
+            paySourceKey: null,
+            date: exp.date,
+            expenseId: exp.expense_id,
+            vendorId: vendor.id,
+            adopted: true,
+            postedBy: 'books-sync',
+            postedAt: new Date().toISOString(),
+          }
+          all.push(rec)
+          paidRecords.push(rec)
+        }
+        db.write('payroll', all)
+        _payrollCache = null
       }
     }
-    if (changed) { db.write('payroll', all); _payrollCache = null }
     _runReconciledAt[period] = Date.now()
-    paidRecords = paidRecords.filter((r) => !r._deleted)
   }
   const paidByName = {}
   paidRecords.forEach((r) => { paidByName[r.name] = r })
