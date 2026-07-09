@@ -946,13 +946,18 @@ export default function HRTeam({
                       const setD = (patch) => setPayDraft(s => ({ ...s, [p.name]: { ...s[p.name], ...patch } }));
                       return (
                         <tr key={p.name} className="border-b border-gray-100">
-                          <td className="px-3 py-2"><p className="text-sm font-medium text-gray-900">{p.name}</p><p className="text-xs text-gray-500">{p.role}</p></td>
+                          <td className="px-3 py-2">
+                            <p className="text-sm font-medium text-gray-900">{p.name}</p>
+                            <p className="text-xs text-gray-500">{p.role}</p>
+                            {p.paid?.label && <p className="text-xs font-medium text-emerald-700 mt-0.5">{p.paid.label}</p>}
+                          </td>
                           {p.paid ? (
-                            <td colSpan={4} className="px-3 py-2 text-sm text-emerald-700">
-                              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">✓ Paid D{p.paid.total.toLocaleString()}{p.paid.label ? ` · ${p.paid.label}` : ''} · {p.paid.paySource} · {p.paid.date}</span>
-                              {p.paid.expenseId && <span className="text-[11px] text-gray-400 ml-2">Books #{String(p.paid.expenseId).slice(-6)}</span>}
-                              {p.paid.editedInZoho && <span className="text-[11px] text-amber-600 ml-2">· edited in Zoho</span>}
-                            </td>
+                            <>
+                              <td className="px-3 py-2 text-right text-sm tabular-nums text-gray-700">D{(p.paid.salary || 0).toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right text-sm tabular-nums text-gray-700">{Number(p.paid.bonus) > 0 ? `D${p.paid.bonus.toLocaleString()}` : '—'}</td>
+                              <td className="px-3 py-2 text-right text-sm font-bold whitespace-nowrap">D{p.paid.total.toLocaleString()}</td>
+                              <td className="px-3 py-2 text-sm text-gray-700">{p.paid.paySource || '—'}</td>
+                            </>
                           ) : (
                             <>
                               <td className="px-3 py-2 text-right"><input type="number" value={d.salary} onChange={e => setD({ salary: e.target.value })} className="w-24 text-right border border-gray-200 rounded px-2 py-1 text-sm" /></td>
@@ -971,7 +976,9 @@ export default function HRTeam({
                             </td>
                           ) : (
                             <td className="px-3 py-2 text-right whitespace-nowrap">
-                              <button type="button" title="Edit payment" onClick={() => setPayEdit({ rec: p.paid, salary: p.paid.salary, bonus: p.paid.bonus, source: p.paid.paySourceKey, date: p.paid.date, label: p.paid.label || '' })} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"><Edit2 size={15} /></button>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700" title={p.paid.expenseId ? `Zoho Books #${String(p.paid.expenseId).slice(-6)}` : undefined}>✓ Paid {p.paid.date}</span>
+                              {p.paid.editedInZoho && <span className="ml-1 text-[11px] text-amber-600" title="Total was changed directly in Zoho">⚠</span>}
+                              <button type="button" title="Edit payment" onClick={() => setPayEdit({ rec: p.paid, salary: p.paid.salary, bonus: p.paid.bonus, source: p.paid.paySourceKey, date: p.paid.date, label: p.paid.label || '' })} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 ml-1"><Edit2 size={15} /></button>
                               <button type="button" title="Undo payment" onClick={() => setPayUndo({ rec: p.paid })} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 ml-1"><Trash2 size={15} /></button>
                             </td>
                           )}
