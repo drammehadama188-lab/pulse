@@ -199,7 +199,7 @@ export default function HRTeam({
   // exact vendor + Books payload before anything posts.
   async function startPay(person) {
     const d = payDraft[person.name] || {};
-    setPayConfirm({ person, loading: true, salary: d.salary, bonus: d.bonus, source: d.source, date: payDate });
+    setPayConfirm({ person, loading: true, salary: d.salary, bonus: d.bonus, source: d.source, date: payDate, label: '' });
     try {
       const preview = await api(`/payroll/pay?dryRun=1`, { method: 'POST', body: { name: person.name, salary: Number(d.salary) || 0, bonus: Number(d.bonus) || 0, paySourceKey: d.source, date: payDate, period: payRun.period } });
       // A duplicate found at preview time gets the same choices as one found on
@@ -214,10 +214,10 @@ export default function HRTeam({
   // Real post. force=true overrides the duplicate guard.
   async function confirmPay(force = false) {
     if (!payConfirm) return;
-    const { person, salary, bonus, source, date } = payConfirm;
+    const { person, salary, bonus, source, date, label } = payConfirm;
     setPayPosting(true);
     try {
-      const res = await api('/payroll/pay', { method: 'POST', body: { name: person.name, salary: Number(salary) || 0, bonus: Number(bonus) || 0, paySourceKey: source, date, period: payRun.period, force } });
+      const res = await api('/payroll/pay', { method: 'POST', body: { name: person.name, salary: Number(salary) || 0, bonus: Number(bonus) || 0, paySourceKey: source, date, period: payRun.period, label: label || '', force } });
       if (res.ok === false && res.reason === 'duplicate') {
         setPayConfirm(c => c && { ...c, duplicate: res.duplicate, message: res.message });
       } else {
@@ -254,7 +254,7 @@ export default function HRTeam({
     if (!payEdit) return;
     setPayPosting(true);
     try {
-      await api(`/payroll/pay/${payEdit.rec.id}`, { method: 'PUT', body: { salary: Number(payEdit.salary) || 0, bonus: Number(payEdit.bonus) || 0, paySourceKey: payEdit.source, date: payEdit.date } });
+      await api(`/payroll/pay/${payEdit.rec.id}`, { method: 'PUT', body: { salary: Number(payEdit.salary) || 0, bonus: Number(payEdit.bonus) || 0, paySourceKey: payEdit.source, date: payEdit.date, label: payEdit.label || '' } });
       setPayEdit(null); loadPayRun(); setPayLive(null);
     } catch (e) {
       setPayEdit(c => c && { ...c, error: e.message });
@@ -874,7 +874,7 @@ export default function HRTeam({
                           <td className="px-3 py-2"><p className="text-sm font-medium text-gray-900">{p.name}</p><p className="text-xs text-gray-500">{p.role}</p></td>
                           {p.paid ? (
                             <td colSpan={4} className="px-3 py-2 text-sm text-emerald-700">
-                              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">✓ Paid D{p.paid.total.toLocaleString()} · {p.paid.paySource} · {p.paid.date}</span>
+                              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">✓ Paid D{p.paid.total.toLocaleString()}{p.paid.label ? ` · ${p.paid.label}` : ''} · {p.paid.paySource} · {p.paid.date}</span>
                               {p.paid.expenseId && <span className="text-[11px] text-gray-400 ml-2">Books #{String(p.paid.expenseId).slice(-6)}</span>}
                               {p.paid.editedInZoho && <span className="text-[11px] text-amber-600 ml-2">· edited in Zoho</span>}
                             </td>
@@ -896,7 +896,7 @@ export default function HRTeam({
                             </td>
                           ) : (
                             <td className="px-3 py-2 text-right whitespace-nowrap">
-                              <button type="button" title="Edit payment" onClick={() => setPayEdit({ rec: p.paid, salary: p.paid.salary, bonus: p.paid.bonus, source: p.paid.paySourceKey, date: p.paid.date })} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"><Edit2 size={15} /></button>
+                              <button type="button" title="Edit payment" onClick={() => setPayEdit({ rec: p.paid, salary: p.paid.salary, bonus: p.paid.bonus, source: p.paid.paySourceKey, date: p.paid.date, label: p.paid.label || '' })} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"><Edit2 size={15} /></button>
                               <button type="button" title="Undo payment" onClick={() => setPayUndo({ rec: p.paid })} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 ml-1"><Trash2 size={15} /></button>
                             </td>
                           )}
@@ -1107,6 +1107,10 @@ export default function HRTeam({
                     <div className="flex justify-between border-t border-gray-100 pt-2"><span className="text-gray-900 font-semibold">Total to Books</span><span className="font-bold">D{payConfirm.preview.total.toLocaleString()}</span></div>
                     <div className="flex justify-between"><span className="text-gray-500">Paid via</span><span className="font-medium">{payConfirm.preview.paySource?.label}</span></div>
                     <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-medium">{payConfirm.date}</span></div>
+                    <label className="flex items-center justify-between gap-3 pt-1">
+                      <span className="text-gray-500">Label <span className="text-gray-400">(optional)</span></span>
+                      <input value={payConfirm.label || ''} onChange={e => setPayConfirm(c => c && { ...c, label: e.target.value })} placeholder="e.g. Training pay, Transport allowance" className="w-56 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-right" />
+                    </label>
                     <div className="flex justify-between"><span className="text-gray-500">Account</span><span className="font-medium">Salaries and Employee Wages</span></div>
                     <div className="flex justify-between"><span className="text-gray-500">Vendor</span><span className="font-medium text-right">{payConfirm.preview.vendor?.name}{payConfirm.preview.createdVendor && ' (new)'}</span></div>
                     {payConfirm.preview.fuzzyVendor && <p className="text-xs text-amber-600 flex items-center gap-1"><AlertTriangle size={12} /> Matched by name — confirm this is the right person.</p>}
@@ -1137,6 +1141,7 @@ export default function HRTeam({
                 <h3 className="text-lg font-semibold text-gray-900 mb-1">Edit payment — {payEdit.rec.name}</h3>
                 <p className="text-sm text-gray-500 mb-4">Updates the record in Zoho Books.</p>
                 <div className="space-y-3 text-sm">
+                  <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Label <span className="text-gray-400">(optional)</span></span><input value={payEdit.label || ''} onChange={e => setPayEdit(c => ({ ...c, label: e.target.value }))} placeholder="e.g. Training pay, Transport allowance" className="w-56 border border-gray-200 rounded px-2 py-1" /></label>
                   <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Salary</span><input type="number" value={payEdit.salary} onChange={e => setPayEdit(c => ({ ...c, salary: e.target.value }))} className="w-32 text-right border border-gray-200 rounded px-2 py-1" /></label>
                   <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Bonus</span><input type="number" value={payEdit.bonus} onChange={e => setPayEdit(c => ({ ...c, bonus: e.target.value }))} className="w-32 text-right border border-gray-200 rounded px-2 py-1" /></label>
                   <div className="flex items-center justify-between border-t border-gray-100 pt-2"><span className="text-gray-900 font-semibold">New total</span><span className="font-bold">D{((Number(payEdit.salary) || 0) + (Number(payEdit.bonus) || 0)).toLocaleString()}</span></div>

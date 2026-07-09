@@ -2080,8 +2080,14 @@ app.get('/api/payslips', auth, (req, res) => {
   const manual = db.read('payslips', []).filter((p) => p.username === who)
   const fromPayroll = person
     ? db.read('payroll', []).filter((r) => r.name === person.name).map((r) => {
-        const earnings = [{ label: 'Base salary', amount: Number(r.salary) || 0 }]
-        if (Number(r.bonus) > 0) earnings.push({ label: 'Bonus / commission', amount: Number(r.bonus) })
+        // A labelled payment (training pay, transport allowance, …) is one
+        // named line; a plain salary keeps the base + bonus split.
+        const earnings = r.label
+          ? [{ label: r.label, amount: (Number(r.salary) || 0) + (Number(r.bonus) || 0) }]
+          : [
+              { label: 'Base salary', amount: Number(r.salary) || 0 },
+              ...(Number(r.bonus) > 0 ? [{ label: 'Bonus / commission', amount: Number(r.bonus) }] : []),
+            ]
         return {
           id: `pay-${r.id}`,
           username: who,
@@ -2244,10 +2250,14 @@ app.get('/api/payroll/resolve-vendor', auth, requireOwner, async (req, res) => {
 app.post('/api/payroll/pay', auth, requireOwner, notViewAs, async (req, res) => {
   if (!zohoConfigured()) return res.status(503).json({ error: 'Zoho Books is not configured' })
   const { name, salary, bonus, paySourceKey, date, period, force } = req.body || {}
+  // Optional label — what this payment IS when it isn't a plain salary
+  // (Adama 8 Jul: Sally's D2,000 transport allowance in training, Momodou's
+  // D6,000 training pay). Flows to the Books description and the payslip line.
+  const label = String(req.body?.label || '').trim().slice(0, 120)
   if (!name) return res.status(400).json({ error: 'name required' })
   const dryRun = req.query.dryRun === '1' || req.body?.dryRun === true
   try {
-    const result = await recordSalaryPayment({ name, salary, bonus, paySourceKey, date, period, force: !!force, dryRun })
+    const result = await recordSalaryPayment({ name, salary, bonus, paySourceKey, date, period, label, force: !!force, dryRun })
     // duplicate / no_vendor are business outcomes (not HTTP errors) — return 200
     // with ok:false so the UI can show them without the fetch helper throwing.
     if (!result.ok) return res.json(result)
@@ -2265,6 +2275,7 @@ app.post('/api/payroll/pay', auth, requireOwner, notViewAs, async (req, res) => 
         paySource: result.paySource?.label || paySourceKey,
         paySourceKey,
         date,
+        label: label || null,
         expenseId: result.expenseId || null,
         vendorId: result.vendor?.id || null,
         createdVendor: !!result.createdVendor,
@@ -2291,17 +2302,18 @@ app.put('/api/payroll/pay/:id', auth, requireOwner, notViewAs, async (req, res) 
   if (!rec) return res.status(404).json({ error: 'No such payment record' })
   if (!rec.expenseId) return res.status(409).json({ error: 'This record has no linked Zoho expense' })
   const { salary, bonus, paySourceKey, date } = req.body || {}
+  const label = req.body?.label != null ? String(req.body.label).trim().slice(0, 120) : (rec.label || '')
   try {
     const upd = await updateSalaryExpense(rec.expenseId, {
       name: rec.name, vendorId: rec.vendorId,
       salary: Number(salary) || 0, bonus: Number(bonus) || 0,
-      paySourceKey: paySourceKey || rec.paySourceKey, date: date || rec.date, period: rec.period,
+      paySourceKey: paySourceKey || rec.paySourceKey, date: date || rec.date, period: rec.period, label,
     })
     const next = {
       ...rec,
       salary: Math.round(Number(salary) || 0), bonus: Math.round(Number(bonus) || 0), total: upd.total,
       paySource: upd.paySource?.label || rec.paySource, paySourceKey: paySourceKey || rec.paySourceKey,
-      date: date || rec.date, editedInZoho: false, editedBy: req.user.username, editedAt: new Date().toISOString(),
+      date: date || rec.date, label: label || null, editedInZoho: false, editedBy: req.user.username, editedAt: new Date().toISOString(),
     }
     db.write('payroll', all.map((r) => (r.id === rec.id ? next : r)))
     _payrollCache = null
