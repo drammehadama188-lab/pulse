@@ -206,7 +206,7 @@ export default function HRTeam({
   // exact vendor + Books payload before anything posts.
   async function startPay(person) {
     const d = payDraft[person.name] || {};
-    setPayConfirm({ person, loading: true, salary: d.salary, bonus: d.bonus, source: d.source, date: payDate });
+    setPayConfirm({ person, loading: true, salary: d.salary, bonus: d.bonus, source: d.source, date: payDate, label: (d.note || '').trim() });
     try {
       const preview = await api(`/payroll/pay?dryRun=1`, { method: 'POST', body: { name: person.name, salary: Number(d.salary) || 0, bonus: Number(d.bonus) || 0, paySourceKey: d.source, date: payDate, period: payRun.period } });
       // A duplicate found at preview time gets the same choices as one found on
@@ -289,7 +289,7 @@ export default function HRTeam({
     for (const p of bulk.people) {
       const d = payDraft[p.name] || {};
       try {
-        const res = await api('/payroll/pay', { method: 'POST', body: { name: p.name, salary: Number(d.salary) || 0, bonus: Number(d.bonus) || 0, paySourceKey: d.source, date: payDate, period: payRun.period, label: '' } });
+        const res = await api('/payroll/pay', { method: 'POST', body: { name: p.name, salary: Number(d.salary) || 0, bonus: Number(d.bonus) || 0, paySourceKey: d.source, date: payDate, period: payRun.period, label: (d.note || '').trim() } });
         if (res.ok === false) results.push({ name: p.name, status: res.reason === 'duplicate' ? 'skipped — already paid in Books' : (res.message || 'failed') });
         else results.push({ name: p.name, status: `paid D${(res.record?.total ?? ((Number(d.salary) || 0) + (Number(d.bonus) || 0))).toLocaleString()}` });
       } catch (e) {
@@ -937,6 +937,7 @@ export default function HRTeam({
                     <th className="text-right px-3 py-2">Bonus</th>
                     <th className="text-right px-3 py-2">Total</th>
                     <th className="text-left px-3 py-2">Paid via</th>
+                    <th className="text-left px-3 py-2">Notes</th>
                     <th className="text-right px-3 py-2"></th>
                   </tr></thead>
                   <tbody>
@@ -949,7 +950,6 @@ export default function HRTeam({
                           <td className="px-3 py-2">
                             <p className="text-sm font-medium text-gray-900">{p.name}</p>
                             <p className="text-xs text-gray-500">{p.role}</p>
-                            {p.paid?.label && <p className="text-xs font-medium text-emerald-700 mt-0.5">{p.paid.label}</p>}
                           </td>
                           {p.paid ? (
                             <>
@@ -957,6 +957,7 @@ export default function HRTeam({
                               <td className="px-3 py-2 text-right text-sm tabular-nums text-gray-700">{Number(p.paid.bonus) > 0 ? `D${p.paid.bonus.toLocaleString()}` : '—'}</td>
                               <td className="px-3 py-2 text-right text-sm font-bold whitespace-nowrap">D{p.paid.total.toLocaleString()}</td>
                               <td className="px-3 py-2 text-sm text-gray-700">{p.paid.paySource || '—'}</td>
+                              <td className="px-3 py-2 text-sm text-emerald-700">{p.paid.label || <span className="text-gray-300">—</span>}</td>
                             </>
                           ) : (
                             <>
@@ -968,6 +969,7 @@ export default function HRTeam({
                                   {(payRun.paySources || []).map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                                 </select>
                               </td>
+                              <td className="px-3 py-2"><input value={d.note || ''} onChange={e => setD({ note: e.target.value })} placeholder="optional" className="w-36 border border-gray-200 rounded px-2 py-1 text-sm" title="What this payment is, if not plain salary — goes to Books and the payslip" /></td>
                             </>
                           )}
                           {!p.paid ? (
@@ -1000,7 +1002,7 @@ export default function HRTeam({
                           <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">D{sal.toLocaleString()}</td>
                           <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">D{bon.toLocaleString()}</td>
                           <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">D{(sal + bon).toLocaleString()}</td>
-                          <td colSpan={2}></td>
+                          <td colSpan={3}></td>
                         </tr>
                       </tfoot>
                     );
@@ -1189,6 +1191,7 @@ export default function HRTeam({
                     <div className="flex justify-between border-t border-gray-100 pt-2"><span className="text-gray-900 font-semibold">Total to Books</span><span className="font-bold">D{payConfirm.preview.total.toLocaleString()}</span></div>
                     <div className="flex justify-between"><span className="text-gray-500">Paid via</span><span className="font-medium">{payConfirm.preview.paySource?.label}</span></div>
                     <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-medium">{payConfirm.date}</span></div>
+                    {payConfirm.label && <div className="flex justify-between"><span className="text-gray-500">Note</span><span className="font-medium text-right">{payConfirm.label}</span></div>}
                     <div className="flex justify-between"><span className="text-gray-500">Account</span><span className="font-medium">Salaries and Employee Wages</span></div>
                     <div className="flex justify-between"><span className="text-gray-500">Vendor</span><span className="font-medium text-right">{payConfirm.preview.vendor?.name}{payConfirm.preview.createdVendor && ' (new)'}</span></div>
                     {payConfirm.preview.fuzzyVendor && <p className="text-xs text-amber-600 flex items-center gap-1"><AlertTriangle size={12} /> Matched by name — confirm this is the right person.</p>}
