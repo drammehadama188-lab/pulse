@@ -1988,6 +1988,39 @@ function netOf(p) {
   return sum(p.earnings) - sum(p.deductions)
 }
 
+// Run Payroll ↔ payslips bridge (Adama 8 Jul: "i have updated the payroll but
+// sally did not have the changes — it should be connected"). Recording a
+// payment upserts that person's payslip for the month, an edit updates it, an
+// undo removes it — so the staff Payslips page always mirrors what was paid.
+function syncPayslipFromPayroll(rec, actor) {
+  const u = seedUsers().find((x) => x.name === rec.name)
+  if (!u) return
+  const earnings = [{ label: 'Base salary', amount: Number(rec.salary) || 0 }]
+  if (Number(rec.bonus) > 0) earnings.push({ label: 'Bonus / commission', amount: Number(rec.bonus) })
+  const all = db.read('payslips', [])
+  const existing = all.find((p) => p.username === u.username && p.period === rec.period)
+  const slip = {
+    id: existing?.id || crypto.randomUUID(),
+    username: u.username,
+    period: rec.period,
+    earnings,
+    deductions: existing?.deductions || [],
+    note: `Paid${rec.date ? ' ' + rec.date : ''}${rec.paySource ? ' via ' + rec.paySource : ''}`,
+    source: 'payroll-run',
+    payrollRecordId: rec.id,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    createdBy: existing?.createdBy || actor,
+    updatedAt: new Date().toISOString(),
+  }
+  db.write('payslips', [...all.filter((p) => p.id !== slip.id), slip])
+}
+function removePayslipForPayroll(rec) {
+  const u = seedUsers().find((x) => x.name === rec.name)
+  if (!u) return
+  // only removes run-sourced slips — a hand-written payslip is never deleted here
+  db.write('payslips', db.read('payslips', []).filter((p) => !(p.username === u.username && p.period === rec.period && p.source === 'payroll-run')))
+}
+
 // One-time seed of benefit records we already know about (e.g. Kaddy's maternity
 // exception). Only runs if the store is empty — never clobbers manager edits.
 function seedBenefits() {
@@ -2251,6 +2284,7 @@ app.post('/api/payroll/pay', auth, requireOwner, notViewAs, async (req, res) => 
       }
       // one record per person per month
       db.write('payroll', [...all.filter((r) => !(r.name === name && r.period === ym)), rec])
+      syncPayslipFromPayroll(rec, req.user.username)
       // a fresh payment invalidates the cached history
       _payrollCache = null
       return res.json({ ...result, record: rec })
@@ -2282,6 +2316,7 @@ app.put('/api/payroll/pay/:id', auth, requireOwner, notViewAs, async (req, res) 
       date: date || rec.date, editedInZoho: false, editedBy: req.user.username, editedAt: new Date().toISOString(),
     }
     db.write('payroll', all.map((r) => (r.id === rec.id ? next : r)))
+    syncPayslipFromPayroll(next, req.user.username)
     _payrollCache = null
     res.json({ ok: true, record: next })
   } catch (err) {
@@ -2321,6 +2356,7 @@ app.post('/api/payroll/adopt', auth, requireOwner, notViewAs, async (req, res) =
       postedAt: new Date().toISOString(),
     }
     db.write('payroll', [...all.filter((r) => !(r.name === name && r.period === period)), rec])
+    syncPayslipFromPayroll(rec, req.user.username)
     _payrollCache = null
     _runReconciledAt[period] = 0 // next run re-verifies this month against Books
     res.json({ ok: true, record: rec })
@@ -2338,6 +2374,7 @@ app.delete('/api/payroll/pay/:id', auth, requireOwner, notViewAs, async (req, re
   try {
     if (rec.expenseId) await deleteExpense(rec.expenseId)
     db.write('payroll', all.filter((r) => r.id !== rec.id))
+    removePayslipForPayroll(rec)
     _payrollCache = null
     res.json({ ok: true })
   } catch (err) {
