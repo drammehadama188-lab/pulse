@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 import bcrypt from 'bcryptjs'
 import { team, pastStaff } from './src/data/team.js'
 import { sallyCustomers, sallyMonthlyHistory } from './src/data/sally-sales-seed.js'
-import { buildPayrollHistory, zohoConfigured, paySources, recordSalaryPayment, resolveVendor, getExpense, deleteExpense, updateSalaryExpense } from './lib/zoho-books.js'
+import { buildPayrollHistory, zohoConfigured, paySources, recordSalaryPayment, resolveVendor, getExpense, deleteExpense, updateSalaryExpense, existingSalaryExpense } from './lib/zoho-books.js'
 import { sendMail, emailConfigured } from './lib/email.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -2128,6 +2128,7 @@ app.delete('/api/payslips/:id', auth, requireSub('payroll', 'edit'), notViewAs, 
 // Cached in memory (1h) so we don't hit Zoho on every page load; ?refresh=1
 // forces a fresh pull.
 let _payrollCache = null // { at, data }
+const _runReconciledAt = {} // period -> when /payroll/run last verified that month against Zoho
 const PAYROLL_TTL = 60 * 60 * 1000
 app.get('/api/payroll/history', auth, async (req, res) => {
   if (req.realUser.username !== CEO) return res.status(403).json({ error: 'forbidden' })
@@ -2170,24 +2171,29 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
   // Reconcile each recorded payment against Books (Books is the truth): if the
   // expense was deleted in Zoho, drop the local record; if its total changed,
   // sync ours + flag it. Keeps the "Paid" badge honest no matter where edited.
-  if (zohoConfigured() && paidRecords.length) {
+  // Checks run in PARALLEL and at most once per period per 5 minutes — the old
+  // one-at-a-time loop on every load made month switching crawl (Adama 8 Jul).
+  const fresh = Date.now() - (_runReconciledAt[period] || 0) < 5 * 60 * 1000
+  if (zohoConfigured() && paidRecords.length && !fresh) {
+    const checks = await Promise.all(paidRecords.filter((r) => r.expenseId).map((r) =>
+      getExpense(r.expenseId).then((exp) => ({ r, exp })).catch(() => null) // null = transient hiccup, leave as-is
+    ))
     const all = db.read('payroll', [])
     let changed = false
-    for (const r of paidRecords) {
-      if (!r.expenseId) continue
-      try {
-        const exp = await getExpense(r.expenseId)
-        if (!exp) { // deleted in Zoho
-          const i = all.findIndex((x) => x.id === r.id)
-          if (i >= 0) { all.splice(i, 1); changed = true; r._deleted = true }
-        } else if (Math.round(exp.total) !== Math.round(r.total)) {
-          r.total = Math.round(exp.total); r.editedInZoho = true
-          const i = all.findIndex((x) => x.id === r.id)
-          if (i >= 0) { all[i] = { ...all[i], total: r.total, editedInZoho: true }; changed = true }
-        }
-      } catch { /* leave record as-is on a transient Zoho hiccup */ }
+    for (const c of checks) {
+      if (!c) continue
+      const { r, exp } = c
+      if (!exp) { // deleted in Zoho
+        const i = all.findIndex((x) => x.id === r.id)
+        if (i >= 0) { all.splice(i, 1); changed = true; r._deleted = true }
+      } else if (Math.round(exp.total) !== Math.round(r.total)) {
+        r.total = Math.round(exp.total); r.editedInZoho = true
+        const i = all.findIndex((x) => x.id === r.id)
+        if (i >= 0) { all[i] = { ...all[i], total: r.total, editedInZoho: true }; changed = true }
+      }
     }
     if (changed) { db.write('payroll', all); _payrollCache = null }
+    _runReconciledAt[period] = Date.now()
     paidRecords = paidRecords.filter((r) => !r._deleted)
   }
   const paidByName = {}
@@ -2278,6 +2284,46 @@ app.put('/api/payroll/pay/:id', auth, requireOwner, notViewAs, async (req, res) 
     db.write('payroll', all.map((r) => (r.id === rec.id ? next : r)))
     _payrollCache = null
     res.json({ ok: true, record: next })
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
+})
+
+// Adopt a Salaries expense that already exists in Books (entered directly in
+// Zoho, or pre-dating Pulse) as that month's payroll record — it then shows
+// Paid here and can be edited / backdated like any Pulse payment (Adama 8 Jul:
+// "april was pre-entered already, give me the option to edit / backdate it").
+// Writes NOTHING to Zoho — it only links the existing expense.
+app.post('/api/payroll/adopt', auth, requireOwner, notViewAs, async (req, res) => {
+  if (!zohoConfigured()) return res.status(503).json({ error: 'Zoho Books is not configured' })
+  const { name, period } = req.body || {}
+  if (!name || !/^\d{4}-\d{2}$/.test(period || '')) return res.status(400).json({ error: 'name and period (YYYY-MM) required' })
+  try {
+    const { match: vendor } = await resolveVendor(name)
+    if (!vendor) return res.status(404).json({ error: `No Zoho vendor found for ${name}` })
+    const exp = await existingSalaryExpense(vendor.id, period)
+    if (!exp) return res.status(404).json({ error: `No Salaries expense in Books for ${name} in ${period}` })
+    const all = db.read('payroll', [])
+    const rec = {
+      id: crypto.randomUUID(),
+      period,
+      name,
+      salary: Math.round(Number(exp.total) || 0), // Books holds one total; fix the split in Edit if needed
+      bonus: 0,
+      total: Math.round(Number(exp.total) || 0),
+      paySource: null,
+      paySourceKey: null,
+      date: exp.date,
+      expenseId: exp.expense_id,
+      vendorId: vendor.id,
+      adopted: true,
+      postedBy: req.user.username,
+      postedAt: new Date().toISOString(),
+    }
+    db.write('payroll', [...all.filter((r) => !(r.name === name && r.period === period)), rec])
+    _payrollCache = null
+    _runReconciledAt[period] = 0 // next run re-verifies this month against Books
+    res.json({ ok: true, record: rec })
   } catch (err) {
     res.status(502).json({ error: err.message })
   }

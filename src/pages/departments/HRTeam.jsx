@@ -202,7 +202,10 @@ export default function HRTeam({
     setPayConfirm({ person, loading: true, salary: d.salary, bonus: d.bonus, source: d.source, date: payDate });
     try {
       const preview = await api(`/payroll/pay?dryRun=1`, { method: 'POST', body: { name: person.name, salary: Number(d.salary) || 0, bonus: Number(d.bonus) || 0, paySourceKey: d.source, date: payDate, period: payRun.period } });
-      setPayConfirm(c => c && { ...c, loading: false, preview });
+      // A duplicate found at preview time gets the same choices as one found on
+      // confirm: adopt & edit the existing expense, or knowingly pay again.
+      const dup = preview?.ok === false && preview?.reason === 'duplicate' ? { duplicate: preview.duplicate, message: preview.message } : {};
+      setPayConfirm(c => c && { ...c, loading: false, preview, ...dup });
     } catch (e) {
       setPayConfirm(c => c && { ...c, loading: false, error: e.message });
     }
@@ -227,6 +230,23 @@ export default function HRTeam({
     } finally {
       setPayPosting(false);
     }
+  }
+
+  // Adopt an expense that already exists in Books (pre-entered in Zoho) as this
+  // month's record, then open it in the edit modal to fix amounts or backdate.
+  async function adoptExisting() {
+    if (!payConfirm) return;
+    const { person } = payConfirm;
+    setPayPosting(true);
+    try {
+      const res = await api('/payroll/adopt', { method: 'POST', body: { name: person.name, period: payRun.period } });
+      setPayConfirm(null);
+      loadPayRun(); setPayLive(null);
+      const rec = res.record;
+      setPayEdit({ rec, salary: rec.salary, bonus: rec.bonus, source: rec.paySourceKey || (payRun.paySources?.[0]?.key) || 'wave', date: rec.date });
+    } catch (e) {
+      setPayConfirm(c => c && { ...c, error: e.message });
+    } finally { setPayPosting(false); }
   }
 
   // Save an edit to a recorded payment (updates the Zoho expense).
@@ -1100,7 +1120,10 @@ export default function HRTeam({
                     <button type="button" onClick={() => confirmPay(false)} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">{payPosting ? 'Recording…' : 'Confirm & record'}</button>
                   )}
                   {payConfirm.duplicate && (
-                    <button type="button" onClick={() => confirmPay(true)} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-60">{payPosting ? 'Recording…' : 'Pay anyway'}</button>
+                    <button type="button" onClick={adoptExisting} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">{payPosting ? 'Linking…' : 'Use this payment — edit it'}</button>
+                  )}
+                  {payConfirm.duplicate && (
+                    <button type="button" onClick={() => confirmPay(true)} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-60">{payPosting ? 'Recording…' : 'Pay again anyway'}</button>
                   )}
                 </div>
               </div>
