@@ -1422,6 +1422,238 @@ app.get('/api/team/member/:username', auth, (req, res) => {
   })
 })
 
+// ---------- MY WEEK (team lead's auto-built weekly planner — Adama 9 Jul) ----------
+// "He is lost most of the time… I am left in the dark." The system builds each
+// day's priorities FROM the data (coaching due, sales pace, attendance gaps,
+// Yafatou's cases/installations/stock via the Admin bridge) and ranks a Top 3.
+// Undone Top-3 items ROLL to the next day, visibly. Informational only — no
+// scorecard effect (month one). Store 'myweek': one snapshot per lead per day.
+
+function myweekStore() { return db.read('myweek', []) }
+function myweekDay(username, date) { return myweekStore().find((d) => d.username === username && d.date === date) || null }
+function myweekSave(day) {
+  const all = myweekStore().filter((d) => !(d.username === day.username && d.date === day.date))
+  all.push(day)
+  db.write('myweek', all)
+}
+
+// Candidate items for a lead "as of now". Each has a STABLE id so ticks and
+// carry-over survive regeneration. rank: higher = more urgent.
+async function myweekCandidates(lead) {
+  const today = todayKey()
+  const CUR = today.slice(0, 7)
+  const members = teamMembersFor(lead)
+  const items = []
+  const coachingAll = db.read('coaching', [])
+  const attAll = db.read('attendance', [])
+  const salesStore = db.read('agent-sales', {})
+
+  // 1 · Coaching (20% of his score) — every member due or overdue
+  for (const m of members) {
+    const st = coachingStatus(coachingAll, m.username)
+    if (!st.coachingCurrent) {
+      const since = st.lastCoachedAt ? `last ${new Date(st.lastCoachedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'never'
+      items.push({ id: `coach-${m.username}`, cat: 'coaching', rank: 90, title: `Coach ${m.name.split(' ')[0]} — check-in due (${since})` })
+    }
+  }
+
+  // 2 · Team sales pace (45%) — Sales members' month vs their targets
+  const salesMembers = members.filter((m) => m.department === 'Sales')
+  if (salesMembers.length) {
+    let actual = 0, target = 0, known = false
+    for (const m of salesMembers) {
+      const rec = salesStore[m.name]
+      const t = Number(rec?.monthlyTarget) || 0
+      target += t
+      let a = null
+      if (CUR >= SALES_ADMIN_FROM) a = await fetchAdminWonCount(m.name, CUR)
+      if (a == null) { const mm = rec?.months?.[CUR]; a = mm && !mm.pending ? Number(mm.sales) || 0 : null }
+      if (a != null) { actual += a; known = true }
+    }
+    const dayOfMonth = Number(today.slice(8, 10))
+    const paceNeeded = target ? Math.round(target * dayOfMonth / 30) : 0
+    if (known && target && actual < paceNeeded) {
+      items.push({ id: 'team-sales', cat: 'sales', rank: 80, title: `Team at ${actual}/${target} sales — pipeline push with ${salesMembers.map((m) => m.name.split(' ')[0]).join(' & ')}` })
+    } else if (!known && target) {
+      items.push({ id: 'team-sales', cat: 'sales', rank: 55, title: `Review the pipeline with ${salesMembers.map((m) => m.name.split(' ')[0]).join(' & ')} — where is the team on ${target} sales?` })
+    }
+  }
+
+  // 3 · Attendance (10%) — not checked in today (after start of day), Gambia clock
+  const nowMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes()
+  if (nowMin >= 9 * 60 + 30 && today >= ATTENDANCE_START) {
+    for (const m of members) {
+      const rec = attAll.find((a) => a.username === m.username && a.date === today)
+      if (!rec?.checkIn) items.push({ id: `att-${m.username}-${today}`, cat: 'attendance', rank: 70, title: `${m.name.split(' ')[0]} hasn't checked in — find out why` })
+    }
+  }
+
+  // 4 · Yafatou's goals (cases / installations / stock) — not his numbers, his
+  // responsibility to make sure they happen. Admin bridge; honest fallbacks.
+  const yafatou = members.find((m) => m.department === 'Customer Service')
+  if (yafatou) {
+    const first = yafatou.name.split(' ')[0]
+    const [cases, install, stock] = await Promise.all([
+      fetchAdminCases(yafatou.name, CUR), fetchAdminInstall(CUR), fetchAdminStock(CUR),
+    ])
+    if (cases && typeof cases.pct === 'number' && cases.pct < 85) items.push({ id: 'cs-cases', cat: 'cs', rank: 75, title: `Cases at ${Math.round(cases.pct)}% (goal 85) — sit with ${first} on the open ones` })
+    else if (!cases) items.push({ id: 'cs-cases', cat: 'cs', rank: 50, title: `Check open cases with ${first} — goal is 85% resolved on time` })
+    if (install && typeof install.installPct === 'number' && install.installPct < 95) items.push({ id: 'cs-install', cat: 'cs', rank: 74, title: `Installations at ${Math.round(install.installPct)}% (goal 95) — confirm this week's schedule with ${first}` })
+    else if (!install) items.push({ id: 'cs-install', cat: 'cs', rank: 49, title: `Confirm pending installations with ${first} — goal is done within 3 days` })
+    if (stock && typeof stock.accountabilityPct === 'number' && stock.accountabilityPct < 100) items.push({ id: 'cs-stock', cat: 'cs', rank: 73, title: `Stock accountability at ${Math.round(stock.accountabilityPct)}% (goal 100) — count with ${first}` })
+  }
+
+  // 5 · Pending leave requests he can decide
+  for (const l of db.read('leave', [])) {
+    if (l.status === 'pending' && members.some((m) => m.username === l.username)) {
+      items.push({ id: `leave-${l.id || l.username}`, cat: 'ops', rank: 65, title: `Decide ${(l.name || l.username)}'s ${l.leaveType || 'leave'} request` })
+    }
+  }
+
+  // 6 · Weekly rhythm
+  const dow = new Date(`${today}T00:00:00Z`).getUTCDay()
+  if (dow === 1) items.push({ id: `rhythm-plan-${today}`, cat: 'ops', rank: 45, title: 'Plan the week — walk this list, set the order' })
+  if (dow === 5) items.push({ id: `rhythm-report-${today}`, cat: 'ops', rank: 45, title: "Send Adama the week's summary — what moved, what's stuck" })
+
+  return items
+}
+
+// Today's plan: merge fresh candidates into the stored snapshot (stable ids
+// keep ticks), then roll yesterday's undone Top-3 forward with a carried badge.
+async function myweekToday(lead) {
+  const today = todayKey()
+  const stored = myweekDay(lead.username, today)
+  const fresh = await myweekCandidates(lead)
+  const byId = new Map((stored?.items || []).map((i) => [i.id, i]))
+  for (const f of fresh) if (!byId.has(f.id)) byId.set(f.id, f)
+  // carry-over from yesterday
+  const yk = new Date(`${today}T00:00:00Z`); yk.setUTCDate(yk.getUTCDate() - 1)
+  const prev = myweekDay(lead.username, yk.toISOString().slice(0, 10))
+  if (prev) {
+    const prevRanked = [...(prev.items || [])].sort((a, b) => (b.rank || 0) - (a.rank || 0))
+    const prevTop = prevRanked.slice(0, 3)
+    for (const p of prevTop) {
+      if ((prev.done || []).includes(p.id)) continue
+      const existing = byId.get(p.id)
+      const carried = (p.carried || 0) + 1
+      if (existing) { existing.carried = carried; existing.rank = Math.max(existing.rank || 0, 95 + carried) }
+      else byId.set(p.id, { ...p, carried, rank: 95 + carried })
+    }
+  }
+  const items = [...byId.values()].sort((a, b) => (b.rank || 0) - (a.rank || 0))
+  const day = { username: lead.username, date: today, items, done: stored?.done || [], updatedAt: new Date().toISOString() }
+  myweekSave(day)
+  return day
+}
+
+// The lead's goal strip: his 4 KPIs + Yafatou's 3 — every item traces to one.
+function myweekGoals() {
+  return [
+    { key: 'team-target', label: 'Team hits its target', target: '100%', weight: 45, owner: 'you' },
+    { key: 'team-active', label: 'Team trackers active', target: '75%', weight: 25, owner: 'you' },
+    { key: 'coaching', label: 'Coaching check-ins', target: 'every 2 weeks', weight: 20, owner: 'you' },
+    { key: 'team-attendance', label: 'Team attendance', target: '95%', weight: 10, owner: 'you' },
+    { key: 'cs-cases', label: 'Cases resolved on time', target: '85%', owner: 'Yafatou' },
+    { key: 'cs-install', label: 'Installations in 3 days', target: '95%', owner: 'Yafatou' },
+    { key: 'cs-stock', label: 'Stock accountability', target: '100%', owner: 'Yafatou' },
+  ]
+}
+
+// Resolve which lead a My Week request is about: the lead himself (view-as
+// faithful via req.user), or the CEO asking about a lead (?username=).
+function myweekLeadFor(req) {
+  const q = String(req.query.username || req.body?.username || '').toLowerCase()
+  if (q && req.realUser?.username === CEO) {
+    const u = findUser(q)
+    return u && leadsATeam(u) ? u : null
+  }
+  const u = findUser(req.user.username)
+  return u && leadsATeam(u) ? u : null
+}
+
+app.get('/api/myweek', auth, async (req, res) => {
+  const lead = myweekLeadFor(req)
+  if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
+  const today = todayKey()
+  // week = Mon–Sat around ?start (or this week)
+  const startQ = /^\d{4}-\d{2}-\d{2}$/.test(req.query.start || '') ? req.query.start : today
+  const mon = new Date(`${startQ}T00:00:00Z`)
+  mon.setUTCDate(mon.getUTCDate() - ((mon.getUTCDay() + 6) % 7))
+  const days = []
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(mon); d.setUTCDate(mon.getUTCDate() + i)
+    const key = d.toISOString().slice(0, 10)
+    if (key === today) {
+      const plan = await myweekToday(lead)
+      days.push({ date: key, today: true, items: plan.items, done: plan.done })
+    } else if (key < today) {
+      const snap = myweekDay(lead.username, key)
+      days.push({ date: key, past: true, items: snap?.items || [], done: snap?.done || [] })
+    } else {
+      // preview: fixed rhythm + coaching that falls due that day
+      const preview = []
+      const dow = d.getUTCDay()
+      if (dow === 1) preview.push({ id: `rhythm-plan-${key}`, cat: 'ops', rank: 45, title: 'Plan the week — walk this list, set the order' })
+      if (dow === 5) preview.push({ id: `rhythm-report-${key}`, cat: 'ops', rank: 45, title: "Send Adama the week's summary — what moved, what's stuck" })
+      const coachingAll = db.read('coaching', [])
+      for (const m of teamMembersFor(lead)) {
+        const st = coachingStatus(coachingAll, m.username)
+        if (st.nextCoachingDue && st.nextCoachingDue.slice(0, 10) === key) preview.push({ id: `coach-${m.username}`, cat: 'coaching', rank: 90, title: `Coach ${m.name.split(' ')[0]} — check-in falls due` })
+      }
+      days.push({ date: key, preview: true, items: preview, done: [] })
+    }
+  }
+  res.json({ lead: { username: lead.username, name: lead.name }, today, days, goals: myweekGoals() })
+})
+
+// CEO/HR overview: every team lead's TODAY at a glance — plan, ticks, carries.
+// This is how Adama stops being "in the dark" without asking.
+app.get('/api/myweek/overview', auth, async (req, res) => {
+  if (req.realUser?.username !== CEO && !can(req.user, 'hr')) return res.status(403).json({ error: 'forbidden' })
+  const leads = seedUsers().filter((u) => !isArchived(u) && leadsATeam(u))
+  const out = []
+  for (const lead of leads) {
+    try {
+      const plan = await myweekToday(lead)
+      const ranked = [...plan.items].sort((a, b) => (b.rank || 0) - (a.rank || 0))
+      out.push({
+        lead: { username: lead.username, name: lead.name },
+        date: plan.date,
+        top: ranked.slice(0, 3).map((i) => ({ id: i.id, title: i.title, cat: i.cat, carried: i.carried || 0, done: plan.done.includes(i.id) })),
+        doneCount: plan.done.length,
+        total: plan.items.length,
+      })
+    } catch { /* skip a lead we can't build */ }
+  }
+  res.json({ leads: out })
+})
+
+app.post('/api/myweek/toggle', auth, notViewAs, async (req, res) => {
+  const lead = myweekLeadFor(req)
+  if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
+  const { date, itemId } = req.body || {}
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !itemId) return res.status(400).json({ error: 'date and itemId required' })
+  const day = myweekDay(lead.username, date)
+  if (!day || !day.items.some((i) => i.id === itemId)) return res.status(404).json({ error: 'No such item that day' })
+  day.done = day.done.includes(itemId) ? day.done.filter((x) => x !== itemId) : [...day.done, itemId]
+  day.updatedAt = new Date().toISOString()
+  myweekSave(day)
+  res.json({ ok: true, done: day.done })
+})
+
+app.post('/api/myweek/add', auth, notViewAs, async (req, res) => {
+  const lead = myweekLeadFor(req)
+  if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
+  const { date, title } = req.body || {}
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !String(title || '').trim()) return res.status(400).json({ error: 'date and title required' })
+  if (date < todayKey()) return res.status(400).json({ error: 'Past days are history — add to today or later' })
+  const day = myweekDay(lead.username, date) || { username: lead.username, date, items: [], done: [] }
+  day.items.push({ id: `own-${crypto.randomUUID().slice(0, 8)}`, cat: 'own', rank: 60, title: String(title).trim().slice(0, 160), own: true })
+  day.updatedAt = new Date().toISOString()
+  myweekSave(day)
+  res.json({ ok: true, items: day.items })
+})
+
 // ---------- schedules (per-person weekly roster) ----------
 // Mon–Fri 9–5 is the default for anyone without a saved override (Blue Book normal week).
 const DEFAULT_WEEK = {

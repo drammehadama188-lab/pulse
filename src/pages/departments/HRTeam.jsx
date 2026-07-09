@@ -80,6 +80,13 @@ export default function HRTeam({
   // Per-person payroll history is owner/CEO-only. Managers with the payroll
   // power still see the month + total, but not who was paid what.
   const canSeePayDetail = user?.username === 'adama';
+  // "Momodou's day" card — every team lead's auto-built Top 3 with live ticks,
+  // so Adama sees the plan AND the execution without asking (9 Jul).
+  const [weekOverview, setWeekOverview] = useState(null);
+  useEffect(() => {
+    if (!only || !only.includes('dashboard')) return;
+    api('/myweek/overview').then((d) => setWeekOverview(d.leads || [])).catch(() => setWeekOverview([]));
+  }, []);
   const [openPayMonth, setOpenPayMonth] = useState(null);
   // History is grouped by year; the current year is open, older years collapse
   // so the page doesn't become an endless scroll of months.
@@ -443,6 +450,30 @@ export default function HRTeam({
           <p className="text-gray-500 mt-1">{subtitle}</p>
         </div>
       </div>
+
+      {showOverview && weekOverview && weekOverview.length > 0 && (
+        <div className="mb-6 grid gap-3 md:grid-cols-2">
+          {weekOverview.map((w) => (
+            <div key={w.lead.username} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-gray-900">{w.lead.name}'s day</p>
+                <span className="text-[11px] font-semibold text-gray-400">{w.doneCount}/{w.total} done today</span>
+              </div>
+              <div className="space-y-1.5">
+                {w.top.map((t, i) => (
+                  <div key={t.id} className="flex items-start gap-2 text-sm">
+                    <span className={`mt-0.5 ${t.done ? 'text-emerald-600' : 'text-gray-300'}`}>{t.done ? '✓' : '○'}</span>
+                    <span className={`flex-1 ${t.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                      {i + 1}. {t.title}
+                      {t.carried > 0 && <span className="ml-1.5 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600">carried · day {t.carried + 1}</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {showOverview && alerts.length > 0 && (
         <div className="mb-6 space-y-2">
