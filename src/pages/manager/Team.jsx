@@ -51,19 +51,29 @@ export default function Team() {
   const [coachTarget, setCoachTarget] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
 
+  const [loadError, setLoadError] = useState('')
   function load() {
+    setLoadError('')
     Promise.all([api('/users'), api('/past-agents'), api('/powers')]).then(([u, pa, pw]) => {
       setUsers(u.users)
       setPastCount((pa.pastAgents || []).length)
       const map = {}
       ;(pw.powers || []).forEach((p) => { map[p.key] = p.label })
       setLabels(map)
-    })
+    }).catch((e) => setLoadError(e.message || 'Could not load staff')) // never spin forever
   }
   useEffect(() => {
     load()
   }, [])
 
+  if (!users && loadError) {
+    return (
+      <div className="mx-auto max-w-md py-24 text-center">
+        <p className="text-sm font-medium text-[var(--color-bad)]">Couldn't load the staff list — {loadError}</p>
+        <button onClick={load} className="mt-3 rounded-lg bg-[var(--color-ink)] px-4 py-2 text-sm font-semibold text-white">Try again</button>
+      </div>
+    )
+  }
   if (!users) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
 
   const withAccess = users.filter((u) => (u.powers || []).length > 0).length

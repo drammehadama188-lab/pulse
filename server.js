@@ -2104,6 +2104,17 @@ app.get('/api/payroll/people', auth, requirePower('payroll'), (req, res) => {
 // payslips — staff see their own; managers may read anyone's (?username=)
 app.get('/api/payslips', auth, (req, res) => {
   const who = req.query.username && inScope(req.user, 'payroll', req.query.username) ? req.query.username : req.user.username
+  // Self-heal: every recorded payroll payment gets its payslip, including ones
+  // recorded before the payroll↔payslips bridge existed (8 Jul). Only fills
+  // gaps — months that already have a payslip (hand-written or synced) are
+  // left alone; live edits flow through the pay/edit/undo hooks instead.
+  const person = findUser(who)
+  if (person) {
+    const have = new Set(db.read('payslips', []).filter((p) => p.username === who).map((p) => p.period))
+    for (const r of db.read('payroll', []).filter((r) => r.name === person.name)) {
+      if (!have.has(r.period)) syncPayslipFromPayroll(r, 'system')
+    }
+  }
   const list = db.read('payslips', [])
     .filter((p) => p.username === who)
     .map((p) => ({ ...p, net: netOf(p) }))
