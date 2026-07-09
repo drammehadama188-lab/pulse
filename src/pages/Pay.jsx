@@ -210,13 +210,20 @@ export default function Pay() {
 
 function Payslip({ slip, canEdit, onDelete }) {
   const [open, setOpen] = useState(false)
+  // The whole story on the row face — salary + bonus and how/when it was paid
+  // — matching what the manager sees in Run Payroll (Adama 8 Jul). The
+  // expansion keeps the full line-by-line detail.
+  const breakdown = [
+    (slip.earnings || []).map((l) => `${l.label} ${dalasi(l.amount)}`).join(' + '),
+    slip.note,
+  ].filter(Boolean).join(' · ')
   return (
     <Card className="overflow-hidden">
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-[var(--color-line-soft)]">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-brand-50)] text-[var(--color-brand)]"><FileText size={18} /></span>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <div className="font-semibold text-[var(--color-ink)]">{monthLabel(slip.period)}</div>
-          <div className="text-xs text-[var(--color-ink-faint)]">Net pay</div>
+          <div className="truncate text-xs text-[var(--color-ink-faint)]">{breakdown || 'Net pay'}</div>
         </div>
         <span className="text-lg font-extrabold text-[var(--color-ink)]">{dalasi(slip.net)}</span>
         <ChevronDown size={18} className={`text-[var(--color-ink-faint)] transition-transform ${open ? 'rotate-180' : ''}`} />
