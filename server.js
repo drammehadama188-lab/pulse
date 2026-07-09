@@ -1037,12 +1037,14 @@ function scorecardKey(u) {
 // /api/integrations/kpi-targets with the shared PULSE_SYNC_KEY.
 const KPI_CATALOG = {
   'sales': { role: 'Sales agent', kpis: [
+    // Retention MOVED to Customer Service as "Customer renewals" (Adama 9 Jul)
+    // — renewal outreach is Yafatou's job. Remaining weights auto-normalize.
     { key: 'sales', label: 'Tracker sales', kind: 'count', unit: 'sales', target: 5, weight: 40 },
     { key: 'online', label: 'Trackers online', kind: 'percent', unit: '%', target: 75, weight: 20 },
-    { key: 'retention', label: 'Customer retention', kind: 'percent', unit: '%', target: 80, weight: 25 },
     { key: 'reviews', label: '5-star Google reviews', kind: 'count', unit: 'reviews', target: 3, weight: 15 },
   ] },
   'customer-service': { role: 'Customer Service', kpis: [
+    { key: 'renewal', label: 'Customer renewals', kind: 'percent', unit: '%', target: 80, weight: 25 },
     { key: 'cases', label: 'Case resolution', kind: 'percent', unit: '%', target: 85, weight: 40 },
     { key: 'install', label: 'Installation within 3 days', kind: 'percent', unit: '%', target: 95, weight: 35 },
     { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', unit: '% verified', target: 100, weight: 25 },
@@ -1238,17 +1240,18 @@ function scorecardFor(u, salesActual) {
   const N = (kpi, dflt) => kpiNumber(key, kpi, MONTH) || dflt
   if (key === 'sales') {
     const s = N('sales', { target: 5, weight: 40 }), o = N('online', { target: 75, weight: 20 })
-    const r = N('retention', { target: 80, weight: 25 }), v = N('reviews', { target: 3, weight: 15 })
+    const v = N('reviews', { target: 3, weight: 15 })
     return { role: 'Sales agent', kpis: overlayPlan([
       { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u.target) || s.target, weight: s.weight, unit: 'sales', actual: salesActual ?? null },
       { key: 'online', label: 'Trackers online', kind: 'percent', target: o.target, weight: o.weight, unit: '%', actual: null },
-      { key: 'retention', label: 'Customer retention', kind: 'percent', target: r.target, weight: r.weight, unit: '%', actual: null },
       { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: v.target, weight: v.weight, unit: 'reviews', actual: null },
     ], 'sales', MONTH) }
   }
   if (key === 'customer-service') {
+    const rn = N('renewal', { target: 80, weight: 25 })
     const c = N('cases', { target: 85, weight: 40 }), i = N('install', { target: 95, weight: 35 }), st = N('stock', { target: 100, weight: 25 })
     return { role: 'Customer Service', kpis: overlayPlan([
+      { key: 'renewal', label: 'Customer renewals', kind: 'percent', target: rn.target, weight: rn.weight, unit: '%', actual: null },
       { key: 'cases', label: 'Case resolution', kind: 'percent', target: c.target, weight: c.weight, unit: '%', actual: null },
       { key: 'install', label: 'Installation within 3 days', kind: 'percent', target: i.target, weight: i.weight, unit: '%', actual: null },
       { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: st.target, weight: st.weight, unit: '% verified', actual: null },
@@ -1493,9 +1496,14 @@ async function myweekCandidates(lead) {
   const yafatou = members.find((m) => m.department === 'Customer Service')
   if (yafatou) {
     const first = yafatou.name.split(' ')[0]
-    const [cases, install, stock] = await Promise.all([
+    const [cases, install, stock, retFeed] = await Promise.all([
       fetchAdminCases(yafatou.name, CUR), fetchAdminInstall(CUR), fetchAdminStock(CUR),
+      fetchAdminFeed(`/api/integrations/pulse/retention?month=${CUR}`),
     ])
+    const rnDue = (retFeed?.agents || []).reduce((s, a) => s + (Number(a.due) || 0), 0)
+    const rnRen = (retFeed?.agents || []).reduce((s, a) => s + (Number(a.renewed) || 0), 0)
+    if (retFeed && rnDue && (rnRen / rnDue) * 100 < 80) items.push({ id: 'cs-renewal', cat: 'cs', rank: 76, title: `Renewals at ${rnRen}/${rnDue} (goal 80%) — renewal calls with ${first}` })
+    else if (!retFeed) items.push({ id: 'cs-renewal', cat: 'cs', rank: 51, title: `Check this month's renewals with ${first} — goal is 80% of customers due` })
     if (cases && typeof cases.pct === 'number' && cases.pct < 85) items.push({ id: 'cs-cases', cat: 'cs', rank: 75, title: `Cases at ${Math.round(cases.pct)}% (goal 85) — sit with ${first} on the open ones` })
     else if (!cases) items.push({ id: 'cs-cases', cat: 'cs', rank: 50, title: `Check open cases with ${first} — goal is 85% resolved on time` })
     if (install && typeof install.installPct === 'number' && install.installPct < 95) items.push({ id: 'cs-install', cat: 'cs', rank: 74, title: `Installations at ${Math.round(install.installPct)}% (goal 95) — confirm this week's schedule with ${first}` })
@@ -1553,6 +1561,7 @@ function myweekGoals() {
     { key: 'team-active', label: 'Team trackers active', target: '75%', weight: 25, owner: 'you' },
     { key: 'coaching', label: 'Coaching check-ins', target: 'every 2 weeks', weight: 20, owner: 'you' },
     { key: 'team-attendance', label: 'Team attendance', target: '95%', weight: 10, owner: 'you' },
+    { key: 'cs-renewal', label: 'Customer renewals', target: '80%', owner: 'Yafatou' },
     { key: 'cs-cases', label: 'Cases resolved on time', target: '85%', owner: 'Yafatou' },
     { key: 'cs-install', label: 'Installations in 3 days', target: '95%', owner: 'Yafatou' },
     { key: 'cs-stock', label: 'Stock accountability', target: '100%', owner: 'Yafatou' },
@@ -3524,31 +3533,37 @@ app.get('/api/my/progress', auth, async (req, res) => {
       const m = sales?.months?.[CUR]
       salesActual = m && !m.pending ? (m.sales ?? null) : null // sheet = history
     }
-    // All four actuals now flow from Admin (connected 4 Jul): retention =
-    // renewal events on the agent's book, online = live book rate, reviews =
-    // verified 5-star log. Unreachable → null ("Connecting to Admin").
-    // Percent KPIs carry a `detail` line — the counts behind the % (Adama
-    // 4 Jul: "I like to see numbers, not only percentage").
-    const ret = await fetchAdminRetention(name, CUR)
+    // Actuals flow from Admin (connected 4 Jul): online = live book rate,
+    // reviews = verified 5-star log. Unreachable → null ("Connecting to
+    // Admin"). Retention MOVED to Customer Service 9 Jul (renewal outreach is
+    // Yafatou's job). Percent KPIs carry a `detail` line — the counts behind
+    // the % (Adama 4 Jul: "I like to see numbers, not only percentage").
     const onl = await fetchAdminOnline(name)
     const reviewsCount = await fetchAdminReviews(name, CUR)
-    const kS = kpiN('sales', 5, 40), kO = kpiN('online', 75, 20), kR = kpiN('retention', 80, 25), kV = kpiN('reviews', 3, 15)
+    const kS = kpiN('sales', 5, 40), kO = kpiN('online', 75, 20), kV = kpiN('reviews', 3, 15)
     scorecard = { role: 'Sales agent', kpis: [
       { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u?.target) || kS.target, weight: kS.weight, unit: 'sales', actual: salesActual },
       { key: 'online', label: 'Trackers online', kind: 'percent', target: kO.target, weight: kO.weight, unit: '%',
         actual: typeof onl?.pct === 'number' ? onl.pct : null,
         detail: onl && onl.total ? `${onl.online} of ${onl.total} trackers online` : null },
-      { key: 'retention', label: 'Customer retention', kind: 'percent', target: kR.target, weight: kR.weight, unit: '%',
-        actual: typeof ret?.retentionPct === 'number' ? ret.retentionPct : null,
-        detail: ret && ret.due ? `${ret.renewed} renewed of ${ret.due} due` : null },
       { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: kV.target, weight: kV.weight, unit: 'reviews', actual: reviewsCount },
     ] }
   } else if (scKey === 'customer-service') {
     const stock = await fetchAdminStock(CUR) // accountability proven by weekly counts (Admin)
     const cas = await fetchAdminCases(name, CUR) // on-time resolution ÷ (resolved + open-overdue)
     const inst = await fetchAdminInstall(CUR) // company-wide: within 3 days of opening
+    // Renewals = COMPANY-WIDE (moved from the sales agents 9 Jul): Yafatou
+    // runs renewal outreach for every book, so sum every agent's dues.
+    const retFeed = await fetchAdminFeed(`/api/integrations/pulse/retention?month=${CUR}`)
+    const rnDue = (retFeed?.agents || []).reduce((s, a) => s + (Number(a.due) || 0), 0)
+    const rnRen = (retFeed?.agents || []).reduce((s, a) => s + (Number(a.renewed) || 0), 0)
+    const kRn = kpiN('renewal', 80, 25)
     const kC = kpiN('cases', 85, 40), kI = kpiN('install', 95, 35), kSt = kpiN('stock', 100, 25)
     scorecard = { role: 'Customer Service', kpis: [
+      { key: 'renewal', label: 'Customer renewals', kind: 'percent', target: kRn.target, weight: kRn.weight, unit: '%',
+        actual: retFeed && rnDue ? Math.round((rnRen / rnDue) * 100) : null,
+        due: retFeed ? rnDue : null,
+        detail: retFeed && rnDue ? `${rnRen} renewed of ${rnDue} due` : (retFeed ? 'no renewals due this month yet' : null) },
       { key: 'cases', label: 'Case resolution', kind: 'percent', target: kC.target, weight: kC.weight, unit: '%',
         actual: typeof cas?.casesPct === 'number' ? cas.casesPct : null,
         detail: cas ? `${cas.onTime} on time of ${cas.resolved + cas.openOverdue}${cas.openOverdue ? ` · ${cas.openOverdue} open past SLA` : ''}` : null },
@@ -3661,7 +3676,10 @@ app.get('/api/my/progress', auth, async (req, res) => {
   const GOAL_TEXT = {
     sales: (t) => `Close your ${t} tracker sales for the month.`,
     online: (t) => `Keep your customers' trackers online — ${t}% or above.`,
-    retention: (t) => `Keep customer retention at ${t}% or above.`,
+    retention: (t) => `Keep customer retention at ${t}% or above.`, // legacy key — moved to CS as 'renewal'
+    renewal: (t, k) => k?.due
+      ? `Renew at least ${Math.ceil(k.due * t / 100)} of the ${k.due} customers due this month.`
+      : `Customers due this month renew — at least ${t}%.`,
     reviews: (t) => `Bring in ${t} five-star Google reviews.`,
     cases: (t) => `Resolve ${t}% of customer cases.`,
     install: (t) => `Complete ${t}% of installations within 3 days.`,
