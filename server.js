@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 import bcrypt from 'bcryptjs'
 import { team, pastStaff } from './src/data/team.js'
 import { sallyCustomers, sallyMonthlyHistory } from './src/data/sally-sales-seed.js'
-import { buildPayrollHistory, zohoConfigured, paySources, recordSalaryPayment, resolveVendor, getExpense, deleteExpense, updateSalaryExpense, existingSalaryExpense } from './lib/zoho-books.js'
+import { buildPayrollHistory, zohoConfigured, paySources, recordSalaryPayment, resolveVendor, getExpense, deleteExpense, updateSalaryExpense, existingSalaryExpense, salaryExpensesForMonth } from './lib/zoho-books.js'
 import { sendMail, emailConfigured } from './lib/email.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -2239,28 +2239,29 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
       paidRecords = paidRecords.filter((r) => !r._deleted)
     }
     // AUTO-ADOPT (Adama 9 Jul: "you know what we have paid — why leave it Mark
-    // paid"): anyone with no record this month gets their Books Salaries
-    // expense looked up in parallel; a hit is linked as an adopted record, so
-    // months paid straight into Zoho load as Paid without any clicking.
-    const haveRecord = new Set(paidRecords.map((r) => r.name))
-    const toFind = merged.filter((p, i, arr) => !haveRecord.has(p.name) && arr.findIndex((x) => x.name === p.name) === i)
-    if (toFind.length) {
-      const found = await Promise.all(toFind.map(async (p) => {
-        try {
-          const { match: vendor } = await resolveVendor(p.name)
-          if (!vendor) return null
-          const exp = await existingSalaryExpense(vendor.id, period)
-          return exp ? { p, vendor, exp } : null
-        } catch { return null }
-      }))
-      const hits = found.filter(Boolean)
-      if (hits.length) {
+    // paid" / "past staff are not on the previous payroll but you have this
+    // information"): ONE query pulls every Salaries expense in the month from
+    // Books; each unclaimed expense becomes an adopted record — matched to a
+    // roster or past-staff name when possible, otherwise shown under the
+    // vendor's name. Months paid straight into Zoho load fully, past staff
+    // included, without any clicking.
+    try {
+      const monthExpenses = await salaryExpensesForMonth(period)
+      const claimed = new Set(paidRecords.map((r) => String(r.expenseId)))
+      const unclaimed = monthExpenses.filter((e) => !claimed.has(String(e.expense_id)))
+      if (unclaimed.length) {
+        const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        const knownNames = [...new Set([...merged.map((p) => p.name), ...pastStaff.map((p) => p.name)])]
+        const matchName = (vendorName) => {
+          const v = norm(vendorName)
+          return knownNames.find((n) => norm(n) === v) || knownNames.find((n) => norm(n).includes(v) || v.includes(norm(n))) || vendorName
+        }
         const all = db.read('payroll', [])
-        for (const { p, vendor, exp } of hits) {
+        for (const exp of unclaimed) {
           const rec = {
             id: crypto.randomUUID(),
             period,
-            name: p.name,
+            name: matchName(exp.vendor_name),
             salary: Math.round(Number(exp.total) || 0), // Books holds one total; fix the split in Edit if needed
             bonus: 0,
             total: Math.round(Number(exp.total) || 0),
@@ -2268,7 +2269,7 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
             paySourceKey: null,
             date: exp.date,
             expenseId: exp.expense_id,
-            vendorId: vendor.id,
+            vendorId: exp.vendor_id,
             adopted: true,
             postedBy: 'books-sync',
             postedAt: new Date().toISOString(),
@@ -2279,7 +2280,7 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
         db.write('payroll', all)
         _payrollCache = null
       }
-    }
+    } catch { /* Books unreachable — show what we have locally */ }
     _runReconciledAt[period] = Date.now()
   }
   const paidByName = {}
@@ -2293,6 +2294,15 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
     suggestedBonus: Number(p.commission) || 0,
     paid: paidByName[p.name] || null,
   }))
+  // Payments to people no longer on the roster (past staff, pre-Pulse hires)
+  // still belong to the month's story — read-only paid rows after the roster.
+  const rosterNames = new Set(people.map((p) => p.name))
+  for (const r of paidRecords) {
+    if (rosterNames.has(r.name)) continue
+    rosterNames.add(r.name)
+    const past = pastStaff.find((p) => p.name === r.name)
+    people.push({ name: r.name, role: past?.role || 'Past staff', suggestedSalary: 0, suggestedBonus: 0, paid: r, past: true })
+  }
   res.json({ period, people, paySources: paySources().map((s) => ({ key: s.key, label: s.label })) })
 })
 

@@ -948,7 +948,7 @@ export default function HRTeam({
                       return (
                         <tr key={p.name} className="border-b border-gray-100">
                           <td className="px-3 py-2">
-                            <p className="text-sm font-medium text-gray-900">{p.name}</p>
+                            <p className="text-sm font-medium text-gray-900">{p.name}{p.past && <span className="ml-2 px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-semibold uppercase tracking-wide">Past staff</span>}</p>
                             <p className="text-xs text-gray-500">{p.role}</p>
                           </td>
                           {p.paid ? (
