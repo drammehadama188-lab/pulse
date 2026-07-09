@@ -115,21 +115,33 @@ export default function HRTeam({
   // month can be picked (Adama 8 Jul: enter June's payroll late, or fix an
   // error in a past month). The server takes ?period= and pays into it.
   const [payPeriod, setPayPeriod] = useState(() => new Date().toISOString().slice(0, 7));
+  // Salaries are paid end of month (Adama): the payment date defaults to the
+  // period's last day — capped at today so it never lands in the future — and
+  // stays editable. Every Mark paid in the run uses this one date.
+  const eomOf = (ym) => { const [y, m] = ym.split('-').map(Number); return `${ym}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`; };
+  const defaultPayDate = (ym) => { const eom = eomOf(ym); return eom < todayISO ? eom : todayISO; };
+  const [payDate, setPayDate] = useState(() => defaultPayDate(new Date().toISOString().slice(0, 7)));
 
   function loadPayRun(period = payPeriod) {
     api(`/payroll/run?period=${period}`)
       .then(d => {
         setPayRun(d);
-        const draft = {};
-        (d.people || []).forEach(p => { draft[p.name] = { salary: p.suggestedSalary, bonus: p.suggestedBonus, source: (d.paySources?.[0]?.key) || 'wave' }; });
-        setPayDraft(draft);
+        // MERGE with what the owner already typed — marking one person paid
+        // must not reset everyone else's numbers back to the defaults.
+        setPayDraft(prev => {
+          const draft = {};
+          (d.people || []).forEach(p => { draft[p.name] = prev[p.name] || { salary: p.suggestedSalary, bonus: p.suggestedBonus, source: (d.paySources?.[0]?.key) || 'wave' }; });
+          return draft;
+        });
       })
       .catch(() => setPayRun({ error: true }));
   }
   function changePayPeriod(period) {
     if (!/^\d{4}-\d{2}$/.test(period)) return;
     setPayPeriod(period);
+    setPayDate(defaultPayDate(period));
     setPayRun(null); // show fresh state while the month loads
+    setPayDraft({}); // a new month starts from that month's defaults
     loadPayRun(period);
   }
   const openProfile = (name) => navigate(`/agents/${name.toLowerCase().replace(/\s+/g, '-')}`);
@@ -187,9 +199,9 @@ export default function HRTeam({
   // exact vendor + Books payload before anything posts.
   async function startPay(person) {
     const d = payDraft[person.name] || {};
-    setPayConfirm({ person, loading: true, salary: d.salary, bonus: d.bonus, source: d.source, date: todayISO });
+    setPayConfirm({ person, loading: true, salary: d.salary, bonus: d.bonus, source: d.source, date: payDate });
     try {
-      const preview = await api(`/payroll/pay?dryRun=1`, { method: 'POST', body: { name: person.name, salary: Number(d.salary) || 0, bonus: Number(d.bonus) || 0, paySourceKey: d.source, date: todayISO, period: payRun.period } });
+      const preview = await api(`/payroll/pay?dryRun=1`, { method: 'POST', body: { name: person.name, salary: Number(d.salary) || 0, bonus: Number(d.bonus) || 0, paySourceKey: d.source, date: payDate, period: payRun.period } });
       setPayConfirm(c => c && { ...c, loading: false, preview });
     } catch (e) {
       setPayConfirm(c => c && { ...c, loading: false, error: e.message });
@@ -808,6 +820,16 @@ export default function HRTeam({
                     className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700"
                     title="Pick which month this payroll applies to — go back to enter or correct a past month"
                   />
+                  <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                    Paid on
+                    <input
+                      type="date"
+                      value={payDate}
+                      onChange={(e) => e.target.value && setPayDate(e.target.value)}
+                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700"
+                      title="The payment date recorded in Zoho Books for every Mark paid in this run — defaults to the month's end"
+                    />
+                  </label>
                 </div>
                 <span className="text-[11px] text-gray-400 flex items-center gap-1 mt-1"><DollarSign size={11} /> Records to Zoho Books</span>
               </div>
