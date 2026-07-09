@@ -86,7 +86,10 @@ export default function HRTeam({
   const [openYears, setOpenYears] = useState(() => [String(new Date().getFullYear())]);
   const toggleYear = (y) => setOpenYears(s => s.includes(y) ? s.filter(x => x !== y) : [...s, y]);
   // Payroll is split into its own sub-pages (Run / History / Team Salaries).
-  const [paySection, setPaySection] = useState('run');
+  // Section + month survive a reload (Adama 9 Jul: "it should leave me always
+  // where i was") — kept per-tab in sessionStorage.
+  const [paySection, setPaySectionRaw] = useState(() => sessionStorage.getItem('payroll.section') || 'run');
+  const setPaySection = (s) => { sessionStorage.setItem('payroll.section', s); setPaySectionRaw(s); };
   const [payHistYear, setPayHistYear] = useState('all');
   const [payHistSearch, setPayHistSearch] = useState('');
   // Run Payroll is owner-only; non-owners get History + Team Salaries only.
@@ -114,13 +117,16 @@ export default function HRTeam({
   // Which month the payroll run applies to — defaults to this month, but any
   // month can be picked (Adama 8 Jul: enter June's payroll late, or fix an
   // error in a past month). The server takes ?period= and pays into it.
-  const [payPeriod, setPayPeriod] = useState(() => new Date().toISOString().slice(0, 7));
+  const [payPeriod, setPayPeriod] = useState(() => {
+    const saved = sessionStorage.getItem('payroll.period');
+    return /^\d{4}-\d{2}$/.test(saved || '') ? saved : new Date().toISOString().slice(0, 7);
+  });
   // Salaries are paid end of month (Adama): the payment date defaults to the
   // period's last day — capped at today so it never lands in the future — and
   // stays editable. Every Mark paid in the run uses this one date.
   const eomOf = (ym) => { const [y, m] = ym.split('-').map(Number); return `${ym}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`; };
   const defaultPayDate = (ym) => { const eom = eomOf(ym); return eom < todayISO ? eom : todayISO; };
-  const [payDate, setPayDate] = useState(() => defaultPayDate(new Date().toISOString().slice(0, 7)));
+  const [payDate, setPayDate] = useState(() => defaultPayDate(payPeriod));
 
   function loadPayRun(period = payPeriod) {
     api(`/payroll/run?period=${period}`)
@@ -138,6 +144,7 @@ export default function HRTeam({
   }
   function changePayPeriod(period) {
     if (!/^\d{4}-\d{2}$/.test(period)) return;
+    sessionStorage.setItem('payroll.period', period);
     setPayPeriod(period);
     setPayDate(defaultPayDate(period));
     setPayRun(null); // show fresh state while the month loads
