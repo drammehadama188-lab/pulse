@@ -206,7 +206,7 @@ export default function HRTeam({
   // exact vendor + Books payload before anything posts.
   async function startPay(person) {
     const d = payDraft[person.name] || {};
-    setPayConfirm({ person, loading: true, salary: d.salary, bonus: d.bonus, source: d.source, date: payDate, label: '' });
+    setPayConfirm({ person, loading: true, salary: d.salary, bonus: d.bonus, source: d.source, date: payDate });
     try {
       const preview = await api(`/payroll/pay?dryRun=1`, { method: 'POST', body: { name: person.name, salary: Number(d.salary) || 0, bonus: Number(d.bonus) || 0, paySourceKey: d.source, date: payDate, period: payRun.period } });
       // A duplicate found at preview time gets the same choices as one found on
@@ -237,6 +237,68 @@ export default function HRTeam({
     } finally {
       setPayPosting(false);
     }
+  }
+
+  // ONE-OFF payment — Zoho "Record Expense" style (Adama 9 Jul): everything up
+  // front in one form (person, what it is, amount, month, date, method), one
+  // Save. For training pay, allowances, advances — anything that isn't the
+  // standard monthly salary.
+  const [oneOff, setOneOff] = useState(null); // { name, label, amount, period, date, source, busy, error }
+  function openOneOff() {
+    setOneOff({
+      name: payRun?.people?.[0]?.name || '',
+      label: '', amount: '',
+      period: payPeriod, date: payDate,
+      source: payRun?.paySources?.[0]?.key || 'wave',
+      busy: false, error: '',
+    });
+  }
+  async function submitOneOff() {
+    const o = oneOff;
+    if (!o.name) return setOneOff(c => ({ ...c, error: 'Pick a person' }));
+    if (!o.label.trim()) return setOneOff(c => ({ ...c, error: 'Say what this payment is (e.g. Training pay)' }));
+    if (!(Number(o.amount) > 0)) return setOneOff(c => ({ ...c, error: 'Enter an amount' }));
+    setOneOff(c => ({ ...c, busy: true, error: '' }));
+    try {
+      const res = await api('/payroll/pay', { method: 'POST', body: { name: o.name, salary: Number(o.amount), bonus: 0, paySourceKey: o.source, date: o.date, period: o.period, label: o.label.trim() } });
+      if (res.ok === false && res.reason === 'duplicate') {
+        setOneOff(c => ({ ...c, busy: false, error: `${o.name} already has a payment for ${o.period} (${res.message}). One payment per person per month — edit that payment in the run instead, or pick a different month.` }));
+        return;
+      }
+      if (res.ok === false) { setOneOff(c => ({ ...c, busy: false, error: res.message || 'Could not record' })); return; }
+      setOneOff(null);
+      if (o.period === payRun?.period) loadPayRun();
+      setPayLive(null);
+    } catch (e) {
+      setOneOff(c => ({ ...c, busy: false, error: e.message }));
+    }
+  }
+
+  // PAY ALL — the recurring run in one go: every unpaid row, the numbers as
+  // typed, one confirmation. People whose month is already paid in Books are
+  // skipped and reported, never double-paid.
+  const [bulk, setBulk] = useState(null); // { people, busy, done, results }
+  function openBulk() {
+    const unpaid = (payRun?.people || []).filter(p => !p.paid);
+    if (!unpaid.length) return;
+    setBulk({ people: unpaid, busy: false, done: false, results: null });
+  }
+  async function runBulk() {
+    setBulk(c => ({ ...c, busy: true }));
+    const results = [];
+    for (const p of bulk.people) {
+      const d = payDraft[p.name] || {};
+      try {
+        const res = await api('/payroll/pay', { method: 'POST', body: { name: p.name, salary: Number(d.salary) || 0, bonus: Number(d.bonus) || 0, paySourceKey: d.source, date: payDate, period: payRun.period, label: '' } });
+        if (res.ok === false) results.push({ name: p.name, status: res.reason === 'duplicate' ? 'skipped — already paid in Books' : (res.message || 'failed') });
+        else results.push({ name: p.name, status: `paid D${(res.record?.total ?? ((Number(d.salary) || 0) + (Number(d.bonus) || 0))).toLocaleString()}` });
+      } catch (e) {
+        results.push({ name: p.name, status: e.message || 'failed' });
+      }
+    }
+    setBulk(c => ({ ...c, busy: false, done: true, results }));
+    loadPayRun();
+    setPayLive(null);
   }
 
   // Adopt an expense that already exists in Books (pre-entered in Zoho) as this
@@ -858,7 +920,13 @@ export default function HRTeam({
                     />
                   </label>
                 </div>
-                <span className="text-[11px] text-gray-400 flex items-center gap-1 mt-1"><DollarSign size={11} /> Records to Zoho Books</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={openOneOff} className="px-3 py-2 rounded-lg text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:border-gray-500">+ Record a payment</button>
+                  {(payRun.people || []).some(p => !p.paid) && (
+                    <button type="button" onClick={openBulk} className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-900 text-white hover:bg-gray-800">Pay all ({(payRun.people || []).filter(p => !p.paid).length})</button>
+                  )}
+                  <span className="text-[11px] text-gray-400 flex items-center gap-1"><DollarSign size={11} /> Records to Zoho Books</span>
+                </div>
               </div>
               <p className="text-xs text-gray-500 mb-4">Enter what each person receives, pick how you paid them, then mark paid. Nothing posts until you confirm.{payPeriod !== new Date().toISOString().slice(0, 7) && <span className="font-semibold text-amber-600"> You are paying into a past month — payments record under that month.</span>}</p>
               <div className="overflow-x-auto">
@@ -1114,10 +1182,6 @@ export default function HRTeam({
                     <div className="flex justify-between border-t border-gray-100 pt-2"><span className="text-gray-900 font-semibold">Total to Books</span><span className="font-bold">D{payConfirm.preview.total.toLocaleString()}</span></div>
                     <div className="flex justify-between"><span className="text-gray-500">Paid via</span><span className="font-medium">{payConfirm.preview.paySource?.label}</span></div>
                     <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-medium">{payConfirm.date}</span></div>
-                    <label className="flex items-center justify-between gap-3 pt-1">
-                      <span className="text-gray-500">Label <span className="text-gray-400">(optional)</span></span>
-                      <input value={payConfirm.label || ''} onChange={e => setPayConfirm(c => c && { ...c, label: e.target.value })} placeholder="e.g. Training pay, Transport allowance" className="w-56 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-right" />
-                    </label>
                     <div className="flex justify-between"><span className="text-gray-500">Account</span><span className="font-medium">Salaries and Employee Wages</span></div>
                     <div className="flex justify-between"><span className="text-gray-500">Vendor</span><span className="font-medium text-right">{payConfirm.preview.vendor?.name}{payConfirm.preview.createdVendor && ' (new)'}</span></div>
                     {payConfirm.preview.fuzzyVendor && <p className="text-xs text-amber-600 flex items-center gap-1"><AlertTriangle size={12} /> Matched by name — confirm this is the right person.</p>}
@@ -1137,6 +1201,79 @@ export default function HRTeam({
                     <button type="button" onClick={() => confirmPay(true)} disabled={payPosting} className="px-3 py-2 rounded-lg text-sm font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-60">{payPosting ? 'Recording…' : 'Pay again anyway'}</button>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Record a one-off payment — everything up front, one Save */}
+          {oneOff && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !oneOff.busy && setOneOff(null)}>
+              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Record a payment</h3>
+                <p className="text-sm text-gray-500 mb-4">A one-off — training pay, an allowance, an advance. Posts to Zoho Books and shows on their payslip under the month you pick.</p>
+                <div className="space-y-3 text-sm">
+                  <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Person</span>
+                    <select value={oneOff.name} onChange={e => setOneOff(c => ({ ...c, name: e.target.value }))} className="w-56 border border-gray-200 rounded px-2 py-1.5">
+                      {(payRun?.people || []).map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex items-center justify-between gap-3"><span className="text-gray-600">What is it</span>
+                    <input value={oneOff.label} onChange={e => setOneOff(c => ({ ...c, label: e.target.value }))} placeholder="e.g. Training pay, Transport allowance" className="w-56 border border-gray-200 rounded px-2 py-1.5" />
+                  </label>
+                  <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Amount (D)</span>
+                    <input type="number" value={oneOff.amount} onChange={e => setOneOff(c => ({ ...c, amount: e.target.value }))} className="w-32 text-right border border-gray-200 rounded px-2 py-1.5" />
+                  </label>
+                  <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Counts to month</span>
+                    <input type="month" value={oneOff.period} onChange={e => e.target.value && setOneOff(c => ({ ...c, period: e.target.value, date: (() => { const [y, m] = e.target.value.split('-').map(Number); const eom = `${e.target.value}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`; return eom < todayISO ? eom : todayISO; })() }))} className="w-40 border border-gray-200 rounded px-2 py-1.5" />
+                  </label>
+                  <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Paid on</span>
+                    <input type="date" value={oneOff.date} onChange={e => e.target.value && setOneOff(c => ({ ...c, date: e.target.value }))} className="w-40 border border-gray-200 rounded px-2 py-1.5" />
+                  </label>
+                  <label className="flex items-center justify-between gap-3"><span className="text-gray-600">Paid via</span>
+                    <select value={oneOff.source} onChange={e => setOneOff(c => ({ ...c, source: e.target.value }))} className="w-40 border border-gray-200 rounded px-2 py-1.5">
+                      {(payRun?.paySources || []).map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                    </select>
+                  </label>
+                </div>
+                {oneOff.error && <p className="text-sm text-red-600 mt-3">{oneOff.error}</p>}
+                <div className="flex justify-end gap-2 mt-5">
+                  <button type="button" onClick={() => setOneOff(null)} disabled={oneOff.busy} className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+                  <button type="button" onClick={submitOneOff} disabled={oneOff.busy} className="px-4 py-2 rounded-lg text-sm text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60">{oneOff.busy ? 'Recording…' : 'Save'}</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Pay all — one confirmation for the whole run */}
+          {bulk && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !bulk.busy && setBulk(null)}>
+              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">{bulk.done ? 'Pay all — done' : `Pay ${bulk.people.length} people — ${payRun?.period}`}</h3>
+                {!bulk.done ? (
+                  <>
+                    <p className="text-sm text-gray-500 mb-4">Each payment posts to Zoho Books with the numbers as entered, dated {payDate}. Anyone already paid in Books is skipped.</p>
+                    <div className="space-y-1.5 text-sm max-h-56 overflow-y-auto">
+                      {bulk.people.map(p => {
+                        const d = payDraft[p.name] || {};
+                        return <div key={p.name} className="flex justify-between"><span className="text-gray-700">{p.name}</span><span className="font-medium tabular-nums">D{(((Number(d.salary) || 0) + (Number(d.bonus) || 0))).toLocaleString()}</span></div>;
+                      })}
+                      <div className="flex justify-between border-t border-gray-100 pt-2 font-bold"><span>Total</span><span className="tabular-nums">D{bulk.people.reduce((s, p) => { const d = payDraft[p.name] || {}; return s + (Number(d.salary) || 0) + (Number(d.bonus) || 0); }, 0).toLocaleString()}</span></div>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-5">
+                      <button type="button" onClick={() => setBulk(null)} disabled={bulk.busy} className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+                      <button type="button" onClick={runBulk} disabled={bulk.busy} className="px-4 py-2 rounded-lg text-sm text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60">{bulk.busy ? 'Recording…' : 'Confirm — pay all'}</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-1.5 text-sm mt-3 max-h-56 overflow-y-auto">
+                      {(bulk.results || []).map(r => <div key={r.name} className="flex justify-between gap-3"><span className="text-gray-700">{r.name}</span><span className={`text-right ${r.status.startsWith('paid') ? 'text-emerald-700' : 'text-amber-600'}`}>{r.status}</span></div>)}
+                    </div>
+                    <div className="flex justify-end mt-5">
+                      <button type="button" onClick={() => setBulk(null)} className="px-4 py-2 rounded-lg text-sm text-white bg-gray-900 hover:bg-gray-800">Done</button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
