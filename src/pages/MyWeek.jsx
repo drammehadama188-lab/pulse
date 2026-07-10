@@ -20,7 +20,6 @@ export default function MyWeek() {
   const [noteSaved, setNoteSaved] = useState({})
   const [otherTitle, setOtherTitle] = useState('')
   const noteTimers = useRef({})
-  const otherTimer = useRef(null)
 
   async function load() {
     try {
@@ -64,11 +63,6 @@ export default function MyWeek() {
         .then(() => { setNoteSaved((v) => ({ ...v, [key]: true })); setTimeout(() => setNoteSaved((v) => ({ ...v, [key]: false })), 1500) })
         .catch(() => {})
     }, 600)
-  }
-  function saveOtherTitle(title) {
-    setOtherTitle(title)
-    clearTimeout(otherTimer.current)
-    otherTimer.current = setTimeout(() => { api('/workday/other', { method: 'POST', body: { title } }).catch(() => {}) }, 600)
   }
 
   if (error) return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'My Workday is for team leads.' : `Couldn't load — ${error}`}</Card>
@@ -128,13 +122,7 @@ export default function MyWeek() {
       <section>
         <div className="border-t border-[var(--color-line)] pt-3">
           <div className="text-[11px] font-extrabold uppercase tracking-widest text-[var(--color-ink-faint)]">Other objective</div>
-          <input
-            value={otherTitle}
-            onChange={(e) => canAct && saveOtherTitle(e.target.value)}
-            readOnly={!canAct}
-            placeholder="What else are you working on? e.g. Coaching"
-            className="mt-0.5 w-full max-w-md border-0 bg-transparent text-lg font-bold text-[var(--color-ink)] outline-none placeholder:font-semibold placeholder:text-[var(--color-ink-faint)]"
-          />
+          <h2 className="mt-0.5 text-lg font-bold text-[var(--color-ink)]">{otherTitle || <span className="font-semibold text-[var(--color-ink-faint)]">Adama hasn't named this objective yet</span>}</h2>
         </div>
         <div className="mt-3">
           <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
@@ -279,16 +267,16 @@ export function PlanArea({ items, canAct, canTick, focusKey, date, cap, placehol
               />
             ) : (
               <span
-                onClick={canAct && !it.done ? () => { setEditing(it.id); setEditText(it.title) } : undefined}
-                className={`min-w-0 flex-1 ${canAct && !it.done ? 'cursor-text' : ''}`}
-                title={canAct && !it.done ? 'Click to edit' : undefined}
+                onClick={canAct && !it.done && !it.byAdama ? () => { setEditing(it.id); setEditText(it.title) } : undefined}
+                className={`min-w-0 flex-1 ${canAct && !it.done && !it.byAdama ? 'cursor-text' : ''}`}
+                title={it.byAdama ? 'From management — only Adama can change it' : canAct && !it.done ? 'Click to edit' : undefined}
               >
                 <span className={`text-sm font-medium ${it.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>{it.title}</span>
                 {it.byAdama ? <span className="ml-2 rounded-full bg-[var(--color-brand-50)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-brand)]">from Adama</span> : null}
                 {it.carried ? <span className="ml-2 rounded-full bg-[var(--color-bad-bg,#fef2f2)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-bad)]">from yesterday</span> : null}
               </span>
             )}
-            {canAct && editing !== it.id && (
+            {canAct && editing !== it.id && !it.byAdama && (
               <button onClick={() => onRemove(it.id, date)} title="Remove" className="shrink-0 rounded p-0.5 text-[var(--color-ink-faint)] opacity-0 transition-opacity hover:text-[var(--color-bad)] group-hover:opacity-100"><X size={14} /></button>
             )}
           </div>

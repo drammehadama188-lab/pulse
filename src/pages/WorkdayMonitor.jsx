@@ -24,6 +24,7 @@ const ACTION_TEXT = {
 const RED_FLAGS = new Set(['removed', 'unticked'])
 
 export default function WorkdayMonitor() {
+  const [otherDraft, setOtherDraft] = useState('')
   const [leads, setLeads] = useState(null)
   const [lead, setLead] = useState(null) // username
   const [data, setData] = useState(null)
@@ -45,12 +46,16 @@ export default function WorkdayMonitor() {
         api(`/workday?username=${u}`),
         api(`/workday/audit?username=${u}`),
       ])
-      setData(w); setAudit(a.entries || [])
+      setData(w); setAudit(a.entries || []); setOtherDraft(w.otherTitle || '')
       setSelDate((cur) => (cur && w.days.includes(cur) ? cur : w.today))
     } catch (e) { setError(e.message) }
   }
   useEffect(() => { if (lead) loadLead(lead) }, [lead])
 
+  async function saveOther() {
+    try { await api('/workday/other', { method: 'POST', body: { username: lead, title: otherDraft.trim() } }); loadLead(lead) }
+    catch (e) { alert(e.message) }
+  }
   async function addFor(focusKey) {
     const text = (drafts[focusKey] || '').trim()
     if (!text) return
@@ -70,7 +75,7 @@ export default function WorkdayMonitor() {
   const itemsFor = (key) => dayItems.filter((i) => i.focusKey === key)
   const sections = [
     ...data.focus.map((f, i) => ({ key: f.key, label: `${i === 0 ? 'Primary' : 'Supporting'} — ${f.title}`, metrics: f.metrics, progress: f.progress, note: data.objNotes?.[f.key] || '' })),
-    { key: 'other', label: `Other — ${data.otherTitle || 'not named yet'}`, metrics: [], progress: null, note: data.objNotes?.other || '' },
+    { key: 'other', label: null, metrics: [], progress: null, note: data.objNotes?.other || '' },
   ]
 
   return (
@@ -87,12 +92,49 @@ export default function WorkdayMonitor() {
         )}
       </div>
 
+      {/* the goals, always on top — all of them */}
+      {data.week.length > 0 && (
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          {data.week.map((w) => {
+            const pct = w.target ? Math.min(100, Math.round(((w.actual || 0) / w.target) * 100)) : 0
+            return (
+              <div key={w.label} className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-500">{w.label}</span>
+                <span className="h-1.5 w-16 overflow-hidden rounded-full bg-gray-100">
+                  <span className={`block h-full rounded-full ${pct >= 66 ? 'bg-emerald-500' : pct >= 33 ? 'bg-amber-400' : 'bg-red-500'}`} style={{ width: `${pct}%` }} />
+                </span>
+                <span className="text-xs font-bold tabular-nums text-gray-900">{w.actual ?? '—'}{w.unit || `/${w.target}`}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* management items he did NOT do on their day */}
+      {(data.adamaOverdue || []).length > 0 && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm font-bold text-red-700">Your items he hasn't done:</p>
+          <div className="mt-1 space-y-0.5">
+            {data.adamaOverdue.map((o, i) => (
+              <p key={i} className="text-sm text-red-700">“{o.title}” — was for {new Date(`${o.date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}</p>
+            ))}
+          </div>
+        </div>
+      )}
+
       <DayStrip days={data.days} today={data.today} selDate={selDate} onSelect={setSelDate} planByDate={data.planByDate} />
 
       {sections.map((sec) => (
         <div key={sec.key} className="rounded-2xl border border-gray-200 bg-white p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-base font-bold text-gray-900">{sec.label}</h2>
+            {sec.key === 'other' ? (
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="text-base font-bold text-gray-900">Other —</span>
+                <input value={otherDraft} onChange={(e) => setOtherDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveOther()} onBlur={saveOther} placeholder="Name his other objective — e.g. Coaching" className="min-w-0 flex-1 border-0 border-b border-dashed border-gray-300 bg-transparent py-0.5 text-base font-bold text-gray-900 outline-none placeholder:font-medium placeholder:text-gray-400" />
+              </div>
+            ) : (
+              <h2 className="text-base font-bold text-gray-900">{sec.label}</h2>
+            )}
             {sec.metrics.length > 0 && (
               <span className="text-xs text-gray-500">{sec.metrics.map((m) => `${m.label.toLowerCase()} ${m.value}`).join(' · ')}{sec.progress ? ` · today ${sec.progress.actual}/${sec.progress.goal}` : ''}</span>
             )}
@@ -120,7 +162,7 @@ export default function WorkdayMonitor() {
               className="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm outline-none placeholder:text-gray-400"
             />
           </div>
-          {sec.note && <p className="mt-2 rounded-lg bg-gray-50 px-2.5 py-2 text-xs text-gray-600"><span className="font-semibold">His comment:</span> {sec.note}</p>}
+          <p className="mt-2 rounded-lg bg-gray-50 px-2.5 py-2 text-xs text-gray-600"><span className="font-semibold">His comment:</span> {sec.note || <span className="text-gray-400">nothing written yet</span>}</p>
         </div>
       ))}
 

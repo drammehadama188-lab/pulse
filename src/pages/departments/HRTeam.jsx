@@ -483,6 +483,11 @@ export default function HRTeam({
                     {f.note && <p className="mt-0.5 rounded bg-gray-50 px-2 py-1 text-xs text-gray-600"><span className="font-semibold">His comment:</span> {f.note}</p>}
                   </div>
                 ))}
+                {(w.adamaOverdue || []).length > 0 && (
+                  <div className="rounded-lg bg-red-50 px-2.5 py-2 text-xs font-semibold text-red-700">
+                    Your items he hasn't done: {w.adamaOverdue.map((o) => `“${o.title}” (${o.date})`).join(' · ')}
+                  </div>
+                )}
                 {w.other && (w.other.title || w.other.note) && (
                   <div className="text-sm text-gray-700">
                     <span className="font-semibold">Other:</span> {w.other.title || '—'}

@@ -1725,6 +1725,18 @@ function workdayLeadFor(req) {
   return u && leadsATeam(u) ? u : null
 }
 
+// Management items that were NOT done on their day — Adama gets told.
+function adamaOverdueFor(username, today) {
+  const out = []
+  for (const d of workdayStore()) {
+    if (d.username !== username || d.date >= today) continue
+    for (const i of d.items) {
+      if (i.byAdama && !i.done && !i.deleted) out.push({ title: i.title, date: d.date })
+    }
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20)
+}
+
 function assignmentsFor(username) {
   return db.read('assignments', []).filter((a) => a.toUsername === username && !a.archived)
     .sort((a, b) => String(a.due || '9999').localeCompare(String(b.due || '9999')))
@@ -1770,6 +1782,7 @@ app.get('/api/workday', auth, async (req, res) => {
       items: day.items.filter((i) => !i.deleted),
       otherTitle: (db.read('workday-other', []).find((o) => o.username === lead.username) || {}).title || '',
       fromAdama: assignmentsFor(lead.username),
+      adamaOverdue: adamaOverdueFor(lead.username, x.today),
       objNotes,
       week,
     })
@@ -1800,6 +1813,7 @@ app.post('/api/workday/remove', auth, notViewAs, (req, res) => {
   const day = workdayGet(lead.username, date)
   const item = day?.items.find((i) => i.id === req.body?.itemId)
   if (!item) return res.status(404).json({ error: 'No such item that day' })
+  if (item.byAdama && req.realUser?.username !== CEO) return res.status(403).json({ error: 'This came from management — only Adama can remove it' })
   item.deleted = true
   workdaySave(day)
   workdayAudit(lead, req, 'removed', { title: item.title, date })
@@ -1839,6 +1853,7 @@ app.post('/api/workday/edit', auth, notViewAs, (req, res) => {
   const day = workdayGet(lead.username, date)
   const item = day?.items.find((i) => i.id === req.body?.itemId && !i.deleted)
   if (!item) return res.status(404).json({ error: 'No such item that day' })
+  if (item.byAdama && req.realUser?.username !== CEO) return res.status(403).json({ error: 'This came from management — only Adama can edit it' })
   const before = item.title
   item.title = title.slice(0, 160)
   workdaySave(day)
@@ -1846,9 +1861,10 @@ app.post('/api/workday/edit', auth, notViewAs, (req, res) => {
   res.json({ ok: true, items: day.items.filter((i) => !i.deleted) })
 })
 
-// The OTHER objective — unspecified, his to name ("coaching or anything"),
-// with a plan and a comment box like the business objectives.
+// The OTHER objective — set by ADAMA ONLY (10 Jul: "only me, not him, can
+// edit the objectives"); the lead plans and comments under it.
 app.post('/api/workday/other', auth, notViewAs, (req, res) => {
+  if (req.realUser?.username !== CEO) return res.status(403).json({ error: 'Only Adama names the objectives' })
   const lead = workdayLeadFor(req)
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
   const all = db.read('workday-other', []).filter((o) => o.username !== lead.username)
@@ -1940,6 +1956,7 @@ app.get('/api/workday/overview', auth, async (req, res) => {
         lead: { username: lead.username, name: lead.name },
         focus: focus.map((f) => ({ key: f.key, title: f.title, metrics: f.metrics, progress: f.progress, note: objNotes[f.key] || '' })),
         other: { title: (db.read('workday-other', []).find((o) => o.username === lead.username) || {}).title || '', note: objNotes.other || '' },
+        adamaOverdue: adamaOverdueFor(lead.username, today),
         doneCount: items.filter((i) => i.done).length,
         totalItems: items.length,
         assignments: assignmentsFor(lead.username),
