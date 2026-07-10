@@ -480,12 +480,10 @@ export default function HRTeam({
                   <div key={f.key} className="text-sm text-gray-700">
                     <span className="font-semibold">{i === 0 ? 'Primary' : 'Supporting'}:</span> {f.title} — {(f.metrics || []).map((m) => `${m.label.toLowerCase()} ${m.value}`).join(' · ')}
                     {f.progress && <span className="ml-1.5 font-bold tabular-nums">today {f.progress.actual}/{f.progress.goal}</span>}
+                    {f.note && <p className="mt-0.5 rounded bg-gray-50 px-2 py-1 text-xs text-gray-600"><span className="font-semibold">His comment:</span> {f.note}</p>}
                   </div>
                 ))}
               </div>
-              {w.carry && (
-                <p className="mt-2 rounded-lg bg-gray-50 px-2.5 py-2 text-xs text-gray-600"><span className="font-semibold">Carrying to tomorrow:</span> {w.carry}</p>
-              )}
               {w.assignments.length > 0 && (
                 <div className="mt-2 space-y-0.5 text-xs text-gray-600">
                   {w.assignments.map((a) => <div key={a.id}>{a.done ? '✓' : '○'} {a.title}{a.due ? ` · due ${a.due}` : ''}</div>)}

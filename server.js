@@ -1619,6 +1619,10 @@ function workdayFocus(x, prevSnap) {
 function workdayQuick(x) {
   const first = (m) => m.name.split(' ')[0]
   const q = []
+  // Renewals live on Yafatou's goals — his admin job is checking in on them.
+  if (x.yafatou && x.retF && x.rnDue && x.rnRen < Math.ceil(x.rnDue * 0.8)) {
+    q.push({ id: 'quick-renewals-yafatou', title: `Check in with ${first(x.yafatou)} on renewals — it's on her goals`, to: `/team-member/${x.yafatou.username}` })
+  }
   const overdue = x.coaching.filter((c) => !c.coachingCurrent)
     .sort((a, b) => String(a.lastCoachedAt || '').localeCompare(String(b.lastCoachedAt || '')))
   if (overdue.length) q.push({ id: `coach-${overdue[0].m.username}`, title: `Coach ${first(overdue[0].m)} — longest without a check-in`, to: `/team-member/${overdue[0].m.username}` })
@@ -1699,7 +1703,7 @@ app.get('/api/workday', auth, async (req, res) => {
     const day = workdayToday(lead, quick)
     const tomorrowKeyD = new Date(`${x.today}T00:00:00Z`); tomorrowKeyD.setUTCDate(tomorrowKeyD.getUTCDate() + 1)
     const tomorrow = workdayGet(lead.username, tomorrowKeyD.toISOString().slice(0, 10))
-    const notes = (db.read('workday-notes', []).find((n) => n.username === lead.username) || {}).text || ''
+    const objNotes = (db.read('workday-objnotes', []).find((n) => n.username === lead.username) || {}).notes || {}
     const week = []
     if (x.teamTarget) week.push({ label: 'Sales', actual: x.teamWon, target: x.teamTarget })
     if (x.retF && x.rnDue) week.push({ label: 'Renewals', actual: x.rnRen, target: Math.ceil(x.rnDue * 0.8) })
@@ -1713,8 +1717,7 @@ app.get('/api/workday', auth, async (req, res) => {
       items: day.items.filter((i) => !i.deleted),
       tomorrowItems: (tomorrow?.items || []).filter((i) => !i.deleted),
       fromAdama: assignmentsFor(lead.username),
-      notes,
-      carry: day.carry || '',
+      objNotes,
       week,
     })
   } catch (e) {
@@ -1765,25 +1768,21 @@ app.post('/api/workday/add', auth, notViewAs, (req, res) => {
   res.json({ ok: true, date, items: day.items.filter((i) => !i.deleted) })
 })
 
-// Carry Forward — "what still needs attention tomorrow?" Each line becomes an
-// item on tomorrow's list automatically. Not homework; a handover to himself.
-app.post('/api/workday/carry', auth, notViewAs, (req, res) => {
+// Per-objective comments — where he explains why a goal wasn't met, or
+// anything the business should know (Adama 10 Jul). One running box per
+// objective; Adama reads it on his card. Replaces the global Working Notes
+// and the Carry Forward box (removed on his call). No suggestions anywhere —
+// the plan is his responsibility; the system only shows the goal.
+app.post('/api/workday/objnote', auth, notViewAs, (req, res) => {
   const lead = workdayLeadFor(req)
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
-  const today = todayKey()
-  const day = workdayGet(lead.username, today) || { username: lead.username, date: today, items: [], carry: '' }
-  day.carry = String(req.body?.text || '').slice(0, 2000)
-  workdaySave(day)
-  res.json({ ok: true })
-})
-
-// Working Notes — the lead's desk scratchpad. Not shown on the CEO overview.
-app.post('/api/workday/notes', auth, notViewAs, (req, res) => {
-  const lead = workdayLeadFor(req)
-  if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
-  const all = db.read('workday-notes', []).filter((n) => n.username !== lead.username)
-  all.push({ username: lead.username, text: String(req.body?.text || '').slice(0, 4000), updatedAt: new Date().toISOString() })
-  db.write('workday-notes', all)
+  const key = String(req.body?.key || '')
+  if (!key) return res.status(400).json({ error: 'key required' })
+  const all = db.read('workday-objnotes', [])
+  const rec = all.find((n) => n.username === lead.username) || (all.push({ username: lead.username, notes: {} }), all[all.length - 1])
+  rec.notes[key] = String(req.body?.text || '').slice(0, 4000)
+  rec.updatedAt = new Date().toISOString()
+  db.write('workday-objnotes', all)
   res.json({ ok: true })
 })
 
@@ -1831,13 +1830,13 @@ app.get('/api/workday/overview', auth, async (req, res) => {
       const focus = workdayFocus(x, prevSnap).slice(0, 2)
       const day = workdayGet(lead.username, today)
       const items = (day?.items || []).filter((i) => !i.deleted)
+      const objNotes = (db.read('workday-objnotes', []).find((n) => n.username === lead.username) || {}).notes || {}
       out.push({
         lead: { username: lead.username, name: lead.name },
-        focus: focus.map((f) => ({ key: f.key, title: f.title, metrics: f.metrics, progress: f.progress })),
+        focus: focus.map((f) => ({ key: f.key, title: f.title, metrics: f.metrics, progress: f.progress, note: objNotes[f.key] || '' })),
         doneCount: items.filter((i) => i.done).length,
         totalItems: items.length,
         assignments: assignmentsFor(lead.username),
-        carry: day?.carry || '',
       })
     } catch { /* skip a lead we can't build */ }
   }

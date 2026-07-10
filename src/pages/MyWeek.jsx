@@ -18,15 +18,13 @@ export default function MyWeek() {
   const canAct = !isViewAs
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [notes, setNotes] = useState('')
-  const [carry, setCarry] = useState('')
-  const [carrySaved, setCarrySaved] = useState(false)
-  const notesTimer = useRef(null)
+  const [objNotes, setObjNotes] = useState({})
+  const noteTimers = useRef({})
 
   async function load() {
     try {
       const d = await api('/workday')
-      setData(d); setNotes(d.notes || ''); setCarry(d.carry || '')
+      setData(d); setObjNotes(d.objNotes || {})
     } catch (e) { setError(e.message) }
   }
   useEffect(() => { load() }, [])
@@ -51,15 +49,11 @@ export default function MyWeek() {
       setData((d) => ({ ...d, fromAdama: d.fromAdama.map((a) => (a.id === id ? r.assignment : a)) }))
     } catch (e) { alert(e.message) }
   }
-  async function saveCarry() {
-    try { await api('/workday/carry', { method: 'POST', body: { text: carry } }); setCarrySaved(true); setTimeout(() => setCarrySaved(false), 2000) }
-    catch (e) { alert(e.message) }
-  }
-  function onNotes(text) {
-    setNotes(text)
+  function saveObjNote(key, text) {
+    setObjNotes((n) => ({ ...n, [key]: text }))
     if (!canAct) return
-    clearTimeout(notesTimer.current)
-    notesTimer.current = setTimeout(() => { api('/workday/notes', { method: 'POST', body: { text } }).catch(() => {}) }, 800)
+    clearTimeout(noteTimers.current[key])
+    noteTimers.current[key] = setTimeout(() => { api('/workday/objnote', { method: 'POST', body: { key, text } }).catch(() => {}) }, 800)
   }
 
   if (error) return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'My Workday is for team leads.' : `Couldn't load — ${error}`}</Card>
@@ -100,6 +94,7 @@ export default function MyWeek() {
         <ObjectiveCard
           key={f.key} f={f} primary={i === 0} data={data} canAct={canAct}
           items={itemsFor(f.key, data.items)} tomorrowItems={itemsFor(f.key, data.tomorrowItems)}
+          note={objNotes[f.key] || ''} onNote={(text) => saveObjNote(f.key, text)}
           onToggle={toggle} onRemove={remove} onAdd={add}
         />
       ))}
@@ -129,30 +124,12 @@ export default function MyWeek() {
         </section>
       )}
 
-      {/* working notes */}
-      <section>
-        <h2 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-[var(--color-ink-faint)]">Working notes</h2>
-        <textarea value={notes} onChange={(e) => onNotes(e.target.value)} disabled={!canAct} rows={4} placeholder="Your desk scratchpad — supplier to call, SIMs to order… saves by itself." className="w-full rounded-xl border border-[var(--color-line-soft)] bg-transparent px-3 py-2.5 text-sm" />
-      </section>
-
-      {/* carry forward */}
-      <section>
-        <h2 className="text-sm font-extrabold uppercase tracking-wide text-[var(--color-ink-faint)]">Carry forward</h2>
-        <p className="mb-2 text-xs text-[var(--color-ink-faint)]">What still needs attention tomorrow? Each line becomes an item on tomorrow's list.</p>
-        <textarea value={carry} onChange={(e) => setCarry(e.target.value)} disabled={!canAct} rows={3} placeholder={'Waiting for Access Bank payment\nMusa requested invoice\nSally needs coaching'} className="w-full rounded-xl border border-[var(--color-line-soft)] bg-transparent px-3 py-2.5 text-sm" />
-        {canAct && (
-          <div className="mt-2 flex items-center gap-2">
-            <button onClick={saveCarry} className="rounded-xl bg-[var(--color-ink)] px-4 py-2 text-sm font-bold text-white hover:opacity-90">Save</button>
-            {carrySaved && <span className="text-xs font-semibold text-[var(--color-good)]">Saved — it'll be on tomorrow's list ✓</span>}
-          </div>
-        )}
-      </section>
     </div>
   )
 }
 
 // One objective: metrics = context, the writing area = the hero.
-function ObjectiveCard({ f, primary, data, canAct, items, tomorrowItems, onToggle, onRemove, onAdd }) {
+function ObjectiveCard({ f, primary, data, canAct, items, tomorrowItems, note, onNote, onToggle, onRemove, onAdd }) {
   return (
     <section className={primary ? '' : 'opacity-95'}>
       {primary ? (
@@ -198,6 +175,14 @@ function ObjectiveCard({ f, primary, data, canAct, items, tomorrowItems, onToggl
           Progress today: <span className="font-extrabold tabular-nums text-[var(--color-ink)]">{f.progress.actual}/{f.progress.goal}</span> {f.progress.unit}
         </p>
       )}
+      <div className="mt-3">
+        <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Comments</div>
+        <textarea
+          value={note} onChange={(e) => onNote(e.target.value)} disabled={!canAct} rows={2}
+          placeholder="Why wasn't the goal met, or anything the business should know — saves by itself."
+          className="w-full rounded-xl border border-[var(--color-line-soft)] bg-transparent px-3 py-2 text-sm"
+        />
+      </div>
     </section>
   )
 }
