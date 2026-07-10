@@ -132,8 +132,8 @@ export default function App() {
         <Route path="/team-dashboard" element={<RequireAuth teamLead><TeamDashboard /></RequireAuth>} />
         <Route path="/my-week" element={<RequireAuth teamLead><MyWeek /></RequireAuth>} />
         <Route path="/workday-monitor" element={<RequireAuth power="hr"><WorkdayMonitor /></RequireAuth>} />
-        <Route path="/weekly-report" element={<Navigate to="/reports?tab=weekly" replace />} />
-        <Route path="/business-report" element={<Navigate to="/reports?tab=business" replace />} />
+        <Route path="/weekly-report" element={<Navigate to="/reports?tab=managers&period=week" replace />} />
+        <Route path="/business-report" element={<Navigate to="/reports?tab=overview&period=last_month" replace />} />
         <Route path="/team-member/:username" element={<RequireAuth teamLead><TeamMember /></RequireAuth>} />
         {/* MY TEAM — existing pages reused, scoped to the lead's own team (Adama 1 Jul). */}
         <Route path="/team-requests" element={<RequireAuth teamLead><Approvals scope="team" /></RequireAuth>} />

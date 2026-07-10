@@ -2273,6 +2273,267 @@ app.get('/api/report/business', auth, async (req, res) => {
   }
 })
 
+// ---------- REPORTING CENTRE (Adama 10 Jul) ----------
+// One endpoint, seven reports, one structure: title · summary · key metrics ·
+// detail sections · recent activity · notes. Every report answers ONE
+// question. The PERIOD is separate from the report type. Metrics Pulse cannot
+// measure yet are named in the notes — never invented.
+
+function rcPeriod(period, today) {
+  const CUR = today.slice(0, 7)
+  const [y, m] = CUR.split('-').map(Number)
+  const monthsBack = (n) => {
+    const out = []
+    for (let i = 0; i < n; i++) out.push(new Date(Date.UTC(y, m - 1 - i, 1)).toISOString().slice(0, 7))
+    return out
+  }
+  switch (period) {
+    case 'today': return { label: `Today, ${today}`, months: [CUR], from: today, to: today }
+    case 'week': { const mon = mondayOf(today); return { label: `Week of ${mon}`, months: [CUR], from: mon, to: weekDaysOf(mon)[4] } }
+    case 'last_month': { const pm = monthsBack(2)[1]; return { label: monthName(pm), months: [pm], from: `${pm}-01`, to: `${pm}-31` } }
+    case 'quarter': { const ms = monthsBack(3); return { label: `Last 3 months`, months: ms, from: `${ms[2]}-01`, to: today } }
+    case 'year': { const ms = monthsBack(12); return { label: `Last 12 months`, months: ms, from: `${ms[11]}-01`, to: today } }
+    default: return { label: monthName(CUR), months: [CUR], from: `${CUR}-01`, to: today }
+  }
+}
+function monthName(ym) {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
+const rcSum = (feed, f) => (feed?.agents || []).reduce((s, a) => s + (Number(a[f]) || 0), 0)
+
+// Aggregate the month-parameterised Admin feeds over the period's months.
+async function rcFeeds(months) {
+  const per = await Promise.all(months.map(async (mm) => ({
+    month: mm,
+    sales: await fetchAdminFeed(`/api/integrations/pulse/sales?month=${mm}`),
+    ret: await fetchAdminFeed(`/api/integrations/pulse/retention?month=${mm}`),
+    rev: await fetchAdminFeed(`/api/integrations/pulse/reviews?month=${mm}`),
+    inst: await fetchAdminInstall(mm),
+    stock: await fetchAdminStock(mm),
+  })))
+  const online = await fetchAdminFeed('/api/integrations/pulse/online')
+  return { per, online }
+}
+
+function rcAttendance(members, from, to, today) {
+  const attAll = db.read('attendance', [])
+  const leaveAll = db.read('leave', [])
+  const schedules = db.read('schedules', {})
+  const rows = members.map((mem) => {
+    let scheduled = 0, worked = 0, late = 0
+    const d = new Date(`${from}T00:00:00Z`)
+    const end = new Date(`${to}T00:00:00Z`)
+    while (d <= end) {
+      const k = d.toISOString().slice(0, 10)
+      d.setUTCDate(d.getUTCDate() + 1)
+      if (k > today || k < ATTENDANCE_START) continue
+      const shift = effectiveWeek(schedules[mem.username], k)[dowOfKey(k)]
+      if (!shift || leaveOnDate(leaveAll, mem.username, k)) continue
+      scheduled++
+      const a = attAll.find((r) => r.username === mem.username && r.date === k)
+      if (a?.checkIn) { worked++; if (a.late) late++ }
+    }
+    return { name: mem.name, scheduled, worked, late }
+  })
+  const tot = rows.reduce((s, r) => ({ scheduled: s.scheduled + r.scheduled, worked: s.worked + r.worked, late: s.late + r.late }), { scheduled: 0, worked: 0, late: 0 })
+  return { rows, pct: tot.scheduled ? Math.round((tot.worked / tot.scheduled) * 100) : null, ...tot }
+}
+
+const rcStatus = (actual, target) => actual == null ? 'no data' : target == null ? '—' : actual >= target ? 'On target' : actual >= target * 0.7 ? 'Needs attention' : 'Behind'
+
+app.get('/api/reportx', auth, async (req, res) => {
+  const report = String(req.query.report || 'overview')
+  const period = String(req.query.period || 'month')
+  const today = todayKey()
+  const CUR = today.slice(0, 7)
+  const isCeo = req.realUser?.username === CEO
+  const isHr = isCeo || can(req.user, 'hr')
+  const isLead = leadsATeam(findUser(req.user.username) || {})
+  if (!isHr && !isLead) return res.status(403).json({ error: 'forbidden' })
+  if ((report === 'finance' || report === 'people') && !isHr) return res.status(403).json({ error: 'forbidden' })
+  try {
+    const P = rcPeriod(period, today)
+    const F = await rcFeeds(P.months)
+    const T = (role, kpi, fb) => kpiNumber(role, kpi, CUR)?.target ?? fb
+    const members = seedUsers().filter((u) => !isArchived(u) && u.username !== CEO)
+    const sellers = members.filter((u) => u.department === 'Sales')
+    const yafatou = members.find((u) => u.department === 'Customer Service')
+    const nMonths = P.months.length
+    const scale = (t) => (t == null ? null : t * nMonths)
+
+    const won = F.per.some((p) => p.sales) ? F.per.reduce((s, p) => s + rcSum(p.sales, 'won'), 0) : null
+    const rnDue = F.per.some((p) => p.ret) ? F.per.reduce((s, p) => s + rcSum(p.ret, 'due'), 0) : null
+    const rnRen = F.per.some((p) => p.ret) ? F.per.reduce((s, p) => s + rcSum(p.ret, 'renewed'), 0) : null
+    const reviews = F.per.some((p) => p.rev) ? F.per.reduce((s, p) => s + rcSum(p.rev, 'verified'), 0) : null
+    const onlTotal = rcSum(F.online, 'total'), onlOn = rcSum(F.online, 'online')
+    const onlPct = F.online && onlTotal ? Math.round((onlOn / onlTotal) * 100) : null
+    const casesAgg = { onTime: 0, resolved: 0, overdue: 0, seen: false }
+    for (const p of P.months) {
+      const c = yafatou ? await fetchAdminCases(yafatou.name, p) : null
+      if (c) { casesAgg.seen = true; casesAgg.onTime += Number(c.onTime) || 0; casesAgg.resolved += Number(c.resolved) || 0; casesAgg.overdue += Number(c.openOverdue) || 0 }
+    }
+    const casesPct = casesAgg.seen && (casesAgg.resolved + casesAgg.overdue) ? Math.round((casesAgg.onTime / (casesAgg.resolved + casesAgg.overdue)) * 100) : null
+    const inst = F.per[0]?.inst || null
+    const stock = F.per[0]?.stock || null
+    const stockPct = stock && typeof stock.accountabilityPct === 'number' ? Math.round(stock.accountabilityPct) : null
+    const instPct = inst && typeof inst.installPct === 'number' ? Math.round(inst.installPct) : null
+    const rnTargetPct = T('customer-service', 'renewal', 80)
+    const rnNeed = rnDue != null ? Math.ceil(rnDue * (rnTargetPct / 100)) : null
+    const salesTarget = scale(T('team-lead', 'team-sales', 12))
+    const reviewsTarget = scale(T('sales', 'reviews', 3) * Math.max(1, sellers.length))
+
+    const M = (label, value, sub) => ({ label, value: value == null ? '—' : String(value), sub: sub || null })
+    let out = null
+
+    if (report === 'overview') {
+      const areas = [
+        { area: 'Sales', status: rcStatus(won, salesTarget), line: won != null ? `${won}/${salesTarget}` : 'no data' },
+        { area: 'Renewals', status: rcStatus(rnRen, rnNeed), line: rnRen != null ? `${rnRen} of ${rnDue} due` : 'no data' },
+        { area: 'Customer service', status: rcStatus(casesPct, T('customer-service', 'cases', 85)), line: casesPct != null ? `${casesPct}% on time` : 'no data' },
+        { area: 'Operations', status: rcStatus(instPct, T('customer-service', 'install', 95)), line: instPct != null ? `${instPct}% installs in 3 days` : 'no data' },
+        { area: 'Inventory', status: rcStatus(stockPct, T('customer-service', 'stock', 100)), line: stockPct != null ? `${stockPct}% verified` : 'no data' },
+        { area: 'Trackers online', status: rcStatus(onlPct, T('team-lead', 'team-online', 75)), line: onlPct != null ? `${onlPct}%` : 'no data' },
+      ]
+      const att = rcAttendance(members, P.from, P.to, today)
+      areas.push({ area: 'Attendance', status: att.pct == null ? 'no data' : att.pct >= 90 ? 'On target' : att.pct >= 75 ? 'Needs attention' : 'Behind', line: att.pct != null ? `${att.pct}%` : 'no data' })
+      const behind = areas.filter((a) => a.status === 'Behind').map((a) => a.area)
+      const attn = areas.filter((a) => a.status === 'Needs attention').map((a) => a.area)
+      const good = areas.filter((a) => a.status === 'On target').map((a) => a.area)
+      const score = areas.filter((a) => a.status !== 'no data').length
+        ? Math.round((good.length / areas.filter((a) => a.status !== 'no data').length) * 100) : null
+      out = {
+        question: 'How is the business doing?',
+        summary: behind.length
+          ? `${behind.join(' and ')} ${behind.length === 1 ? 'is' : 'are'} behind target${attn.length ? `; ${attn.join(', ').toLowerCase()} need${attn.length === 1 ? 's' : ''} attention` : ''}${good.length ? `, while ${good.join(', ').toLowerCase()} ${good.length === 1 ? 'is' : 'are'} performing well` : ''}.`
+          : attn.length ? `Business is stable — ${attn.join(', ').toLowerCase()} need${attn.length === 1 ? 's' : ''} attention.` : 'Business is on track across the board.',
+        metrics: [M('Health score', score != null ? `${score}%` : null, 'areas on target'), M('Areas behind', behind.length), M('Need attention', attn.length)],
+        sections: [{ title: 'Business areas', rows: areas.map((a) => [a.area, a.line, a.status]) , head: ['Area', 'Where it stands', 'Status'] }],
+        activity: [],
+        notes: [],
+      }
+    }
+
+    if (report === 'sales') {
+      const perAgent = new Map()
+      for (const p of F.per) for (const a of (p.sales?.agents || [])) perAgent.set(a.name, (perAgent.get(a.name) || 0) + (Number(a.won) || 0))
+      const trend = [...F.per].reverse().map((p) => [monthName(p.month), p.sales ? String(rcSum(p.sales, 'won')) : '—'])
+      out = {
+        question: 'Are we selling enough?',
+        summary: won == null ? 'The sales feed is unreachable — get the numbers from the agents directly.'
+          : `${won} sale${won === 1 ? '' : 's'} against a target of ${salesTarget}. ${[...perAgent.entries()].sort((a, b) => b[1] - a[1]).map(([n, w]) => `${n.split(' ')[0]} ${w}`).join(', ') || ''}.`,
+        metrics: [M('Target', salesTarget), M('Completed', won), M('Remaining', won != null && salesTarget != null ? Math.max(0, salesTarget - won) : null), M('Per salesperson', won != null && sellers.length ? (won / sellers.length).toFixed(1) : null)],
+        sections: [
+          { title: 'By salesperson', head: ['Agent', 'Sales'], rows: sellers.map((s0) => [s0.name, String(perAgent.get(s0.name) ?? '—')]) },
+          ...(nMonths > 1 ? [{ title: 'Trend', head: ['Month', 'Sales'], rows: trend }] : []),
+        ],
+        activity: [],
+        notes: ['Not measured yet in Pulse: revenue per sale, conversion rate, pipeline and opportunities (they live in Admin → Sales).'],
+      }
+    }
+
+    if (report === 'cs') {
+      out = {
+        question: 'Are customers being looked after?',
+        summary: casesPct == null && rnRen == null ? 'Customer service feeds are unreachable.' :
+          `Case resolution ${casesPct != null ? `at ${casesPct}%` : 'has no data'}${casesAgg.overdue ? ` with ${casesAgg.overdue} past deadline` : ''}; ${rnRen ?? '—'} of ${rnDue ?? '—'} due customers renewed; ${reviews ?? '—'} five-star reviews.`,
+        metrics: [M('Resolution rate', casesPct != null ? `${casesPct}%` : null, `target ${T('customer-service', 'cases', 85)}%`), M('Resolved on time', casesAgg.seen ? casesAgg.onTime : null), M('Past deadline', casesAgg.seen ? casesAgg.overdue : null), M('Renewals', rnRen, rnDue != null ? `of ${rnDue} due` : null), M('Google reviews', reviews, reviewsTarget != null ? `target ${reviewsTarget}` : null)],
+        sections: [],
+        activity: [],
+        notes: ['Not measured yet: average response time, customer satisfaction, per-case lists (Admin → Cases has the queue).'],
+      }
+    }
+
+    if (report === 'operations') {
+      out = {
+        question: 'Are installations and inventory under control?',
+        summary: instPct == null && stockPct == null ? 'Operations feeds are unreachable.' :
+          `Installations ${instPct != null ? `${instPct}% within 3 days` : 'no data'}${inst?.openLate ? ` (${inst.openLate} open past 3 days)` : ''}; stock ${stockPct != null ? `${stockPct}% verified` : 'no data'}${stock?.outstandingMissing ? ` with ${stock.outstandingMissing} trackers unaccounted` : ''}; ${onlPct != null ? `${onlPct}% of trackers online` : 'online rate unavailable'}.`,
+        metrics: [M('Installs in 3 days', instPct != null ? `${instPct}%` : null, `target ${T('customer-service', 'install', 95)}%`), M('Installs completed', inst?.completed ?? null), M('Stock verified', stockPct != null ? `${stockPct}%` : null, `target ${T('customer-service', 'stock', 100)}%`), M('Trackers online', onlPct != null ? `${onlPct}%` : null, onlTotal ? `${onlOn} of ${onlTotal}` : null)],
+        sections: [],
+        activity: [],
+        notes: ['Not measured yet: average installation time, SIM inventory counts and technician workload (Admin → Inventory / SIM & Data).'],
+      }
+    }
+
+    if (report === 'finance') {
+      const payRows = P.months.map((mm) => {
+        const recs = db.read('payroll', []).filter((r) => r.period === mm)
+        return [monthName(mm), recs.length ? `D${recs.reduce((s, r) => s + (Number(r.total) || 0), 0).toLocaleString()}` : '—', String(recs.length)]
+      })
+      const payrollCost = P.months.reduce((s, mm) => s + db.read('payroll', []).filter((r) => r.period === mm).reduce((a, r) => a + (Number(r.total) || 0), 0), 0)
+      const renewalRevenue = rnRen != null ? rnRen * 6500 : null
+      const outstanding = rnDue != null && rnRen != null ? (rnDue - rnRen) * 6500 : null
+      out = {
+        question: 'Are we making money?',
+        summary: `Payroll paid D${payrollCost.toLocaleString()} this period; renewals brought ${renewalRevenue != null ? `D${renewalRevenue.toLocaleString()}` : '—'} with ${outstanding != null ? `D${outstanding.toLocaleString()}` : '—'} still out there.`,
+        metrics: [M('Payroll paid', `D${payrollCost.toLocaleString()}`), M('Renewal revenue', renewalRevenue != null ? `D${renewalRevenue.toLocaleString()}` : null, 'recorded × D6,500'), M('Renewals outstanding', outstanding != null ? `D${outstanding.toLocaleString()}` : null, 'due, not renewed')],
+        sections: [{ title: 'Payroll by month', head: ['Month', 'Paid', 'Payments'], rows: payRows }],
+        activity: [],
+        notes: ['Not measured in Pulse: total revenue, expenses, profit and cash balance — they live in Zoho Books; new-sale revenue is not fed to Pulse.'],
+      }
+    }
+
+    if (report === 'people') {
+      const att = rcAttendance(members, P.from, P.to, today)
+      const leaveAll = db.read('leave', []).filter((l) => l.status === 'approved' && l.from <= P.to && l.to >= P.from)
+      const coachingAll = db.read('coaching', []).filter((c) => { const d0 = (c.datetime || c.createdAt || '').slice(0, 10); return d0 >= P.from && d0 <= P.to })
+      const reviewsStore = db.read('reviews', {})
+      const reviewsDone = members.filter((mem) => (reviewsStore[mem.name] || []).some((r) => P.months.includes(r.period))).length
+      const warnAll = db.read('warnings', []).filter((w) => (w.date || '') >= P.from && (w.date || '') <= P.to)
+      const contractsSoon = members.map((mem) => { const p0 = team.find((t) => t.name === mem.name); const end = p0?.contractEnd || mem.contractEnd; if (!end) return null; const d0 = Math.ceil((new Date(`${end}T00:00:00`) - new Date(`${today}T00:00:00`)) / 86400000); return d0 >= 0 && d0 <= 45 ? [mem.name, `${d0} days`] : null }).filter(Boolean)
+      const left = pastStaff.filter((p0) => P.months.some((mm) => (p0.date || '').includes(monthName(mm).split(' ')[0].slice(0, 3))))
+      out = {
+        question: 'Is the team healthy?',
+        summary: `Attendance at ${att.pct != null ? `${att.pct}%` : '—'} (${att.worked} of ${att.scheduled} scheduled days), ${coachingAll.length} coaching session${coachingAll.length === 1 ? '' : 's'} logged, ${reviewsDone} of ${members.length} monthly reviews done, ${warnAll.length} warning${warnAll.length === 1 ? '' : 's'} issued.`,
+        metrics: [M('Attendance', att.pct != null ? `${att.pct}%` : null, `${att.late} late arrivals`), M('Coaching sessions', coachingAll.length), M('Reviews done', `${reviewsDone}/${members.length}`), M('Warnings', warnAll.length), M('On approved leave', leaveAll.length)],
+        sections: [
+          { title: 'Attendance by person', head: ['Person', 'Worked', 'Late'], rows: att.rows.map((r) => [r.name, `${r.worked}/${r.scheduled}`, String(r.late)]) },
+          ...(contractsSoon.length ? [{ title: 'Contracts ending soon', head: ['Person', 'Ends in'], rows: contractsSoon }] : []),
+          ...(left.length ? [{ title: 'Left this period', head: ['Person', 'Reason'], rows: left.map((p0) => [p0.name, p0.reason || '—']) }] : []),
+        ],
+        activity: coachingAll.slice(-8).reverse().map((c) => `Coaching: ${c.title || 'check-in'} (${(c.datetime || c.createdAt || '').slice(0, 10)})`),
+        notes: ['Not tracked yet: promotions as records (role changes live in contracts).'],
+      }
+    }
+
+    if (report === 'managers') {
+      const lead = seedUsers().find((u) => !isArchived(u) && leadsATeam(u))
+      if (!lead) { out = { question: 'Are managers managing?', summary: 'No team leads yet.', metrics: [], sections: [], activity: [], notes: [] } }
+      else {
+        const teamMembers = teamMembersFor(lead)
+        const names = new Set(teamMembers.map((mem) => mem.name))
+        const coachingAll = db.read('coaching', []).filter((c) => { const d0 = (c.datetime || c.createdAt || '').slice(0, 10); return d0 >= P.from && d0 <= P.to })
+        const reviewsStore = db.read('reviews', {})
+        const reviewsDone = teamMembers.filter((mem) => (reviewsStore[mem.name] || []).some((r) => P.months.includes(r.period))).length
+        const pendingLeave = db.read('leave', []).filter((l) => l.status === 'pending' && teamMembers.some((mem) => mem.username === l.username)).length
+        let planned = 0, done = 0, adamaT = 0, adamaD = 0
+        for (const rec of workdayStore().filter((r) => r.username === lead.username && r.date >= P.from && r.date <= P.to)) {
+          for (const i of rec.items) {
+            if (i.deleted) continue
+            planned++; if (i.done) done++
+            if (i.byAdama) { adamaT++; if (i.done) adamaD++ }
+          }
+        }
+        const audit = db.read('workday-audit', []).filter((e) => e.lead === lead.username && e.at.slice(0, 10) >= P.from && e.at.slice(0, 10) <= P.to)
+        out = {
+          question: 'Are managers managing effectively?',
+          summary: `${lead.name}: ${done} of ${planned} planned items done, ${coachingAll.length} coaching session${coachingAll.length === 1 ? '' : 's'}, ${reviewsDone}/${teamMembers.length} reviews completed, ${adamaD}/${adamaT} management items done${pendingLeave ? `, ${pendingLeave} leave request${pendingLeave === 1 ? '' : 's'} waiting` : ''}.`,
+          metrics: [M('Plan done', planned ? `${Math.round((done / planned) * 100)}%` : null, `${done} of ${planned}`), M('Coaching', coachingAll.length), M('Reviews', `${reviewsDone}/${teamMembers.length}`), M('From Adama', adamaT ? `${adamaD}/${adamaT}` : '—'), M('Approvals waiting', pendingLeave)],
+          sections: [],
+          activity: audit.slice(0, 20).map((e) => `${e.at.slice(0, 10)} ${e.actor === CEO ? 'Adama' : e.actor}: ${e.action}${e.detail?.title ? ` — “${e.detail.title}”` : e.detail?.key ? ` (${e.detail.key})` : ''}`),
+          notes: [],
+        }
+      }
+    }
+
+    if (!out) return res.status(400).json({ error: 'unknown report' })
+    res.json({ report, period: { key: period, label: P.label }, generatedAt: new Date().toISOString(), ...out })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // ---------- schedules (per-person weekly roster) ----------
 // Mon–Fri 9–5 is the default for anyone without a saved override (Blue Book normal week).
 const DEFAULT_WEEK = {
