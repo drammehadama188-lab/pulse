@@ -1494,6 +1494,9 @@ async function opsMetrics(lead) {
     salesF, teamWon, teamTarget, wonBy,
     retF, rnDue, rnRen,
     rnTargetPct: kpiNumber('customer-service', 'renewal', CUR)?.target ?? 80,
+    casesTargetPct: kpiNumber('customer-service', 'cases', CUR)?.target ?? 85,
+    stockTargetPct: kpiNumber('customer-service', 'stock', CUR)?.target ?? 100,
+    onlineTargetPct: kpiNumber('team-lead', 'team-online', CUR)?.target ?? 75,
     onlF, onlTotal, onlOn, onlPct: onlF && onlTotal ? Math.round((onlOn / onlTotal) * 100) : null,
     revF, reviewsCount, reviewsTarget, reviewsBy,
     casesF, instF, stockF,
@@ -1559,7 +1562,7 @@ function workdayFocus(x, prevSnap) {
     }
   }
   // Customer cases
-  if (x.casesF && typeof x.casesF.casesPct === 'number' && x.casesF.casesPct < 85) {
+  if (x.casesF && typeof x.casesF.casesPct === 'number' && x.casesF.casesPct < x.casesTargetPct) {
     const open = Number(x.casesF.openOverdue) || 0
     const goal = open ? Math.min(open, Math.max(1, Math.ceil(open / 2))) : 1
     const doneToday = prevSnap && prevSnap.casesOnTime != null && typeof x.casesF.onTime === 'number' ? Math.max(0, x.casesF.onTime - prevSnap.casesOnTime) : 0
@@ -1567,7 +1570,7 @@ function workdayFocus(x, prevSnap) {
       key: 'cases', severity: 60 + Math.min(25, 85 - x.casesF.casesPct), title: 'Customer cases',
       metrics: [
         { label: 'Resolution', value: `${Math.round(x.casesF.casesPct)}%` },
-        { label: 'Goal', value: '85%' },
+        { label: 'Goal', value: `${x.casesTargetPct}%` },
         ...(open ? [{ label: 'Past deadline', value: String(open) }] : []),
         { label: "Today's target", value: `clear ${goal}` },
       ],
@@ -1589,12 +1592,12 @@ function workdayFocus(x, prevSnap) {
     })
   }
   // Trackers online
-  if (x.onlPct != null && x.onlPct < 75) {
+  if (x.onlPct != null && x.onlPct < x.onlineTargetPct) {
     F.push({
-      key: 'online', severity: 62 + Math.min(20, 75 - x.onlPct), title: 'Trackers online',
+      key: 'online', severity: 62 + Math.min(20, x.onlineTargetPct - x.onlPct), title: 'Trackers online',
       metrics: [
         { label: 'Online now', value: `${x.onlPct}%` },
-        { label: 'Goal', value: '75%' },
+        { label: 'Goal', value: `${x.onlineTargetPct}%` },
         { label: 'Silent', value: String(x.onlTotal - x.onlOn) },
       ],
       progress: prevSnap && prevSnap.onlOn != null && x.onlOn != null ? { actual: Math.max(0, x.onlOn - prevSnap.onlOn), goal: Math.max(1, Math.ceil((x.onlTotal - x.onlOn) / 3)), unit: 'back online today' } : null,
