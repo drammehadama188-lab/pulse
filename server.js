@@ -2501,28 +2501,68 @@ app.get('/api/reportx', auth, async (req, res) => {
       const lead = seedUsers().find((u) => !isArchived(u) && leadsATeam(u))
       if (!lead) { out = { question: 'Are managers managing?', summary: 'No team leads yet.', metrics: [], sections: [], activity: [], notes: [] } }
       else {
+        const KEY_TITLES = { renewals: 'Renewals', sales: 'Sales', cases: 'Customer cases', online: 'Trackers online', reviews: 'Google reviews', other: 'Other', quick: 'Other', myobj: 'Own objective', biz: 'Business' }
         const teamMembers = teamMembersFor(lead)
-        const names = new Set(teamMembers.map((mem) => mem.name))
         const coachingAll = db.read('coaching', []).filter((c) => { const d0 = (c.datetime || c.createdAt || '').slice(0, 10); return d0 >= P.from && d0 <= P.to })
         const reviewsStore = db.read('reviews', {})
         const reviewsDone = teamMembers.filter((mem) => (reviewsStore[mem.name] || []).some((r) => P.months.includes(r.period))).length
         const pendingLeave = db.read('leave', []).filter((l) => l.status === 'pending' && teamMembers.some((mem) => mem.username === l.username)).length
-        let planned = 0, done = 0, adamaT = 0, adamaD = 0
-        for (const rec of workdayStore().filter((r) => r.username === lead.username && r.date >= P.from && r.date <= P.to)) {
-          for (const i of rec.items) {
-            if (i.deleted) continue
-            planned++; if (i.done) done++
-            if (i.byAdama) { adamaT++; if (i.done) adamaD++ }
-          }
+
+        // his days: which objectives held the chair, what he planned, what got done
+        const snaps = opsSnapshots().filter((sn) => sn.username === lead.username).sort((a, b) => a.date.localeCompare(b.date))
+        const dayDelta = (date, field) => {
+          const i = snaps.findIndex((sn) => sn.date === date && sn[field] != null)
+          if (i < 1) return null
+          const prev = [...snaps.slice(0, i)].reverse().find((sn) => sn[field] != null)
+          return prev ? Math.max(0, (Number(snaps[i][field]) || 0) - (Number(prev[field]) || 0)) : null
         }
+        const dayRows = []
+        const itemRows = []
+        let planned = 0, done = 0, adamaT = 0, adamaD = 0
+        const dcur = new Date(`${P.from}T00:00:00Z`)
+        const dend = new Date(`${P.to <= today ? P.to : today}T00:00:00Z`)
+        const pick = objectivePickFor(lead.username)
+        while (dcur <= dend) {
+          const k = dcur.toISOString().slice(0, 10)
+          const dow = dcur.getUTCDay()
+          dcur.setUTCDate(dcur.getUTCDate() + 1)
+          if (dow === 0 || dow === 6) continue
+          const rec = workdayGet(lead.username, k)
+          const keys = rec?.slots?.primary ? rec.slots : rotationKeys(rec?.pool || [], pick, k)
+          const items = (rec?.items || []).filter((i) => !i.deleted)
+          const dDone = items.filter((i) => i.done).length
+          planned += items.length; done += dDone
+          for (const i of items) { if (i.byAdama) { adamaT++; if (i.done) adamaD++ } }
+          const moved = [
+            dayDelta(k, 'teamWon') ? `sales +${dayDelta(k, 'teamWon')}` : null,
+            dayDelta(k, 'rnRen') ? `renewals +${dayDelta(k, 'rnRen')}` : null,
+            dayDelta(k, 'casesOnTime') ? `cases +${dayDelta(k, 'casesOnTime')}` : null,
+          ].filter(Boolean).join(' · ')
+          const dayLabel = new Date(`${k}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+          dayRows.push([dayLabel, `${KEY_TITLES[keys.primary] || keys.primary} + ${KEY_TITLES[keys.supporting] || keys.supporting}`, items.length ? `${dDone}/${items.length} done` : 'no plan written', moved || '—'])
+          for (const i of items) itemRows.push([dayLabel, KEY_TITLES[i.focusKey] || i.focusKey, `${i.title}${i.byAdama ? ' (from Adama)' : ''}`, i.done ? '✓ done' : i.carried ? '○ carried over' : '○ not done'])
+        }
+        const objNotes = (db.read('workday-objnotes', []).find((n) => n.username === lead.username) || {}).notes || {}
+        const commentRows = Object.entries(objNotes).filter(([, t]) => t).map(([k2, t]) => [KEY_TITLES[k2] || k2, t])
+
+        // only the activity worth asking about — never the raw edit noise
         const audit = db.read('workday-audit', []).filter((e) => e.lead === lead.username && e.at.slice(0, 10) >= P.from && e.at.slice(0, 10) <= P.to)
+        const flagged = audit.filter((e) => e.action === 'unticked' || e.action === 'removed')
+          .map((e) => `${e.at.slice(0, 10)} — ${e.actor === CEO ? 'Adama' : e.actor} ${e.action === 'unticked' ? 'UNTICKED' : 'removed'} “${e.detail?.title || ''}”`)
+        const objChanges = audit.filter((e) => e.action === 'objectives-set')
+          .map((e) => `${e.at.slice(0, 10)} — Adama set objectives: ${e.detail?.primary || 'auto'} + ${e.detail?.supporting || 'auto'}`)
+
         out = {
           question: 'Are managers managing effectively?',
-          summary: `${lead.name}: ${done} of ${planned} planned items done, ${coachingAll.length} coaching session${coachingAll.length === 1 ? '' : 's'}, ${reviewsDone}/${teamMembers.length} reviews completed, ${adamaD}/${adamaT} management items done${pendingLeave ? `, ${pendingLeave} leave request${pendingLeave === 1 ? '' : 's'} waiting` : ''}.`,
-          metrics: [M('Plan done', planned ? `${Math.round((done / planned) * 100)}%` : null, `${done} of ${planned}`), M('Coaching', coachingAll.length), M('Reviews', `${reviewsDone}/${teamMembers.length}`), M('From Adama', adamaT ? `${adamaD}/${adamaT}` : '—'), M('Approvals waiting', pendingLeave)],
-          sections: [],
-          activity: audit.slice(0, 20).map((e) => `${e.at.slice(0, 10)} ${e.actor === CEO ? 'Adama' : e.actor}: ${e.action}${e.detail?.title ? ` — “${e.detail.title}”` : e.detail?.key ? ` (${e.detail.key})` : ''}`),
-          notes: [],
+          summary: `${lead.name}: ${planned ? `${done} of ${planned} planned items done (${Math.round((done / planned) * 100)}%)` : 'no plan written this period'}${adamaT ? `, ${adamaD}/${adamaT} of Adama's items done` : ''}, ${coachingAll.length} coaching session${coachingAll.length === 1 ? '' : 's'}, ${reviewsDone}/${teamMembers.length} reviews completed${pendingLeave ? `, ${pendingLeave} leave request${pendingLeave === 1 ? '' : 's'} waiting on him` : ''}.`,
+          metrics: [M('Plan done', planned ? `${Math.round((done / planned) * 100)}%` : null, planned ? `${done} of ${planned}` : 'no plan'), M('Coaching', coachingAll.length), M('Reviews', `${reviewsDone}/${teamMembers.length}`), M('From Adama', adamaT ? `${adamaD}/${adamaT}` : '—'), M('Approvals waiting', pendingLeave)],
+          sections: [
+            { title: 'Day by day', head: ['Day', 'Objectives', 'Plan', 'Numbers moved'], rows: dayRows },
+            ...(itemRows.length ? [{ title: 'The plan, item by item', head: ['Day', 'Objective', 'Item', 'Status'], rows: itemRows.slice(0, 60) }] : []),
+            ...(commentRows.length ? [{ title: 'His comments', head: ['Objective', 'Comment'], rows: commentRows }] : []),
+          ],
+          activity: [...flagged, ...objChanges].slice(0, 15),
+          notes: flagged.length ? ['Activity shows only unticks, removals and objective changes — the things worth asking about.'] : [],
         }
       }
     }
