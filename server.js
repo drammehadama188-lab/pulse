@@ -1493,6 +1493,7 @@ async function opsMetrics(lead) {
     today, CUR, members, sellers, yafatou,
     salesF, teamWon, teamTarget, wonBy,
     retF, rnDue, rnRen,
+    rnTargetPct: kpiNumber('customer-service', 'renewal', CUR)?.target ?? 80,
     onlF, onlTotal, onlOn, onlPct: onlF && onlTotal ? Math.round((onlOn / onlTotal) * 100) : null,
     revF, reviewsCount, reviewsTarget, reviewsBy,
     casesF, instF, stockF,
@@ -1521,7 +1522,7 @@ function workdayFocus(x, prevSnap) {
   const F = []
   // Renewals
   if (x.retF && x.rnDue) {
-    const need = Math.ceil(x.rnDue * 0.8)
+    const need = Math.ceil(x.rnDue * (x.rnTargetPct / 100))
     const remaining = Math.max(0, need - x.rnRen)
     if (remaining > 0) {
       const goal = Math.min(remaining, Math.max(1, Math.ceil(remaining / daysLeft)))
@@ -1684,7 +1685,7 @@ app.get('/api/workday', auth, async (req, res) => {
     const objNotes = (db.read('workday-objnotes', []).find((n) => n.username === lead.username) || {}).notes || {}
     const week = []
     if (x.teamTarget) week.push({ label: 'Sales', actual: x.teamWon, target: x.teamTarget })
-    if (x.retF && x.rnDue) week.push({ label: 'Renewals', actual: x.rnRen, target: Math.ceil(x.rnDue * 0.8) })
+    if (x.retF && x.rnDue) week.push({ label: 'Renewals', actual: x.rnRen, target: Math.ceil(x.rnDue * (x.rnTargetPct / 100)) })
     if (x.casesF && typeof x.casesF.casesPct === 'number') week.push({ label: 'Cases', actual: Math.round(x.casesF.casesPct), target: 100, unit: '%' })
     if (x.onlPct != null) week.push({ label: 'Trackers online', actual: x.onlPct, target: 100, unit: '%' })
     if (x.reviewsTarget) week.push({ label: 'Google reviews', actual: x.reviewsCount, target: x.reviewsTarget })
