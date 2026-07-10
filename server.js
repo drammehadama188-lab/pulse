@@ -1615,24 +1615,6 @@ function workdayFocus(x, prevSnap) {
   return F
 }
 
-// Admin & Follow-ups — auto-populated small jobs. He can tick, DELETE or add.
-function workdayQuick(x) {
-  const first = (m) => m.name.split(' ')[0]
-  const q = []
-  // Renewals live on Yafatou's goals — his admin job is checking in on them.
-  if (x.yafatou && x.retF && x.rnDue && x.rnRen < Math.ceil(x.rnDue * 0.8)) {
-    q.push({ id: 'quick-renewals-yafatou', title: `Check in with ${first(x.yafatou)} on renewals — it's on her goals`, to: `/team-member/${x.yafatou.username}` })
-  }
-  const overdue = x.coaching.filter((c) => !c.coachingCurrent)
-    .sort((a, b) => String(a.lastCoachedAt || '').localeCompare(String(b.lastCoachedAt || '')))
-  if (overdue.length) q.push({ id: `coach-${overdue[0].m.username}`, title: `Coach ${first(overdue[0].m)} — longest without a check-in`, to: `/team-member/${overdue[0].m.username}` })
-  if (x.stockF && typeof x.stockF.accountabilityPct === 'number' && x.stockF.accountabilityPct < 100) q.push({ id: 'quick-stock', title: `Stock count — at ${Math.round(x.stockF.accountabilityPct)}%, finish the rest`, to: x.yafatou ? `/team-member/${x.yafatou.username}` : '/team-dashboard' })
-  for (const m of x.reviewsMissing) q.push({ id: `review-${m.username}`, title: `Complete ${first(m)}'s monthly review`, to: '/team-reviews' })
-  for (const l of x.pendingLeave) q.push({ id: `leave-${l.id || l.username}`, title: `Decide ${(l.name || l.username)}'s ${l.leaveType || 'leave'} request`, to: '/team-requests' })
-  for (const c of x.contractsSoon) q.push({ id: `contract-${c.m.username}`, title: `${first(c.m)}'s contract ends in ${c.days} day${c.days === 1 ? '' : 's'}`, to: `/team-member/${c.m.username}` })
-  return q
-}
-
 // ---- day record store: his plan, ticks, deletions and the carry-forward box ----
 function workdayStore() { return db.read('workday', []) }
 function workdayGet(username, date) { return workdayStore().find((d) => d.username === username && d.date === date) || null }
@@ -1642,19 +1624,18 @@ function workdaySave(day) {
   db.write('workday', all.filter((d) => d.date >= new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10)))
 }
 
-// Today's items: auto small jobs (stable ids keep ticks; a deleted one stays
-// deleted), his own plan items, yesterday's unfinished work carried forward,
-// and each line of yesterday's Carry Forward box turned into an item.
-function workdayToday(lead, quick) {
+// Today's items: HIS plan only (nothing auto-suggested), plus yesterday's
+// unticked items carried forward — the next day just shows the goals.
+function workdayToday(lead) {
   const today = todayKey()
-  const stored = workdayGet(lead.username, today) || { username: lead.username, date: today, items: [], carry: '' }
-  const byId = new Map(stored.items.map((i) => [i.id, i]))
-  quick.forEach((qi) => { if (!byId.has(qi.id)) byId.set(qi.id, { id: qi.id, title: qi.title, focusKey: 'quick', done: false, auto: true, to: qi.to }) })
+  const stored = workdayGet(lead.username, today) || { username: lead.username, date: today, items: [] }
+  // nothing is auto-suggested any more — purge auto items older versions seeded
+  const byId = new Map(stored.items.filter((i) => !i.auto).map((i) => [i.id, i]))
   const yk = new Date(`${today}T00:00:00Z`); yk.setUTCDate(yk.getUTCDate() - 1)
   const prev = workdayGet(lead.username, yk.toISOString().slice(0, 10))
   if (prev) {
     for (const p of prev.items) {
-      if (p.done || p.deleted || byId.has(p.id)) continue
+      if (p.done || p.deleted || p.auto || byId.has(p.id)) continue
       byId.set(p.id, { ...p, done: false, carried: (p.carried || 0) + 1 })
     }
     // Carry Forward box → tomorrow's items, once (marker survives in stored.carriedFromBox)
@@ -1699,10 +1680,7 @@ app.get('/api/workday', auth, async (req, res) => {
     })
     const allFocus = workdayFocus(x, prevSnap)
     const focus = allFocus.slice(0, 2).map((f, i) => ({ ...f, slot: i === 0 ? 'Primary objective' : 'Supporting objective' }))
-    const quick = workdayQuick(x)
-    const day = workdayToday(lead, quick)
-    const tomorrowKeyD = new Date(`${x.today}T00:00:00Z`); tomorrowKeyD.setUTCDate(tomorrowKeyD.getUTCDate() + 1)
-    const tomorrow = workdayGet(lead.username, tomorrowKeyD.toISOString().slice(0, 10))
+    const day = workdayToday(lead)
     const objNotes = (db.read('workday-objnotes', []).find((n) => n.username === lead.username) || {}).notes || {}
     const week = []
     if (x.teamTarget) week.push({ label: 'Sales', actual: x.teamWon, target: x.teamTarget })
@@ -1715,7 +1693,7 @@ app.get('/api/workday', auth, async (req, res) => {
       today: x.today,
       focus,
       items: day.items.filter((i) => !i.deleted),
-      tomorrowItems: (tomorrow?.items || []).filter((i) => !i.deleted),
+      otherTitle: (db.read('workday-other', []).find((o) => o.username === lead.username) || {}).title || '',
       fromAdama: assignmentsFor(lead.username),
       objNotes,
       week,
@@ -1750,22 +1728,29 @@ app.post('/api/workday/remove', auth, notViewAs, (req, res) => {
   res.json({ ok: true, items: day.items.filter((i) => !i.deleted) })
 })
 
-// Add to the plan — today by default; `date` may point up to a week ahead so
-// he can write tomorrow's plan before leaving ("the page is already prepared").
+// Add to today's plan — planning lives in the day; tomorrow just shows the goals.
 app.post('/api/workday/add', auth, notViewAs, (req, res) => {
   const lead = workdayLeadFor(req)
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
   const title = String(req.body?.title || '').trim()
   if (!title) return res.status(400).json({ error: 'title required' })
-  const today = todayKey()
-  let date = /^\d{4}-\d{2}-\d{2}$/.test(req.body?.date || '') ? req.body.date : today
-  const max = new Date(`${today}T00:00:00Z`); max.setUTCDate(max.getUTCDate() + 7)
-  if (date < today || date > max.toISOString().slice(0, 10)) return res.status(400).json({ error: 'Pick today or up to a week ahead' })
-  const focusKey = String(req.body?.focusKey || 'quick')
-  const day = workdayGet(lead.username, date) || { username: lead.username, date, items: [], carry: '' }
+  const date = todayKey()
+  const focusKey = String(req.body?.focusKey || 'other')
+  const day = workdayGet(lead.username, date) || { username: lead.username, date, items: [] }
   day.items.push({ id: `own-${crypto.randomUUID().slice(0, 8)}`, title: title.slice(0, 160), focusKey, done: false, own: true })
   workdaySave(day)
-  res.json({ ok: true, date, items: day.items.filter((i) => !i.deleted) })
+  res.json({ ok: true, items: day.items.filter((i) => !i.deleted) })
+})
+
+// The OTHER objective — unspecified, his to name ("coaching or anything"),
+// with a plan and a comment box like the business objectives.
+app.post('/api/workday/other', auth, notViewAs, (req, res) => {
+  const lead = workdayLeadFor(req)
+  if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
+  const all = db.read('workday-other', []).filter((o) => o.username !== lead.username)
+  all.push({ username: lead.username, title: String(req.body?.title || '').trim().slice(0, 120), updatedAt: new Date().toISOString() })
+  db.write('workday-other', all)
+  res.json({ ok: true })
 })
 
 // Per-objective comments — where he explains why a goal wasn't met, or
@@ -1834,6 +1819,7 @@ app.get('/api/workday/overview', auth, async (req, res) => {
       out.push({
         lead: { username: lead.username, name: lead.name },
         focus: focus.map((f) => ({ key: f.key, title: f.title, metrics: f.metrics, progress: f.progress, note: objNotes[f.key] || '' })),
+        other: { title: (db.read('workday-other', []).find((o) => o.username === lead.username) || {}).title || '', note: objNotes.other || '' },
         doneCount: items.filter((i) => i.done).length,
         totalItems: items.length,
         assignments: assignmentsFor(lead.username),
