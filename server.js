@@ -1490,7 +1490,7 @@ async function opsMetrics(lead) {
     return days >= 0 && days <= 45 ? { m, days } : null
   }).filter(Boolean)
   return {
-    today, CUR, members, sellers, yafatou,
+    today, CUR, username: lead.username, members, sellers, yafatou,
     salesF, teamWon, teamTarget, wonBy,
     retF, rnDue, rnRen,
     rnTargetPct: kpiNumber('customer-service', 'renewal', CUR)?.target ?? 80,
@@ -1502,6 +1502,32 @@ async function opsMetrics(lead) {
     casesF, instF, stockF,
     checkedIn, coaching, pendingLeave, reviewsMissing, contractsSoon,
   }
+}
+
+// "He can know what is coming and when he needs to push" (Adama 10 Jul):
+// Mon–Sat of the current week. Past days show what actually happened (daily
+// snapshot diffs — real numbers or nothing); today and coming days show the
+// per-day quota that keeps the month's goal alive.
+function weekPlanFor(username, today, remaining, snapField) {
+  const snaps = opsSnapshots().filter((s) => s.username === username && s[snapField] != null).sort((a, b) => a.date.localeCompare(b.date))
+  const didOn = (date) => {
+    const i = snaps.findIndex((s) => s.date === date)
+    if (i < 1) return null // no snapshot, or nothing before it to diff against
+    return Math.max(0, (Number(snaps[i][snapField]) || 0) - (Number(snaps[i - 1][snapField]) || 0))
+  }
+  const mon = new Date(`${today}T00:00:00Z`); mon.setUTCDate(mon.getUTCDate() - ((mon.getUTCDay() + 6) % 7))
+  const daysLeft = workingDaysLeft(today)
+  const base = Math.floor(remaining / daysLeft), extra = remaining % daysLeft
+  let q = 0
+  const out = []
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(mon); d.setUTCDate(mon.getUTCDate() + i)
+    const date = d.toISOString().slice(0, 10)
+    const label = d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })
+    if (date < today) out.push({ label, date, past: true, did: didOn(date) })
+    else { const need = base + (q < extra ? 1 : 0); q++; out.push({ label, date, today: date === today, need }) }
+  }
+  return out
 }
 
 function workingDaysLeft(today) {
@@ -1539,6 +1565,7 @@ function workdayFocus(x, prevSnap) {
           { label: "Today's target", value: String(goal) },
         ],
         progress: { actual: doneToday, goal, unit: 'renewed today' },
+        weekPlan: weekPlanFor(x.username, x.today, remaining, 'rnRen'),
       })
     }
   }
@@ -1558,6 +1585,7 @@ function workdayFocus(x, prevSnap) {
         ],
         agents: x.sellers.map((m) => ({ name: first(m), won: x.wonBy(m) })),
         progress: { actual: doneToday, goal, unit: 'closed today' },
+        weekPlan: weekPlanFor(x.username, x.today, remaining, 'teamWon'),
       })
     }
   }
@@ -1685,6 +1713,8 @@ app.get('/api/workday', auth, async (req, res) => {
     const allFocus = workdayFocus(x, prevSnap)
     const focus = allFocus.slice(0, 2).map((f, i) => ({ ...f, slot: i === 0 ? 'Primary objective' : 'Supporting objective' }))
     const day = workdayToday(lead)
+    day.slots = { primary: focus[0]?.key || null, supporting: focus[1]?.key || null }
+    workdaySave(day)
     const objNotes = (db.read('workday-objnotes', []).find((n) => n.username === lead.username) || {}).notes || {}
     const week = []
     if (x.teamTarget) week.push({ label: 'Sales', actual: x.teamWon, target: x.teamTarget })
@@ -1741,7 +1771,25 @@ app.post('/api/workday/add', auth, notViewAs, (req, res) => {
   const date = todayKey()
   const focusKey = String(req.body?.focusKey || 'other')
   const day = workdayGet(lead.username, date) || { username: lead.username, date, items: [] }
+  // Caps keep the plan honest (Adama 10 Jul): Primary 10, Supporting 8, Other 5.
+  const cap = focusKey === 'other' ? 5 : day.slots?.primary === focusKey ? 10 : day.slots?.supporting === focusKey ? 8 : 10
+  const count = day.items.filter((i) => i.focusKey === focusKey && !i.deleted).length
+  if (count >= cap) return res.status(400).json({ error: `This plan is full (${cap} max) — finish or remove something first` })
   day.items.push({ id: `own-${crypto.randomUUID().slice(0, 8)}`, title: title.slice(0, 160), focusKey, done: false, own: true })
+  workdaySave(day)
+  res.json({ ok: true, items: day.items.filter((i) => !i.deleted) })
+})
+
+// Edit an item's wording — his plan, his words, editable any time today.
+app.post('/api/workday/edit', auth, notViewAs, (req, res) => {
+  const lead = workdayLeadFor(req)
+  if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
+  const title = String(req.body?.title || '').trim()
+  if (!title) return res.status(400).json({ error: 'title required' })
+  const day = workdayGet(lead.username, todayKey())
+  const item = day?.items.find((i) => i.id === req.body?.itemId && !i.deleted)
+  if (!item) return res.status(404).json({ error: 'No such item today' })
+  item.title = title.slice(0, 160)
   workdaySave(day)
   res.json({ ok: true, items: day.items.filter((i) => !i.deleted) })
 })

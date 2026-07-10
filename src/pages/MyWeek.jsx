@@ -35,6 +35,10 @@ export default function MyWeek() {
     try { const r = await api('/workday/toggle', { method: 'POST', body: { itemId } }); setData((d) => ({ ...d, items: r.items })) }
     catch (e) { alert(e.message) }
   }
+  async function editItem(itemId, title) {
+    try { const r = await api('/workday/edit', { method: 'POST', body: { itemId, title } }); setData((d) => ({ ...d, items: r.items })) }
+    catch (e) { alert(e.message) }
+  }
   async function remove(itemId) {
     try { const r = await api('/workday/remove', { method: 'POST', body: { itemId } }); setData((d) => ({ ...d, items: r.items })) }
     catch (e) { alert(e.message) }
@@ -101,13 +105,14 @@ export default function MyWeek() {
       {data.focus.map((f, i) => (
         <ObjectiveSection
           key={f.key}
-          slot={f.slot} title={f.title} metrics={f.metrics} agents={f.agents} progress={f.progress}
+          slot={f.slot} title={f.title} metrics={f.metrics} agents={f.agents} progress={f.progress} weekPlan={f.weekPlan}
           primary={i === 0} canAct={canAct}
           items={itemsFor(f.key)} focusKey={f.key}
           placeholder={f.key === 'renewals' ? 'e.g. Call Musa' : 'e.g. Sit with Sally on her pipeline'}
+          cap={i === 0 ? 10 : 8}
           note={objNotes[f.key] || ''} noteSaved={!!noteSaved[f.key]}
           onNote={(text) => saveObjNote(f.key, text)}
-          onToggle={toggle} onRemove={remove} onAdd={add}
+          onToggle={toggle} onRemove={remove} onAdd={add} onEdit={editItem}
         />
       ))}
 
@@ -125,7 +130,7 @@ export default function MyWeek() {
         </div>
         <div className="mt-3">
           <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
-          <PlanArea items={itemsFor('other')} canAct={canAct} focusKey="other" placeholder="e.g. Coaching session with Sally" onToggle={toggle} onRemove={remove} onAdd={add} />
+          <PlanArea items={itemsFor('other')} canAct={canAct} focusKey="other" cap={5} placeholder="e.g. Coaching session with Sally" onToggle={toggle} onRemove={remove} onAdd={add} onEdit={editItem} />
         </div>
         <CommentBox label="Comments" value={objNotes.other || ''} saved={!!noteSaved.other} onChange={(text) => saveObjNote('other', text)} />
       </section>
@@ -148,7 +153,7 @@ export default function MyWeek() {
   )
 }
 
-function ObjectiveSection({ slot, title, metrics, agents, progress, primary, canAct, items, focusKey, placeholder, note, noteSaved, onNote, onToggle, onRemove, onAdd }) {
+function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, primary, canAct, items, focusKey, cap, placeholder, note, noteSaved, onNote, onToggle, onRemove, onAdd, onEdit }) {
   return (
     <section>
       {primary ? (
@@ -176,9 +181,20 @@ function ObjectiveSection({ slot, title, metrics, agents, progress, primary, can
           </div>
         )}
       </div>
+      {weekPlan && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {weekPlan.map((d) => (
+            <div key={d.date} className={`rounded-lg px-2.5 py-1.5 text-center ${d.today ? 'bg-[var(--color-brand)] text-white' : d.past ? 'bg-[var(--color-fill)] text-[var(--color-ink-faint)]' : 'bg-[var(--color-surface)] border border-[var(--color-line-soft)] text-[var(--color-ink)]'}`}>
+              <div className="text-[10px] font-bold uppercase tracking-wide opacity-80">{d.label}</div>
+              <div className="text-sm font-extrabold tabular-nums">{d.past ? (d.did == null ? '—' : `✓${d.did}`) : d.need}</div>
+            </div>
+          ))}
+          <div className="self-center pl-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">per-day pace to hit the month</div>
+        </div>
+      )}
       <div className="mt-4">
         <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
-        <PlanArea items={items} canAct={canAct} focusKey={focusKey} placeholder={placeholder} onToggle={onToggle} onRemove={onRemove} onAdd={onAdd} />
+        <PlanArea items={items} canAct={canAct} focusKey={focusKey} cap={cap} placeholder={placeholder} onToggle={onToggle} onRemove={onRemove} onAdd={onAdd} onEdit={onEdit} />
       </div>
       {progress && (
         <p className="mt-3 text-sm text-[var(--color-ink-soft)]">
@@ -204,13 +220,21 @@ function CommentBox({ label, value, saved, onChange }) {
 }
 
 // His plan for TODAY — no planning ahead; tomorrow starts fresh from the
-// goals, carrying whatever wasn't ticked.
-function PlanArea({ items, canAct, focusKey, placeholder, onToggle, onRemove, onAdd }) {
+// goals, carrying whatever wasn't ticked. Click a line to reword it. Capped
+// (Primary 10 · Supporting 8 · Other 5) so the plan stays a plan.
+function PlanArea({ items, canAct, focusKey, cap, placeholder, onToggle, onRemove, onAdd, onEdit }) {
   const [text, setText] = useState('')
+  const [editing, setEditing] = useState(null) // item id
+  const [editText, setEditText] = useState('')
+  const full = cap != null && items.length >= cap
   function submit() {
     if (!text.trim()) return
     onAdd(text.trim(), focusKey)
     setText('')
+  }
+  function saveEdit(id) {
+    if (editText.trim()) onEdit(id, editText.trim())
+    setEditing(null)
   }
   return (
     <div className="rounded-2xl border border-[var(--color-line-soft)] bg-[var(--color-surface)] p-4">
@@ -221,22 +245,38 @@ function PlanArea({ items, canAct, focusKey, placeholder, onToggle, onRemove, on
             <button onClick={canAct ? () => onToggle(it.id) : undefined} className={`mt-0.5 shrink-0 ${canAct ? '' : 'cursor-default'}`}>
               {it.done ? <CheckCircle2 size={17} className="text-[var(--color-good)]" /> : <Circle size={17} className="text-[var(--color-ink-faint)]" />}
             </button>
-            <span className="min-w-0 flex-1">
-              <span className={`text-sm font-medium ${it.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>{it.title}</span>
-              {it.carried ? <span className="ml-2 rounded-full bg-[var(--color-bad-bg,#fef2f2)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-bad)]">from yesterday</span> : null}
-            </span>
-            {canAct && (
+            {editing === it.id ? (
+              <input
+                autoFocus value={editText} onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(it.id); if (e.key === 'Escape') setEditing(null) }}
+                onBlur={() => saveEdit(it.id)}
+                className="min-w-0 flex-1 rounded border border-[var(--color-line)] px-1.5 py-0.5 text-sm"
+              />
+            ) : (
+              <span
+                onClick={canAct && !it.done ? () => { setEditing(it.id); setEditText(it.title) } : undefined}
+                className={`min-w-0 flex-1 ${canAct && !it.done ? 'cursor-text' : ''}`}
+                title={canAct && !it.done ? 'Click to edit' : undefined}
+              >
+                <span className={`text-sm font-medium ${it.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>{it.title}</span>
+                {it.carried ? <span className="ml-2 rounded-full bg-[var(--color-bad-bg,#fef2f2)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-bad)]">from yesterday</span> : null}
+              </span>
+            )}
+            {canAct && editing !== it.id && (
               <button onClick={() => onRemove(it.id)} title="Remove" className="shrink-0 rounded p-0.5 text-[var(--color-ink-faint)] opacity-0 transition-opacity hover:text-[var(--color-bad)] group-hover:opacity-100"><X size={14} /></button>
             )}
           </div>
         ))}
       </div>
-      {canAct && (
+      {canAct && (full ? (
+        <p className="mt-1.5 text-xs font-semibold text-[var(--color-ink-faint)]">{items.length}/{cap} — the plan is full. Finish or remove something first.</p>
+      ) : (
         <div className="mt-1.5 flex items-center gap-2">
           <Plus size={15} className="shrink-0 text-[var(--color-ink-faint)]" />
           <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder={`${placeholder} — Enter to add`} className="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm outline-none placeholder:text-[var(--color-ink-faint)]" />
+          {cap != null && <span className="shrink-0 text-[10px] font-semibold tabular-nums text-[var(--color-ink-faint)]">{items.length}/{cap}</span>}
         </div>
-      )}
+      ))}
     </div>
   )
 }
