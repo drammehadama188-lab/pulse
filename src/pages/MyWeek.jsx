@@ -49,11 +49,15 @@ export default function MyWeek() {
       setData((d) => ({ ...d, fromAdama: d.fromAdama.map((a) => (a.id === id ? r.assignment : a)) }))
     } catch (e) { alert(e.message) }
   }
+  const [noteSaved, setNoteSaved] = useState({})
   function saveObjNote(key, text) {
     setObjNotes((n) => ({ ...n, [key]: text }))
-    if (!canAct) return
     clearTimeout(noteTimers.current[key])
-    noteTimers.current[key] = setTimeout(() => { api('/workday/objnote', { method: 'POST', body: { key, text } }).catch(() => {}) }, 800)
+    noteTimers.current[key] = setTimeout(() => {
+      api('/workday/objnote', { method: 'POST', body: { key, text } })
+        .then(() => { setNoteSaved((v) => ({ ...v, [key]: true })); setTimeout(() => setNoteSaved((v) => ({ ...v, [key]: false })), 1500) })
+        .catch(() => {})
+    }, 600)
   }
 
   if (error) return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'My Workday is for team leads.' : `Couldn't load — ${error}`}</Card>
@@ -94,7 +98,7 @@ export default function MyWeek() {
         <ObjectiveCard
           key={f.key} f={f} primary={i === 0} data={data} canAct={canAct}
           items={itemsFor(f.key, data.items)} tomorrowItems={itemsFor(f.key, data.tomorrowItems)}
-          note={objNotes[f.key] || ''} onNote={(text) => saveObjNote(f.key, text)}
+          note={objNotes[f.key] || ''} noteSaved={!!noteSaved[f.key]} onNote={(text) => saveObjNote(f.key, text)}
           onToggle={toggle} onRemove={remove} onAdd={add}
         />
       ))}
@@ -129,7 +133,7 @@ export default function MyWeek() {
 }
 
 // One objective: metrics = context, the writing area = the hero.
-function ObjectiveCard({ f, primary, data, canAct, items, tomorrowItems, note, onNote, onToggle, onRemove, onAdd }) {
+function ObjectiveCard({ f, primary, data, canAct, items, tomorrowItems, note, noteSaved, onNote, onToggle, onRemove, onAdd }) {
   return (
     <section className={primary ? '' : 'opacity-95'}>
       {primary ? (
@@ -176,11 +180,11 @@ function ObjectiveCard({ f, primary, data, canAct, items, tomorrowItems, note, o
         </p>
       )}
       <div className="mt-3">
-        <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Comments</div>
+        <div className="mb-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Comments {noteSaved && <span className="normal-case tracking-normal text-[var(--color-good)]">Saved ✓</span>}</div>
         <textarea
-          value={note} onChange={(e) => onNote(e.target.value)} disabled={!canAct} rows={2}
+          value={note} onChange={(e) => onNote(e.target.value)} rows={2}
           placeholder="Why wasn't the goal met, or anything the business should know — saves by itself."
-          className="w-full rounded-xl border border-[var(--color-line-soft)] bg-transparent px-3 py-2 text-sm"
+          className="w-full rounded-xl border border-[var(--color-line-soft)] bg-[var(--color-surface)] px-3 py-2 text-sm"
         />
       </div>
     </section>
