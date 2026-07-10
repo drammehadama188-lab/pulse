@@ -475,17 +475,21 @@ export default function HRTeam({
                 <span className="text-[11px] font-semibold text-gray-400">{w.doneCount}/{w.totalItems} ticked</span>
               </div>
               <div className="space-y-1.5">
-                {w.focus.length === 0 && <p className="text-sm text-gray-400">Nothing behind target.</p>}
-                {w.focus.map((f, i) => (
+                {w.focus.length === 0 && <p className="text-sm text-gray-400">Every business goal is on track.</p>}
+                {w.focus.map((f) => (
                   <div key={f.key} className="text-sm text-gray-700">
-                    <span className="font-semibold">{i === 0 ? 'Primary' : 'Supporting'}:</span> {f.title} — {(f.metrics || []).map((m) => `${m.label.toLowerCase()} ${m.value}`).join(' · ')}
+                    <span className="font-semibold">Business:</span> {f.title} — {(f.metrics || []).map((m) => `${m.label.toLowerCase()} ${m.value}`).join(' · ')}
                     {f.progress && <span className="ml-1.5 font-bold tabular-nums">today {f.progress.actual}/{f.progress.goal}</span>}
+                    {f.note && <p className="mt-0.5 rounded bg-gray-50 px-2 py-1 text-xs text-gray-600">{f.note}</p>}
                   </div>
                 ))}
+                {w.ownObjective && (
+                  <div className="text-sm text-gray-700">
+                    <span className="font-semibold">His own:</span> {w.ownObjective.title}
+                    {w.ownObjective.note && <p className="mt-0.5 rounded bg-gray-50 px-2 py-1 text-xs text-gray-600">{w.ownObjective.note}</p>}
+                  </div>
+                )}
               </div>
-              {w.carry && (
-                <p className="mt-2 rounded-lg bg-gray-50 px-2.5 py-2 text-xs text-gray-600"><span className="font-semibold">Carrying to tomorrow:</span> {w.carry}</p>
-              )}
               {w.assignments.length > 0 && (
                 <div className="mt-2 space-y-0.5 text-xs text-gray-600">
                   {w.assignments.map((a) => <div key={a.id}>{a.done ? '✓' : '○'} {a.title}{a.due ? ` · due ${a.due}` : ''}</div>)}

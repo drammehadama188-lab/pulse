@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircle2, Circle, Plus, X } from 'lucide-react'
+import { CheckCircle2, Circle, Flag, Plus, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import { Card, Spinner } from '../components/ui.jsx'
 import { greeting, firstName } from '../lib/format.js'
 import { useAuth } from '../context/AuthContext.jsx'
 
-// MY WORKDAY v5 — the manager's desk. The system shows reality (metrics, live
-// progress); the PLAN is his to write. Primary objective dominates the page;
-// everything else is quieter. Carry Forward hands unfinished thinking to
-// tomorrow; items roll over on their own.
+// MY WORKDAY v6 — two objectives, different owners (Adama 9 Jul). The
+// BUSINESS objective is assigned by the goals: he can't delete or rename it,
+// only work it; when its month-goal is met the next-most-behind goal takes
+// its place. HIS objective is one slot he writes and carries until HE marks
+// it finished. Each objective carries its own note — no general notes pile.
 
 const dayAfter = (key) => { const d = new Date(`${key}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10) }
 
@@ -18,15 +19,17 @@ export default function MyWeek() {
   const canAct = !isViewAs
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [notes, setNotes] = useState('')
-  const [carry, setCarry] = useState('')
-  const [carrySaved, setCarrySaved] = useState(false)
-  const notesTimer = useRef(null)
+  const noteTimers = useRef({})
+  const [objNotes, setObjNotes] = useState({})
+  const [ownNote, setOwnNote] = useState('')
+  const [ownTitle, setOwnTitle] = useState('')
 
   async function load() {
     try {
       const d = await api('/workday')
-      setData(d); setNotes(d.notes || ''); setCarry(d.carry || '')
+      setData(d)
+      setObjNotes(d.objNotes || {})
+      setOwnNote(d.ownObjective?.note || '')
     } catch (e) { setError(e.message) }
   }
   useEffect(() => { load() }, [])
@@ -51,15 +54,26 @@ export default function MyWeek() {
       setData((d) => ({ ...d, fromAdama: d.fromAdama.map((a) => (a.id === id ? r.assignment : a)) }))
     } catch (e) { alert(e.message) }
   }
-  async function saveCarry() {
-    try { await api('/workday/carry', { method: 'POST', body: { text: carry } }); setCarrySaved(true); setTimeout(() => setCarrySaved(false), 2000) }
+  function saveObjNote(key, text) {
+    setObjNotes((n) => ({ ...n, [key]: text }))
+    if (!canAct) return
+    clearTimeout(noteTimers.current[key])
+    noteTimers.current[key] = setTimeout(() => { api('/workday/objnote', { method: 'POST', body: { key, text } }).catch(() => {}) }, 800)
+  }
+  function saveOwnNote(text) {
+    setOwnNote(text)
+    if (!canAct) return
+    clearTimeout(noteTimers.current.own)
+    noteTimers.current.own = setTimeout(() => { api('/workday/own/note', { method: 'POST', body: { text } }).catch(() => {}) }, 800)
+  }
+  async function createOwn() {
+    if (!ownTitle.trim()) return
+    try { const r = await api('/workday/own', { method: 'POST', body: { title: ownTitle.trim() } }); setData((d) => ({ ...d, ownObjective: r.ownObjective })); setOwnTitle('') }
     catch (e) { alert(e.message) }
   }
-  function onNotes(text) {
-    setNotes(text)
-    if (!canAct) return
-    clearTimeout(notesTimer.current)
-    notesTimer.current = setTimeout(() => { api('/workday/notes', { method: 'POST', body: { text } }).catch(() => {}) }, 800)
+  async function finishOwn() {
+    try { await api('/workday/own/finish', { method: 'POST' }); setData((d) => ({ ...d, ownObjective: null })); setOwnNote('') }
+    catch (e) { alert(e.message) }
   }
 
   if (error) return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'My Workday is for team leads.' : `Couldn't load — ${error}`}</Card>
@@ -67,6 +81,7 @@ export default function MyWeek() {
 
   const dateLabel = new Date(`${data.today}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
   const itemsFor = (key, list) => (list || []).filter((i) => i.focusKey === key)
+  const biz = data.focus[0] || null
 
   return (
     <div className="space-y-8">
@@ -92,26 +107,81 @@ export default function MyWeek() {
         )}
       </div>
 
-      {/* objectives — the system shows reality, HE writes the plan */}
-      {data.focus.length === 0 && (
-        <Card className="p-6 text-sm text-[var(--color-ink-soft)]">Nothing is behind target — Admin &amp; Follow-ups below, and push the month further.</Card>
+      {/* THE business objective — assigned by the goals, not negotiable */}
+      {biz ? (
+        <section>
+          <div className="border-t-4 border-[var(--color-brand)] pt-3">
+            <div className="text-xs font-extrabold uppercase tracking-widest text-[var(--color-brand)]">Business objective</div>
+            <h2 className="mt-0.5 text-2xl font-extrabold text-[var(--color-ink)]">{biz.title}</h2>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+            {biz.metrics.map((m) => (
+              <div key={m.label}>
+                <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{m.label}</div>
+                <div className="text-xl font-extrabold tabular-nums text-[var(--color-ink)]">{m.value}</div>
+              </div>
+            ))}
+            {biz.agents && (
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Agents</div>
+                <div className="text-base font-semibold text-[var(--color-ink)]">{biz.agents.map((a) => `${a.name} ${a.won}`).join(' · ')}</div>
+              </div>
+            )}
+          </div>
+          <div className="mt-4">
+            <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
+            <PlanArea items={itemsFor('biz', data.items)} tomorrowItems={itemsFor('biz', data.tomorrowItems)} canAct={canAct} today={data.today} focusKey="biz" placeholder={biz.key === 'renewals' ? 'e.g. Call Musa' : 'e.g. Sit with Sally on her pipeline'} onToggle={toggle} onRemove={remove} onAdd={add} />
+          </div>
+          {biz.progress && (
+            <p className="mt-3 text-sm text-[var(--color-ink-soft)]">Progress today: <span className="font-extrabold tabular-nums text-[var(--color-ink)]">{biz.progress.actual}/{biz.progress.goal}</span> {biz.progress.unit}</p>
+          )}
+          <div className="mt-3">
+            <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{biz.title} note</div>
+            <textarea value={objNotes[biz.key] || ''} onChange={(e) => saveObjNote(biz.key, e.target.value)} disabled={!canAct} rows={2} placeholder="e.g. Musa requested the invoice by WhatsApp — saves by itself, follows this objective." className="w-full rounded-xl border border-[var(--color-line-soft)] bg-transparent px-3 py-2 text-sm" />
+          </div>
+        </section>
+      ) : (
+        <Card className="p-6 text-sm text-[var(--color-ink-soft)]">Every business goal is on track — nothing assigned today. Your own objective and follow-ups below.</Card>
       )}
-      {data.focus.map((f, i) => (
-        <ObjectiveCard
-          key={f.key} f={f} primary={i === 0} data={data} canAct={canAct}
-          items={itemsFor(f.key, data.items)} tomorrowItems={itemsFor(f.key, data.tomorrowItems)}
-          onToggle={toggle} onRemove={remove} onAdd={add}
-        />
-      ))}
+
+      {/* HIS objective — one slot, carries until he finishes it */}
+      <section>
+        <div className="border-t border-[var(--color-line)] pt-3">
+          <div className="text-[11px] font-extrabold uppercase tracking-widest text-[var(--color-ink-faint)]">My objective</div>
+          {data.ownObjective ? (
+            <div className="mt-0.5 flex flex-wrap items-center gap-3">
+              <h2 className="text-lg font-bold text-[var(--color-ink)]">{data.ownObjective.title}</h2>
+              {canAct && (
+                <button onClick={finishOwn} className="inline-flex items-center gap-1 rounded-full bg-[var(--color-good-bg)] px-3 py-1 text-xs font-bold text-[var(--color-good)] hover:opacity-80"><Flag size={12} /> Mark finished</button>
+              )}
+            </div>
+          ) : canAct ? (
+            <div className="mt-2 flex gap-1.5">
+              <input value={ownTitle} onChange={(e) => setOwnTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && createOwn()} placeholder="One objective of your own — e.g. Get Sally closing on her own" className="min-w-0 flex-1 rounded-lg border border-[var(--color-line)] px-3 py-2 text-sm" />
+              <button onClick={createOwn} className="rounded-lg bg-[var(--color-ink)] px-3 py-2 text-xs font-bold text-white">Set</button>
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-[var(--color-ink-faint)]">No personal objective set.</p>
+          )}
+        </div>
+        {data.ownObjective && (
+          <>
+            <div className="mt-3">
+              <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
+              <PlanArea items={itemsFor('myobj', data.items)} tomorrowItems={itemsFor('myobj', data.tomorrowItems)} canAct={canAct} today={data.today} focusKey="myobj" placeholder="e.g. Shadow her next customer call" onToggle={toggle} onRemove={remove} onAdd={add} />
+            </div>
+            <div className="mt-3">
+              <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Note</div>
+              <textarea value={ownNote} onChange={(e) => saveOwnNote(e.target.value)} disabled={!canAct} rows={2} placeholder="Notes for this objective — saves by itself." className="w-full rounded-xl border border-[var(--color-line-soft)] bg-transparent px-3 py-2 text-sm" />
+            </div>
+          </>
+        )}
+      </section>
 
       {/* admin & follow-ups */}
       <section>
         <h2 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-[var(--color-ink-faint)]">Admin &amp; Follow-ups</h2>
-        <PlanArea
-          items={itemsFor('quick', data.items)} tomorrowItems={itemsFor('quick', data.tomorrowItems)}
-          canAct={canAct} today={data.today} focusKey="quick" placeholder="e.g. Call supplier"
-          onToggle={toggle} onRemove={remove} onAdd={add} quiet
-        />
+        <PlanArea items={itemsFor('quick', data.items)} tomorrowItems={itemsFor('quick', data.tomorrowItems)} canAct={canAct} today={data.today} focusKey="quick" placeholder="e.g. Call supplier" onToggle={toggle} onRemove={remove} onAdd={add} quiet />
       </section>
 
       {/* from Adama */}
@@ -128,77 +198,7 @@ export default function MyWeek() {
           </div>
         </section>
       )}
-
-      {/* working notes */}
-      <section>
-        <h2 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-[var(--color-ink-faint)]">Working notes</h2>
-        <textarea value={notes} onChange={(e) => onNotes(e.target.value)} disabled={!canAct} rows={4} placeholder="Your desk scratchpad — supplier to call, SIMs to order… saves by itself." className="w-full rounded-xl border border-[var(--color-line-soft)] bg-transparent px-3 py-2.5 text-sm" />
-      </section>
-
-      {/* carry forward */}
-      <section>
-        <h2 className="text-sm font-extrabold uppercase tracking-wide text-[var(--color-ink-faint)]">Carry forward</h2>
-        <p className="mb-2 text-xs text-[var(--color-ink-faint)]">What still needs attention tomorrow? Each line becomes an item on tomorrow's list.</p>
-        <textarea value={carry} onChange={(e) => setCarry(e.target.value)} disabled={!canAct} rows={3} placeholder={'Waiting for Access Bank payment\nMusa requested invoice\nSally needs coaching'} className="w-full rounded-xl border border-[var(--color-line-soft)] bg-transparent px-3 py-2.5 text-sm" />
-        {canAct && (
-          <div className="mt-2 flex items-center gap-2">
-            <button onClick={saveCarry} className="rounded-xl bg-[var(--color-ink)] px-4 py-2 text-sm font-bold text-white hover:opacity-90">Save</button>
-            {carrySaved && <span className="text-xs font-semibold text-[var(--color-good)]">Saved — it'll be on tomorrow's list ✓</span>}
-          </div>
-        )}
-      </section>
     </div>
-  )
-}
-
-// One objective: metrics = context, the writing area = the hero.
-function ObjectiveCard({ f, primary, data, canAct, items, tomorrowItems, onToggle, onRemove, onAdd }) {
-  return (
-    <section className={primary ? '' : 'opacity-95'}>
-      {primary ? (
-        <div className="border-t-4 border-[var(--color-brand)] pt-3">
-          <div className="text-xs font-extrabold uppercase tracking-widest text-[var(--color-brand)]">{f.slot}</div>
-          <h2 className="mt-0.5 text-2xl font-extrabold text-[var(--color-ink)]">{f.title}</h2>
-        </div>
-      ) : (
-        <div className="border-t border-[var(--color-line)] pt-3">
-          <div className="text-[11px] font-extrabold uppercase tracking-widest text-[var(--color-ink-faint)]">{f.slot}</div>
-          <h2 className="mt-0.5 text-lg font-bold text-[var(--color-ink)]">{f.title}</h2>
-        </div>
-      )}
-
-      {/* reality — metrics only, no instructions */}
-      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-        {f.metrics.map((m) => (
-          <div key={m.label}>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{m.label}</div>
-            <div className={`font-extrabold tabular-nums text-[var(--color-ink)] ${primary ? 'text-xl' : 'text-base'}`}>{m.value}</div>
-          </div>
-        ))}
-        {f.agents && (
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Agents</div>
-            <div className={`font-semibold text-[var(--color-ink)] ${primary ? 'text-base' : 'text-sm'}`}>{f.agents.map((a) => `${a.name} ${a.won}`).join(' · ')}</div>
-          </div>
-        )}
-      </div>
-
-      {/* his plan — the writing area is the centre */}
-      <div className="mt-4">
-        <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
-        <PlanArea
-          items={items} tomorrowItems={tomorrowItems} canAct={canAct} today={data.today}
-          focusKey={f.key} placeholder={f.key === 'renewals' ? 'e.g. Call Musa' : 'e.g. Sit with Sally on her pipeline'}
-          onToggle={onToggle} onRemove={onRemove} onAdd={onAdd}
-        />
-      </div>
-
-      {f.progress && (
-        <p className="mt-3 text-sm text-[var(--color-ink-soft)]">
-          Progress today: <span className="font-extrabold tabular-nums text-[var(--color-ink)]">{f.progress.actual}/{f.progress.goal}</span> {f.progress.unit}
-        </p>
-      )}
-    </section>
   )
 }
 
