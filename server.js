@@ -1425,150 +1425,241 @@ app.get('/api/team/member/:username', auth, (req, res) => {
   })
 })
 
-// ---------- MY WEEK (team lead's auto-built weekly planner — Adama 9 Jul) ----------
-// "He is lost most of the time… I am left in the dark." The system builds each
-// day's priorities FROM the data (coaching due, sales pace, attendance gaps,
-// Yafatou's cases/installations/stock via the Admin bridge) and ranks a Top 3.
-// Undone Top-3 items ROLL to the next day, visibly. Informational only — no
-// scorecard effect (month one). Store 'myweek': one snapshot per lead per day.
+// ---------- MY WEEK (the team lead's operating system — Adama 9 Jul v2) ----------
+// "Don't make him plan. Make Pulse think." Every number DERIVES live from the
+// goals and feeds — a priority stays up until the metric moves (the metric IS
+// the checkbox), so there is no planner, no ticking, no carry-over machinery.
+// Sections: Today's Priorities (always ≤3, severity-ranked, each with the
+// metric, WHY, and one action), Waiting For Me (things only he can do — they
+// vanish when done), Team Health (one status per area), Today's Wins (real
+// deltas vs yesterday's snapshot — never invented), This Week (goal bars).
+// Only store: 'ops-snapshots' (one metrics photo per day, to compute wins).
 
-function myweekStore() { return db.read('myweek', []) }
-function myweekDay(username, date) { return myweekStore().find((d) => d.username === username && d.date === date) || null }
-function myweekSave(day) {
-  const all = myweekStore().filter((d) => !(d.username === day.username && d.date === day.date))
-  all.push(day)
-  db.write('myweek', all)
+function opsSnapshots() { return db.read('ops-snapshots', []) }
+function opsSnapshotFor(username, date) { return opsSnapshots().find((s) => s.username === username && s.date === date) || null }
+function opsSaveSnapshot(snap) {
+  const all = opsSnapshots().filter((s) => !(s.username === snap.username && s.date === snap.date))
+  all.push(snap)
+  // keep a rolling month per lead — history beyond wins-diffing has no reader
+  db.write('ops-snapshots', all.filter((s) => s.date >= new Date(Date.now() - 35 * 86400000).toISOString().slice(0, 10)))
 }
 
-// Candidate items for a lead "as of now". Each has a STABLE id so ticks and
-// carry-over survive regeneration. rank: higher = more urgent.
-async function myweekCandidates(lead) {
+// Everything the OS needs, in one pass: live feeds + local stores → the
+// metrics object. Feed unreachable → null, never a made-up number.
+async function opsMetrics(lead) {
   const today = todayKey()
   const CUR = today.slice(0, 7)
   const members = teamMembersFor(lead)
-  const items = []
-  const coachingAll = db.read('coaching', [])
-  const attAll = db.read('attendance', [])
-  const salesStore = db.read('agent-sales', {})
-
-  // 1 · Coaching (20% of his score) — every member due or overdue
-  for (const m of members) {
-    const st = coachingStatus(coachingAll, m.username)
-    if (!st.coachingCurrent) {
-      const since = st.lastCoachedAt ? `last ${new Date(st.lastCoachedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'never'
-      items.push({ id: `coach-${m.username}`, cat: 'coaching', rank: 90, title: `Coach ${m.name.split(' ')[0]} — check-in due (${since})` })
-    }
-  }
-
-  // 2 · Team sales pace (45%) — Sales members' month vs their targets
-  const salesMembers = members.filter((m) => m.department === 'Sales')
-  if (salesMembers.length) {
-    let actual = 0, target = 0, known = false
-    for (const m of salesMembers) {
-      const rec = salesStore[m.name]
-      const t = Number(rec?.monthlyTarget) || 0
-      target += t
-      let a = null
-      if (CUR >= SALES_ADMIN_FROM) a = await fetchAdminWonCount(m.name, CUR)
-      if (a == null) { const mm = rec?.months?.[CUR]; a = mm && !mm.pending ? Number(mm.sales) || 0 : null }
-      if (a != null) { actual += a; known = true }
-    }
-    const dayOfMonth = Number(today.slice(8, 10))
-    const paceNeeded = target ? Math.round(target * dayOfMonth / 30) : 0
-    if (known && target && actual < paceNeeded) {
-      items.push({ id: 'team-sales', cat: 'sales', rank: 80, title: `Team at ${actual}/${target} sales — pipeline push with ${salesMembers.map((m) => m.name.split(' ')[0]).join(' & ')}` })
-    } else if (!known && target) {
-      items.push({ id: 'team-sales', cat: 'sales', rank: 55, title: `Review the pipeline with ${salesMembers.map((m) => m.name.split(' ')[0]).join(' & ')} — where is the team on ${target} sales?` })
-    }
-  }
-
-  // 3 · Attendance (10%) — not checked in today (after start of day), Gambia clock
-  const nowMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes()
-  if (nowMin >= 9 * 60 + 30 && today >= ATTENDANCE_START) {
-    for (const m of members) {
-      const rec = attAll.find((a) => a.username === m.username && a.date === today)
-      if (!rec?.checkIn) items.push({ id: `att-${m.username}-${today}`, cat: 'attendance', rank: 70, title: `${m.name.split(' ')[0]} hasn't checked in — find out why` })
-    }
-  }
-
-  // 4 · Yafatou's goals (cases / installations / stock) — not his numbers, his
-  // responsibility to make sure they happen. Admin bridge; honest fallbacks.
+  const sellers = members.filter((m) => m.department === 'Sales')
   const yafatou = members.find((m) => m.department === 'Customer Service')
-  if (yafatou) {
-    const first = yafatou.name.split(' ')[0]
-    const [cases, install, stock, retFeed] = await Promise.all([
-      fetchAdminCases(yafatou.name, CUR), fetchAdminInstall(CUR), fetchAdminStock(CUR),
-      fetchAdminFeed(`/api/integrations/pulse/retention?month=${CUR}`),
-    ])
-    const rnDue = (retFeed?.agents || []).reduce((s, a) => s + (Number(a.due) || 0), 0)
-    const rnRen = (retFeed?.agents || []).reduce((s, a) => s + (Number(a.renewed) || 0), 0)
-    if (retFeed && rnDue && (rnRen / rnDue) * 100 < 80) items.push({ id: 'cs-renewal', cat: 'cs', rank: 76, title: `Renewals at ${rnRen}/${rnDue} (goal 80%) — renewal calls with ${first}` })
-    else if (!retFeed) items.push({ id: 'cs-renewal', cat: 'cs', rank: 51, title: `Check this month's renewals with ${first} — goal is 80% of customers due` })
-    if (cases && typeof cases.pct === 'number' && cases.pct < 85) items.push({ id: 'cs-cases', cat: 'cs', rank: 75, title: `Cases at ${Math.round(cases.pct)}% (goal 85) — sit with ${first} on the open ones` })
-    else if (!cases) items.push({ id: 'cs-cases', cat: 'cs', rank: 50, title: `Check open cases with ${first} — goal is 85% resolved on time` })
-    if (install && typeof install.installPct === 'number' && install.installPct < 95) items.push({ id: 'cs-install', cat: 'cs', rank: 74, title: `Installations at ${Math.round(install.installPct)}% (goal 95) — confirm this week's schedule with ${first}` })
-    else if (!install) items.push({ id: 'cs-install', cat: 'cs', rank: 49, title: `Confirm pending installations with ${first} — goal is done within 3 days` })
-    if (stock && typeof stock.accountabilityPct === 'number' && stock.accountabilityPct < 100) items.push({ id: 'cs-stock', cat: 'cs', rank: 73, title: `Stock accountability at ${Math.round(stock.accountabilityPct)}% (goal 100) — count with ${first}` })
+  const salesStore = db.read('agent-sales', {})
+  const [salesF, retF, onlF, revF, casesF, instF, stockF] = await Promise.all([
+    fetchAdminFeed(`/api/integrations/pulse/sales?month=${CUR}`),
+    fetchAdminFeed(`/api/integrations/pulse/retention?month=${CUR}`),
+    fetchAdminFeed('/api/integrations/pulse/online'),
+    fetchAdminFeed(`/api/integrations/pulse/reviews?month=${CUR}`),
+    yafatou ? fetchAdminCases(yafatou.name, CUR) : null,
+    fetchAdminInstall(CUR),
+    fetchAdminStock(CUR),
+  ])
+  const rowFor = (feed, m) => (feed?.agents || []).find((a) => a.name === m.name) || null
+  const wonBy = (m) => Number(rowFor(salesF, m)?.won) || 0
+  const teamWon = salesF ? sellers.reduce((s, m) => s + wonBy(m), 0) : null
+  const teamTarget = sellers.reduce((s, m) => s + (Number(salesStore[m.name]?.monthlyTarget) || 0), 0) || null
+  const perSellerReviews = (kpiNumber('sales', 'reviews', CUR) || { target: 3 }).target
+  const reviewsTarget = perSellerReviews != null && sellers.length ? perSellerReviews * sellers.length : null
+  const reviewsBy = (m) => Number(rowFor(revF, m)?.verified) || 0
+  const reviewsCount = revF ? sellers.reduce((s, m) => s + reviewsBy(m), 0) : null
+  const rnDue = (retF?.agents || []).reduce((s, a) => s + (Number(a.due) || 0), 0)
+  const rnRen = (retF?.agents || []).reduce((s, a) => s + (Number(a.renewed) || 0), 0)
+  const teamNames = new Set(members.map((m) => m.name))
+  const onlRows = (onlF?.agents || []).filter((a) => teamNames.has(a.name))
+  const onlTotal = onlRows.reduce((s, a) => s + (Number(a.total) || 0), 0)
+  const onlOn = onlRows.reduce((s, a) => s + (Number(a.online) || 0), 0)
+  // local signals
+  const attAll = db.read('attendance', [])
+  const checkedIn = members.filter((m) => attAll.find((a) => a.username === m.username && a.date === today && a.checkIn))
+  const coachingAll = db.read('coaching', [])
+  const coaching = members.map((m) => ({ m, ...coachingStatus(coachingAll, m.username) }))
+  const pendingLeave = db.read('leave', []).filter((l) => l.status === 'pending' && members.some((m) => m.username === l.username))
+  const reviewsStore = db.read('reviews', {})
+  const reviewsMissing = members.filter((m) => !(reviewsStore[m.name] || []).some((r) => r.period === CUR))
+  const contractsSoon = members.map((m) => {
+    const p = team.find((t) => t.name === m.name)
+    const end = p?.contractEnd || m.contractEnd || null
+    if (!end) return null
+    const days = Math.ceil((new Date(`${end}T00:00:00`) - new Date(`${today}T00:00:00`)) / 86400000)
+    return days >= 0 && days <= 45 ? { m, days } : null
+  }).filter(Boolean)
+  return {
+    today, CUR, members, sellers, yafatou,
+    salesF, teamWon, teamTarget, wonBy,
+    retF, rnDue, rnRen,
+    onlF, onlTotal, onlOn, onlPct: onlF && onlTotal ? Math.round((onlOn / onlTotal) * 100) : null,
+    revF, reviewsCount, reviewsTarget, reviewsBy,
+    casesF, instF, stockF,
+    checkedIn, coaching, pendingLeave, reviewsMissing, contractsSoon,
   }
+}
 
-  // 5 · Pending leave requests he can decide
-  for (const l of db.read('leave', [])) {
-    if (l.status === 'pending' && members.some((m) => m.username === l.username)) {
-      items.push({ id: `leave-${l.id || l.username}`, cat: 'ops', rank: 65, title: `Decide ${(l.name || l.username)}'s ${l.leaveType || 'leave'} request` })
+// The engine: metrics → severity-ranked priorities, waiting list, health, bars.
+function opsBuild(x) {
+  const first = (m) => m.name.split(' ')[0]
+  const dayOfMonth = Number(x.today.slice(8, 10))
+  const monthPct = dayOfMonth / 30
+
+  const priorities = []
+  // Sales pace (his 45%)
+  if (x.teamWon != null && x.teamTarget) {
+    const pace = Math.round(x.teamTarget * monthPct)
+    if (x.teamWon < pace) {
+      const quiet = x.sellers.filter((m) => x.wonBy(m) === 0)
+      priorities.push({
+        key: 'sales', severity: 90 + (pace - x.teamWon),
+        title: 'Sales behind target', metric: `${x.teamWon}/${x.teamTarget}`, sub: 'trackers sold this month',
+        why: quiet.length ? `${quiet.map(first).join(' and ')} ${quiet.length === 1 ? 'has' : 'have'} no sale yet` : `pace for day ${dayOfMonth} is ${pace}`,
+        action: { label: 'Review the sales team', to: '/team-dashboard' },
+      })
     }
+  } else if (x.teamTarget) {
+    priorities.push({ key: 'sales', severity: 55, title: 'Where is the team on sales?', metric: `?/${x.teamTarget}`, sub: 'Admin feed unreachable', why: 'Check the numbers with the agents directly', action: { label: 'Review the sales team', to: '/team-dashboard' } })
   }
-
-  // 6 · Weekly rhythm
-  const dow = new Date(`${today}T00:00:00Z`).getUTCDay()
-  if (dow === 1) items.push({ id: `rhythm-plan-${today}`, cat: 'ops', rank: 45, title: 'Plan the week — walk this list, set the order' })
-  if (dow === 5) items.push({ id: `rhythm-report-${today}`, cat: 'ops', rank: 45, title: "Send Adama the week's summary — what moved, what's stuck" })
-
-  return items
-}
-
-// Today's plan: merge fresh candidates into the stored snapshot (stable ids
-// keep ticks), then roll yesterday's undone Top-3 forward with a carried badge.
-async function myweekToday(lead) {
-  const today = todayKey()
-  const stored = myweekDay(lead.username, today)
-  const fresh = await myweekCandidates(lead)
-  const byId = new Map((stored?.items || []).map((i) => [i.id, i]))
-  for (const f of fresh) if (!byId.has(f.id)) byId.set(f.id, f)
-  // carry-over from yesterday
-  const yk = new Date(`${today}T00:00:00Z`); yk.setUTCDate(yk.getUTCDate() - 1)
-  const prev = myweekDay(lead.username, yk.toISOString().slice(0, 10))
-  if (prev) {
-    const prevRanked = [...(prev.items || [])].sort((a, b) => (b.rank || 0) - (a.rank || 0))
-    const prevTop = prevRanked.slice(0, 3)
-    for (const p of prevTop) {
-      if ((prev.done || []).includes(p.id)) continue
-      const existing = byId.get(p.id)
-      const carried = (p.carried || 0) + 1
-      if (existing) { existing.carried = carried; existing.rank = Math.max(existing.rank || 0, 95 + carried) }
-      else byId.set(p.id, { ...p, carried, rank: 95 + carried })
-    }
+  // Renewals (company-wide — Yafatou's, he supervises)
+  if (x.retF && x.rnDue) {
+    const need = Math.ceil(x.rnDue * 0.8)
+    if (x.rnRen < need) priorities.push({
+      key: 'renewals', severity: 70 + Math.min(20, need - x.rnRen),
+      title: 'Renewals behind', metric: `${x.rnRen}/${x.rnDue}`, sub: `goal: at least ${need} renew`,
+      why: `${x.rnDue - x.rnRen} customers due are unrenewed${x.yafatou ? ` — renewal calls with ${first(x.yafatou)}` : ''}`,
+      action: x.yafatou ? { label: 'Open renewals with ' + first(x.yafatou), to: `/team-member/${x.yafatou.username}` } : { label: 'Team Dashboard', to: '/team-dashboard' },
+    })
   }
-  const items = [...byId.values()].sort((a, b) => (b.rank || 0) - (a.rank || 0))
-  const day = { username: lead.username, date: today, items, done: stored?.done || [], updatedAt: new Date().toISOString() }
-  myweekSave(day)
-  return day
+  // Cases (Yafatou's 85%)
+  if (x.casesF && typeof x.casesF.casesPct === 'number' && x.casesF.casesPct < 85) {
+    priorities.push({
+      key: 'cases', severity: 60 + Math.min(25, 85 - x.casesF.casesPct),
+      title: 'Customer cases below target', metric: `${Math.round(x.casesF.casesPct)}%`, sub: 'target 85%',
+      why: x.casesF.openOverdue ? `${x.casesF.openOverdue} open past their deadline` : 'resolution rate is short of 85%',
+      action: x.yafatou ? { label: 'View cases with ' + first(x.yafatou), to: `/team-member/${x.yafatou.username}` } : { label: 'Team Dashboard', to: '/team-dashboard' },
+    })
+  }
+  // Google reviews
+  if (x.reviewsCount != null && x.reviewsTarget && x.reviewsCount < Math.round(x.reviewsTarget * monthPct)) {
+    priorities.push({
+      key: 'reviews', severity: 58,
+      title: 'Google reviews behind', metric: `${x.reviewsCount}/${x.reviewsTarget}`, sub: 'five-star reviews this month',
+      why: `ask today's happy customers — ${x.sellers.map((m) => `${first(m)} ${x.reviewsBy(m)}`).join(' · ')}`,
+      action: { label: 'Review the sales team', to: '/team-dashboard' },
+    })
+  }
+  // Trackers online (team book)
+  if (x.onlPct != null && x.onlPct < 75) {
+    priorities.push({
+      key: 'online', severity: 62 + Math.min(20, 75 - x.onlPct),
+      title: 'Trackers offline', metric: `${x.onlPct}%`, sub: 'target 75% online',
+      why: `${x.onlTotal - x.onlOn} of the team's trackers are silent`,
+      action: { label: 'Team Dashboard', to: '/team-dashboard' },
+    })
+  }
+  // Stock
+  if (x.stockF && typeof x.stockF.accountabilityPct === 'number' && x.stockF.accountabilityPct < 100) {
+    priorities.push({
+      key: 'stock', severity: 50,
+      title: 'Stock count incomplete', metric: `${Math.round(x.stockF.accountabilityPct)}%`, sub: 'target 100% verified',
+      why: x.stockF.outstandingMissing ? `${x.stockF.outstandingMissing} trackers unaccounted for` : 'a weekly count is missing',
+      action: x.yafatou ? { label: 'Count with ' + first(x.yafatou), to: `/team-member/${x.yafatou.username}` } : { label: 'Team Dashboard', to: '/team-dashboard' },
+    })
+  }
+  // Attendance right now (after 09:30 Gambia)
+  const nowMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes()
+  const notIn = x.members.filter((m) => !x.checkedIn.some((c) => c.username === m.username))
+  if (nowMin >= 9 * 60 + 30 && x.today >= ATTENDANCE_START && notIn.length) {
+    priorities.push({
+      key: 'attendance', severity: 65 + notIn.length * 3,
+      title: 'People not checked in', metric: `${x.checkedIn.length}/${x.members.length}`, sub: 'checked in today',
+      why: `${notIn.map(first).join(', ')} — find out why`,
+      action: { label: 'Open Team Schedule', to: '/team-schedule' },
+    })
+  }
+  // Coaching — DYNAMIC: the most-overdue member, not a fixed name
+  const overdue = x.coaching.filter((c) => !c.coachingCurrent)
+  if (overdue.length) {
+    overdue.sort((a, b) => String(a.lastCoachedAt || '').localeCompare(String(b.lastCoachedAt || '')))
+    const c = overdue[0]
+    priorities.push({
+      key: 'coaching', severity: 64,
+      title: 'Coaching overdue', metric: `${x.coaching.length - overdue.length}/${x.coaching.length}`, sub: 'check-ins current',
+      why: `${first(c.m)} is the longest without a check-in (${c.lastCoachedAt ? 'last ' + new Date(c.lastCoachedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'never'})`,
+      action: { label: `Coach ${first(c.m)}`, to: `/team-member/${c.m.username}` },
+    })
+  }
+  priorities.sort((a, b) => b.severity - a.severity)
+  const top = priorities.slice(0, 3).map((p, i) => ({ ...p, tier: p.severity >= 85 ? 'high' : p.severity >= 65 ? 'medium' : 'low', n: i + 1 }))
+
+  // Waiting For Me — only-he-can-do items; each disappears when done
+  const waiting = []
+  for (const l of x.pendingLeave) waiting.push({ title: `Decide ${(l.name || l.username)}'s ${l.leaveType || 'leave'} request`, to: '/team-requests' })
+  for (const m of x.reviewsMissing) waiting.push({ title: `Complete ${first(m)}'s ${new Date().toLocaleDateString('en-US', { month: 'long' })} review`, to: '/team-reviews' })
+  for (const c of x.contractsSoon) waiting.push({ title: `${first(c.m)}'s contract ends in ${c.days} day${c.days === 1 ? '' : 's'} — renew or let go`, to: `/team-member/${c.m.username}` })
+
+  // Team Health — one line per area, computed, never guessed
+  const H = (area, status, line) => ({ area, status, line })
+  const health = []
+  if (x.teamWon != null && x.teamTarget) {
+    const pace = Math.round(x.teamTarget * monthPct)
+    health.push(H('Sales', x.teamWon >= pace ? 'green' : x.teamWon >= pace - 2 ? 'amber' : 'red', `${x.teamWon}/${x.teamTarget} sold`))
+  } else health.push(H('Sales', 'unknown', 'connecting to Admin'))
+  if (x.retF && x.rnDue) {
+    const rate = (x.rnRen / x.rnDue) * 100
+    health.push(H('Renewals', rate >= 80 ? 'green' : rate >= 60 ? 'amber' : 'red', `${x.rnRen} of ${x.rnDue} due`))
+  } else health.push(H('Renewals', x.retF ? 'green' : 'unknown', x.retF ? 'none due yet' : 'connecting to Admin'))
+  if (x.casesF && typeof x.casesF.casesPct === 'number') health.push(H('Customer care', x.casesF.casesPct >= 85 ? 'green' : x.casesF.casesPct >= 70 ? 'amber' : 'red', `${Math.round(x.casesF.casesPct)}% on time`))
+  else health.push(H('Customer care', 'unknown', 'connecting to Admin'))
+  if (x.reviewsCount != null && x.reviewsTarget) health.push(H('Google reviews', x.reviewsCount >= Math.round(x.reviewsTarget * monthPct) ? 'green' : x.reviewsCount > 0 ? 'amber' : 'red', `${x.reviewsCount}/${x.reviewsTarget}`))
+  else health.push(H('Google reviews', 'unknown', 'connecting to Admin'))
+  if (x.onlPct != null) health.push(H('Trackers online', x.onlPct >= 75 ? 'green' : x.onlPct >= 65 ? 'amber' : 'red', `${x.onlPct}%`))
+  else health.push(H('Trackers online', 'unknown', 'connecting to Admin'))
+  if (x.stockF && typeof x.stockF.accountabilityPct === 'number') health.push(H('Stock', x.stockF.accountabilityPct >= 100 ? 'green' : x.stockF.accountabilityPct >= 90 ? 'amber' : 'red', `${Math.round(x.stockF.accountabilityPct)}% verified`))
+  else health.push(H('Stock', 'unknown', 'connecting to Admin'))
+
+  // This Week — the goal bars
+  const week = []
+  if (x.teamTarget) week.push({ label: 'Tracker sales', actual: x.teamWon, target: x.teamTarget })
+  if (x.retF && x.rnDue) week.push({ label: 'Renewals', actual: x.rnRen, target: x.rnDue })
+  if (x.reviewsTarget) week.push({ label: 'Google reviews', actual: x.reviewsCount, target: x.reviewsTarget })
+  if (x.onlPct != null) week.push({ label: 'Trackers online', actual: x.onlPct, target: 100, unit: '%' })
+
+  return { priorities: top, waiting, health, week }
 }
 
-// The lead's goal strip: his 4 KPIs + Yafatou's 3 — every item traces to one.
-function myweekGoals() {
-  return [
-    { key: 'team-target', label: 'Team hits its target', target: '100%', weight: 45, owner: 'you' },
-    { key: 'team-active', label: 'Team trackers active', target: '75%', weight: 25, owner: 'you' },
-    { key: 'coaching', label: 'Coaching check-ins', target: 'every 2 weeks', weight: 20, owner: 'you' },
-    { key: 'team-attendance', label: 'Team attendance', target: '95%', weight: 10, owner: 'you' },
-    { key: 'cs-renewal', label: 'Customer renewals', target: '80%', owner: 'Yafatou' },
-    { key: 'cs-cases', label: 'Cases resolved on time', target: '85%', owner: 'Yafatou' },
-    { key: 'cs-install', label: 'Installations in 3 days', target: '95%', owner: 'Yafatou' },
-    { key: 'cs-stock', label: 'Stock accountability', target: '100%', owner: 'Yafatou' },
-  ]
+// Wins = the DIFF between now and the latest previous snapshot. Real events
+// only; a feed that's down contributes nothing (never a made-up cheer).
+function opsWins(lead, x) {
+  const first = (n) => String(n).split(' ')[0]
+  const nowSnap = {
+    username: lead.username, date: x.today,
+    teamWon: x.teamWon, wonBy: Object.fromEntries(x.sellers.map((m) => [m.name, x.wonBy(m)])),
+    rnRen: x.retF ? x.rnRen : null,
+    casesOnTime: x.casesF && typeof x.casesF.onTime === 'number' ? x.casesF.onTime : null,
+    onlOn: x.onlF ? x.onlOn : null,
+  }
+  const prevDays = opsSnapshots().filter((s) => s.username === lead.username && s.date < x.today).sort((a, b) => (a.date < b.date ? 1 : -1))
+  const prev = prevDays[0] || null
+  opsSaveSnapshot(nowSnap)
+  if (!prev) return []
+  const wins = []
+  for (const [name, won] of Object.entries(nowSnap.wonBy || {})) {
+    const d = won - (Number(prev.wonBy?.[name]) || 0)
+    if (nowSnap.teamWon != null && prev.teamWon != null && d > 0) wins.push(`${first(name)} closed ${d} sale${d === 1 ? '' : 's'}`)
+  }
+  if (nowSnap.rnRen != null && prev.rnRen != null && nowSnap.rnRen > prev.rnRen) wins.push(`${nowSnap.rnRen - prev.rnRen} customer${nowSnap.rnRen - prev.rnRen === 1 ? '' : 's'} renewed`)
+  if (nowSnap.casesOnTime != null && prev.casesOnTime != null && nowSnap.casesOnTime > prev.casesOnTime) wins.push(`${nowSnap.casesOnTime - prev.casesOnTime} case${nowSnap.casesOnTime - prev.casesOnTime === 1 ? '' : 's'} resolved on time`)
+  if (nowSnap.onlOn != null && prev.onlOn != null && nowSnap.onlOn > prev.onlOn) wins.push(`${nowSnap.onlOn - prev.onlOn} tracker${nowSnap.onlOn - prev.onlOn === 1 ? '' : 's'} came back online`)
+  if (x.checkedIn.length === x.members.length && x.members.length) wins.push('Whole team checked in today')
+  return wins
 }
 
-// Resolve which lead a My Week request is about: the lead himself (view-as
+// Resolve which lead this request is about: the lead himself (view-as
 // faithful via req.user), or the CEO asking about a lead (?username=).
 function myweekLeadFor(req) {
   const q = String(req.query.username || req.body?.username || '').toLowerCase()
@@ -1583,84 +1674,29 @@ function myweekLeadFor(req) {
 app.get('/api/myweek', auth, async (req, res) => {
   const lead = myweekLeadFor(req)
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
-  const today = todayKey()
-  // week = Mon–Sat around ?start (or this week)
-  const startQ = /^\d{4}-\d{2}-\d{2}$/.test(req.query.start || '') ? req.query.start : today
-  const mon = new Date(`${startQ}T00:00:00Z`)
-  mon.setUTCDate(mon.getUTCDate() - ((mon.getUTCDay() + 6) % 7))
-  const days = []
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(mon); d.setUTCDate(mon.getUTCDate() + i)
-    const key = d.toISOString().slice(0, 10)
-    if (key === today) {
-      const plan = await myweekToday(lead)
-      days.push({ date: key, today: true, items: plan.items, done: plan.done })
-    } else if (key < today) {
-      const snap = myweekDay(lead.username, key)
-      days.push({ date: key, past: true, items: snap?.items || [], done: snap?.done || [] })
-    } else {
-      // preview: fixed rhythm + coaching that falls due that day
-      const preview = []
-      const dow = d.getUTCDay()
-      if (dow === 1) preview.push({ id: `rhythm-plan-${key}`, cat: 'ops', rank: 45, title: 'Plan the week — walk this list, set the order' })
-      if (dow === 5) preview.push({ id: `rhythm-report-${key}`, cat: 'ops', rank: 45, title: "Send Adama the week's summary — what moved, what's stuck" })
-      const coachingAll = db.read('coaching', [])
-      for (const m of teamMembersFor(lead)) {
-        const st = coachingStatus(coachingAll, m.username)
-        if (st.nextCoachingDue && st.nextCoachingDue.slice(0, 10) === key) preview.push({ id: `coach-${m.username}`, cat: 'coaching', rank: 90, title: `Coach ${m.name.split(' ')[0]} — check-in falls due` })
-      }
-      days.push({ date: key, preview: true, items: preview, done: [] })
-    }
+  try {
+    const x = await opsMetrics(lead)
+    const built = opsBuild(x)
+    res.json({ lead: { username: lead.username, name: lead.name }, today: x.today, ...built, wins: opsWins(lead, x) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
   }
-  res.json({ lead: { username: lead.username, name: lead.name }, today, days, goals: myweekGoals() })
 })
 
-// CEO/HR overview: every team lead's TODAY at a glance — plan, ticks, carries.
-// This is how Adama stops being "in the dark" without asking.
+// CEO/HR overview: each lead's priorities + health at a glance — how Adama
+// stays out of the dark without asking.
 app.get('/api/myweek/overview', auth, async (req, res) => {
   if (req.realUser?.username !== CEO && !can(req.user, 'hr')) return res.status(403).json({ error: 'forbidden' })
   const leads = seedUsers().filter((u) => !isArchived(u) && leadsATeam(u))
   const out = []
   for (const lead of leads) {
     try {
-      const plan = await myweekToday(lead)
-      const ranked = [...plan.items].sort((a, b) => (b.rank || 0) - (a.rank || 0))
-      out.push({
-        lead: { username: lead.username, name: lead.name },
-        date: plan.date,
-        top: ranked.slice(0, 3).map((i) => ({ id: i.id, title: i.title, cat: i.cat, carried: i.carried || 0, done: plan.done.includes(i.id) })),
-        doneCount: plan.done.length,
-        total: plan.items.length,
-      })
+      const x = await opsMetrics(lead)
+      const built = opsBuild(x)
+      out.push({ lead: { username: lead.username, name: lead.name }, priorities: built.priorities, health: built.health })
     } catch { /* skip a lead we can't build */ }
   }
   res.json({ leads: out })
-})
-
-app.post('/api/myweek/toggle', auth, notViewAs, async (req, res) => {
-  const lead = myweekLeadFor(req)
-  if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
-  const { date, itemId } = req.body || {}
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !itemId) return res.status(400).json({ error: 'date and itemId required' })
-  const day = myweekDay(lead.username, date)
-  if (!day || !day.items.some((i) => i.id === itemId)) return res.status(404).json({ error: 'No such item that day' })
-  day.done = day.done.includes(itemId) ? day.done.filter((x) => x !== itemId) : [...day.done, itemId]
-  day.updatedAt = new Date().toISOString()
-  myweekSave(day)
-  res.json({ ok: true, done: day.done })
-})
-
-app.post('/api/myweek/add', auth, notViewAs, async (req, res) => {
-  const lead = myweekLeadFor(req)
-  if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
-  const { date, title } = req.body || {}
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !String(title || '').trim()) return res.status(400).json({ error: 'date and title required' })
-  if (date < todayKey()) return res.status(400).json({ error: 'Past days are history — add to today or later' })
-  const day = myweekDay(lead.username, date) || { username: lead.username, date, items: [], done: [] }
-  day.items.push({ id: `own-${crypto.randomUUID().slice(0, 8)}`, cat: 'own', rank: 60, title: String(title).trim().slice(0, 160), own: true })
-  day.updatedAt = new Date().toISOString()
-  myweekSave(day)
-  res.json({ ok: true, items: day.items })
 })
 
 // ---------- schedules (per-person weekly roster) ----------

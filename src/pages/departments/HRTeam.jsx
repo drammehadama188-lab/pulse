@@ -456,20 +456,23 @@ export default function HRTeam({
           {weekOverview.map((w) => (
             <div key={w.lead.username} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-gray-900">{w.lead.name}'s day</p>
-                <span className="text-[11px] font-semibold text-gray-400">{w.doneCount}/{w.total} done today</span>
+                <p className="text-sm font-semibold text-gray-900">{w.lead.name}'s priorities today</p>
+                <span className="text-[11px] font-semibold text-gray-400">{w.priorities.length === 0 ? 'all on track' : `${w.priorities.length} open`}</span>
               </div>
               <div className="space-y-1.5">
-                {w.top.map((t, i) => (
-                  <div key={t.id} className="flex items-start gap-2 text-sm">
-                    <span className={`mt-0.5 ${t.done ? 'text-emerald-600' : 'text-gray-300'}`}>{t.done ? '✓' : '○'}</span>
-                    <span className={`flex-1 ${t.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-                      {i + 1}. {t.title}
-                      {t.carried > 0 && <span className="ml-1.5 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600">carried · day {t.carried + 1}</span>}
-                    </span>
+                {w.priorities.length === 0 && <p className="text-sm text-gray-400">Nothing is on fire.</p>}
+                {w.priorities.map((p) => (
+                  <div key={p.key} className="flex items-start gap-2 text-sm">
+                    <span className="mt-0.5">{p.tier === 'high' ? '🔥' : p.tier === 'medium' ? '🟠' : '🟡'}</span>
+                    <span className="flex-1 text-gray-700">{p.n}. {p.title} <span className="font-bold tabular-nums">{p.metric}</span></span>
                   </div>
                 ))}
               </div>
+              {w.health && (
+                <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-gray-100 pt-2 text-[11px] text-gray-500">
+                  {w.health.map((h) => <span key={h.area}>{h.status === 'green' ? '🟢' : h.status === 'amber' ? '🟡' : h.status === 'red' ? '🔴' : '⚪'} {h.area}</span>)}
+                </div>
+              )}
             </div>
           ))}
         </div>

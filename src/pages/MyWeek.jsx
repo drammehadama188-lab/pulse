@@ -1,147 +1,138 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Circle, Plus, RotateCcw } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ChevronRight, CheckCircle2 } from 'lucide-react'
 import { api } from '../lib/api.js'
-import { useAuth } from '../context/AuthContext.jsx'
 import { Card, Spinner } from '../components/ui.jsx'
+import { greeting, firstName } from '../lib/format.js'
+import { useAuth } from '../context/AuthContext.jsx'
 
-// MY WEEK — the team lead's auto-built planner (Adama 9 Jul). The system reads
-// the data (coaching due, sales pace, attendance, Yafatou's cases/installs/
-// stock) and ranks each day's Top 3. Undone Top-3 items roll forward with a
-// "carried" badge. Informational — it doesn't move the scorecard (month one).
+// MY WEEK v2 — the team lead's operating system (Adama 9 Jul: "don't make him
+// plan, make Pulse think"). Everything on this page DERIVES live from the
+// goals: priorities stay up until the metric moves, Waiting For Me items
+// vanish when done, wins are real deltas vs yesterday. Nothing to fill in.
 
-const CAT = {
-  coaching: { label: 'Coaching', cls: 'bg-purple-50 text-purple-700' },
-  sales: { label: 'Sales', cls: 'bg-emerald-50 text-emerald-700' },
-  attendance: { label: 'Attendance', cls: 'bg-amber-50 text-amber-700' },
-  cs: { label: "Yafatou's", cls: 'bg-blue-50 text-blue-700' },
-  ops: { label: 'Ops', cls: 'bg-gray-100 text-gray-600' },
-  own: { label: 'Mine', cls: 'bg-gray-100 text-gray-600' },
+const TIER = {
+  high: { chip: '🔥 HIGH', ring: 'ring-2 ring-[var(--color-bad)]', text: 'text-[var(--color-bad)]' },
+  medium: { chip: '🟠 MEDIUM', ring: 'ring-1 ring-amber-300', text: 'text-amber-600' },
+  low: { chip: '🟡 LOW', ring: '', text: 'text-[var(--color-ink-soft)]' },
 }
-
-const dayLabel = (key, today) => {
-  const d = new Date(`${key}T00:00:00Z`)
-  const name = d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })
-  return key === today ? 'TODAY' : `${name} ${d.getUTCDate()}`
-}
+const DOT = { green: '🟢', amber: '🟡', red: '🔴', unknown: '⚪' }
+const HEALTH_WORD = { green: 'On track', amber: 'Needs attention', red: 'Behind', unknown: 'Connecting' }
 
 export default function MyWeek() {
-  const { user, isViewAs } = useAuth()
+  const { user } = useAuth()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [adding, setAdding] = useState(null) // date being added to
-  const [addText, setAddText] = useState('')
 
-  async function load() {
-    try { setData(await api('/myweek')) }
-    catch (e) { setError(e.message) }
-  }
-  useEffect(() => { load() }, [])
-
-  async function toggle(date, itemId) {
-    try {
-      const r = await api('/myweek/toggle', { method: 'POST', body: { date, itemId } })
-      setData((d) => ({ ...d, days: d.days.map((day) => (day.date === date ? { ...day, done: r.done } : day)) }))
-    } catch (e) { alert(e.message) }
-  }
-  async function addItem(date) {
-    if (!addText.trim()) return
-    try {
-      const r = await api('/myweek/add', { method: 'POST', body: { date, title: addText.trim() } })
-      setData((d) => ({ ...d, days: d.days.map((day) => (day.date === date ? { ...day, items: r.items } : day)) }))
-      setAdding(null); setAddText('')
-    } catch (e) { alert(e.message) }
-  }
+  useEffect(() => {
+    api('/myweek').then(setData).catch((e) => setError(e.message))
+  }, [])
 
   if (error) return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'My Week is for team leads.' : `Couldn't load — ${error}`}</Card>
   if (!data) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
 
+  const n = data.priorities.length
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
+      {/* header */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-[var(--color-ink)]">My Week</h1>
-        <p className="mt-1 text-[var(--color-ink-soft)]">Built from the data every morning — work the Top 3, tick things off. Undone priorities follow you to tomorrow.</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-[var(--color-ink)]">{greeting()}, {firstName(data.lead.name)} 👋</h1>
+        <p className="mt-1 text-[var(--color-ink-soft)]">
+          {n === 0 ? 'Nothing is on fire — everything is on track.' : `${n} priorit${n === 1 ? 'y needs' : 'ies need'} your attention.`}
+        </p>
       </div>
 
-      {/* goals strip — every item below traces to one of these */}
-      <div className="flex flex-wrap gap-2">
-        {data.goals.map((g) => (
-          <span key={g.key} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${g.owner === 'you' ? 'border-[var(--color-line)] text-[var(--color-ink)]' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>
-            {g.label} · {g.target}
-            {g.owner !== 'you' && <span className="font-medium opacity-70">— {g.owner} owns it, you make it happen</span>}
-            {g.weight ? <span className="opacity-60">· {g.weight}%</span> : null}
-          </span>
-        ))}
-      </div>
-
-      {/* week */}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {data.days.map((day) => {
-          const ranked = [...(day.items || [])].sort((a, b) => (b.rank || 0) - (a.rank || 0))
-          const top = ranked.slice(0, 3)
-          const rest = ranked.slice(3)
-          const doneSet = new Set(day.done || [])
-          return (
-            <Card key={day.date} className={`p-4 ${day.today ? 'ring-2 ring-[var(--color-brand)]' : ''} ${day.past ? 'opacity-70' : ''}`}>
-              <div className="mb-3 flex items-center justify-between">
-                <span className={`text-sm font-extrabold ${day.today ? 'text-[var(--color-brand)]' : 'text-[var(--color-ink)]'}`}>{dayLabel(day.date, data.today)}</span>
-                {day.past && <span className="text-[11px] font-semibold text-[var(--color-ink-faint)]">{doneSet.size}/{ranked.length ? Math.min(3, ranked.length) : 0} top-3 done</span>}
-                {day.preview && <span className="text-[11px] font-semibold text-[var(--color-ink-faint)]">preview</span>}
-              </div>
-              {ranked.length === 0 ? (
-                <p className="py-4 text-center text-sm text-[var(--color-ink-faint)]">{day.past ? 'No plan was built this day.' : 'Nothing scheduled yet.'}</p>
-              ) : (
-                <div className="space-y-2">
-                  {top.map((it, i) => (
-                    <ItemRow key={it.id} it={it} n={i + 1} done={doneSet.has(it.id)} canTick={(day.today || day.past) && !isViewAs} onToggle={() => toggle(day.date, it.id)} />
-                  ))}
-                  {rest.length > 0 && (
-                    <div className="border-t border-[var(--color-line-soft)] pt-2">
-                      <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Also</div>
-                      {rest.map((it) => (
-                        <ItemRow key={it.id} it={it} small done={doneSet.has(it.id)} canTick={(day.today || day.past) && !isViewAs} onToggle={() => toggle(day.date, it.id)} />
-                      ))}
-                    </div>
-                  )}
+      {/* today's priorities — the system decided, he executes */}
+      {n > 0 && (
+        <div className="grid gap-3 lg:grid-cols-3">
+          {data.priorities.map((p) => {
+            const t = TIER[p.tier] || TIER.low
+            return (
+              <Card key={p.key} className={`flex flex-col p-5 ${t.ring}`}>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className={`text-[11px] font-extrabold tracking-wide ${t.text}`}>{t.chip} · PRIORITY {p.n}</span>
                 </div>
-              )}
-              {!day.past && !isViewAs && (
-                adding === day.date ? (
-                  <div className="mt-3 flex gap-1.5">
-                    <input autoFocus value={addText} onChange={(e) => setAddText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addItem(day.date)} placeholder="Add your own…" className="min-w-0 flex-1 rounded-lg border border-[var(--color-line)] px-2.5 py-1.5 text-sm" />
-                    <button onClick={() => addItem(day.date)} className="rounded-lg bg-[var(--color-ink)] px-2.5 py-1.5 text-xs font-bold text-white">Add</button>
-                    <button onClick={() => { setAdding(null); setAddText('') }} className="rounded-lg bg-[var(--color-fill)] px-2 py-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">✕</button>
-                  </div>
-                ) : (
-                  <button onClick={() => { setAdding(day.date); setAddText('') }} className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-ink-faint)] hover:text-[var(--color-brand)]"><Plus size={13} /> Add my own</button>
-                )
-              )}
-            </Card>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
+                <div className="text-lg font-bold leading-tight text-[var(--color-ink)]">{p.title}</div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-3xl font-extrabold tabular-nums text-[var(--color-ink)]">{p.metric}</span>
+                  {p.sub && <span className="text-xs text-[var(--color-ink-faint)]">{p.sub}</span>}
+                </div>
+                <p className="mt-2 flex-1 text-sm text-[var(--color-ink-soft)]"><span className="font-semibold">Why:</span> {p.why}</p>
+                <Link to={p.action.to} className="mt-4 inline-flex items-center justify-center gap-1 rounded-xl bg-[var(--color-ink)] px-4 py-2.5 text-sm font-bold text-white hover:opacity-90">
+                  {p.action.label} <ChevronRight size={15} />
+                </Link>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
-function ItemRow({ it, n, small, done, canTick, onToggle }) {
-  const m = CAT[it.cat] || CAT.ops
-  return (
-    <button
-      onClick={canTick ? onToggle : undefined}
-      className={`flex w-full items-start gap-2 rounded-lg px-1.5 py-1 text-left ${canTick ? 'hover:bg-[var(--color-paper)]' : 'cursor-default'}`}
-    >
-      <span className="mt-0.5 shrink-0 text-[var(--color-ink-faint)]">
-        {done ? <CheckCircle2 size={small ? 14 : 17} className="text-[var(--color-good)]" /> : <Circle size={small ? 14 : 17} />}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className={`${small ? 'text-xs' : 'text-sm font-semibold'} ${done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>
-          {n ? `${n}. ` : ''}{it.title}
-        </span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-1">
-          <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${m.cls}`}>{m.label}</span>
-          {it.carried ? <span className="inline-flex items-center gap-0.5 rounded-full bg-[var(--color-bad-bg,#fef2f2)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--color-bad)]"><RotateCcw size={9} /> carried · day {it.carried + 1}</span> : null}
-        </span>
-      </span>
-    </button>
+      {/* waiting for me — only things a manager can do; each disappears when done */}
+      {data.waiting.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-[var(--color-ink-faint)]">Waiting for me</h2>
+          <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden p-0">
+            {data.waiting.map((w, i) => (
+              <Link key={i} to={w.to} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-[var(--color-paper)]">
+                <span className="text-sm font-medium text-[var(--color-ink)]">{w.title}</span>
+                <ChevronRight size={15} className="shrink-0 text-[var(--color-ink-faint)]" />
+              </Link>
+            ))}
+          </Card>
+        </div>
+      )}
+
+      {/* team health — one glance, no thinking */}
+      <div>
+        <h2 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-[var(--color-ink-faint)]">Team health</h2>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {data.health.map((h) => (
+            <Card key={h.area} className="p-3">
+              <div className="text-xs font-semibold text-[var(--color-ink-soft)]">{h.area}</div>
+              <div className="mt-1 text-sm font-bold text-[var(--color-ink)]">{DOT[h.status]} {HEALTH_WORD[h.status]}</div>
+              <div className="mt-0.5 text-[11px] text-[var(--color-ink-faint)]">{h.line}</div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* today's wins — real deltas only */}
+      {data.wins.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-[var(--color-ink-faint)]">Today's progress</h2>
+          <Card className="space-y-2 p-4">
+            {data.wins.map((w, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm text-[var(--color-ink)]">
+                <CheckCircle2 size={15} className="shrink-0 text-[var(--color-good)]" /> {w}
+              </div>
+            ))}
+          </Card>
+        </div>
+      )}
+
+      {/* this week — the goal bars */}
+      {data.week.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-[var(--color-ink-faint)]">This month</h2>
+          <Card className="space-y-4 p-5">
+            {data.week.map((w) => {
+              const pct = w.target ? Math.min(100, Math.round(((w.actual || 0) / w.target) * 100)) : 0
+              return (
+                <div key={w.label}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="font-semibold text-[var(--color-ink)]">{w.label}</span>
+                    <span className="tabular-nums text-[var(--color-ink-soft)]">{w.actual ?? '—'}{w.unit || ''}{w.unit ? '' : ` / ${w.target}`}</span>
+                  </div>
+                  <div className="h-2.5 overflow-hidden rounded-full bg-[var(--color-fill)]">
+                    <div className={`h-full rounded-full ${pct >= 66 ? 'bg-[var(--color-good)]' : pct >= 33 ? 'bg-amber-400' : 'bg-[var(--color-bad)]'}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+          </Card>
+        </div>
+      )}
+    </div>
   )
 }
