@@ -1520,7 +1520,7 @@ function weekPlanFor(username, today, remaining, snapField) {
   const base = Math.floor(remaining / daysLeft), extra = remaining % daysLeft
   let q = 0
   const out = []
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 5; i++) {
     const d = new Date(mon); d.setUTCDate(mon.getUTCDate() + i)
     const date = d.toISOString().slice(0, 10)
     const label = d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })
@@ -1536,7 +1536,7 @@ function workingDaysLeft(today) {
   let n = 0
   for (let day = d; day <= last; day++) {
     const dow = new Date(Date.UTC(y, m - 1, day)).getUTCDay()
-    if (dow !== 0) n++
+    if (dow !== 0 && dow !== 6) n++ // Mon–Fri, the whole team
   }
   return Math.max(1, n)
 }
@@ -1764,8 +1764,8 @@ function workdayAudit(lead, req, action, detail) {
   db.write('workday-audit', all.filter((e) => e.at >= new Date(Date.now() - 90 * 86400000).toISOString()))
 }
 
-// Plan window: today up to NEXT week's Friday, Sundays skipped — "he knows
-// what is coming and which days to use".
+// Plan window: today up to NEXT week's Friday. The whole team works
+// Monday–Friday (Adama 10 Jul), so weekends never appear.
 function planWindow(today) {
   const t = new Date(`${today}T00:00:00Z`)
   const thisFri = new Date(t); thisFri.setUTCDate(t.getUTCDate() + ((5 - t.getUTCDay() + 7) % 7))
@@ -1773,7 +1773,8 @@ function planWindow(today) {
   const out = []
   const d = new Date(t)
   while (d <= end) {
-    if (d.getUTCDay() !== 0) out.push(d.toISOString().slice(0, 10))
+    const dow = d.getUTCDay()
+    if (dow !== 0 && dow !== 6) out.push(d.toISOString().slice(0, 10))
     d.setUTCDate(d.getUTCDate() + 1)
   }
   return out
