@@ -1683,6 +1683,38 @@ function workdayToday(lead) {
   return day
 }
 
+// AUDIT TRAIL (Adama 10 Jul: "i do not want him to cheat his way into the
+// goals"): every plan mutation is logged under the REAL actor — Adama acting
+// through view-as is recorded as adama, so contributions and corrections are
+// distinguishable from Momodou's own edits. Nothing is ever silently gone.
+function workdayAudit(lead, req, action, detail) {
+  const all = db.read('workday-audit', [])
+  all.push({
+    id: crypto.randomUUID(),
+    lead: lead.username,
+    actor: req.realUser?.username || req.user?.username,
+    at: new Date().toISOString(),
+    action,
+    detail,
+  })
+  db.write('workday-audit', all.filter((e) => e.at >= new Date(Date.now() - 90 * 86400000).toISOString()))
+}
+
+// Plan window: today up to NEXT week's Friday, Sundays skipped — "he knows
+// what is coming and which days to use".
+function planWindow(today) {
+  const t = new Date(`${today}T00:00:00Z`)
+  const thisFri = new Date(t); thisFri.setUTCDate(t.getUTCDate() + ((5 - t.getUTCDay() + 7) % 7))
+  const end = new Date(thisFri); end.setUTCDate(thisFri.getUTCDate() + 7)
+  const out = []
+  const d = new Date(t)
+  while (d <= end) {
+    if (d.getUTCDay() !== 0) out.push(d.toISOString().slice(0, 10))
+    d.setUTCDate(d.getUTCDate() + 1)
+  }
+  return out
+}
+
 function workdayLeadFor(req) {
   const q = String(req.query.username || req.body?.username || '').toLowerCase()
   if (q && req.realUser?.username === CEO) {
@@ -1722,9 +1754,18 @@ app.get('/api/workday', auth, async (req, res) => {
     if (x.casesF && typeof x.casesF.casesPct === 'number') week.push({ label: 'Cases', actual: Math.round(x.casesF.casesPct), target: 100, unit: '%' })
     if (x.onlPct != null) week.push({ label: 'Trackers online', actual: x.onlPct, target: 100, unit: '%' })
     if (x.reviewsTarget) week.push({ label: 'Google reviews', actual: x.reviewsCount, target: x.reviewsTarget })
+    const win = planWindow(x.today)
+    const planByDate = {}
+    for (const dte of win) {
+      planByDate[dte] = dte === x.today
+        ? day.items.filter((i) => !i.deleted)
+        : (workdayGet(lead.username, dte)?.items || []).filter((i) => !i.deleted)
+    }
     res.json({
       lead: { username: lead.username, name: lead.name },
       today: x.today,
+      days: win,
+      planByDate,
       focus,
       items: day.items.filter((i) => !i.deleted),
       otherTitle: (db.read('workday-other', []).find((o) => o.username === lead.username) || {}).title || '',
@@ -1746,6 +1787,7 @@ app.post('/api/workday/toggle', auth, notViewAs, (req, res) => {
   item.done = !item.done
   item.doneAt = item.done ? new Date().toISOString() : null
   workdaySave(day)
+  workdayAudit(lead, req, item.done ? 'ticked' : 'unticked', { title: item.title, date: day.date })
   res.json({ ok: true, items: day.items.filter((i) => !i.deleted) })
 })
 
@@ -1754,11 +1796,13 @@ app.post('/api/workday/toggle', auth, notViewAs, (req, res) => {
 app.post('/api/workday/remove', auth, notViewAs, (req, res) => {
   const lead = workdayLeadFor(req)
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
-  const day = workdayGet(lead.username, todayKey())
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body?.date || '') ? req.body.date : todayKey()
+  const day = workdayGet(lead.username, date)
   const item = day?.items.find((i) => i.id === req.body?.itemId)
-  if (!item) return res.status(404).json({ error: 'No such item today' })
+  if (!item) return res.status(404).json({ error: 'No such item that day' })
   item.deleted = true
   workdaySave(day)
+  workdayAudit(lead, req, 'removed', { title: item.title, date })
   res.json({ ok: true, items: day.items.filter((i) => !i.deleted) })
 })
 
@@ -1768,16 +1812,21 @@ app.post('/api/workday/add', auth, notViewAs, (req, res) => {
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
   const title = String(req.body?.title || '').trim()
   if (!title) return res.status(400).json({ error: 'title required' })
-  const date = todayKey()
+  const today = todayKey()
+  const win = planWindow(today)
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body?.date || '') && win.includes(req.body.date) ? req.body.date : today
   const focusKey = String(req.body?.focusKey || 'other')
   const day = workdayGet(lead.username, date) || { username: lead.username, date, items: [] }
   // Caps keep the plan honest (Adama 10 Jul): Primary 10, Supporting 8, Other 5.
-  const cap = focusKey === 'other' ? 5 : day.slots?.primary === focusKey ? 10 : day.slots?.supporting === focusKey ? 8 : 10
+  const todaySlots = workdayGet(lead.username, today)?.slots || day.slots
+  const cap = focusKey === 'other' ? 5 : todaySlots?.primary === focusKey ? 10 : todaySlots?.supporting === focusKey ? 8 : 10
   const count = day.items.filter((i) => i.focusKey === focusKey && !i.deleted).length
   if (count >= cap) return res.status(400).json({ error: `This plan is full (${cap} max) — finish or remove something first` })
-  day.items.push({ id: `own-${crypto.randomUUID().slice(0, 8)}`, title: title.slice(0, 160), focusKey, done: false, own: true })
+  const byAdama = req.realUser?.username === CEO && lead.username !== CEO
+  day.items.push({ id: `own-${crypto.randomUUID().slice(0, 8)}`, title: title.slice(0, 160), focusKey, done: false, own: true, ...(byAdama ? { byAdama: true } : {}) })
   workdaySave(day)
-  res.json({ ok: true, items: day.items.filter((i) => !i.deleted) })
+  workdayAudit(lead, req, 'added', { title: title.slice(0, 160), date, focusKey })
+  res.json({ ok: true, date, items: day.items.filter((i) => !i.deleted) })
 })
 
 // Edit an item's wording — his plan, his words, editable any time today.
@@ -1786,11 +1835,14 @@ app.post('/api/workday/edit', auth, notViewAs, (req, res) => {
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
   const title = String(req.body?.title || '').trim()
   if (!title) return res.status(400).json({ error: 'title required' })
-  const day = workdayGet(lead.username, todayKey())
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body?.date || '') ? req.body.date : todayKey()
+  const day = workdayGet(lead.username, date)
   const item = day?.items.find((i) => i.id === req.body?.itemId && !i.deleted)
-  if (!item) return res.status(404).json({ error: 'No such item today' })
+  if (!item) return res.status(404).json({ error: 'No such item that day' })
+  const before = item.title
   item.title = title.slice(0, 160)
   workdaySave(day)
+  workdayAudit(lead, req, 'edited', { from: before, to: item.title, date })
   res.json({ ok: true, items: day.items.filter((i) => !i.deleted) })
 })
 
@@ -1800,8 +1852,10 @@ app.post('/api/workday/other', auth, notViewAs, (req, res) => {
   const lead = workdayLeadFor(req)
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
   const all = db.read('workday-other', []).filter((o) => o.username !== lead.username)
-  all.push({ username: lead.username, title: String(req.body?.title || '').trim().slice(0, 120), updatedAt: new Date().toISOString() })
+  const newTitle = String(req.body?.title || '').trim().slice(0, 120)
+  all.push({ username: lead.username, title: newTitle, updatedAt: new Date().toISOString() })
   db.write('workday-other', all)
+  workdayAudit(lead, req, 'other-objective', { title: newTitle })
   res.json({ ok: true })
 })
 
@@ -1817,10 +1871,24 @@ app.post('/api/workday/objnote', auth, notViewAs, (req, res) => {
   if (!key) return res.status(400).json({ error: 'key required' })
   const all = db.read('workday-objnotes', [])
   const rec = all.find((n) => n.username === lead.username) || (all.push({ username: lead.username, notes: {} }), all[all.length - 1])
+  const before = rec.notes[key] || ''
   rec.notes[key] = String(req.body?.text || '').slice(0, 4000)
   rec.updatedAt = new Date().toISOString()
   db.write('workday-objnotes', all)
+  if (before !== rec.notes[key]) workdayAudit(lead, req, 'comment', { key, text: rec.notes[key].slice(0, 140) })
   res.json({ ok: true })
+})
+
+// The timeline — the full history of what he added, edited, removed, ticked
+// and commented, with who really did it. CEO/HR, or the lead reading his own.
+app.get('/api/workday/audit', auth, (req, res) => {
+  const q = String(req.query.username || '').toLowerCase()
+  const isBoss = req.realUser?.username === CEO || can(req.user, 'hr')
+  const target = q && isBoss ? q : req.user.username
+  if (target !== req.user.username && !isBoss) return res.status(403).json({ error: 'forbidden' })
+  const entries = db.read('workday-audit', []).filter((e) => e.lead === target)
+    .sort((a, b) => b.at.localeCompare(a.at)).slice(0, 300)
+  res.json({ entries })
 })
 
 // ---- From Adama: assignments (CEO writes, the lead works them) ----

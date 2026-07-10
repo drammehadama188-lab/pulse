@@ -15,6 +15,7 @@ import MyReviews from './pages/MyReviews.jsx'
 import MyProgress from './pages/MyProgress.jsx'
 import TeamDashboard from './pages/TeamDashboard.jsx'
 import MyWeek from './pages/MyWeek.jsx'
+import WorkdayMonitor from './pages/WorkdayMonitor.jsx'
 import TeamMember from './pages/TeamMember.jsx'
 import Attendance from './pages/Attendance.jsx'
 import Leave from './pages/Leave.jsx'
@@ -130,6 +131,7 @@ export default function App() {
         <Route path="/my-progress" element={<MyProgress />} />
         <Route path="/team-dashboard" element={<RequireAuth teamLead><TeamDashboard /></RequireAuth>} />
         <Route path="/my-week" element={<RequireAuth teamLead><MyWeek /></RequireAuth>} />
+        <Route path="/workday-monitor" element={<RequireAuth power="hr"><WorkdayMonitor /></RequireAuth>} />
         <Route path="/team-member/:username" element={<RequireAuth teamLead><TeamMember /></RequireAuth>} />
         {/* MY TEAM — existing pages reused, scoped to the lead's own team (Adama 1 Jul). */}
         <Route path="/team-requests" element={<RequireAuth teamLead><Approvals scope="team" /></RequireAuth>} />

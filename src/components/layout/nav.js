@@ -43,6 +43,7 @@ export const NAV = [
   // Requests already covers those, so this would be a duplicate page.
   { id: 'requests', to: '/requests', label: 'Requests', icon: ClipboardCheck, group: 'Management', show: (u) => has(u, 'approvals') && !(u?.isTeamLead && u?.approvalsBeyondTeam === false) },
   // Reports composes server-side from whichever powers the person holds.
+  { id: 'workday-monitor', to: '/workday-monitor', label: 'Team Workday', icon: Target, group: 'Management', show: mgr },
   { id: 'reports', to: '/reports', label: 'Reports', icon: BarChart3, group: 'Management', show: (u) => ['team', 'approvals', 'payroll', 'hr'].some((p) => has(u, p)) },
   // 'records' (Employee Records / warnings) merged into "Employees & Records" tab.
 

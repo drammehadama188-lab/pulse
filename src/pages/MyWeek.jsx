@@ -5,18 +5,17 @@ import { Card, Spinner } from '../components/ui.jsx'
 import { greeting, firstName } from '../lib/format.js'
 import { useAuth } from '../context/AuthContext.jsx'
 
-// MY WORKDAY — the manager's desk (Adama, final form 10 Jul). The system
-// shows the goals and live numbers; the PLAN is his to write, today only —
-// the next day starts fresh from the goals, carrying over whatever he didn't
-// tick. Three sections: Primary objective, Supporting objective, and an
-// OTHER objective he names himself (coaching or anything). Each has a
-// Comments box the business reads. Nothing is auto-suggested.
+// MY WORKDAY — the manager's desk (Adama, 10 Jul). The system shows the goals
+// and live numbers; the PLAN is his, visible from today to NEXT week's Friday
+// so he knows which days to use. Ticking is today-only (work counts when it
+// happens); every add/edit/remove is on the audit timeline Adama can read.
 
 export default function MyWeek() {
   const { isViewAs } = useAuth()
   const canAct = !isViewAs
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
+  const [selDate, setSelDate] = useState(null)
   const [objNotes, setObjNotes] = useState({})
   const [noteSaved, setNoteSaved] = useState({})
   const [otherTitle, setOtherTitle] = useState('')
@@ -27,24 +26,28 @@ export default function MyWeek() {
     try {
       const d = await api('/workday')
       setData(d); setObjNotes(d.objNotes || {}); setOtherTitle(d.otherTitle || '')
+      setSelDate((cur) => (cur && d.days.includes(cur) ? cur : d.today))
     } catch (e) { setError(e.message) }
   }
   useEffect(() => { load() }, [])
 
+  const updateItems = (date, items) =>
+    setData((d) => ({ ...d, planByDate: { ...d.planByDate, [date]: items }, items: date === d.today ? items : d.items }))
+
   async function toggle(itemId) {
-    try { const r = await api('/workday/toggle', { method: 'POST', body: { itemId } }); setData((d) => ({ ...d, items: r.items })) }
+    try { const r = await api('/workday/toggle', { method: 'POST', body: { itemId } }); updateItems(data.today, r.items) }
     catch (e) { alert(e.message) }
   }
-  async function editItem(itemId, title) {
-    try { const r = await api('/workday/edit', { method: 'POST', body: { itemId, title } }); setData((d) => ({ ...d, items: r.items })) }
+  async function editItem(itemId, title, date) {
+    try { const r = await api('/workday/edit', { method: 'POST', body: { itemId, title, date } }); updateItems(date, r.items) }
     catch (e) { alert(e.message) }
   }
-  async function remove(itemId) {
-    try { const r = await api('/workday/remove', { method: 'POST', body: { itemId } }); setData((d) => ({ ...d, items: r.items })) }
+  async function remove(itemId, date) {
+    try { const r = await api('/workday/remove', { method: 'POST', body: { itemId, date } }); updateItems(date, r.items) }
     catch (e) { alert(e.message) }
   }
-  async function add(title, focusKey) {
-    try { const r = await api('/workday/add', { method: 'POST', body: { title, focusKey } }); setData((d) => ({ ...d, items: r.items })) }
+  async function add(title, focusKey, date) {
+    try { const r = await api('/workday/add', { method: 'POST', body: { title, focusKey, date } }); updateItems(r.date, r.items) }
     catch (e) { alert(e.message) }
   }
   async function toggleAssignment(id) {
@@ -69,10 +72,12 @@ export default function MyWeek() {
   }
 
   if (error) return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'My Workday is for team leads.' : `Couldn't load — ${error}`}</Card>
-  if (!data) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (!data || !selDate) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
 
   const dateLabel = new Date(`${data.today}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
-  const itemsFor = (key) => (data.items || []).filter((i) => i.focusKey === key)
+  const dayItems = data.planByDate[selDate] || []
+  const itemsFor = (key) => dayItems.filter((i) => i.focusKey === key)
+  const isToday = selDate === data.today
 
   return (
     <div className="space-y-8">
@@ -98,6 +103,9 @@ export default function MyWeek() {
         )}
       </div>
 
+      {/* plan days — today up to next week's Friday */}
+      <DayStrip days={data.days} today={data.today} selDate={selDate} onSelect={setSelDate} planByDate={data.planByDate} />
+
       {/* objectives — the system shows the goal, HE writes the plan */}
       {data.focus.length === 0 && (
         <Card className="p-6 text-sm text-[var(--color-ink-soft)]">Nothing is behind target — your other objective below, and push the month further.</Card>
@@ -105,9 +113,9 @@ export default function MyWeek() {
       {data.focus.map((f, i) => (
         <ObjectiveSection
           key={f.key}
-          slot={f.slot} title={f.title} metrics={f.metrics} agents={f.agents} progress={f.progress} weekPlan={f.weekPlan}
-          primary={i === 0} canAct={canAct}
-          items={itemsFor(f.key)} focusKey={f.key}
+          slot={f.slot} title={f.title} metrics={f.metrics} agents={f.agents} progress={isToday ? f.progress : null} weekPlan={f.weekPlan}
+          primary={i === 0} canAct={canAct} canTick={canAct && isToday}
+          items={itemsFor(f.key)} focusKey={f.key} date={selDate}
           placeholder={f.key === 'renewals' ? 'e.g. Call Musa' : 'e.g. Sit with Sally on her pipeline'}
           cap={i === 0 ? 10 : 8}
           note={objNotes[f.key] || ''} noteSaved={!!noteSaved[f.key]}
@@ -130,7 +138,7 @@ export default function MyWeek() {
         </div>
         <div className="mt-3">
           <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
-          <PlanArea items={itemsFor('other')} canAct={canAct} focusKey="other" cap={5} placeholder="e.g. Coaching session with Sally" onToggle={toggle} onRemove={remove} onAdd={add} onEdit={editItem} />
+          <PlanArea items={itemsFor('other')} canAct={canAct} canTick={canAct && isToday} focusKey="other" date={selDate} cap={5} placeholder="e.g. Coaching session with Sally" onToggle={toggle} onRemove={remove} onAdd={add} onEdit={editItem} />
         </div>
         <CommentBox label="Comments" value={objNotes.other || ''} saved={!!noteSaved.other} onChange={(text) => saveObjNote('other', text)} />
       </section>
@@ -153,7 +161,25 @@ export default function MyWeek() {
   )
 }
 
-function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, primary, canAct, items, focusKey, cap, placeholder, note, noteSaved, onNote, onToggle, onRemove, onAdd, onEdit }) {
+export function DayStrip({ days, today, selDate, onSelect, planByDate }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {days.map((d) => {
+        const dt = new Date(`${d}T00:00:00Z`)
+        const n = (planByDate?.[d] || []).length
+        const sel = d === selDate
+        return (
+          <button key={d} onClick={() => onSelect(d)} className={`rounded-xl px-3 py-1.5 text-center ${sel ? 'bg-[var(--color-ink)] text-white' : 'border border-[var(--color-line-soft)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-line)]'}`}>
+            <span className="block text-[10px] font-bold uppercase tracking-wide opacity-75">{d === today ? 'Today' : dt.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })}</span>
+            <span className="block text-sm font-extrabold tabular-nums">{dt.getUTCDate()}{n ? <span className="ml-1 text-[10px] font-bold opacity-70">·{n}</span> : null}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, primary, canAct, canTick, items, focusKey, date, cap, placeholder, note, noteSaved, onNote, onToggle, onRemove, onAdd, onEdit }) {
   return (
     <section>
       {primary ? (
@@ -194,7 +220,7 @@ function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, pr
       )}
       <div className="mt-4">
         <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
-        <PlanArea items={items} canAct={canAct} focusKey={focusKey} cap={cap} placeholder={placeholder} onToggle={onToggle} onRemove={onRemove} onAdd={onAdd} onEdit={onEdit} />
+        <PlanArea items={items} canAct={canAct} canTick={canTick} focusKey={focusKey} date={date} cap={cap} placeholder={placeholder} onToggle={onToggle} onRemove={onRemove} onAdd={onAdd} onEdit={onEdit} />
       </div>
       {progress && (
         <p className="mt-3 text-sm text-[var(--color-ink-soft)]">
@@ -219,30 +245,29 @@ function CommentBox({ label, value, saved, onChange }) {
   )
 }
 
-// His plan for TODAY — no planning ahead; tomorrow starts fresh from the
-// goals, carrying whatever wasn't ticked. Click a line to reword it. Capped
-// (Primary 10 · Supporting 8 · Other 5) so the plan stays a plan.
-function PlanArea({ items, canAct, focusKey, cap, placeholder, onToggle, onRemove, onAdd, onEdit }) {
+// The plan for the selected day. Ticking only counts TODAY; future days are
+// for planning. Click a line to reword it. Items Adama added carry his badge.
+export function PlanArea({ items, canAct, canTick, focusKey, date, cap, placeholder, onToggle, onRemove, onAdd, onEdit }) {
   const [text, setText] = useState('')
-  const [editing, setEditing] = useState(null) // item id
+  const [editing, setEditing] = useState(null)
   const [editText, setEditText] = useState('')
   const full = cap != null && items.length >= cap
   function submit() {
     if (!text.trim()) return
-    onAdd(text.trim(), focusKey)
+    onAdd(text.trim(), focusKey, date)
     setText('')
   }
   function saveEdit(id) {
-    if (editText.trim()) onEdit(id, editText.trim())
+    if (editText.trim()) onEdit(id, editText.trim(), date)
     setEditing(null)
   }
   return (
     <div className="rounded-2xl border border-[var(--color-line-soft)] bg-[var(--color-surface)] p-4">
       <div className="space-y-0.5">
-        {items.length === 0 && <p className="py-1 text-sm text-[var(--color-ink-faint)]">Nothing planned yet — write your first action below.</p>}
+        {items.length === 0 && <p className="py-1 text-sm text-[var(--color-ink-faint)]">Nothing planned for this day yet — write below.</p>}
         {items.map((it) => (
           <div key={it.id} className="group flex items-start gap-2 rounded-lg px-1 py-1">
-            <button onClick={canAct ? () => onToggle(it.id) : undefined} className={`mt-0.5 shrink-0 ${canAct ? '' : 'cursor-default'}`}>
+            <button onClick={canTick ? () => onToggle(it.id) : undefined} title={canTick ? undefined : 'Ticking counts on the day itself'} className={`mt-0.5 shrink-0 ${canTick ? '' : 'cursor-default opacity-50'}`}>
               {it.done ? <CheckCircle2 size={17} className="text-[var(--color-good)]" /> : <Circle size={17} className="text-[var(--color-ink-faint)]" />}
             </button>
             {editing === it.id ? (
@@ -259,11 +284,12 @@ function PlanArea({ items, canAct, focusKey, cap, placeholder, onToggle, onRemov
                 title={canAct && !it.done ? 'Click to edit' : undefined}
               >
                 <span className={`text-sm font-medium ${it.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>{it.title}</span>
+                {it.byAdama ? <span className="ml-2 rounded-full bg-[var(--color-brand-50)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-brand)]">from Adama</span> : null}
                 {it.carried ? <span className="ml-2 rounded-full bg-[var(--color-bad-bg,#fef2f2)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-bad)]">from yesterday</span> : null}
               </span>
             )}
             {canAct && editing !== it.id && (
-              <button onClick={() => onRemove(it.id)} title="Remove" className="shrink-0 rounded p-0.5 text-[var(--color-ink-faint)] opacity-0 transition-opacity hover:text-[var(--color-bad)] group-hover:opacity-100"><X size={14} /></button>
+              <button onClick={() => onRemove(it.id, date)} title="Remove" className="shrink-0 rounded p-0.5 text-[var(--color-ink-faint)] opacity-0 transition-opacity hover:text-[var(--color-bad)] group-hover:opacity-100"><X size={14} /></button>
             )}
           </div>
         ))}
