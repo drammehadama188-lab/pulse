@@ -478,13 +478,13 @@ export default function HRTeam({
                 {w.focus.length === 0 && <p className="text-sm text-gray-400">Nothing behind target.</p>}
                 {w.focus.map((f, i) => (
                   <div key={f.key} className="text-sm text-gray-700">
-                    <span className="font-semibold">{i === 0 ? 'Main' : 'Second'}:</span> {f.objective}
-                    {f.progress && <span className="ml-1.5 font-bold tabular-nums">{f.progress.actual}/{f.progress.goal}</span>}
+                    <span className="font-semibold">{i === 0 ? 'Primary' : 'Supporting'}:</span> {f.title} — {(f.metrics || []).map((m) => `${m.label.toLowerCase()} ${m.value}`).join(' · ')}
+                    {f.progress && <span className="ml-1.5 font-bold tabular-nums">today {f.progress.actual}/{f.progress.goal}</span>}
                   </div>
                 ))}
               </div>
-              {w.lastLog && (
-                <p className="mt-2 rounded-lg bg-gray-50 px-2.5 py-2 text-xs text-gray-600"><span className="font-semibold">End of day ({new Date(`${w.lastLog.date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}):</span> {w.lastLog.text}</p>
+              {w.carry && (
+                <p className="mt-2 rounded-lg bg-gray-50 px-2.5 py-2 text-xs text-gray-600"><span className="font-semibold">Carrying to tomorrow:</span> {w.carry}</p>
               )}
               {w.assignments.length > 0 && (
                 <div className="mt-2 space-y-0.5 text-xs text-gray-600">

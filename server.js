@@ -1425,23 +1425,21 @@ app.get('/api/team/member/:username', auth, (req, res) => {
   })
 })
 
-// ---------- MY WORKDAY (the team lead's workbench — Adama 9 Jul v3) ----------
-// "This page is the manager's workbench — the desk he sits at every morning."
-// Pulse prepares the day: a Main focus (50%) and Secondary focus (30%) picked
-// from whatever is furthest behind, each with a today-sized objective, auto
-// progress where a feed can measure it, and starter steps; Quick tasks (20%)
-// keep the machine tidy. He ticks, adds his own named items (Pulse knows
-// counts, not customers), writes an End-of-Day note Adama reads, keeps a
-// private scratchpad, and receives "From Adama" assignments. Anything
-// unfinished rolls into tomorrow automatically. Stores: 'workday' (day
-// records), 'workday-notes', 'assignments', 'ops-snapshots' (daily metric
-// photos that keep "done today" honest).
+// ---------- MY WORKDAY (the manager's desk — Adama 9 Jul v5) ----------
+// "The software informs. The manager manages." The system shows reality —
+// goal, done, remaining, today's target, live done-today progress — and the
+// PLAN is his: an empty writing area per objective ("These are the fires. You
+// decide how to put them out."). Admin & Follow-ups auto-populates small jobs
+// he can tick, delete or extend. Working Notes = his desk scratchpad. Carry
+// Forward ("what still needs attention tomorrow?") turns each line into
+// tomorrow's items, and unfinished work rolls over by itself. He can also
+// write a plan for a day ahead. Stores: 'workday' (plans/ticks/deletions/
+// carry), 'workday-notes', 'assignments', 'ops-snapshots'.
 
 function opsSnapshots() { return db.read('ops-snapshots', []) }
 function opsSaveSnapshot(snap) {
   const all = opsSnapshots().filter((s) => !(s.username === snap.username && s.date === snap.date))
   all.push(snap)
-  // keep a rolling month per lead — history beyond diffing has no reader
   db.write('ops-snapshots', all.filter((s) => s.date >= new Date(Date.now() - 35 * 86400000).toISOString().slice(0, 10)))
 }
 
@@ -1502,7 +1500,6 @@ async function opsMetrics(lead) {
   }
 }
 
-// Working days left in the month including today (Mon–Sat, Blue Book week).
 function workingDaysLeft(today) {
   const [y, m, d] = today.split('-').map(Number)
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate()
@@ -1514,11 +1511,9 @@ function workingDaysLeft(today) {
   return Math.max(1, n)
 }
 
-// FOCUS ENGINE: what's furthest behind gets the morning. Returns candidate
-// focus blocks with severity, an objective sized for TODAY (remaining work ÷
-// working days left), auto progress where a feed can measure it, and 2-3
-// concrete starter steps (the lead adds his own named calls on top — Pulse
-// only knows counts, not which customer is Musa).
+// OBJECTIVES — the system shows REALITY (goal, done, remaining, today's
+// target, live progress); it never writes the plan. "These are the fires —
+// you decide how to put them out" (Adama 9 Jul v5). No auto steps.
 function workdayFocus(x, prevSnap) {
   const first = (m) => m.name.split(' ')[0]
   const daysLeft = workingDaysLeft(x.today)
@@ -1527,20 +1522,19 @@ function workdayFocus(x, prevSnap) {
   // Renewals
   if (x.retF && x.rnDue) {
     const need = Math.ceil(x.rnDue * 0.8)
-    if (x.rnRen < need) {
-      const remaining = need - x.rnRen
+    const remaining = Math.max(0, need - x.rnRen)
+    if (remaining > 0) {
       const goal = Math.min(remaining, Math.max(1, Math.ceil(remaining / daysLeft)))
-      const doneToday = prevSnap && prevSnap.rnRen != null && x.rnRen != null ? Math.max(0, x.rnRen - prevSnap.rnRen) : 0
+      const doneToday = prevSnap && prevSnap.rnRen != null ? Math.max(0, x.rnRen - prevSnap.rnRen) : 0
       F.push({
         key: 'renewals', severity: 70 + Math.min(20, remaining), title: 'Renewals',
-        objective: `Renew at least ${goal} customer${goal === 1 ? '' : 's'} today`,
-        because: `only ${x.rnRen} of the ${need} needed are done (${x.rnDue} due this month)`,
-        progress: { actual: doneToday, goal, unit: 'renewed today' },
-        steps: [
-          x.yafatou ? `Get today's due list from ${first(x.yafatou)}` : 'Pull the due list from Admin → Renewals',
-          'Renewal calls — morning block',
-          'Record each renewal in Admin',
+        metrics: [
+          { label: 'Monthly goal', value: `${need} renewals` },
+          { label: 'Completed', value: String(x.rnRen) },
+          { label: 'Remaining', value: String(remaining) },
+          { label: "Today's target", value: String(goal) },
         ],
+        progress: { actual: doneToday, goal, unit: 'renewed today' },
       })
     }
   }
@@ -1551,66 +1545,77 @@ function workdayFocus(x, prevSnap) {
     if (remaining > 0 && x.teamWon < pace) {
       const goal = Math.max(1, Math.ceil(remaining / daysLeft))
       const doneToday = prevSnap && prevSnap.teamWon != null ? Math.max(0, x.teamWon - prevSnap.teamWon) : 0
-      const quiet = x.sellers.filter((m) => x.wonBy(m) === 0)
       F.push({
         key: 'sales', severity: 85 + (pace - x.teamWon), title: 'Sales',
-        objective: `Push the team to close ${goal} sale${goal === 1 ? '' : 's'} today`,
-        because: `${x.teamWon}/${x.teamTarget} sold${quiet.length ? ` — ${quiet.map(first).join(' and ')} still at zero` : ''}`,
-        progress: { actual: doneToday, goal, unit: 'closed today' },
-        steps: [
-          quiet.length ? `Pipeline review with ${quiet.map(first).join(' and ')}` : 'Pipeline review with the agents',
-          'Follow up yesterday’s leads',
+        metrics: [
+          { label: 'Monthly goal', value: String(x.teamTarget) },
+          { label: 'Current', value: String(x.teamWon) },
+          { label: "Today's target", value: String(goal) },
         ],
+        agents: x.sellers.map((m) => ({ name: first(m), won: x.wonBy(m) })),
+        progress: { actual: doneToday, goal, unit: 'closed today' },
       })
     }
   }
-  // Cases
+  // Customer cases
   if (x.casesF && typeof x.casesF.casesPct === 'number' && x.casesF.casesPct < 85) {
     const open = Number(x.casesF.openOverdue) || 0
     const goal = open ? Math.min(open, Math.max(1, Math.ceil(open / 2))) : 1
     const doneToday = prevSnap && prevSnap.casesOnTime != null && typeof x.casesF.onTime === 'number' ? Math.max(0, x.casesF.onTime - prevSnap.casesOnTime) : 0
     F.push({
       key: 'cases', severity: 60 + Math.min(25, 85 - x.casesF.casesPct), title: 'Customer cases',
-      objective: open ? `Clear ${goal} overdue case${goal === 1 ? '' : 's'} today` : 'Get case resolution back above 85%',
-      because: `resolution is at ${Math.round(x.casesF.casesPct)}% (target 85)${open ? ` with ${open} past deadline` : ''}`,
-      progress: { actual: doneToday, goal, unit: 'resolved today' },
-      steps: [
-        x.yafatou ? `Sit with ${first(x.yafatou)} on the open list` : 'Review the open case list',
-        'Escalate anything stuck with a customer',
+      metrics: [
+        { label: 'Resolution', value: `${Math.round(x.casesF.casesPct)}%` },
+        { label: 'Goal', value: '85%' },
+        ...(open ? [{ label: 'Past deadline', value: String(open) }] : []),
+        { label: "Today's target", value: `clear ${goal}` },
       ],
+      progress: { actual: doneToday, goal, unit: 'resolved today' },
     })
   }
   // Google reviews
   if (x.reviewsCount != null && x.reviewsTarget && x.reviewsCount < x.reviewsTarget) {
     const remaining = x.reviewsTarget - x.reviewsCount
-    const goal = Math.max(1, Math.ceil(remaining / daysLeft))
     F.push({
       key: 'reviews', severity: 55, title: 'Google reviews',
-      objective: `Get ${goal} five-star review${goal === 1 ? '' : 's'} requested today`,
-      because: `${x.reviewsCount}/${x.reviewsTarget} this month — ask today's happy customers`,
+      metrics: [
+        { label: 'Monthly goal', value: String(x.reviewsTarget) },
+        { label: 'Current', value: String(x.reviewsCount) },
+        { label: 'Remaining', value: String(remaining) },
+      ],
+      agents: x.sellers.map((m) => ({ name: first(m), won: x.reviewsBy(m) })),
       progress: null,
-      steps: x.sellers.map((m) => `${first(m)} asks their last happy customer`),
     })
   }
   // Trackers online
   if (x.onlPct != null && x.onlPct < 75) {
     F.push({
-      key: 'online', severity: 62 + Math.min(20, 75 - x.onlPct), title: 'Trackers offline',
-      objective: `Bring silent trackers back — ${x.onlTotal - x.onlOn} offline`,
-      because: `book is at ${x.onlPct}% online (target 75)`,
+      key: 'online', severity: 62 + Math.min(20, 75 - x.onlPct), title: 'Trackers online',
+      metrics: [
+        { label: 'Online now', value: `${x.onlPct}%` },
+        { label: 'Goal', value: '75%' },
+        { label: 'Silent', value: String(x.onlTotal - x.onlOn) },
+      ],
       progress: prevSnap && prevSnap.onlOn != null && x.onlOn != null ? { actual: Math.max(0, x.onlOn - prevSnap.onlOn), goal: Math.max(1, Math.ceil((x.onlTotal - x.onlOn) / 3)), unit: 'back online today' } : null,
-      steps: ['Get the offline list from Admin', 'Split call-outs between the agents'],
     })
   }
-  // Sales feed down — honest fallback
+  // Sales feed down — honest fallback, still no prescriptions
   if (x.teamWon == null && x.teamTarget) {
-    F.push({ key: 'sales', severity: 50, title: 'Sales', objective: `Find out where the team is on ${x.teamTarget} sales`, because: 'the Admin feed is unreachable — get the numbers from the agents directly', progress: null, steps: ['Ask each agent for their count', 'Check Admin is up'] })
+    F.push({
+      key: 'sales', severity: 50, title: 'Sales',
+      metrics: [
+        { label: 'Monthly goal', value: String(x.teamTarget) },
+        { label: 'Current', value: '? — Admin unreachable' },
+      ],
+      agents: null,
+      progress: null,
+    })
   }
   F.sort((a, b) => b.severity - a.severity)
   return F
 }
 
-// Maintenance / quick tasks — the 20%: small items that keep the machine tidy.
+// Admin & Follow-ups — auto-populated small jobs. He can tick, DELETE or add.
 function workdayQuick(x) {
   const first = (m) => m.name.split(' ')[0]
   const q = []
@@ -1624,7 +1629,7 @@ function workdayQuick(x) {
   return q
 }
 
-// ---- day record store: the lead's ticks, own items and end-of-day log ----
+// ---- day record store: his plan, ticks, deletions and the carry-forward box ----
 function workdayStore() { return db.read('workday', []) }
 function workdayGet(username, date) { return workdayStore().find((d) => d.username === username && d.date === date) || null }
 function workdaySave(day) {
@@ -1633,26 +1638,27 @@ function workdaySave(day) {
   db.write('workday', all.filter((d) => d.date >= new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10)))
 }
 
-// Build (or refresh) today's day record: auto steps for the current focus
-// blocks (stable ids keep ticks) + the lead's own items + AUTO CARRY-FORWARD
-// of yesterday's unfinished checklist ("any unfinished work automatically
-// rolls into tomorrow" — no rewriting).
-function workdayToday(lead, focus, quick) {
+// Today's items: auto small jobs (stable ids keep ticks; a deleted one stays
+// deleted), his own plan items, yesterday's unfinished work carried forward,
+// and each line of yesterday's Carry Forward box turned into an item.
+function workdayToday(lead, quick) {
   const today = todayKey()
-  const stored = workdayGet(lead.username, today) || { username: lead.username, date: today, items: [], log: '' }
+  const stored = workdayGet(lead.username, today) || { username: lead.username, date: today, items: [], carry: '' }
   const byId = new Map(stored.items.map((i) => [i.id, i]))
-  focus.forEach((f, fi) => f.steps.forEach((title, si) => {
-    const id = `step-${f.key}-${si}`
-    if (!byId.has(id)) byId.set(id, { id, title, focusKey: f.key, done: false, auto: true })
-  }))
   quick.forEach((qi) => { if (!byId.has(qi.id)) byId.set(qi.id, { id: qi.id, title: qi.title, focusKey: 'quick', done: false, auto: true, to: qi.to }) })
-  // carry yesterday's unfinished items forward, marked
   const yk = new Date(`${today}T00:00:00Z`); yk.setUTCDate(yk.getUTCDate() - 1)
   const prev = workdayGet(lead.username, yk.toISOString().slice(0, 10))
   if (prev) {
     for (const p of prev.items) {
-      if (p.done || byId.has(p.id)) continue
+      if (p.done || p.deleted || byId.has(p.id)) continue
       byId.set(p.id, { ...p, done: false, carried: (p.carried || 0) + 1 })
+    }
+    // Carry Forward box → tomorrow's items, once (marker survives in stored.carriedFromBox)
+    if (prev.carry && !stored.carriedFromBox) {
+      for (const line of String(prev.carry).split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 20)) {
+        byId.set(`carry-${crypto.randomUUID().slice(0, 8)}`, { id: `carry-${crypto.randomUUID().slice(0, 8)}`, title: line.slice(0, 160), focusKey: 'quick', done: false, own: true, carried: 1 })
+      }
+      stored.carriedFromBox = true
     }
   }
   const day = { ...stored, items: [...byId.values()] }
@@ -1670,7 +1676,6 @@ function workdayLeadFor(req) {
   return u && leadsATeam(u) ? u : null
 }
 
-// assignments FROM the CEO — their own section, their own colour
 function assignmentsFor(username) {
   return db.read('assignments', []).filter((a) => a.toUsername === username && !a.archived)
     .sort((a, b) => String(a.due || '9999').localeCompare(String(b.due || '9999')))
@@ -1682,7 +1687,6 @@ app.get('/api/workday', auth, async (req, res) => {
   try {
     const x = await opsMetrics(lead)
     const prevSnap = opsSnapshots().filter((s) => s.username === lead.username && s.date < x.today).sort((a, b) => (a.date < b.date ? 1 : -1))[0] || null
-    // today's snapshot keeps the "done today" progress honest tomorrow
     opsSaveSnapshot({
       username: lead.username, date: x.today,
       teamWon: x.teamWon, rnRen: x.retF ? x.rnRen : null,
@@ -1690,26 +1694,27 @@ app.get('/api/workday', auth, async (req, res) => {
       onlOn: x.onlF ? x.onlOn : null,
     })
     const allFocus = workdayFocus(x, prevSnap)
-    // 50 / 30 / 20: the top two behind-areas get the day; the rest is upkeep
-    const focus = allFocus.slice(0, 2).map((f, i) => ({ ...f, share: i === 0 ? 50 : 30, slot: i === 0 ? 'Main focus' : 'Secondary focus' }))
+    const focus = allFocus.slice(0, 2).map((f, i) => ({ ...f, slot: i === 0 ? 'Primary objective' : 'Supporting objective' }))
     const quick = workdayQuick(x)
-    const day = workdayToday(lead, focus, quick)
+    const day = workdayToday(lead, quick)
+    const tomorrowKeyD = new Date(`${x.today}T00:00:00Z`); tomorrowKeyD.setUTCDate(tomorrowKeyD.getUTCDate() + 1)
+    const tomorrow = workdayGet(lead.username, tomorrowKeyD.toISOString().slice(0, 10))
     const notes = (db.read('workday-notes', []).find((n) => n.username === lead.username) || {}).text || ''
-    // week bars
     const week = []
-    if (x.teamTarget) week.push({ label: 'Tracker sales', actual: x.teamWon, target: x.teamTarget })
-    if (x.retF && x.rnDue) week.push({ label: 'Renewals', actual: x.rnRen, target: x.rnDue })
-    if (x.reviewsTarget) week.push({ label: 'Google reviews', actual: x.reviewsCount, target: x.reviewsTarget })
+    if (x.teamTarget) week.push({ label: 'Sales', actual: x.teamWon, target: x.teamTarget })
+    if (x.retF && x.rnDue) week.push({ label: 'Renewals', actual: x.rnRen, target: Math.ceil(x.rnDue * 0.8) })
+    if (x.casesF && typeof x.casesF.casesPct === 'number') week.push({ label: 'Cases', actual: Math.round(x.casesF.casesPct), target: 100, unit: '%' })
     if (x.onlPct != null) week.push({ label: 'Trackers online', actual: x.onlPct, target: 100, unit: '%' })
+    if (x.reviewsTarget) week.push({ label: 'Google reviews', actual: x.reviewsCount, target: x.reviewsTarget })
     res.json({
       lead: { username: lead.username, name: lead.name },
       today: x.today,
       focus,
-      quickShare: 20,
-      items: day.items,
+      items: day.items.filter((i) => !i.deleted),
+      tomorrowItems: (tomorrow?.items || []).filter((i) => !i.deleted),
       fromAdama: assignmentsFor(lead.username),
       notes,
-      log: day.log || '',
+      carry: day.carry || '',
       week,
     })
   } catch (e) {
@@ -1721,39 +1726,58 @@ app.post('/api/workday/toggle', auth, notViewAs, (req, res) => {
   const lead = workdayLeadFor(req)
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
   const day = workdayGet(lead.username, todayKey())
-  const item = day?.items.find((i) => i.id === req.body?.itemId)
+  const item = day?.items.find((i) => i.id === req.body?.itemId && !i.deleted)
   if (!item) return res.status(404).json({ error: 'No such item today' })
   item.done = !item.done
+  item.doneAt = item.done ? new Date().toISOString() : null
   workdaySave(day)
-  res.json({ ok: true, items: day.items })
+  res.json({ ok: true, items: day.items.filter((i) => !i.deleted) })
 })
 
+// Remove an item from the list — auto items get a tombstone so the generator
+// doesn't resurrect them tomorrow morning.
+app.post('/api/workday/remove', auth, notViewAs, (req, res) => {
+  const lead = workdayLeadFor(req)
+  if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
+  const day = workdayGet(lead.username, todayKey())
+  const item = day?.items.find((i) => i.id === req.body?.itemId)
+  if (!item) return res.status(404).json({ error: 'No such item today' })
+  item.deleted = true
+  workdaySave(day)
+  res.json({ ok: true, items: day.items.filter((i) => !i.deleted) })
+})
+
+// Add to the plan — today by default; `date` may point up to a week ahead so
+// he can write tomorrow's plan before leaving ("the page is already prepared").
 app.post('/api/workday/add', auth, notViewAs, (req, res) => {
   const lead = workdayLeadFor(req)
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
   const title = String(req.body?.title || '').trim()
   if (!title) return res.status(400).json({ error: 'title required' })
-  const focusKey = String(req.body?.focusKey || 'quick')
   const today = todayKey()
-  const day = workdayGet(lead.username, today) || { username: lead.username, date: today, items: [], log: '' }
+  let date = /^\d{4}-\d{2}-\d{2}$/.test(req.body?.date || '') ? req.body.date : today
+  const max = new Date(`${today}T00:00:00Z`); max.setUTCDate(max.getUTCDate() + 7)
+  if (date < today || date > max.toISOString().slice(0, 10)) return res.status(400).json({ error: 'Pick today or up to a week ahead' })
+  const focusKey = String(req.body?.focusKey || 'quick')
+  const day = workdayGet(lead.username, date) || { username: lead.username, date, items: [], carry: '' }
   day.items.push({ id: `own-${crypto.randomUUID().slice(0, 8)}`, title: title.slice(0, 160), focusKey, done: false, own: true })
   workdaySave(day)
-  res.json({ ok: true, items: day.items })
+  res.json({ ok: true, date, items: day.items.filter((i) => !i.deleted) })
 })
 
-// End of Day — "what happened today?" One honest paragraph; Adama's overview
-// reads it, so the day closes itself instead of a report meeting.
-app.post('/api/workday/log', auth, notViewAs, (req, res) => {
+// Carry Forward — "what still needs attention tomorrow?" Each line becomes an
+// item on tomorrow's list automatically. Not homework; a handover to himself.
+app.post('/api/workday/carry', auth, notViewAs, (req, res) => {
   const lead = workdayLeadFor(req)
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
   const today = todayKey()
-  const day = workdayGet(lead.username, today) || { username: lead.username, date: today, items: [], log: '' }
-  day.log = String(req.body?.text || '').slice(0, 2000)
+  const day = workdayGet(lead.username, today) || { username: lead.username, date: today, items: [], carry: '' }
+  day.carry = String(req.body?.text || '').slice(0, 2000)
   workdaySave(day)
   res.json({ ok: true })
 })
 
-// Personal scratchpad — the lead's running notes. Not shown on the CEO overview.
+// Working Notes — the lead's desk scratchpad. Not shown on the CEO overview.
 app.post('/api/workday/notes', auth, notViewAs, (req, res) => {
   const lead = workdayLeadFor(req)
   if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
@@ -1793,8 +1817,8 @@ app.delete('/api/assignments/:id', auth, notViewAs, (req, res) => {
   res.json({ ok: true })
 })
 
-// CEO overview: each lead's focus, checklist progress, assignments and the
-// latest End-of-Day note — the whole point of not being in the dark.
+// CEO overview: each lead's objectives, plan progress, assignments and what
+// they're carrying to tomorrow — out of the dark without asking.
 app.get('/api/workday/overview', auth, async (req, res) => {
   if (req.realUser?.username !== CEO && !can(req.user, 'hr')) return res.status(403).json({ error: 'forbidden' })
   const leads = seedUsers().filter((u) => !isArchived(u) && leadsATeam(u))
@@ -1806,15 +1830,14 @@ app.get('/api/workday/overview', auth, async (req, res) => {
       const prevSnap = opsSnapshots().filter((s) => s.username === lead.username && s.date < today).sort((a, b) => (a.date < b.date ? 1 : -1))[0] || null
       const focus = workdayFocus(x, prevSnap).slice(0, 2)
       const day = workdayGet(lead.username, today)
-      const doneCount = (day?.items || []).filter((i) => i.done).length
-      // latest end-of-day note (today's if written, else yesterday's)
-      const logs = workdayStore().filter((d) => d.username === lead.username && d.log).sort((a, b) => (a.date < b.date ? 1 : -1))
+      const items = (day?.items || []).filter((i) => !i.deleted)
       out.push({
         lead: { username: lead.username, name: lead.name },
-        focus: focus.map((f) => ({ key: f.key, title: f.title, objective: f.objective, progress: f.progress })),
-        doneCount, totalItems: (day?.items || []).length,
+        focus: focus.map((f) => ({ key: f.key, title: f.title, metrics: f.metrics, progress: f.progress })),
+        doneCount: items.filter((i) => i.done).length,
+        totalItems: items.length,
         assignments: assignmentsFor(lead.username),
-        lastLog: logs[0] ? { date: logs[0].date, text: logs[0].log } : null,
+        carry: day?.carry || '',
       })
     } catch { /* skip a lead we can't build */ }
   }
