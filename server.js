@@ -2071,6 +2071,208 @@ app.get('/api/workday/overview', auth, async (req, res) => {
   res.json({ leads: out })
 })
 
+// ---------- REPORTS (Adama 10 Jul: team weekly + business monthly) ----------
+// Both DERIVE on read — a finished week/month is stable data (snapshots, day
+// records, audit), so there is nothing to generate, store or forget. The team
+// report is SHARED: Momodou opens the same document Adama does.
+
+function weekDaysOf(monday) {
+  const out = []
+  const d = new Date(`${monday}T00:00:00Z`)
+  for (let i = 0; i < 5; i++) { out.push(d.toISOString().slice(0, 10)); d.setUTCDate(d.getUTCDate() + 1) }
+  return out
+}
+function mondayOf(dateKey) {
+  const d = new Date(`${dateKey}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7))
+  return d.toISOString().slice(0, 10)
+}
+
+// What actually moved during [mon..fri]: snapshot at/after the week's end
+// minus the last snapshot before the week began. null = not enough history.
+function weekDelta(username, mon, fri, field) {
+  const snaps = opsSnapshots().filter((s) => s.username === username && s[field] != null).sort((a, b) => a.date.localeCompare(b.date))
+  if (!snaps.length) return null
+  const before = [...snaps].reverse().find((s) => s.date < mon) || null
+  const endSnap = [...snaps].reverse().find((s) => s.date <= fri) || null
+  if (!endSnap) return null
+  const base = before ? Number(before[field]) || 0 : (snaps[0].date <= fri ? Number(snaps[0][field]) || 0 : null)
+  if (base == null) return null
+  return Math.max(0, (Number(endSnap[field]) || 0) - base)
+}
+
+app.get('/api/report/week', auth, async (req, res) => {
+  const lead = workdayLeadFor(req)
+  if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
+  try {
+    const today = todayKey()
+    const mon = mondayOf(/^\d{4}-\d{2}-\d{2}$/.test(req.query.start || '') ? req.query.start : today)
+    const days = weekDaysOf(mon)
+    const fri = days[4]
+    const x = await opsMetrics(lead)
+    const CUR = today.slice(0, 7)
+
+    // the five goals: month target, month standing (live), what THIS WEEK added
+    const goals = [
+      { key: 'sales', title: 'Sales', target: kpiNumber('team-lead', 'team-sales', CUR)?.target ?? null, actual: x.teamWon, unit: 'sales', weekDone: weekDelta(lead.username, mon, fri, 'teamWon') },
+      { key: 'renewals', title: 'Renewals', target: x.retF && x.rnDue ? Math.ceil(x.rnDue * (x.rnTargetPct / 100)) : null, actual: x.retF ? x.rnRen : null, unit: 'renewals', weekDone: weekDelta(lead.username, mon, fri, 'rnRen') },
+      { key: 'cases', title: 'Customer cases', target: x.casesTargetPct, actual: x.casesF && typeof x.casesF.casesPct === 'number' ? Math.round(x.casesF.casesPct) : null, unit: '%', weekDone: weekDelta(lead.username, mon, fri, 'casesOnTime') },
+      { key: 'online', title: 'Trackers online', target: x.onlineTargetPct, actual: x.onlPct, unit: '%', weekDone: null },
+      { key: 'reviews', title: 'Google reviews', target: x.reviewsTarget, actual: x.reviewsCount, unit: 'reviews', weekDone: null },
+    ]
+
+    // objectives that held the chair each day (stored slots; rotation as fallback)
+    const pick = objectivePickFor(lead.username)
+    const objectivesByDay = days.map((d) => {
+      const rec = workdayGet(lead.username, d)
+      const keys = rec?.slots?.primary ? rec.slots : rotationKeys(rec?.pool || [], pick, d)
+      return { date: d, primary: keys.primary, supporting: keys.supporting }
+    })
+
+    // plan discipline: per objective area, what was planned / done / carried
+    const plan = {}
+    let adamaTotal = 0, adamaDone = 0
+    const adamaMissed = []
+    for (const d of days) {
+      if (d > today) continue
+      const rec = workdayGet(lead.username, d)
+      for (const i of (rec?.items || [])) {
+        if (i.deleted) continue
+        const k = i.focusKey || 'other'
+        plan[k] = plan[k] || { total: 0, done: 0, carried: 0 }
+        plan[k].total++
+        if (i.done) plan[k].done++
+        if (i.carried) plan[k].carried++
+        if (i.byAdama) {
+          adamaTotal++
+          if (i.done) adamaDone++
+          else if (d < today) adamaMissed.push({ title: i.title, date: d })
+        }
+      }
+    }
+
+    // his comments + honesty notes, from the audit trail of this week
+    const audit = db.read('workday-audit', []).filter((e) => e.lead === lead.username && e.at.slice(0, 10) >= mon && e.at.slice(0, 10) <= fri)
+    const comments = {}
+    for (const e of audit.filter((e) => e.action === 'comment').sort((a, b) => a.at.localeCompare(b.at))) comments[e.detail?.key] = e.detail?.text
+    const flags = audit.filter((e) => (e.action === 'unticked' || e.action === 'removed') && e.actor === lead.username)
+      .map((e) => ({ action: e.action, title: e.detail?.title, at: e.at }))
+
+    // team attendance for the week (Mon–Fri, leave excused)
+    const attAll = db.read('attendance', [])
+    const leaveAll = db.read('leave', [])
+    const schedules = db.read('schedules', {})
+    const attendance = x.members.map((m) => {
+      let scheduled = 0, worked = 0, late = 0
+      for (const d of days) {
+        if (d > today || d < ATTENDANCE_START) continue
+        const shift = effectiveWeek(schedules[m.username], d)[dowOfKey(d)]
+        if (!shift || leaveOnDate(leaveAll, m.username, d)) continue
+        scheduled++
+        const a = attAll.find((r) => r.username === m.username && r.date === d)
+        if (a?.checkIn) { worked++; if (a.late) late++ }
+      }
+      return { name: m.name, scheduled, worked, late }
+    })
+
+    res.json({
+      lead: { username: lead.username, name: lead.name },
+      week: { start: mon, end: fri, days },
+      generatedAt: new Date().toISOString(),
+      currentMonth: CUR,
+      goals,
+      objectivesByDay,
+      plan,
+      fromAdama: { total: adamaTotal, done: adamaDone, missed: adamaMissed },
+      comments,
+      objNotes: (db.read('workday-objnotes', []).find((n) => n.username === lead.username) || {}).notes || {},
+      flags,
+      attendance,
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// ---- the business report: one month, the whole company (CEO only) ----
+app.get('/api/report/business', auth, async (req, res) => {
+  if (req.realUser?.username !== CEO) return res.status(403).json({ error: 'forbidden' })
+  try {
+    const today = todayKey()
+    const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : today.slice(0, 7)
+    const [salesF, retF, revF, instF, stockF, onlF] = await Promise.all([
+      fetchAdminFeed(`/api/integrations/pulse/sales?month=${month}`),
+      fetchAdminFeed(`/api/integrations/pulse/retention?month=${month}`),
+      fetchAdminFeed(`/api/integrations/pulse/reviews?month=${month}`),
+      fetchAdminInstall(month),
+      fetchAdminStock(month),
+      fetchAdminFeed('/api/integrations/pulse/online'),
+    ])
+    const sum = (feed, f) => (feed?.agents || []).reduce((s, a) => s + (Number(a[f]) || 0), 0)
+    const won = salesF ? sum(salesF, 'won') : null
+    const rnDue = retF ? sum(retF, 'due') : null
+    const rnRen = retF ? sum(retF, 'renewed') : null
+    const reviews = revF ? sum(revF, 'verified') : null
+    const onlTotal = onlF ? sum(onlF, 'total') : null
+    const onlOn = onlF ? sum(onlF, 'online') : null
+    // cases: Yafatou's number is the company number
+    const yafatou = seedUsers().find((u) => !isArchived(u) && u.department === 'Customer Service')
+    const casesF = yafatou ? await fetchAdminCases(yafatou.name, month) : null
+
+    const T = (role, kpi, fb) => kpiNumber(role, kpi, month)?.target ?? fb
+    const rnTargetPct = T('customer-service', 'renewal', 80)
+    const goals = [
+      { title: 'Sales', target: T('team-lead', 'team-sales', 12), actual: won, unit: 'sales' },
+      { title: 'Renewals', target: rnDue != null ? Math.ceil(rnDue * (rnTargetPct / 100)) : null, actual: rnRen, unit: `of ${rnDue ?? '?'} due` },
+      { title: 'Cases resolved on time', target: T('customer-service', 'cases', 85), actual: casesF && typeof casesF.casesPct === 'number' ? Math.round(casesF.casesPct) : null, unit: '%' },
+      { title: 'Installations in 3 days', target: T('customer-service', 'install', 95), actual: instF && typeof instF.installPct === 'number' ? Math.round(instF.installPct) : null, unit: '%' },
+      { title: 'Stock accountability', target: T('customer-service', 'stock', 100), actual: stockF && typeof stockF.accountabilityPct === 'number' ? Math.round(stockF.accountabilityPct) : null, unit: '%' },
+      { title: 'Trackers online (now)', target: T('team-lead', 'team-online', 75), actual: onlTotal ? Math.round((onlOn / onlTotal) * 100) : null, unit: '%' },
+      { title: 'Google reviews', target: T('sales', 'reviews', 3) * 2, actual: reviews, unit: 'reviews' },
+    ]
+
+    // money: payroll cost (recorded payments) + renewal revenue at flat D6,500
+    const payRecs = db.read('payroll', []).filter((r) => r.period === month)
+    const payrollCost = payRecs.reduce((s, r) => s + (Number(r.total) || 0), 0)
+    const money = {
+      payrollCost,
+      payrollPeople: payRecs.length,
+      renewalRevenue: rnRen != null ? rnRen * 6500 : null,
+      renewalOutstanding: rnDue != null && rnRen != null ? (rnDue - rnRen) * 6500 : null,
+    }
+
+    // team: headcount + month attendance (Mon–Fri, leave excused)
+    const members = seedUsers().filter((u) => !isArchived(u) && u.username !== CEO)
+    const attAll = db.read('attendance', [])
+    const leaveAll = db.read('leave', [])
+    const schedules = db.read('schedules', {})
+    let scheduled = 0, worked = 0, late = 0
+    for (const m of members) {
+      for (const d of monthKeys(month)) {
+        if (d > today || d < ATTENDANCE_START) continue
+        const shift = effectiveWeek(schedules[m.username], d)[dowOfKey(d)]
+        if (!shift || leaveOnDate(leaveAll, m.username, d)) continue
+        scheduled++
+        const a = attAll.find((r) => r.username === m.username && r.date === d)
+        if (a?.checkIn) { worked++; if (a.late) late++ }
+      }
+    }
+    const team = { headcount: members.length, scheduled, worked, late, attendancePct: scheduled ? Math.round((worked / scheduled) * 100) : null }
+
+    // flags: what needs a decision
+    const flags = []
+    for (const g of goals) {
+      if (g.actual == null) flags.push(`${g.title}: no data — check the Admin feed`)
+      else if (g.target != null && g.actual < g.target) flags.push(`${g.title} behind: ${g.actual}${g.unit === '%' ? '%' : ''} of ${g.target}${g.unit === '%' ? '%' : ''}`)
+    }
+    if (team.attendancePct != null && team.attendancePct < 90) flags.push(`Attendance at ${team.attendancePct}% — below 90`)
+
+    res.json({ month, generatedAt: new Date().toISOString(), goals, money, team, flags })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // ---------- schedules (per-person weekly roster) ----------
 // Mon–Fri 9–5 is the default for anyone without a saved override (Blue Book normal week).
 const DEFAULT_WEEK = {

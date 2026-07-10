@@ -44,6 +44,8 @@ export const NAV = [
   { id: 'requests', to: '/requests', label: 'Requests', icon: ClipboardCheck, group: 'Management', show: (u) => has(u, 'approvals') && !(u?.isTeamLead && u?.approvalsBeyondTeam === false) },
   // Reports composes server-side from whichever powers the person holds.
   { id: 'workday-monitor', to: '/workday-monitor', label: 'Team Workday', icon: Target, group: 'Management', show: mgr },
+  { id: 'weekly-report-mgr', to: '/weekly-report', label: 'Weekly Report', icon: BarChart3, group: 'Management', show: mgr },
+  { id: 'business-report', to: '/business-report', label: 'Business Report', icon: BarChart3, group: 'Management', show: isOwner },
   { id: 'reports', to: '/reports', label: 'Reports', icon: BarChart3, group: 'Management', show: (u) => ['team', 'approvals', 'payroll', 'hr'].some((p) => has(u, p)) },
   // 'records' (Employee Records / warnings) merged into "Employees & Records" tab.
 
@@ -58,6 +60,7 @@ export const NAV = [
   // MY TEAM — a team lead's scoped workspace over the people they manage (NOT the
   // whole company). Gated on isTeamLead (server-computed); pages re-check scope.
   { id: 'my-week', to: '/my-week', label: 'My Workday', icon: Target, group: 'My team', show: (u) => u?.isTeamLead },
+  { id: 'weekly-report-lead', to: '/weekly-report', label: 'Weekly Report', icon: BarChart3, group: 'My team', show: (u) => u?.isTeamLead && !has(u, 'hr') },
   { id: 'team-dashboard', to: '/team-dashboard', label: 'Team Dashboard', icon: LayoutDashboard, group: 'My team', show: (u) => u?.isTeamLead },
   { id: 'team-requests', to: '/team-requests', label: 'Team Requests', icon: ClipboardCheck, group: 'My team', show: (u) => u?.isTeamLead },
   { id: 'team-schedule', to: '/team-schedule', label: 'Team Schedule', icon: Clock, group: 'My team', show: (u) => u?.isTeamLead },
