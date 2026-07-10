@@ -16,8 +16,7 @@ import MyProgress from './pages/MyProgress.jsx'
 import TeamDashboard from './pages/TeamDashboard.jsx'
 import MyWeek from './pages/MyWeek.jsx'
 import WorkdayMonitor from './pages/WorkdayMonitor.jsx'
-import WeeklyReport from './pages/WeeklyReport.jsx'
-import BusinessReport from './pages/BusinessReport.jsx'
+import ReportsHub from './pages/ReportsHub.jsx'
 import TeamMember from './pages/TeamMember.jsx'
 import Attendance from './pages/Attendance.jsx'
 import Leave from './pages/Leave.jsx'
@@ -25,7 +24,6 @@ import Pay from './pages/Pay.jsx'
 import Profile from './pages/Profile.jsx'
 import ChangePassword from './pages/ChangePassword.jsx'
 import Approvals from './pages/manager/Approvals.jsx'
-import Reports from './pages/Reports.jsx'
 import Team from './pages/manager/Team.jsx'
 import HRTeam from './pages/departments/HRTeam.jsx'
 import EmployeeProfile from './pages/EmployeeProfile.jsx'
@@ -118,7 +116,7 @@ export default function App() {
         <Route path="/kpi-targets" element={<RequireAuth power="ceo"><KpiTargets /></RequireAuth>} />
         <Route path="/requests" element={<RequireAuth power="approvals"><Approvals /></RequireAuth>} />
         {/* Reports self-composes on the server from the viewer's powers. */}
-        <Route path="/reports" element={<RequireAuth><Reports /></RequireAuth>} />
+        <Route path="/reports" element={<RequireAuth><ReportsHub /></RequireAuth>} />
         <Route path="/records" element={<RequireAuth power="hr"><HRTeam only={['warnings']} title="Employee Records" subtitle="Warnings, disciplinary actions and notes" /></RequireAuth>} />
         {/* PAYROLL */}
         <Route path="/payroll" element={<RequireAuth power="payroll"><HRTeam only={['payroll']} title="Payroll" subtitle="Salaries, commission and payroll history" /></RequireAuth>} />
@@ -134,8 +132,8 @@ export default function App() {
         <Route path="/team-dashboard" element={<RequireAuth teamLead><TeamDashboard /></RequireAuth>} />
         <Route path="/my-week" element={<RequireAuth teamLead><MyWeek /></RequireAuth>} />
         <Route path="/workday-monitor" element={<RequireAuth power="hr"><WorkdayMonitor /></RequireAuth>} />
-        <Route path="/weekly-report" element={<RequireAuth><WeeklyReport /></RequireAuth>} />
-        <Route path="/business-report" element={<RequireAuth power="ceo"><BusinessReport /></RequireAuth>} />
+        <Route path="/weekly-report" element={<Navigate to="/reports?tab=weekly" replace />} />
+        <Route path="/business-report" element={<Navigate to="/reports?tab=business" replace />} />
         <Route path="/team-member/:username" element={<RequireAuth teamLead><TeamMember /></RequireAuth>} />
         {/* MY TEAM — existing pages reused, scoped to the lead's own team (Adama 1 Jul). */}
         <Route path="/team-requests" element={<RequireAuth teamLead><Approvals scope="team" /></RequireAuth>} />
