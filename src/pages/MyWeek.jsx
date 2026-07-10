@@ -100,23 +100,28 @@ export default function MyWeek() {
       {/* plan days — today up to next week's Friday */}
       <DayStrip days={data.days} today={data.today} selDate={selDate} onSelect={setSelDate} planByDate={data.planByDate} />
 
-      {/* objectives — the system shows the goal, HE writes the plan */}
-      {data.focus.length === 0 && (
-        <Card className="p-6 text-sm text-[var(--color-ink-soft)]">Nothing is behind target — your other objective below, and push the month further.</Card>
-      )}
-      {data.focus.map((f, i) => (
-        <ObjectiveSection
-          key={f.key}
-          slot={f.slot} title={f.title} metrics={f.metrics} agents={f.agents} progress={isToday ? f.progress : null} weekPlan={f.weekPlan}
-          primary={i === 0} canAct={canAct} canTick={canAct && isToday}
-          items={itemsFor(f.key)} focusKey={f.key} date={selDate}
-          placeholder={f.key === 'renewals' ? 'e.g. Call Musa' : 'e.g. Sit with Sally on her pipeline'}
-          cap={i === 0 ? 10 : 8}
-          note={objNotes[f.key] || ''} noteSaved={!!noteSaved[f.key]}
-          onNote={(text) => saveObjNote(f.key, text)}
-          onToggle={toggle} onRemove={remove} onAdd={add} onEdit={editItem}
-        />
-      ))}
+      {/* objectives — rotate day by day so every goal gets the chair */}
+      {(() => {
+        const keys = data.focusByDate?.[selDate] || { primary: data.focus[0]?.key, supporting: data.focus[1]?.key }
+        return [keys.primary, keys.supporting].filter(Boolean).map((k, i) => {
+          const f = data.focusBlocks?.[k] || data.focus.find((x) => x.key === k)
+          if (!f) return null
+          return (
+            <ObjectiveSection
+              key={`${selDate}-${k}`}
+              slot={i === 0 ? 'Primary objective' : 'Supporting objective'} title={f.title} metrics={f.metrics} agents={f.agents}
+              progress={isToday ? f.progress : null} weekPlan={f.weekPlan}
+              primary={i === 0} canAct={canAct} canTick={canAct && isToday}
+              items={itemsFor(k)} focusKey={k} date={selDate}
+              placeholder={k === 'renewals' ? 'e.g. Call Musa' : 'e.g. Sit with Sally on her pipeline'}
+              cap={i === 0 ? 10 : 8}
+              note={objNotes[k] || ''} noteSaved={!!noteSaved[k]}
+              onNote={(text) => saveObjNote(k, text)}
+              onToggle={toggle} onRemove={remove} onAdd={add} onEdit={editItem}
+            />
+          )
+        })
+      })()}
 
       {/* the OTHER objective — unspecified, his to name */}
       <section>

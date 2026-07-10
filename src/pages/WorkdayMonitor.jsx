@@ -52,6 +52,14 @@ export default function WorkdayMonitor() {
   }
   useEffect(() => { if (lead) loadLead(lead) }, [lead])
 
+  async function setObjectives(field, value) {
+    const cur = data.objectivePick || { primary: '', supporting: '' }
+    const next = { ...cur, [field]: value }
+    try {
+      await api('/workday/objectives', { method: 'POST', body: { username: lead, primary: next.primary, supporting: next.supporting } })
+      loadLead(lead)
+    } catch (e) { alert(e.message) }
+  }
   async function saveOther() {
     try { await api('/workday/other', { method: 'POST', body: { username: lead, title: otherDraft.trim() } }); loadLead(lead) }
     catch (e) { alert(e.message) }
@@ -73,10 +81,16 @@ export default function WorkdayMonitor() {
 
   const dayItems = data.planByDate[selDate] || []
   const itemsFor = (key) => dayItems.filter((i) => i.focusKey === key)
+  const dayKeys = data.focusByDate?.[selDate] || { primary: data.focus[0]?.key, supporting: data.focus[1]?.key }
+  const blockOf = (k) => data.focusBlocks?.[k] || data.focus.find((x) => x.key === k) || { key: k, title: k, metrics: [] }
   const sections = [
-    ...data.focus.map((f, i) => ({ key: f.key, label: `${i === 0 ? 'Primary' : 'Supporting'} — ${f.title}`, metrics: f.metrics, progress: f.progress, note: data.objNotes?.[f.key] || '' })),
+    ...[dayKeys.primary, dayKeys.supporting].filter(Boolean).map((k, i) => {
+      const f = blockOf(k)
+      return { key: k, label: `${i === 0 ? 'Primary' : 'Supporting'} — ${f.title}`, metrics: f.metrics || [], progress: selDate === data.today ? f.progress : null, note: data.objNotes?.[k] || '' }
+    }),
     { key: 'other', label: null, metrics: [], progress: null, note: data.objNotes?.other || '' },
   ]
+  const KEY_LABELS = { renewals: 'Renewals', sales: 'Sales', cases: 'Customer cases', online: 'Trackers online', reviews: 'Google reviews' }
 
   return (
     <div className="max-w-5xl space-y-7">
@@ -123,6 +137,24 @@ export default function WorkdayMonitor() {
       )}
 
       <DayStrip days={data.days} today={data.today} selDate={selDate} onSelect={setSelDate} planByDate={data.planByDate} />
+
+      {/* objectives rotate daily; Adama can pin them here — only he can */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm">
+        <span className="font-semibold text-gray-700">Objectives:</span>
+        {['primary', 'supporting'].map((field) => (
+          <label key={field} className="flex items-center gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wide text-gray-400">{field}</span>
+            <select
+              value={(data.objectivePick || {})[field] || ''}
+              onChange={(e) => setObjectives(field, e.target.value)}
+              className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+            >
+              <option value="">Auto — rotates daily</option>
+              {Object.entries({ renewals: 'Renewals', sales: 'Sales', cases: 'Customer cases', online: 'Trackers online', reviews: 'Google reviews' }).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </label>
+        ))}
+      </div>
 
       {sections.map((sec) => (
         <div key={sec.key} className="rounded-2xl border border-gray-200 bg-white p-5">

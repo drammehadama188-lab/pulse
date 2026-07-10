@@ -1541,6 +1541,60 @@ function workingDaysLeft(today) {
   return Math.max(1, n)
 }
 
+// Every goal can hold the chair. When an area isn't behind, it still gets an
+// honest "hold the line" block so the rotation can put it in front.
+const OBJECTIVE_KEYS = ['renewals', 'sales', 'cases', 'online', 'reviews']
+function synthFocus(x, key) {
+  const first = (m) => m.name.split(' ')[0]
+  if (key === 'renewals') {
+    const need = x.retF && x.rnDue ? Math.ceil(x.rnDue * (x.rnTargetPct / 100)) : null
+    return { key, title: 'Renewals', metrics: [
+      { label: 'Monthly goal', value: need != null ? `${need} renewals` : '—' },
+      { label: 'Completed', value: x.retF ? String(x.rnRen) : '—' },
+    ], progress: null, onTrack: true }
+  }
+  if (key === 'sales') {
+    return { key, title: 'Sales', metrics: [
+      { label: 'Monthly goal', value: x.teamTarget != null ? String(x.teamTarget) : '—' },
+      { label: 'Current', value: x.teamWon != null ? String(x.teamWon) : '—' },
+    ], agents: x.salesF ? x.sellers.map((m) => ({ name: first(m), won: x.wonBy(m) })) : null, progress: null, onTrack: true }
+  }
+  if (key === 'cases') {
+    return { key, title: 'Customer cases', metrics: [
+      { label: 'Resolution', value: x.casesF && typeof x.casesF.casesPct === 'number' ? `${Math.round(x.casesF.casesPct)}%` : '—' },
+      { label: 'Goal', value: `${x.casesTargetPct}%` },
+    ], progress: null, onTrack: true }
+  }
+  if (key === 'online') {
+    return { key, title: 'Trackers online', metrics: [
+      { label: 'Online now', value: x.onlPct != null ? `${x.onlPct}%` : '—' },
+      { label: 'Goal', value: `${x.onlineTargetPct}%` },
+    ], progress: null, onTrack: true }
+  }
+  return { key: 'reviews', title: 'Google reviews', metrics: [
+    { label: 'Monthly goal', value: x.reviewsTarget != null ? String(x.reviewsTarget) : '—' },
+    { label: 'Current', value: x.reviewsCount != null ? String(x.reviewsCount) : '—' },
+  ], progress: null, onTrack: true }
+}
+
+// ROTATION (Adama 10 Jul: "everyday cannot be sales and cases — 5 goals, at
+// least one has to be primary everyday, mixing"): the behind-areas form the
+// pool (all five when nothing is behind), and the date walks the pool, so
+// each day a different goal takes the chair. Adama's stored picks override.
+function rotationKeys(poolKeys, pick, dateKey) {
+  const pool = poolKeys.length ? poolKeys : OBJECTIVE_KEYS
+  const dayIdx = Math.floor(new Date(`${dateKey}T00:00:00Z`).getTime() / 86400000)
+  let primary = pick?.primary && OBJECTIVE_KEYS.includes(pick.primary) ? pick.primary : pool[dayIdx % pool.length]
+  const pool2 = pool.filter((k) => k !== primary)
+  let supporting = pick?.supporting && OBJECTIVE_KEYS.includes(pick.supporting) && pick.supporting !== primary
+    ? pick.supporting
+    : (pool2.length ? pool2[dayIdx % pool2.length] : OBJECTIVE_KEYS.find((k) => k !== primary))
+  return { primary, supporting }
+}
+function objectivePickFor(username) {
+  return db.read('workday-objectives', []).find((o) => o.username === username) || {}
+}
+
 // OBJECTIVES — the system shows REALITY (goal, done, remaining, today's
 // target, live progress); it never writes the plan. "These are the fires —
 // you decide how to put them out" (Adama 9 Jul v5). No auto steps.
@@ -1754,10 +1808,18 @@ app.get('/api/workday', auth, async (req, res) => {
       casesOnTime: x.casesF && typeof x.casesF.onTime === 'number' ? x.casesF.onTime : null,
       onlOn: x.onlF ? x.onlOn : null,
     })
-    const allFocus = workdayFocus(x, prevSnap)
-    const focus = allFocus.slice(0, 2).map((f, i) => ({ ...f, slot: i === 0 ? 'Primary objective' : 'Supporting objective' }))
+    const behind = workdayFocus(x, prevSnap)
+    const byKey = new Map(behind.map((f) => [f.key, f]))
+    const blockFor = (k) => byKey.get(k) || synthFocus(x, k)
+    const poolKeys = behind.map((f) => f.key)
+    const pick = objectivePickFor(lead.username)
+    const todayKeys = rotationKeys(poolKeys, pick, x.today)
+    const focus = [
+      { ...blockFor(todayKeys.primary), slot: 'Primary objective' },
+      { ...blockFor(todayKeys.supporting), slot: 'Supporting objective' },
+    ]
     const day = workdayToday(lead)
-    day.slots = { primary: focus[0]?.key || null, supporting: focus[1]?.key || null }
+    day.slots = { primary: todayKeys.primary, supporting: todayKeys.supporting }
     workdaySave(day)
     const objNotes = (db.read('workday-objnotes', []).find((n) => n.username === lead.username) || {}).notes || {}
     const week = []
@@ -1773,11 +1835,18 @@ app.get('/api/workday', auth, async (req, res) => {
         ? day.items.filter((i) => !i.deleted)
         : (workdayGet(lead.username, dte)?.items || []).filter((i) => !i.deleted)
     }
+    const focusByDate = Object.fromEntries(win.map((dte) => [dte, rotationKeys(poolKeys, pick, dte)]))
+    const focusBlocks = Object.fromEntries(OBJECTIVE_KEYS.map((k) => [k, blockFor(k)]))
+    day.pool = poolKeys
+    workdaySave(day)
     res.json({
       lead: { username: lead.username, name: lead.name },
       today: x.today,
       days: win,
       planByDate,
+      focusByDate,
+      focusBlocks,
+      objectivePick: { primary: pick.primary || '', supporting: pick.supporting || '' },
       focus,
       items: day.items.filter((i) => !i.deleted),
       otherTitle: (db.read('workday-other', []).find((o) => o.username === lead.username) || {}).title || '',
@@ -1832,8 +1901,9 @@ app.post('/api/workday/add', auth, notViewAs, (req, res) => {
   const focusKey = String(req.body?.focusKey || 'other')
   const day = workdayGet(lead.username, date) || { username: lead.username, date, items: [] }
   // Caps keep the plan honest (Adama 10 Jul): Primary 10, Supporting 8, Other 5.
-  const todaySlots = workdayGet(lead.username, today)?.slots || day.slots
-  const cap = focusKey === 'other' ? 5 : todaySlots?.primary === focusKey ? 10 : todaySlots?.supporting === focusKey ? 8 : 10
+  const todayRec = workdayGet(lead.username, today)
+  const dateKeys = rotationKeys(todayRec?.pool || [], objectivePickFor(lead.username), date)
+  const cap = focusKey === 'other' ? 5 : dateKeys.primary === focusKey ? 10 : dateKeys.supporting === focusKey ? 8 : 10
   const count = day.items.filter((i) => i.focusKey === focusKey && !i.deleted).length
   if (count >= cap) return res.status(400).json({ error: `This plan is full (${cap} max) — finish or remove something first` })
   const byAdama = req.realUser?.username === CEO && lead.username !== CEO
@@ -1872,6 +1942,21 @@ app.post('/api/workday/other', auth, notViewAs, (req, res) => {
   all.push({ username: lead.username, title: newTitle, updatedAt: new Date().toISOString() })
   db.write('workday-other', all)
   workdayAudit(lead, req, 'other-objective', { title: newTitle })
+  res.json({ ok: true })
+})
+
+// Adama picks the objectives himself when he wants to — overrides the daily
+// rotation until cleared ('' = back to auto).
+app.post('/api/workday/objectives', auth, notViewAs, (req, res) => {
+  if (req.realUser?.username !== CEO) return res.status(403).json({ error: 'Only Adama sets the objectives' })
+  const lead = workdayLeadFor(req)
+  if (!lead) return res.status(403).json({ error: 'not-a-team-lead' })
+  const clean = (v) => (OBJECTIVE_KEYS.includes(v) ? v : null)
+  const all = db.read('workday-objectives', []).filter((o) => o.username !== lead.username)
+  const rec = { username: lead.username, primary: clean(req.body?.primary), supporting: clean(req.body?.supporting), setAt: new Date().toISOString() }
+  all.push(rec)
+  db.write('workday-objectives', all)
+  workdayAudit(lead, req, 'objectives-set', { primary: rec.primary || 'auto', supporting: rec.supporting || 'auto' })
   res.json({ ok: true })
 })
 
@@ -1948,7 +2033,10 @@ app.get('/api/workday/overview', auth, async (req, res) => {
     try {
       const x = await opsMetrics(lead)
       const prevSnap = opsSnapshots().filter((s) => s.username === lead.username && s.date < today).sort((a, b) => (a.date < b.date ? 1 : -1))[0] || null
-      const focus = workdayFocus(x, prevSnap).slice(0, 2)
+      const behindO = workdayFocus(x, prevSnap)
+      const bkO = new Map(behindO.map((f) => [f.key, f]))
+      const tkO = rotationKeys(behindO.map((f) => f.key), objectivePickFor(lead.username), today)
+      const focus = [bkO.get(tkO.primary) || synthFocus(x, tkO.primary), bkO.get(tkO.supporting) || synthFocus(x, tkO.supporting)]
       const day = workdayGet(lead.username, today)
       const items = (day?.items || []).filter((i) => !i.deleted)
       const objNotes = (db.read('workday-objnotes', []).find((n) => n.username === lead.username) || {}).notes || {}
