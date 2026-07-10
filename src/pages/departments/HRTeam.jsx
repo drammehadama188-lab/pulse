@@ -80,13 +80,26 @@ export default function HRTeam({
   // Per-person payroll history is owner/CEO-only. Managers with the payroll
   // power still see the month + total, but not who was paid what.
   const canSeePayDetail = user?.username === 'adama';
-  // "Momodou's day" card — every team lead's auto-built Top 3 with live ticks,
-  // so Adama sees the plan AND the execution without asking (9 Jul).
+  // Workday card — every team lead's focus, checklist progress, latest
+  // End-of-Day note, plus a composer to send them a task (9 Jul v3).
   const [weekOverview, setWeekOverview] = useState(null);
+  const [assignDraft, setAssignDraft] = useState({}); // username -> { title, due }
+  function loadWorkdayOverview() {
+    api('/workday/overview').then((d) => setWeekOverview(d.leads || [])).catch(() => setWeekOverview([]));
+  }
   useEffect(() => {
     if (!only || !only.includes('dashboard')) return;
-    api('/myweek/overview').then((d) => setWeekOverview(d.leads || [])).catch(() => setWeekOverview([]));
+    loadWorkdayOverview();
   }, []);
+  async function sendAssignment(username) {
+    const d = assignDraft[username] || {};
+    if (!String(d.title || '').trim()) return;
+    try {
+      await api('/assignments', { method: 'POST', body: { username, title: d.title.trim(), due: d.due || null } });
+      setAssignDraft((s) => ({ ...s, [username]: { title: '', due: '' } }));
+      loadWorkdayOverview();
+    } catch (e) { alert(e.message); }
+  }
   const [openPayMonth, setOpenPayMonth] = useState(null);
   // History is grouped by year; the current year is open, older years collapse
   // so the page doesn't become an endless scroll of months.
@@ -453,28 +466,38 @@ export default function HRTeam({
 
       {showOverview && weekOverview && weekOverview.length > 0 && (
         <div className="mb-6 grid gap-3 md:grid-cols-2">
-          {weekOverview.map((w) => (
+          {weekOverview.map((w) => {
+            const d = assignDraft[w.lead.username] || { title: '', due: '' };
+            return (
             <div key={w.lead.username} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-gray-900">{w.lead.name}'s priorities today</p>
-                <span className="text-[11px] font-semibold text-gray-400">{w.priorities.length === 0 ? 'all on track' : `${w.priorities.length} open`}</span>
+                <p className="text-sm font-semibold text-gray-900">{w.lead.name}'s workday</p>
+                <span className="text-[11px] font-semibold text-gray-400">{w.doneCount}/{w.totalItems} ticked</span>
               </div>
               <div className="space-y-1.5">
-                {w.priorities.length === 0 && <p className="text-sm text-gray-400">Nothing is on fire.</p>}
-                {w.priorities.map((p) => (
-                  <div key={p.key} className="flex items-start gap-2 text-sm">
-                    <span className="mt-0.5">{p.tier === 'high' ? '🔥' : p.tier === 'medium' ? '🟠' : '🟡'}</span>
-                    <span className="flex-1 text-gray-700">{p.n}. {p.title} <span className="font-bold tabular-nums">{p.metric}</span></span>
+                {w.focus.length === 0 && <p className="text-sm text-gray-400">Nothing behind target.</p>}
+                {w.focus.map((f, i) => (
+                  <div key={f.key} className="text-sm text-gray-700">
+                    <span className="font-semibold">{i === 0 ? 'Main' : 'Second'}:</span> {f.objective}
+                    {f.progress && <span className="ml-1.5 font-bold tabular-nums">{f.progress.actual}/{f.progress.goal}</span>}
                   </div>
                 ))}
               </div>
-              {w.health && (
-                <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-gray-100 pt-2 text-[11px] text-gray-500">
-                  {w.health.map((h) => <span key={h.area}>{h.status === 'green' ? '🟢' : h.status === 'amber' ? '🟡' : h.status === 'red' ? '🔴' : '⚪'} {h.area}</span>)}
+              {w.lastLog && (
+                <p className="mt-2 rounded-lg bg-gray-50 px-2.5 py-2 text-xs text-gray-600"><span className="font-semibold">End of day ({new Date(`${w.lastLog.date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}):</span> {w.lastLog.text}</p>
+              )}
+              {w.assignments.length > 0 && (
+                <div className="mt-2 space-y-0.5 text-xs text-gray-600">
+                  {w.assignments.map((a) => <div key={a.id}>{a.done ? '✓' : '○'} {a.title}{a.due ? ` · due ${a.due}` : ''}</div>)}
                 </div>
               )}
+              <div className="mt-3 flex gap-1.5 border-t border-gray-100 pt-2">
+                <input value={d.title} onChange={(e) => setAssignDraft((s) => ({ ...s, [w.lead.username]: { ...d, title: e.target.value } }))} onKeyDown={(e) => e.key === 'Enter' && sendAssignment(w.lead.username)} placeholder={`Send ${w.lead.name.split(' ')[0]} a task…`} className="min-w-0 flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs" />
+                <input type="date" value={d.due || ''} onChange={(e) => setAssignDraft((s) => ({ ...s, [w.lead.username]: { ...d, due: e.target.value } }))} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-gray-600" />
+                <button onClick={() => sendAssignment(w.lead.username)} className="rounded-lg bg-gray-900 px-2.5 py-1.5 text-xs font-bold text-white">Send</button>
+              </div>
             </div>
-          ))}
+          );})}
         </div>
       )}
 
