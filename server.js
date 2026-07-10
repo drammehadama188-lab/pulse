@@ -1581,8 +1581,18 @@ function synthFocus(x, key) {
 // least one has to be primary everyday, mixing"): the behind-areas form the
 // pool (all five when nothing is behind), and the date walks the pool, so
 // each day a different goal takes the chair. Adama's stored picks override.
+const ROTATION_FROM = '2026-07-13' // Adama 10 Jul: the 10th keeps the plan
+// Momodou already wrote (Sales + Cases, severity order); rotation starts Monday.
 function rotationKeys(poolKeys, pick, dateKey) {
   const pool = poolKeys.length ? poolKeys : OBJECTIVE_KEYS
+  if (dateKey < ROTATION_FROM) {
+    const primary = pick?.primary && OBJECTIVE_KEYS.includes(pick.primary) ? pick.primary : pool[0]
+    const rest = pool.filter((k) => k !== primary)
+    const supporting = pick?.supporting && OBJECTIVE_KEYS.includes(pick.supporting) && pick.supporting !== primary
+      ? pick.supporting
+      : (rest[0] || OBJECTIVE_KEYS.find((k) => k !== primary))
+    return { primary, supporting }
+  }
   const dayIdx = Math.floor(new Date(`${dateKey}T00:00:00Z`).getTime() / 86400000)
   let primary = pick?.primary && OBJECTIVE_KEYS.includes(pick.primary) ? pick.primary : pool[dayIdx % pool.length]
   const pool2 = pool.filter((k) => k !== primary)
