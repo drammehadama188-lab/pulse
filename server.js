@@ -1464,7 +1464,13 @@ async function opsMetrics(lead) {
   const rowFor = (feed, m) => (feed?.agents || []).find((a) => a.name === m.name) || null
   const wonBy = (m) => Number(rowFor(salesF, m)?.won) || 0
   const teamWon = salesF ? sellers.reduce((s, m) => s + wonBy(m), 0) : null
-  const teamTarget = sellers.reduce((s, m) => s + (Number(salesStore[m.name]?.monthlyTarget) || 0), 0) || null
+  // Team goal = the KPI Targets store (Pulse is the source of truth — Adama
+  // 10 Jul: "the monthly goal is 12, each agent 6"). Fallbacks: per-agent KPI
+  // target × sellers, then the old per-agent sheet sum.
+  const perAgentTarget = kpiNumber('sales', 'sales', CUR)?.target ?? null
+  const teamTarget = kpiNumber('team-lead', 'team-sales', CUR)?.target
+    ?? (perAgentTarget != null && sellers.length ? perAgentTarget * sellers.length : null)
+    ?? (sellers.reduce((s, m) => s + (Number(salesStore[m.name]?.monthlyTarget) || 0), 0) || null)
   const perSellerReviews = (kpiNumber('sales', 'reviews', CUR) || { target: 3 }).target
   const reviewsTarget = perSellerReviews != null && sellers.length ? perSellerReviews * sellers.length : null
   const reviewsBy = (m) => Number(rowFor(revF, m)?.verified) || 0
