@@ -409,15 +409,51 @@ function notViewAs(req, res, next) {
   next()
 }
 
+// ---------- login brute-force lockout (Adama 15 Jul security fix) ----------
+// In-memory, per (email + client IP): LOGIN_MAX_FAILS failures inside the window
+// → locked for LOGIN_LOCK_MS. Cleared on a successful login. Mirrors the admin
+// app's lockout. A constant dummy hash is always compared for unknown emails so
+// response timing can't distinguish "no such account" from "wrong password".
+const LOGIN_DUMMY_HASH = bcrypt.hashSync('x'.repeat(24), 10)
+const loginFails = new Map() // key -> { count, firstAt, lockedUntil }
+const LOGIN_MAX_FAILS = 5
+const LOGIN_WINDOW_MS = 15 * 60 * 1000
+const LOGIN_LOCK_MS = 15 * 60 * 1000
+const loginKey = (username, req) => `${String(username || '').toLowerCase()}|${clientIp(req)}`
+const loginLocked = (key) => { const r = loginFails.get(key); return !!(r && r.lockedUntil > Date.now()) }
+function loginRecordFail(key) {
+  const now = Date.now()
+  let r = loginFails.get(key)
+  if (!r || now - r.firstAt > LOGIN_WINDOW_MS) r = { count: 0, firstAt: now, lockedUntil: 0 }
+  r.count++
+  if (r.count >= LOGIN_MAX_FAILS) r.lockedUntil = now + LOGIN_LOCK_MS
+  loginFails.set(key, r)
+}
+const loginClear = (key) => loginFails.delete(key)
+
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body || {}
+  const key = loginKey(username, req)
+  if (loginLocked(key)) return res.status(429).json({ error: 'Too many attempts. Please wait a few minutes and try again.' })
+
   const user = username ? findUser(username) : null
-  if (!user) return res.status(401).json({ error: 'No account with that email' })
-  if (isArchived(user)) return res.status(403).json({ error: 'This account is archived' })
-  if (user.suspended) return res.status(403).json({ error: 'Your sign-in is paused. Speak to Adama.' })
-  if (REQUIRE_PASSWORD && !bcrypt.compareSync(password || '', user.passwordHash)) {
-    return res.status(401).json({ error: 'Invalid username or password' })
+  // Always run bcrypt (against a dummy hash for unknown users) so timing is
+  // uniform and a wrong email is indistinguishable from a wrong password.
+  const passwordOk = REQUIRE_PASSWORD
+    ? bcrypt.compareSync(password || '', user?.passwordHash || LOGIN_DUMMY_HASH)
+    : true
+  if (!user || !passwordOk) {
+    loginRecordFail(key)
+    // ONE generic message — never reveal whether the email exists (was four
+    // distinct messages that let an attacker enumerate real staff accounts).
+    return res.status(401).json({ error: 'Invalid email or password' })
   }
+  // Password is correct — only now is it safe to tell the real account holder
+  // about account state (these states no longer leak to wrong-password probes).
+  if (isArchived(user)) return res.status(403).json({ error: 'This account is archived. Speak to Adama.' })
+  if (user.suspended) return res.status(403).json({ error: 'Your sign-in is paused. Speak to Adama.' })
+
+  loginClear(key)
   const token = crypto.randomBytes(24).toString('hex')
   sessions[token] = { username: user.username, exp: Date.now() + 1000 * 60 * 60 * 24 * 14 }
   persistSessions()
