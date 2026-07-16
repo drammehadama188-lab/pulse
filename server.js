@@ -10,6 +10,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import bcrypt from 'bcryptjs'
 import { team, pastStaff } from './src/data/team.js'
+import { rosterPay, pastStaffPay, payrollHistory as legacyPayrollHistory, totalPayroll } from './lib/roster-pay.js'
 import { sallyCustomers, sallyMonthlyHistory } from './src/data/sally-sales-seed.js'
 import { buildPayrollHistory, zohoConfigured, paySources, recordSalaryPayment, resolveVendor, getExpense, deleteExpense, updateSalaryExpense, existingSalaryExpense, salaryExpensesForMonth } from './lib/zoho-books.js'
 import { sendMail, emailConfigured } from './lib/email.js'
@@ -423,8 +424,12 @@ app.post('/api/login', (req, res) => {
   res.json({ token, user: publicUser(user) })
 })
 
-app.get('/api/me', auth, (req, res) =>
-  res.json({ user: publicUser(req.user) }))
+app.get('/api/me', auth, (req, res) => {
+  // Own pay is fine to return to the person themselves (never bundled, never
+  // another person's). Keyed by name; created-via-Pulse staff use u.salary.
+  const own = rosterPay[req.user.name] || (req.user.salary ? { base: 0, commission: 0, transport: 0, total: Number(req.user.salary) } : null)
+  res.json({ user: publicUser(req.user), pay: own })
+})
 
 // Change own password. Verifies the current one, swaps the hash, clears the
 // first-login flag, and signs out every other session for this account.
@@ -3205,19 +3210,31 @@ app.get('/api/payroll/people', auth, requirePower('payroll'), (req, res) => {
   const merged = [...team, ...createdStaffRoster()].filter((p) => !archived.has(p.name))
   const people = merged.map((p) => {
     const u = seedUsers().find((x) => x.name === p.name)
+    // Pay lives server-side (lib/roster-pay.js), keyed by name. Created-via-Pulse
+    // staff carry their figure on the user record (u.salary) instead. Confirmed
+    // by Adama 15 Jul: rosterPay holds the identical figures moved out of team.js.
+    const pay = rosterPay[p.name] || (u?.salary ? { total: Number(u.salary) } : {})
     return {
       username: u?.username || null,
       name: p.name,
       title: p.role || u?.title || '',
       department: p.type || u?.department || '',
-      base: Number(p.base) || 0,
-      commission: Number(p.commission) || 0,
-      transport: Number(p.transport) || 0,
-      total: Number(p.total) || 0,
+      base: Number(pay.base) || 0,
+      commission: Number(pay.commission) || 0,
+      transport: Number(pay.transport) || 0,
+      total: Number(pay.total) || 0,
     }
   }).filter((p) => p.username)
   const scope = powerScopeSet(req.user, 'payroll')
   res.json({ people: people.filter((p) => scope.has(p.username)) })
+})
+
+// Past-staff settlement + legacy payroll history + payroll total. All pay data,
+// so payroll-gated (was bundled in the public JS until 15 Jul 2026). Feeds the HR
+// "past employees" pay fields, the Payroll History card, and the payroll total.
+app.get('/api/roster/private', auth, requirePower('payroll'), (req, res) => {
+  const pastStaffFull = (pastStaff || []).map((p) => ({ ...p, ...(pastStaffPay[p.name] || { pay: 0, finalPay: 0 }) }))
+  res.json({ pastStaff: pastStaffFull, payrollHistory: legacyPayrollHistory, totalPayroll })
 })
 
 // payslips — staff see their own; managers may read anyone's (?username=).

@@ -4,9 +4,13 @@ import {
   Users, DollarSign, AlertTriangle, Target, Shield,
   Plus, Edit2, Trash2, Settings, ChevronDown, UserX, RotateCcw,
 } from 'lucide-react';
-import { team, pastStaff, payrollHistory } from '../../data/team';
+// Pay data moved out of the bundle to permission-gated endpoints (Adama-approved
+// 15 Jul 2026 security fix — salaries were readable in the public JS). team.js no
+// longer carries pay; payrollHistory/totals/per-person pay come from lib/pay.js.
+import { team, pastStaff } from '../../data/team';
 import Contracts from '../Contracts.jsx';
 import { api } from '../../lib/api.js';
+import { rosterPay, rosterPrivate } from '../../lib/pay.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 
 // HR & Team — migrated from the Founder Hub HR page into Pulse.
@@ -17,8 +21,8 @@ const workingTeam = team.filter(t => t.status !== 'maternity');
 const activeTeam = team.filter(t => t.status === 'active');
 const probationTeam = team.filter(t => t.status === 'probation');
 const trainingTeam = team.filter(t => t.status === 'training');
-const totalBase = workingTeam.reduce((sum, t) => sum + t.base, 0);
-const totalPayroll = team.reduce((sum, t) => sum + t.total, 0);
+// Payroll totals are derived from the payroll-gated API inside the component
+// (was module-level from team.js pay, which no longer ships in the bundle).
 const today = new Date();
 
 const alerts = [];
@@ -122,8 +126,21 @@ export default function HRTeam({
   const [payLive, setPayLive] = useState(null);
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState(null);
+  // Pay from the payroll-gated endpoints, never the bundle (Adama-approved 15 Jul
+  // security fix). payMap: name -> { base, commission, transport, total }.
+  // priv: { pastStaff[], payrollHistory[], totalPayroll }. A non-payroll viewer
+  // gets empty data → pay renders as 0 / "—".
+  const [payMap, setPayMap] = useState({});
+  const [priv, setPriv] = useState(null);
+  useEffect(() => {
+    rosterPay().then((people) => { const m = {}; for (const x of people) m[x.name] = x; setPayMap(m); }).catch(() => {});
+    rosterPrivate().then(setPriv).catch(() => {});
+  }, []);
+  const pastPayMap = (priv?.pastStaff || []).reduce((m, x) => { m[x.name] = x; return m; }, {});
+  const totalBase = Object.values(payMap).reduce((s, x) => s + (Number(x.base) || 0), 0);
+  const totalPayroll = (priv?.totalPayroll ?? Object.values(payMap).reduce((s, x) => s + (Number(x.total) || 0), 0));
   // History data source + available years (used by the History sub-page filter).
-  const histMonths = canSeePayDetail && payLive ? payLive : payrollHistory;
+  const histMonths = canSeePayDetail && payLive ? payLive : (priv?.payrollHistory || []);
   const histYearOf = (m) => (m.ym ? m.ym.slice(0, 4) : (String(m.month).match(/\d{4}/)?.[0] || '—'));
   const histYears = [...new Set((histMonths || []).map(histYearOf))].sort((a, b) => b.localeCompare(a));
   // Run-payroll (write to Books) state.
@@ -945,8 +962,8 @@ export default function HRTeam({
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-4 pt-4 border-t border-gray-100">
                   <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Joined</p><p className="text-sm text-gray-900 mt-0.5">{p.joined || '—'}</p></div>
                   <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Department</p><p className="text-sm text-gray-900 mt-0.5">{p.type || '—'}</p></div>
-                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Salary</p><p className="text-sm text-gray-900 mt-0.5">D{(p.base || 0).toLocaleString()}</p></div>
-                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Commission</p><p className="text-sm text-gray-900 mt-0.5">{p.commission > 0 ? `Up to D${p.commission.toLocaleString()}` : '—'}</p></div>
+                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Salary</p><p className="text-sm text-gray-900 mt-0.5">D{(payMap[p.name]?.base || 0).toLocaleString()}</p></div>
+                  <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Commission</p><p className="text-sm text-gray-900 mt-0.5">{payMap[p.name]?.commission > 0 ? `Up to D${payMap[p.name].commission.toLocaleString()}` : '—'}</p></div>
                   <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Contract ends</p><p className={`text-sm mt-0.5 ${daysLeft !== null && daysLeft <= 30 ? 'text-red-600' : daysLeft !== null && daysLeft <= 90 ? 'text-amber-600' : 'text-gray-900'}`}>{ends}</p></div>
                   <div><p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Warnings</p><p className={`text-sm mt-0.5 ${warns > 0 ? 'text-red-600 font-medium' : 'text-gray-900'}`}>{warns}</p></div>
                 </div>
@@ -1085,7 +1102,7 @@ export default function HRTeam({
               <th className="text-right px-4 py-3 text-xs uppercase text-gray-500">Base</th><th className="text-right px-4 py-3 text-xs uppercase text-gray-500">Commission</th>
               <th className="text-right px-4 py-3 text-xs uppercase text-gray-500">Total</th>
             </tr></thead><tbody>
-              {team.map((p, i) => <tr key={i} className="border-b border-gray-100"><td className="px-4 py-3 text-sm font-medium text-gray-900">{p.name}</td><td className="px-4 py-3 text-sm text-gray-600">{p.role}</td><td className="px-4 py-3 text-sm text-right">D{p.base.toLocaleString()}</td><td className="px-4 py-3 text-sm text-right">{p.commission > 0 ? <span className="text-green-600">Up to D{p.commission.toLocaleString()}</span> : '—'}</td><td className="px-4 py-3 text-sm font-bold text-right">D{p.total.toLocaleString()}</td></tr>)}
+              {team.map((p, i) => { const pay = payMap[p.name] || {}; return <tr key={i} className="border-b border-gray-100"><td className="px-4 py-3 text-sm font-medium text-gray-900">{p.name}</td><td className="px-4 py-3 text-sm text-gray-600">{p.role}</td><td className="px-4 py-3 text-sm text-right">D{(pay.base || 0).toLocaleString()}</td><td className="px-4 py-3 text-sm text-right">{pay.commission > 0 ? <span className="text-green-600">Up to D{pay.commission.toLocaleString()}</span> : '—'}</td><td className="px-4 py-3 text-sm font-bold text-right">D{(pay.total || 0).toLocaleString()}</td></tr>; })}
             </tbody><tfoot><tr className="border-t-2 border-gray-300"><td colSpan={4} className="px-4 py-3 font-bold">Total</td><td className="px-4 py-3 text-lg font-bold text-right">D{totalPayroll.toLocaleString()}</td></tr></tfoot></table>
           </div>
           )}
@@ -1452,7 +1469,7 @@ export default function HRTeam({
       })()}
 
       {tab === 'past' && (() => {
-        const withCat = pastStaff.map(p => ({ ...p, cat: pastCategory(p.reason) }));
+        const withCat = pastStaff.map(p => ({ ...p, ...(pastPayMap[p.name] || {}), cat: pastCategory(p.reason) }));
         const cats = ['all', 'Resigned', 'Terminated', 'Contract Ended', 'Training/Internship'];
         const counts = withCat.reduce((m, p) => { m[p.cat] = (m[p.cat] || 0) + 1; return m; }, {});
         const shown = pastFilter === 'all' ? withCat : withCat.filter(p => p.cat === pastFilter);

@@ -14,8 +14,10 @@ export default function Pipeline() {
   const [period, setPeriod] = useState(() => computePeriod('this_month'))
 
   useEffect(() => {
-    Promise.all([api('/customers'), api('/activities'), api('/team')]).then(([c, a, t]) => {
-      setData({ customers: c.customers, activities: a.activities, me: t.team.find((x) => x.name === user.name) })
+    Promise.all([api('/customers'), api('/activities'), api('/team'), api('/me')]).then(([c, a, t, meResp]) => {
+      // Own commission from /api/me (pay is server-only, not in the /team roster).
+      const meRec = t.team.find((x) => x.name === user.name)
+      setData({ customers: c.customers, activities: a.activities, me: meRec ? { ...meRec, commission: meResp.pay?.commission || 0 } : meRec })
     })
   }, [user.name])
 

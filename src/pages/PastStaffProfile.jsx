@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, UserX } from 'lucide-react';
-import { pastStaff, payrollHistory } from '../data/team';
+import { pastStaff } from '../data/team';
+import { rosterPrivate } from '../lib/pay';
 
 // Past-staff profile — the company record for someone who has left. Everything
 // here is REAL: the exit summary comes from the pastStaff roster, and the
@@ -33,7 +35,12 @@ function Field({ label, value, accent }) {
 export default function PastStaffProfile() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  // Pay + ledger come from the payroll-gated endpoint, never the bundle. A
+  // viewer without payroll power gets empty data → pay shows "—".
+  const [priv, setPriv] = useState(null);
+  useEffect(() => { rosterPrivate().then(setPriv).catch(() => setPriv({ pastStaff: [], payrollHistory: [] })); }, []);
   const person = pastStaff.find((p) => slugify(p.name) === slug);
+  const privPerson = (priv?.pastStaff || []).find((p) => slugify(p.name) === slug) || {};
 
   if (!person) {
     return (
@@ -49,7 +56,7 @@ export default function PastStaffProfile() {
   const nameKey = norm(person.name);
 
   // Month-by-month pay matched out of the recorded ledger (itemised lines only).
-  const payLines = payrollHistory.flatMap((m) =>
+  const payLines = (priv?.payrollHistory || []).flatMap((m) =>
     (m.people || [])
       .filter((pl) => !pl.unallocated)
       .filter((pl) => {
@@ -84,8 +91,8 @@ export default function PastStaffProfile() {
         <h2 className="text-base font-semibold text-gray-900 mb-5">Exit record</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
           <Field label="Left" value={person.date} />
-          <Field label="Monthly pay" value={person.pay > 0 ? money(person.pay) : '—'} />
-          <Field label="Final settlement" value={person.finalPay > 0 ? money(person.finalPay) : '—'} />
+          <Field label="Monthly pay" value={privPerson.pay > 0 ? money(privPerson.pay) : '—'} />
+          <Field label="Final settlement" value={privPerson.finalPay > 0 ? money(privPerson.finalPay) : '—'} />
           <Field label="Total recorded paid" value={payLines.length ? money(totalPaid) : '—'} />
         </div>
         <div className="mt-5">

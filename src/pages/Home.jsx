@@ -22,15 +22,18 @@ export default function Home() {
   const [checking, setChecking] = useState(false)
 
   async function load() {
-    const [a, l, t] = await Promise.all([
+    const [a, l, t, meResp] = await Promise.all([
       api('/attendance/today'),
       api('/leave/mine'),
       api('/team'),
+      api('/me'),
     ])
     setAtt(a.record)
     setLeave(l)
+    // Roster record for display + own commission from /api/me (pay is server-only,
+    // no longer in the /team roster).
     const meRec = t.team.find((p) => p.name === user.name) || null
-    setMe(meRec)
+    setMe(meRec ? { ...meRec, commission: meResp.pay?.commission || 0 } : meRec)
     if (meRec?.type === 'Sales' || meRec?.type === 'Training') {
       const [{ customers }, { activities }] = await Promise.all([
         api('/customers'),

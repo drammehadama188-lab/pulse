@@ -6,6 +6,7 @@ import {
   Eye, Hand, Gavel, Briefcase, Award,
 } from 'lucide-react';
 import { team } from '../../data/team';
+import { payByName } from '../../lib/pay.js';
 import TimePeriodSelector from '../../components/TimePeriodSelector';
 import AgentFiles from '../../components/AgentFiles';
 import { getToken } from '../../lib/api.js';
@@ -68,6 +69,11 @@ function formatDate(iso) {
 
 export default function SupervisorProfile({ supervisor }) {
   const navigate = useNavigate();
+  // Adama-approved 15 Jul security fix: pay moved out of the public bundle to the
+  // payroll-gated endpoint. Same figures for authorized viewers (Adama/payroll);
+  // others get no pay, exactly as intended — cost was never meant to be public.
+  const [pay, setPay] = useState(null);
+  useEffect(() => { if (supervisor) payByName().then((m) => setPay(m[supervisor.name] || null)).catch(() => {}); }, [supervisor?.name]);
   const [crmTrackers, setCrmTrackers] = useState([]);
   const [feedback, setFeedback] = useState([]);
   const [newNote, setNewNote] = useState('');
@@ -197,7 +203,9 @@ export default function SupervisorProfile({ supervisor }) {
   const personalMonthlyTarget = supervisor.target || 5;
   const personalRangeDays = Math.max(1, Math.ceil(rangeMs / 86400000));
   const personalTarget = rangeKey === 'last_year' ? personalMonthlyTarget * 12 : Math.max(1, Math.round(personalMonthlyTarget * (personalRangeDays / 30)));
-  const cost = (supervisor.base || 0) + (supervisor.commission || 0);
+  // Pay now comes from the payroll-gated `pay` fetch (Adama-approved 15 Jul fix);
+  // identical base/commission figures, just no longer read from the public bundle.
+  const cost = (pay?.base || 0) + (pay?.commission || 0);
 
   const initials = supervisor.name.split(' ').map(w => w[0]).slice(0, 2).join('');
 

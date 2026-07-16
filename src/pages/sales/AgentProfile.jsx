@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Link as RouterLink } from 'react-router-dom';
 import { team } from '../../data/team';
+import { payByName } from '../../lib/pay.js';
 import TimePeriodSelector from '../../components/TimePeriodSelector';
 import SupervisorProfile from './SupervisorProfile';
 import AgentFiles from '../../components/AgentFiles';
@@ -231,6 +232,10 @@ export default function AgentProfile() {
     return <SupervisorProfile supervisor={agent} />;
   }
 
+  // Pay from the payroll-gated endpoint, never the bundle → cost/ROI show 0 for
+  // viewers without payroll power.
+  const [pay, setPay] = useState(null);
+  useEffect(() => { if (agent) payByName().then((m) => setPay(m[agent.name] || null)).catch(() => {}); }, [agent?.name]);
   const [feedback, setFeedback] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [noteCategory, setNoteCategory] = useState('coaching');
@@ -402,7 +407,7 @@ export default function AgentProfile() {
   const perf = proratedTarget ? Math.round((salesCount / proratedTarget) * 100) : 0;
   const rangeLabel = AGENT_PERIODS.find(r => r.value === rangeKey)?.label || (rangeKey === 'custom' ? 'Custom Range' : '');
 
-  const cost = (agent.base || 0) + (agent.commission || 0);
+  const cost = (pay?.base || 0) + (pay?.commission || 0);
   const profit = revenue - cost;
   const roi = cost > 0 ? Math.round((revenue / cost) * 100) : 0;
   const costPerSale = salesCount > 0 ? Math.round(cost / salesCount) : null;

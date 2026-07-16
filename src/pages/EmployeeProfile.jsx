@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Pencil, Upload, Download, FileText, AlertTriangle, CheckCircle2, Circle, RefreshCw, CalendarPlus, BadgeCheck, UserX, X, Trash2 } from 'lucide-react';
 import { team } from '../data/team';
 import { api } from '../lib/api.js';
+import { payByName } from '../lib/pay.js';
 
 // Employee Profile — a real HR profile, not a spreadsheet row. Phase 1:
 // Overview (employment + editable personal/contact), Documents (agent-files),
@@ -49,6 +50,11 @@ export default function EmployeeProfile() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const agent = team.find((t) => t.name.toLowerCase().replace(/\s+/g, '-') === slug);
+
+  // Pay from the payroll-gated endpoint, never the bundle. Empty for viewers
+  // without payroll power → salary/commission render as 0 / "—".
+  const [pay, setPay] = useState(null);
+  useEffect(() => { if (agent) payByName().then((m) => setPay(m[agent.name] || null)).catch(() => {}); }, [agent?.name]);
 
   const [tab, setTab] = useState('overview');
   const [profile, setProfile] = useState({});
@@ -296,8 +302,8 @@ export default function EmployeeProfile() {
               <Field label="Role" value={agent.role} />
               <Field label="Department" value={agent.type} />
               <Field label="Status" value={statusLabel} accent={isActive ? 'text-emerald-700' : 'text-gray-900'} />
-              <Field label="Base salary" value={`D${(agent.base || 0).toLocaleString()}`} />
-              <Field label="Commission" value={agent.commission > 0 ? `Up to D${agent.commission.toLocaleString()}` : '—'} accent={agent.commission > 0 ? 'text-emerald-700' : 'text-gray-900'} />
+              <Field label="Base salary" value={`D${(pay?.base || 0).toLocaleString()}`} />
+              <Field label="Commission" value={pay?.commission > 0 ? `Up to D${pay.commission.toLocaleString()}` : '—'} accent={pay?.commission > 0 ? 'text-emerald-700' : 'text-gray-900'} />
               <Field label="Warnings" value={String(warnings.length)} accent={warnings.length > 0 ? 'text-red-600' : 'text-gray-900'} />
             </div>
           </div>

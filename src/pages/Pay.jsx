@@ -58,8 +58,9 @@ export default function Pay() {
           setSelected(sel)
           await loadDetails(sel)
         } else {
-          const { team } = await api('/team')
-          setOwnRoster(team.find((p) => p.name === user.name) || null)
+          // Own pay comes from /api/me (server-only source, never bundled).
+          const me = await api('/me')
+          setOwnRoster(me.pay || null)
           await loadDetails(user.username)
         }
       } finally {
