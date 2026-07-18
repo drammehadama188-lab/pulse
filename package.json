@@ -8,7 +8,9 @@
     "server": "node server.js",
     "start": "node server.js & vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "postbuild": "node test/no-pay-in-bundle.test.mjs",
+    "preview": "vite preview",
+    "test": "node test/no-pay-in-bundle.test.mjs && node test/auth-coverage.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
