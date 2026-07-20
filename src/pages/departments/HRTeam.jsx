@@ -949,7 +949,7 @@ export default function HRTeam({
 
       {tab === 'roster' && (
         <div className="space-y-3">
-          {team.map((p, i) => {
+          {team.filter((p) => !archivedNames.has(p.name)).map((p, i) => {
             const warns = (warningsByAgent[p.name] || []).length;
             const ends = p.contractEnd ? new Date(p.contractEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
             const daysLeft = p.contractEnd ? Math.ceil((new Date(p.contractEnd) - today) / 86400000) : null;
@@ -1111,7 +1111,7 @@ export default function HRTeam({
               <th className="text-right px-4 py-3 text-xs uppercase text-gray-500">Base</th><th className="text-right px-4 py-3 text-xs uppercase text-gray-500">Commission</th>
               <th className="text-right px-4 py-3 text-xs uppercase text-gray-500">Total</th>
             </tr></thead><tbody>
-              {team.map((p, i) => { const pay = payMap[p.name] || {}; return <tr key={i} className="border-b border-gray-100"><td className="px-4 py-3 text-sm font-medium text-gray-900">{p.name}</td><td className="px-4 py-3 text-sm text-gray-600">{p.role}</td><td className="px-4 py-3 text-sm text-right">D{(pay.base || 0).toLocaleString()}</td><td className="px-4 py-3 text-sm text-right">{pay.commission > 0 ? <span className="text-green-600">Up to D{pay.commission.toLocaleString()}</span> : '—'}</td><td className="px-4 py-3 text-sm font-bold text-right">D{(pay.total || 0).toLocaleString()}</td></tr>; })}
+              {team.filter((p) => !archivedNames.has(p.name)).map((p, i) => { const pay = payMap[p.name] || {}; return <tr key={i} className="border-b border-gray-100"><td className="px-4 py-3 text-sm font-medium text-gray-900">{p.name}</td><td className="px-4 py-3 text-sm text-gray-600">{p.role}</td><td className="px-4 py-3 text-sm text-right">D{(pay.base || 0).toLocaleString()}</td><td className="px-4 py-3 text-sm text-right">{pay.commission > 0 ? <span className="text-green-600">Up to D{pay.commission.toLocaleString()}</span> : '—'}</td><td className="px-4 py-3 text-sm font-bold text-right">D{(pay.total || 0).toLocaleString()}</td></tr>; })}
             </tbody><tfoot><tr className="border-t-2 border-gray-300"><td colSpan={4} className="px-4 py-3 font-bold">Total</td><td className="px-4 py-3 text-lg font-bold text-right">D{totalPayroll.toLocaleString()}</td></tr></tfoot></table>
           </div>
           )}
