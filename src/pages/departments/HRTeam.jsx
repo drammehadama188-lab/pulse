@@ -86,6 +86,15 @@ export default function HRTeam({
   const canSeePayDetail = user?.username === 'adama';
   // Workday card — every team lead's focus, checklist progress, latest
   // End-of-Day note, plus a composer to send them a task (9 Jul v3).
+  // Terminated/archived people (server truth) — the static roster never
+  // changes on termination, so the list must derive from /past-agents
+  // (Adama 20 Jul: "terminated the contract and it still says active").
+  const [archivedAgents, setArchivedAgents] = useState([]);
+  useEffect(() => {
+    api('/past-agents').then((d) => setArchivedAgents((d.pastAgents || []).filter((p) => p.restorable))).catch(() => {});
+  }, []);
+  const archivedNames = useMemo(() => new Set(archivedAgents.map((p) => p.name)), [archivedAgents]);
+
   const [weekOverview, setWeekOverview] = useState(null);
   const [assignDraft, setAssignDraft] = useState({}); // username -> { title, due }
   function loadWorkdayOverview() {
@@ -633,10 +642,10 @@ export default function HRTeam({
               <h3 className="text-lg font-semibold text-gray-900">Performance</h3>
               <p className="text-sm text-gray-500 mt-1">Who is delivering and who is not</p>
             </div>
-            <p className="text-xs text-gray-400">{team.filter(t => t.status !== 'maternity').length} people</p>
+            <p className="text-xs text-gray-400">{team.filter(t => t.status !== 'maternity' && !archivedNames.has(t.name)).length} people</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {team.filter(t => t.status !== 'maternity').map((t, i) => {
+            {team.filter(t => t.status !== 'maternity' && !archivedNames.has(t.name)).map((t, i) => {
               const initials = t.name.split(' ').map(w => w[0]).slice(0, 2).join('');
               return (
                 <div key={i} onClick={() => openProfile(t.name)} className="bg-white rounded-3xl border border-gray-100 p-6 cursor-pointer hover:border-gray-300 hover:shadow-md transition-all">
@@ -1421,8 +1430,8 @@ export default function HRTeam({
         const expiring = contractDeadlines.filter(c => c.daysLeft > 0 && c.daysLeft <= 90).length;
         const probationCount = team.filter(t => t.status === 'probation').length;
         const cards = [
-          { label: 'Active employees', value: team.length },
-          { label: 'Past employees', value: pastStaff.length },
+          { label: 'Active employees', value: team.filter(t => !archivedNames.has(t.name)).length },
+          { label: 'Past employees', value: pastStaff.length + archivedAgents.length },
           { label: 'Warnings', value: allWarnings.length, accent: allWarnings.length > 0 ? 'text-red-600' : 'text-gray-900' },
           { label: 'Probation', value: probationCount, accent: probationCount > 0 ? 'text-amber-600' : 'text-gray-900' },
           { label: 'Contracts expiring', value: expiring, sub: '≤ 90 days', accent: expiring > 0 ? 'text-amber-600' : 'text-gray-900' },
@@ -1469,18 +1478,21 @@ export default function HRTeam({
       })()}
 
       {tab === 'past' && (() => {
-        const withCat = pastStaff.map(p => ({ ...p, ...(pastPayMap[p.name] || {}), cat: pastCategory(p.reason) }));
+        const archivedAsPast = archivedAgents
+          .filter(a => !pastStaff.some(p => p.name === a.name))
+          .map(a => ({ name: a.name, role: a.role, reason: a.reason, date: a.date }));
+        const withCat = [...archivedAsPast, ...pastStaff].map(p => ({ ...p, ...(pastPayMap[p.name] || {}), cat: pastCategory(p.reason) }));
         const cats = ['all', 'Resigned', 'Terminated', 'Contract Ended', 'Training/Internship'];
         const counts = withCat.reduce((m, p) => { m[p.cat] = (m[p.cat] || 0) + 1; return m; }, {});
         const shown = pastFilter === 'all' ? withCat : withCat.filter(p => p.cat === pastFilter);
         return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-1">Past Employees</h3>
-          <p className="text-sm text-gray-500 mb-4">Company history — {pastStaff.length} former team member{pastStaff.length === 1 ? '' : 's'}.</p>
+          <p className="text-sm text-gray-500 mb-4">Company history — {withCat.length} former team member{withCat.length === 1 ? '' : 's'}.</p>
           <div className="flex flex-wrap items-center gap-2 mb-5">
             {cats.map(c => (
               <button key={c} type="button" onClick={() => setPastFilter(c)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${pastFilter === c ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                {c === 'all' ? `All (${pastStaff.length})` : `${c}${counts[c] ? ` (${counts[c]})` : ''}`}
+                {c === 'all' ? `All (${withCat.length})` : `${c}${counts[c] ? ` (${counts[c]})` : ''}`}
               </button>
             ))}
           </div>
