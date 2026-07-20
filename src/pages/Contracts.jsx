@@ -60,7 +60,18 @@ function StatCard({ label, value, tone }) {
 
 export default function Contracts() {
   const navigate = useNavigate()
-  const roster = useMemo(() => team.filter((t) => t.status !== 'maternity'), [])
+  // Live contract truth (renew/extend/terminate live in the contracts store —
+  // the static roster never changes). Terminated people leave this page; real
+  // end dates override the seed (Adama 20 Jul: terminated still said Active).
+  const [live, setLive] = useState(null)
+  useEffect(() => { api('/contracts').then((d) => setLive(d.contracts || {})).catch(() => setLive({})) }, [])
+  const roster = useMemo(() => team
+    .filter((t) => t.status !== 'maternity')
+    .filter((t) => (live?.[t.name]?.status) !== 'terminated')
+    .map((t) => {
+      const c = live?.[t.name]
+      return c && c.end !== undefined ? { ...t, contractEnd: c.end } : t
+    }), [live])
   const [scores, setScores] = useState({})
   const [q, setQ] = useState('')
 
