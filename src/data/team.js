@@ -78,7 +78,7 @@ export const team = [
     history: [
       { date: '2023-08-01', event: 'Joined as Senior Sales Agent' },
       { date: '2025-11-01', event: 'Started 6-month maternity leave', dateApproximate: true },
-      { date: '2026-05-04', event: 'Returned from maternity leave' },
+      { date: '2026-05-01', event: 'Returned from maternity leave', note: 'Official return 1 May; first working day 4 May (public holidays)' },
     ],
   }),
   // --- SALES AGENTS: change 'sales' and 'revenueGenerated', rest auto-calculates ---
