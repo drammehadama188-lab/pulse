@@ -158,6 +158,18 @@ export default function StaffMember() {
   function toggleSignIn() {
     persist([...powers], !canSignIn, '__signin')
   }
+  async function toggleContractor() {
+    const next = !user.contractor
+    setSavingKey('__contractor')
+    setUser((u) => ({ ...u, contractor: next }))
+    try {
+      await api(`/staff/${username}/contractor`, { method: 'POST', body: { contractor: next } })
+    } catch {
+      setUser((u) => ({ ...u, contractor: !next }))
+    } finally {
+      setSavingKey(null)
+    }
+  }
 
   async function saveEmail() {
     setEmailBusy(true); setEmailMsg('')
@@ -226,6 +238,15 @@ export default function StaffMember() {
           </div>
           <Toggle on={canSignIn} disabled={savingKey === '__signin'} onClick={toggleSignIn} />
         </div>
+        {hasRealPower('staffadmin') && (
+          <div className="mt-3 flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Contractor</p>
+              <p className="text-xs text-gray-400">Contractors are paid through Payroll but do not check in or out and hold no schedule — they stay off every attendance view.</p>
+            </div>
+            <Toggle on={!!user.contractor} disabled={savingKey === '__contractor'} onClick={toggleContractor} />
+          </div>
+        )}
       </div>
 
       {/* Access — permission toggles, save instantly. CEO-only: Grant access

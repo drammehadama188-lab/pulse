@@ -135,6 +135,7 @@ function teamMembersFor(lead) {
   if (!leadsATeam(lead)) return []
   return seedUsers().filter((u) =>
     !isArchived(u) &&
+    !u.contractor &&
     PERF_DEPARTMENTS.includes(u.department) &&
     u.username !== lead.username,
   )
@@ -828,6 +829,19 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
   res.json({ staff: { username, name: rec.name, email: rec.email, title: rec.title }, invited })
 })
 
+// Mark someone as a contractor — stays on payroll and in the staff list, but
+// no check-in/out, no schedule, and off every attendance view (Adama 3 Aug:
+// Abdourahman is a contractor, he does not check in and out).
+app.post('/api/staff/:username/contractor', auth, requireSub('staffadmin', 'add'), notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === req.params.username)
+  if (!u) return res.status(404).json({ error: 'No such staff member' })
+  u.contractor = !!req.body?.contractor
+  ;(u.history ||= []).push({ date: todayKey(), event: u.contractor ? 'Marked as contractor — no check-in or schedule' : 'Contractor mark removed — back on schedules and check-in' })
+  db.write('users', users)
+  res.json({ ok: true, contractor: u.contractor })
+})
+
 // archive a staff member — keeps the record forever, blocks login, removes from active lists
 app.post('/api/staff/:username/archive', auth, requireSub('staffadmin', 'archive'), notViewAs, (req, res) => {
   const users = seedUsers()
@@ -914,6 +928,7 @@ app.get('/api/users', auth, requirePower('team'), (req, res) => {
       canDocsEdit: canSub(u, 'hr', 'files-edit'),
       canDocsDelete: canSub(u, 'hr', 'files-delete'),
       suspended: !!u.suspended,
+      contractor: !!u.contractor, // contractors skip check-in/schedules
     }))
   res.json({ users })
 })
@@ -961,6 +976,7 @@ function onOfficeNetwork(req) {
 }
 
 app.post('/api/attendance/check-in', auth, notViewAs, (req, res) => {
+  if (req.user.contractor) return res.status(403).json({ error: 'Contractors do not check in or out' })
   const all = db.read('attendance', [])
   const date = todayKey()
   let rec = all.find((a) => a.username === req.user.username && a.date === date)
@@ -983,6 +999,7 @@ app.post('/api/attendance/check-in', auth, notViewAs, (req, res) => {
 })
 
 app.post('/api/attendance/check-out', auth, notViewAs, (req, res) => {
+  if (req.user.contractor) return res.status(403).json({ error: 'Contractors do not check in or out' })
   const all = db.read('attendance', [])
   const date = todayKey()
   const rec = all.find((a) => a.username === req.user.username && a.date === date)
@@ -1042,7 +1059,7 @@ app.get('/api/attendance', auth, requirePower('team'), (req, res) => {
   const date = req.query.date || todayKey()
   const all = db.read('attendance', [])
   const byUser = Object.fromEntries(all.filter((a) => a.date === date).map((a) => [a.username, a]))
-  const roster = seedUsers().filter((u) => u.username !== 'adama' && !isArchived(u))
+  const roster = seedUsers().filter((u) => u.username !== 'adama' && !isArchived(u) && !u.contractor)
   const presence = roster.map((u) => ({
     username: u.username,
     name: u.name,
@@ -2687,7 +2704,7 @@ app.get('/api/attendance/week', auth, (req, res) => {
   const roster = req.query.scope === 'self'
     ? seedUsers().filter((u) => u.username === req.user.username)
     : teamSet && teamSet.size
-      ? seedUsers().filter((u) => teamSet.has(u.username))
+      ? seedUsers().filter((u) => teamSet.has(u.username) && !u.contractor)
       : can(req.user, 'team')
         ? scheduleRoster(req)
         : seedUsers().filter((u) => u.username === req.user.username)
@@ -2737,9 +2754,10 @@ function cleanWeek(incoming = {}) {
 }
 function scheduleRoster(req) {
   // the people the VIEWED user's Team power covers (named sub-toggles);
-  // the CEO is never in anyone's roster.
+  // the CEO is never in anyone's roster. Contractors don't check in or hold
+  // a schedule (Adama 3 Aug: Abdourahman) — they never appear here.
   const scope = powerScopeSet(req.user, 'team')
-  return seedUsers().filter((u) => scope.has(u.username))
+  return seedUsers().filter((u) => scope.has(u.username) && !u.contractor)
 }
 
 // manager: assign a schedule to people, effective from a date.
