@@ -1,4 +1,6 @@
 // Warm UI kit — soft, rounded, friendly building blocks.
+import { useState, useRef, useEffect } from 'react'
+import { ChevronDown, Check } from 'lucide-react'
 
 const AVATAR_TONES = [
   ['#e6f6f0', '#1aa179'],
@@ -159,6 +161,48 @@ export function Select({ options = [], children, ...props }) {
         </option>
       ))}
     </select>
+  )
+}
+
+// Dropdown that draws its own menu instead of the browser's default popup
+// (Adama 3 Aug: "fix the google dropdown") — same look as PeriodPicker.
+// Options: strings, or { value, label } objects. onChange gets the VALUE.
+export function MenuSelect({ value, onChange, options = [], placeholder = 'Choose…' }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return undefined
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [open])
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }))
+  const current = opts.find((o) => String(o.value) === String(value))
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen((o) => !o)} className={`${FIELD_CLS} flex items-center justify-between gap-2 text-left`}>
+        <span className={current ? '' : 'text-[var(--color-ink-faint)]'}>{current ? current.label : placeholder}</span>
+        <ChevronDown size={16} className={`shrink-0 text-[var(--color-ink-faint)] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 z-40 mt-1.5 overflow-hidden rounded-2xl border border-[var(--color-line)] bg-white p-1.5 shadow-xl">
+          {opts.map((o) => {
+            const active = String(o.value) === String(value)
+            return (
+              <button
+                type="button"
+                key={o.value}
+                onClick={() => { onChange(o.value); setOpen(false) }}
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${active ? 'bg-blue-50 font-semibold text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}
+              >
+                {o.label}
+                {active && <Check size={15} className="shrink-0 text-blue-500" />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
 

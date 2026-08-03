@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Plus, UserPlus, CheckCircle2, Archive, KeyRound, Users, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { Avatar, Button, Card, Pill, SectionTitle, Spinner, Modal, Field, Input, Select, Textarea } from '../../components/ui.jsx'
+import { Avatar, Button, Card, Pill, SectionTitle, Spinner, Modal, Field, Input, MenuSelect, Textarea } from '../../components/ui.jsx'
 
 // Staff — roles, permissions and accounts. The team-admin hub: invite staff,
 // grant/revoke powers (shown inline so access is visible at a glance), reset
@@ -280,7 +280,7 @@ function AddStaffForm({ onClose, onCreated }) {
         <Field label="Full name"><Input value={v.name} onChange={set('name')} placeholder="e.g. Modou Njie" /></Field>
         <Field label="Email"><Input type="email" value={v.email} onChange={set('email')} placeholder="name@example.com" /></Field>
         <Field label="Title">
-          <Select value={v.title} onChange={set('title')} options={isMgr ? ['Manager', 'Operations Manager', 'General Manager', 'Team Lead', OTHER] : ['Sales Agent', 'Sales Intern', 'Senior Sales Agent', 'Technician / Installer', 'Customer Service Supervisor', 'Office Cleaner', OTHER]} />
+          <MenuSelect value={v.title} onChange={(t) => setV((p) => ({ ...p, title: t }))} options={isMgr ? ['Manager', 'Operations Manager', 'General Manager', 'Team Lead', OTHER] : ['Sales Agent', 'Sales Intern', 'Senior Sales Agent', 'Technician / Installer', 'Customer Service Supervisor', 'Office Cleaner', OTHER]} />
         </Field>
         {v.title === OTHER && (
           <Field label="Job title"><Input value={v.customTitle} onChange={set('customTitle')} placeholder="e.g. Driver" /></Field>
@@ -296,14 +296,18 @@ function AddStaffForm({ onClose, onCreated }) {
           <p className="mt-1 text-xs text-[var(--color-ink-faint)]">The day they actually started — set a past date if you're entering them late. Payroll only shows people from their start month onward.</p>
         </div>
         <Field label="Contract length">
-          <Select value={v.contractMonths} onChange={set('contractMonths')}>
-            <option value="1">1 month</option>
-            <option value="2">2 months</option>
-            <option value="3">3 months</option>
-            <option value="6">6 months</option>
-            <option value="12">12 months</option>
-            <option value="0">Indefinite</option>
-          </Select>
+          <MenuSelect
+            value={v.contractMonths}
+            onChange={(m) => setV((p) => ({ ...p, contractMonths: m }))}
+            options={[
+              { value: '1', label: '1 month' },
+              { value: '2', label: '2 months' },
+              { value: '3', label: '3 months' },
+              { value: '6', label: '6 months' },
+              { value: '12', label: '12 months' },
+              { value: '0', label: 'Indefinite' },
+            ]}
+          />
         </Field>
         <p className="text-xs text-[var(--color-ink-faint)]">
           {isMgr
