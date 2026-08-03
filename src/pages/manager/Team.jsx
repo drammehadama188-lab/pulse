@@ -186,7 +186,7 @@ function ArchiveDialog({ target, onClose, onDone }) {
 }
 
 function AddStaffForm({ onClose, onCreated }) {
-  const [v, setV] = useState({ type: 'agent', name: '', email: '', title: 'Sales Agent', salary: '', target: '5', contractMonths: '3' })
+  const [v, setV] = useState({ type: 'agent', name: '', email: '', title: 'Sales Agent', customTitle: '', salary: '', target: '5', contractMonths: '3' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
@@ -194,9 +194,13 @@ function AddStaffForm({ onClose, onCreated }) {
   const isMgr = v.type === 'manager'
   const pickType = (t) => setV((p) => ({ ...p, type: t, title: t === 'manager' ? 'Manager' : 'Sales Agent' }))
 
+  const OTHER = 'Other — type it in'
+  const finalTitle = v.title === OTHER ? v.customTitle.trim() : v.title
+
   async function save() {
     if (!v.name.trim()) return setError('Enter their full name')
     if (!/^\S+@\S+\.\S+$/.test(v.email)) return setError('Enter a valid email')
+    if (!finalTitle) return setError('Type the job title')
     setBusy(true)
     setError('')
     try {
@@ -206,7 +210,7 @@ function AddStaffForm({ onClose, onCreated }) {
           type: v.type,
           name: v.name,
           email: v.email,
-          title: v.title,
+          title: finalTitle,
           salary: v.salary,
           target: v.target,
           contractMonths: v.contractMonths,
@@ -275,8 +279,11 @@ function AddStaffForm({ onClose, onCreated }) {
         <Field label="Full name"><Input value={v.name} onChange={set('name')} placeholder="e.g. Modou Njie" /></Field>
         <Field label="Email"><Input type="email" value={v.email} onChange={set('email')} placeholder="name@example.com" /></Field>
         <Field label="Title">
-          <Select value={v.title} onChange={set('title')} options={isMgr ? ['Manager', 'Operations Manager', 'General Manager', 'Team Lead'] : ['Sales Agent', 'Sales Intern', 'Senior Sales Agent']} />
+          <Select value={v.title} onChange={set('title')} options={isMgr ? ['Manager', 'Operations Manager', 'General Manager', 'Team Lead', OTHER] : ['Sales Agent', 'Sales Intern', 'Senior Sales Agent', 'Technician / Installer', 'Customer Service Supervisor', 'Office Cleaner', OTHER]} />
         </Field>
+        {v.title === OTHER && (
+          <Field label="Job title"><Input value={v.customTitle} onChange={set('customTitle')} placeholder="e.g. Driver" /></Field>
+        )}
         <div className={isMgr ? '' : 'grid grid-cols-2 gap-3'}>
           <Field label="Monthly salary (D)"><Input type="number" min="0" value={v.salary} onChange={set('salary')} placeholder="e.g. 6000" /></Field>
           {!isMgr && <Field label="Monthly target (sales)"><Input type="number" min="0" value={v.target} onChange={set('target')} /></Field>}
