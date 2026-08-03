@@ -182,7 +182,7 @@ export default function HRTeam({
         // must not reset everyone else's numbers back to the defaults.
         setPayDraft(prev => {
           const draft = {};
-          (d.people || []).forEach(p => { draft[p.name] = prev[p.name] || { salary: p.suggestedSalary, bonus: p.suggestedBonus, source: (d.paySources?.[0]?.key) || 'wave' }; });
+          (d.people || []).forEach(p => { draft[p.name] = prev[p.name] || { salary: p.suggestedSalary, bonus: p.suggestedBonus, source: (d.paySources?.[0]?.key) || 'access_bank' }; });
           return draft;
         });
       })
@@ -305,7 +305,7 @@ export default function HRTeam({
       name: payRun?.people?.[0]?.name || '',
       label: '', amount: '',
       period: payPeriod, date: payDate,
-      source: payRun?.paySources?.[0]?.key || 'wave',
+      source: payRun?.paySources?.[0]?.key || 'access_bank',
       busy: false, error: '',
     });
   }
@@ -368,7 +368,7 @@ export default function HRTeam({
       setPayConfirm(null);
       loadPayRun(); setPayLive(null);
       const rec = res.record;
-      setPayEdit({ rec, salary: rec.salary, bonus: rec.bonus, source: rec.paySourceKey || (payRun.paySources?.[0]?.key) || 'wave', date: rec.date });
+      setPayEdit({ rec, salary: rec.salary, bonus: rec.bonus, source: rec.paySourceKey || (payRun.paySources?.[0]?.key) || 'access_bank', date: rec.date });
     } catch (e) {
       setPayConfirm(c => c && { ...c, error: e.message });
     } finally { setPayPosting(false); }
@@ -1048,7 +1048,7 @@ export default function HRTeam({
                   </tr></thead>
                   <tbody>
                     {payRun.people.map((p) => {
-                      const d = payDraft[p.name] || { salary: 0, bonus: 0, source: 'wave' };
+                      const d = payDraft[p.name] || { salary: 0, bonus: 0, source: 'access_bank' };
                       const total = (Number(d.salary) || 0) + (Number(d.bonus) || 0);
                       const setD = (patch) => setPayDraft(s => ({ ...s, [p.name]: { ...s[p.name], ...patch } }));
                       return (
