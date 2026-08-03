@@ -3492,11 +3492,16 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
   paidRecords.forEach((r) => { paidByName[r.name] = r })
   // de-dupe roster by name (createdStaffRoster may overlap team)
   const seen = new Set()
+  // Pay moved out of team.js on 15 Jul (security) — p.base no longer exists on
+  // roster entries; the split lives in rosterPay, created-staff pay on the user
+  // record. Bonus stays 0: commission is "up to", not an automatic payment.
+  const suggestedSalary = (name) =>
+    Number(rosterPay[name]?.base) || Number(seedUsers().find((u) => u.name === name)?.salary) || 0
   const people = merged.filter((p) => (seen.has(p.name) ? false : seen.add(p.name))).map((p) => ({
     name: p.name,
     role: p.role || '',
-    suggestedSalary: Number(p.base) || 0,
-    suggestedBonus: Number(p.commission) || 0,
+    suggestedSalary: suggestedSalary(p.name),
+    suggestedBonus: 0,
     paid: paidByName[p.name] || null,
   }))
   // Payments to people no longer on the roster (past staff, pre-Pulse hires)
