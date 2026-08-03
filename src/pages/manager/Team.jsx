@@ -186,7 +186,7 @@ function ArchiveDialog({ target, onClose, onDone }) {
 }
 
 function AddStaffForm({ onClose, onCreated }) {
-  const [v, setV] = useState({ type: 'agent', name: '', email: '', title: 'Sales Agent', customTitle: '', salary: '', target: '5', contractMonths: '3' })
+  const [v, setV] = useState({ type: 'agent', name: '', email: '', title: 'Sales Agent', customTitle: '', salary: '', target: '5', contractMonths: '3', joined: new Date().toISOString().slice(0, 10) })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
@@ -214,6 +214,7 @@ function AddStaffForm({ onClose, onCreated }) {
           salary: v.salary,
           target: v.target,
           contractMonths: v.contractMonths,
+          joined: v.joined,
         },
       })
       setCreated({ ...r.staff, invited: r.invited })
@@ -287,6 +288,12 @@ function AddStaffForm({ onClose, onCreated }) {
         <div className={isMgr ? '' : 'grid grid-cols-2 gap-3'}>
           <Field label="Monthly salary (D)"><Input type="number" min="0" value={v.salary} onChange={set('salary')} placeholder="e.g. 6000" /></Field>
           {!isMgr && <Field label="Monthly target (sales)"><Input type="number" min="0" value={v.target} onChange={set('target')} /></Field>}
+        </div>
+        <div>
+          <Field label="Start date">
+            <Input type="date" value={v.joined} onChange={set('joined')} />
+          </Field>
+          <p className="mt-1 text-xs text-[var(--color-ink-faint)]">The day they actually started — set a past date if you're entering them late. Payroll only shows people from their start month onward.</p>
         </div>
         <Field label="Contract length">
           <Select value={v.contractMonths} onChange={set('contractMonths')}>

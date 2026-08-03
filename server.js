@@ -771,7 +771,10 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
 
   const isMgr = type === 'manager'
   const username = uniqueUsername(usernameFor(name))
-  const joined = todayKey()
+  // Start date can be backdated (Adama 3 Aug: Abdourahman joined in July but
+  // was only entered in August — payroll hides months before someone joined,
+  // so the real start date matters). Defaults to today.
+  const joined = /^\d{4}-\d{2}-\d{2}$/.test(req.body?.joined || '') ? req.body.joined : todayKey()
   const months = Number(contractMonths) || 0
   const contract = months > 0 ? `${months}-month fixed` : 'Indefinite'
   const contractEnd = months > 0 ? addMonths(joined, months) : null
