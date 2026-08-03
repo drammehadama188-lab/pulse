@@ -3412,6 +3412,24 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
   // so he doesn't belong on March's run (Adama 9 Jul: "misleading"). Anyone
   // with an actual payment recorded for the month stays visible regardless
   // (Sally's March training allowance predates her April joining).
+  // Self-heal for the cross-month double-adopt bug (fixed below): a payment
+  // recorded into one month but PAID on a date in the next month got adopted
+  // again into that next month — two local records pointing at the SAME Books
+  // expense (Cleaner + Momodou, Jun paid in Jul). Keep the record a person
+  // actually posted (or the oldest) and drop the extras. Local only — the
+  // Books expense is never touched.
+  {
+    const all = db.read('payroll', [])
+    const byExp = {}
+    for (const r of all) if (r.expenseId) (byExp[String(r.expenseId)] ||= []).push(r)
+    const drop = new Set()
+    for (const group of Object.values(byExp)) {
+      if (group.length < 2) continue
+      const keep = group.find((r) => r.postedBy !== 'books-sync') || group.slice().sort((a, b) => String(a.postedAt).localeCompare(String(b.postedAt)))[0]
+      for (const r of group) if (r !== keep) drop.add(r.id)
+    }
+    if (drop.size) { db.write('payroll', all.filter((r) => !drop.has(r.id))); _payrollCache = null }
+  }
   let paidRecords = db.read('payroll', []).filter((r) => r.period === period)
   const paidNames = new Set(paidRecords.map((r) => r.name))
   const merged = [...team, ...createdStaffRoster()].filter((p) => !archived.has(p.name) && (paidNames.has(p.name) || joinedYM(p) === null || joinedYM(p) <= period))
@@ -3435,9 +3453,13 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
           const i = all.findIndex((x) => x.id === r.id)
           if (i >= 0) { all.splice(i, 1); changed = true; r._deleted = true }
         } else if (Math.round(exp.total) !== Math.round(r.total)) {
-          r.total = Math.round(exp.total); r.editedInZoho = true
+          // Books holds ONE number — after a Zoho-side edit the old salary/
+          // bonus split is meaningless, so reset it (salary = total, bonus 0).
+          // Leaving the split alone kept ghost bonuses alive no matter how
+          // many times Books was corrected (Sally's 7k+7k, Jun).
+          r.total = Math.round(exp.total); r.salary = r.total; r.bonus = 0; r.editedInZoho = true
           const i = all.findIndex((x) => x.id === r.id)
-          if (i >= 0) { all[i] = { ...all[i], total: r.total, editedInZoho: true }; changed = true }
+          if (i >= 0) { all[i] = { ...all[i], total: r.total, salary: r.total, bonus: 0, editedInZoho: true }; changed = true }
         }
       }
       if (changed) { db.write('payroll', all); _payrollCache = null }
@@ -3452,7 +3474,9 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
     // included, without any clicking.
     try {
       const monthExpenses = await salaryExpensesForMonth(period)
-      const claimed = new Set(paidRecords.map((r) => String(r.expenseId)))
+      // Claimed = expenses linked by ANY month's record, not just this one —
+      // a June payment paid on a July date must not be adopted again as July.
+      const claimed = new Set(db.read('payroll', []).filter((r) => r.expenseId).map((r) => String(r.expenseId)))
       const unclaimed = monthExpenses.filter((e) => !claimed.has(String(e.expense_id)))
       if (unclaimed.length) {
         const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
