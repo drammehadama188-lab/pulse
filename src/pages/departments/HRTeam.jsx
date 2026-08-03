@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Users, DollarSign, AlertTriangle, Target, Shield,
-  Plus, Edit2, Trash2, Settings, ChevronDown, UserX, RotateCcw,
+  Plus, Edit2, Trash2, Settings, ChevronDown, ChevronLeft, ChevronRight, UserX, RotateCcw,
 } from 'lucide-react';
 // Pay data moved out of the bundle to permission-gated endpoints (Adama-approved
 // 15 Jul 2026 security fix — salaries were readable in the public JS). team.js no
@@ -197,6 +197,16 @@ export default function HRTeam({
     setPayDraft({}); // a new month starts from that month's defaults
     loadPayRun(period);
   }
+  // ‹ › step the payroll month one at a time — no calendar needed for nearby
+  // months (Adama 3 Aug). Forward stops at the current month: payroll can't
+  // run into the future.
+  const shiftPayPeriod = (delta) => {
+    const [y, m] = payPeriod.split('-').map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+    const next = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    if (next <= new Date().toISOString().slice(0, 7)) changePayPeriod(next);
+  };
+  const payPeriodIsCurrent = payPeriod >= new Date().toISOString().slice(0, 7);
   const openProfile = (name) => navigate(`/agents/${name.toLowerCase().replace(/\s+/g, '-')}`);
   const urlTab = new URLSearchParams(location.search).get('tab');
   const initialTab = only ? (only.includes(urlTab) ? urlTab : only[0]) : (urlTab || 'dashboard');
@@ -994,13 +1004,17 @@ export default function HRTeam({
               <div className="flex items-start justify-between mb-1 flex-wrap gap-2">
                 <div className="flex items-center gap-3 flex-wrap">
                   <h3 className="text-lg font-semibold text-gray-900">Run Payroll — {payRun.period && new Date(Number(payRun.period.slice(0, 4)), Number(payRun.period.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
-                  <input
-                    type="month"
-                    value={payPeriod}
-                    onChange={(e) => changePayPeriod(e.target.value)}
-                    className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700"
-                    title="Pick which month this payroll applies to — go back to enter or correct a past month"
-                  />
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => shiftPayPeriod(-1)} className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-gray-400" title="Previous month"><ChevronLeft size={16} /></button>
+                    <input
+                      type="month"
+                      value={payPeriod}
+                      onChange={(e) => changePayPeriod(e.target.value)}
+                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700"
+                      title="Pick which month this payroll applies to — go back to enter or correct a past month"
+                    />
+                    <button type="button" onClick={() => shiftPayPeriod(1)} disabled={payPeriodIsCurrent} className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-gray-400 disabled:opacity-40 disabled:hover:border-gray-200" title={payPeriodIsCurrent ? 'This is the current month' : 'Next month'}><ChevronRight size={16} /></button>
+                  </div>
                   <label className="flex items-center gap-1.5 text-xs text-gray-500">
                     Paid on
                     <input
