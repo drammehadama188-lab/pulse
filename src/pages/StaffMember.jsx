@@ -237,6 +237,7 @@ export default function StaffMember() {
           {hasRealPower('staffadmin') && <Button variant="outline" icon={KeyRound} onClick={() => setResetOpen(true)}>Reset password</Button>}
         </div>
         {emailMsg && <p className={`text-xs mt-2 ${emailMsg === 'Saved' ? 'text-emerald-600' : 'text-red-600'}`}>{emailMsg}</p>}
+        <LoginState user={user} />
         <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3">
           <div>
             <p className="text-sm font-semibold text-gray-900">{canSignIn ? 'Can sign in to Pulse' : 'Sign-in paused'}</p>
@@ -325,13 +326,31 @@ export default function StaffMember() {
       </div>
       )}
 
-      {resetOpen && <ResetDialog username={username} name={user.name} onClose={() => setResetOpen(false)} />}
+      {resetOpen && <ResetDialog username={username} name={user.name} email={user.email} onClose={() => setResetOpen(false)} />}
       {archiveOpen && <ArchiveDialog username={username} name={user.name} onClose={() => setArchiveOpen(false)} onDone={() => navigate('/team')} />}
     </div>
   )
 }
 
-function ResetDialog({ username, name, onClose }) {
+// Login state — answers "why can't they sign in?" without guessing. Three
+// honest states: a link is out and still valid, they never chose a password,
+// or they chose one and the account is theirs.
+function LoginState({ user }) {
+  const mins = user.passwordLinkExpires ? Math.max(0, Math.round((user.passwordLinkExpires - Date.now()) / 60000)) : 0
+  const first = (user.name || '').split(' ')[0]
+  let tone = 'text-emerald-700 bg-emerald-50'
+  let text = `Password set. ${first} signs in with ${user.email}.`
+  if (user.passwordLinkExpires && mins > 0) {
+    tone = 'text-amber-800 bg-amber-50'
+    text = `A set-password link is open, sent to ${user.email}, ${mins} min left. It works once. Until ${first} opens it, the old password still applies.`
+  } else if (!user.passwordChosen) {
+    tone = 'text-amber-800 bg-amber-50'
+    text = `${first} has never chosen a password. Any link sent has expired or was not opened. Set a temporary password below and send it to ${first} directly.`
+  }
+  return <p className={`mt-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold ${tone}`}>{text}</p>
+}
+
+function ResetDialog({ username, name, email, onClose }) {
   const first = name.split(' ')[0]
   const [tempPw, setTempPw] = useState('')
   const [busy, setBusy] = useState(false) // 'email' | 'manual' | false
@@ -374,7 +393,7 @@ function ResetDialog({ username, name, onClose }) {
       <div className="space-y-4">
         <div className="rounded-2xl border border-[var(--color-line)] p-4">
           <div className="font-semibold text-[var(--color-ink)]">Email {first} a link</div>
-          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">They click it and choose their own password. The link works for 60 minutes and can be used once.</p>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Goes to <span className="font-bold text-[var(--color-ink)]">{email || 'no email on file'}</span>. They click it and choose their own password. Works for 60 minutes, once.</p>
           <Button className="mt-3" onClick={sendLink} disabled={!!busy}>{busy === 'email' ? <Spinner size={16} /> : 'Send the link'}</Button>
         </div>
         <div className="rounded-2xl border border-[var(--color-line)] p-4">

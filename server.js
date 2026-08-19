@@ -938,6 +938,11 @@ app.get('/api/past-agents', auth, requirePower('team'), (req, res) => {
 
 // who a manager can "view as" (everyone but themselves)
 app.get('/api/users', auth, requirePower('team'), (req, res) => {
+  // Active (unexpired) set-password links, so a manager can SEE whether a
+  // reset was actually completed instead of guessing (Adama 19 Aug: Mustapha
+  // "keeps resetting the password, not working" — nothing on screen said
+  // whether he ever opened a link). Read once, never the token itself.
+  const activeLinks = readLinks()
   const users = seedUsers()
     .filter((u) => u.username !== req.realUser.username && u.username !== CEO && !isArchived(u))
     .map((u) => ({
@@ -961,6 +966,11 @@ app.get('/api/users', auth, requirePower('team'), (req, res) => {
       canDocsDelete: canSub(u, 'hr', 'files-delete'),
       suspended: !!u.suspended,
       contractor: !!u.contractor, // contractors skip check-in/schedules
+      // Login state — false means they are still on a password someone else
+      // set (invite default or a temporary one), i.e. they never completed a
+      // set-password link. Never exposes the hash or the link token.
+      passwordChosen: !u.mustChangePassword,
+      passwordLinkExpires: activeLinks.find((l) => l.username === u.username)?.exp || null,
     }))
   res.json({ users })
 })
