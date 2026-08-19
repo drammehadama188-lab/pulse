@@ -1134,7 +1134,7 @@ const KPI_CATALOG = {
     // — renewal outreach is Yafatou's job. Remaining weights auto-normalize.
     { key: 'sales', label: 'Tracker sales', kind: 'count', unit: 'sales', target: 5, weight: 40 },
     { key: 'online', label: 'Trackers online', kind: 'percent', unit: '%', target: 75, weight: 20 },
-    { key: 'reviews', label: '5-star Google reviews', kind: 'count', unit: 'reviews', target: 3, weight: 15 },
+    // 5-star Google reviews REMOVED as an agent goal (Adama 19 Aug).
   ] },
   'customer-service': { role: 'Customer Service', kpis: [
     { key: 'renewal', label: 'Customer renewals', kind: 'percent', unit: '%', target: 80, weight: 25 },
@@ -1333,11 +1333,9 @@ function scorecardFor(u, salesActual) {
   const N = (kpi, dflt) => kpiNumber(key, kpi, MONTH) || dflt
   if (key === 'sales') {
     const s = N('sales', { target: 5, weight: 40 }), o = N('online', { target: 75, weight: 20 })
-    const v = N('reviews', { target: 3, weight: 15 })
     return { role: 'Sales agent', kpis: overlayPlan([
       { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u.target) || s.target, weight: s.weight, unit: 'sales', actual: salesActual ?? null },
       { key: 'online', label: 'Trackers online', kind: 'percent', target: o.target, weight: o.weight, unit: '%', actual: null },
-      { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: v.target, weight: v.weight, unit: 'reviews', actual: null },
     ], 'sales', MONTH) }
   }
   if (key === 'customer-service') {
@@ -4588,14 +4586,13 @@ app.get('/api/my/progress', auth, async (req, res) => {
     // Yafatou's job). Percent KPIs carry a `detail` line — the counts behind
     // the % (Adama 4 Jul: "I like to see numbers, not only percentage").
     const onl = await fetchAdminOnline(name)
-    const reviewsCount = await fetchAdminReviews(name, CUR)
-    const kS = kpiN('sales', 5, 40), kO = kpiN('online', 75, 20), kV = kpiN('reviews', 3, 15)
+    const kS = kpiN('sales', 5, 40), kO = kpiN('online', 75, 20)
     scorecard = { role: 'Sales agent', kpis: [
       { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u?.target) || kS.target, weight: kS.weight, unit: 'sales', actual: salesActual },
       { key: 'online', label: 'Trackers online', kind: 'percent', target: kO.target, weight: kO.weight, unit: '%',
         actual: typeof onl?.pct === 'number' ? onl.pct : null,
         detail: onl && onl.total ? `${onl.online} of ${onl.total} trackers online` : null },
-      { key: 'reviews', label: '5-star Google reviews', kind: 'count', target: kV.target, weight: kV.weight, unit: 'reviews', actual: reviewsCount },
+      // 5-star Google reviews REMOVED as an agent goal (Adama 19 Aug).
     ] }
   } else if (scKey === 'customer-service') {
     const stock = await fetchAdminStock(CUR) // accountability proven by weekly counts (Admin)

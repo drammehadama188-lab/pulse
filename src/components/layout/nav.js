@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, TrendingUp, Clock, FileText, Target,
   ClipboardCheck, ShieldAlert, Wallet, Gift, BookOpen, FolderOpen,
-  Palmtree, User, Menu, UserPlus, ShieldCheck, BarChart3,
+  Palmtree, User, Menu, UserPlus, ShieldCheck, BarChart3, GraduationCap,
 } from 'lucide-react'
 
 const isOwner = (u) => u?.username === 'adama' // CEO/owner — no self-service (leave, clock-in…)
@@ -52,6 +52,8 @@ export const NAV = [
   { id: 'benefits', to: '/benefits', label: 'Benefits', icon: Gift, group: 'Payroll', show: (u) => has(u, 'payroll') },
 
   // COMPANY
+  // Tracker Guide — the product taught to staff (Adama 19 Aug); everyone sees it.
+  { id: 'tracker-guide', to: '/tracker-guide', label: 'Tracker Guide', icon: GraduationCap, group: 'Company', show: () => true },
   { id: 'policies', to: '/policies', label: 'Policies', icon: BookOpen, group: 'Company', show: mgr },
   { id: 'documents', to: '/documents', label: 'Documents', icon: FolderOpen, group: 'Company', show: mgr },
 

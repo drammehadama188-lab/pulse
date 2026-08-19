@@ -13,6 +13,7 @@ import DailyTracker from './pages/sales/DailyTracker.jsx'
 import Notices from './pages/sales/Notices.jsx'
 import MyReviews from './pages/MyReviews.jsx'
 import MyProgress from './pages/MyProgress.jsx'
+import TrackerGuide from './pages/TrackerGuide.jsx'
 import TeamDashboard from './pages/TeamDashboard.jsx'
 import MyWeek from './pages/MyWeek.jsx'
 import WorkdayMonitor from './pages/WorkdayMonitor.jsx'
@@ -123,6 +124,7 @@ export default function App() {
         <Route path="/benefits" element={<RequireAuth power="payroll"><DepartmentShell icon={Gift} title="Benefits" subtitle="Payroll" blurb="Allowances, bonuses and staff benefits. Being set up — coming online here soon." /></RequireAuth>} />
         {/* COMPANY */}
         <Route path="/policies" element={<Policies />} />
+        <Route path="/tracker-guide" element={<TrackerGuide />} />
         <Route path="/documents" element={<RequireAuth power="hr"><DepartmentShell icon={FolderOpen} title="Documents" subtitle="Company" blurb="Contracts, IDs and employee documents. Being set up — coming online here soon." /></RequireAuth>} />
 
         {/* Personal self-service */}
