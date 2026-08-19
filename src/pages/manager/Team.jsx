@@ -186,7 +186,7 @@ function ArchiveDialog({ target, onClose, onDone }) {
 }
 
 function AddStaffForm({ onClose, onCreated }) {
-  const [v, setV] = useState({ type: 'agent', name: '', email: '', title: 'Sales Agent', customTitle: '', salary: '', target: '5', contractMonths: '3', joined: new Date().toISOString().slice(0, 10) })
+  const [v, setV] = useState({ type: 'agent', name: '', email: '', title: 'Sales Agent', customTitle: '', baseSalary: '', transport: '', commission: '', target: '5', contractMonths: '3', probationMonths: '3', phone: '', address: '', joined: new Date().toISOString().slice(0, 10) })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
@@ -211,9 +211,14 @@ function AddStaffForm({ onClose, onCreated }) {
           name: v.name,
           email: v.email,
           title: finalTitle,
-          salary: v.salary,
+          baseSalary: v.baseSalary,
+          transport: v.transport,
+          commission: v.commission,
           target: v.target,
           contractMonths: v.contractMonths,
+          probationMonths: v.probationMonths,
+          phone: v.phone,
+          address: v.address,
           joined: v.joined,
         },
       })
@@ -285,8 +290,14 @@ function AddStaffForm({ onClose, onCreated }) {
         {v.title === OTHER && (
           <Field label="Job title"><Input value={v.customTitle} onChange={set('customTitle')} placeholder="e.g. Driver" /></Field>
         )}
+        <Field label="Phone"><Input type="tel" value={v.phone} onChange={set('phone')} placeholder="e.g. 3XX XX XX" /></Field>
+        <Field label="Address"><Input value={v.address} onChange={set('address')} placeholder="e.g. Bakau, New Town Road" /></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Base salary (D)"><Input type="number" min="0" value={v.baseSalary} onChange={set('baseSalary')} placeholder="e.g. 6000" /></Field>
+          <Field label="Transport allowance (D)"><Input type="number" min="0" value={v.transport} onChange={set('transport')} placeholder="0" /></Field>
+        </div>
         <div className={isMgr ? '' : 'grid grid-cols-2 gap-3'}>
-          <Field label="Monthly salary (D)"><Input type="number" min="0" value={v.salary} onChange={set('salary')} placeholder="e.g. 6000" /></Field>
+          <Field label="Commission on target (D)"><Input type="number" min="0" value={v.commission} onChange={set('commission')} placeholder="0" /></Field>
           {!isMgr && <Field label="Monthly target (sales)"><Input type="number" min="0" value={v.target} onChange={set('target')} /></Field>}
         </div>
         <div>
@@ -306,6 +317,19 @@ function AddStaffForm({ onClose, onCreated }) {
               { value: '6', label: '6 months' },
               { value: '12', label: '12 months' },
               { value: '0', label: 'Indefinite' },
+            ]}
+          />
+        </Field>
+        <Field label="Probation">
+          <MenuSelect
+            value={v.probationMonths}
+            onChange={(m) => setV((p) => ({ ...p, probationMonths: m }))}
+            options={[
+              { value: '0', label: 'None' },
+              { value: '1', label: '1 month' },
+              { value: '2', label: '2 months' },
+              { value: '3', label: '3 months' },
+              { value: '6', label: '6 months' },
             ]}
           />
         </Field>

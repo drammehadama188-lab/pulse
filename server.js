@@ -223,8 +223,8 @@ function persistSessions() {
 }
 function publicUser(u) {
   if (!u) return null
-  // salary is manager-only (served via /api/staff), never via /me or /users
-  const { passwordHash, salary, ...rest } = u
+  // salary + pay split are manager-only (served via /api/staff), never via /me or /users
+  const { passwordHash, salary, pay, ...rest } = u
   // resolved powers ride along so the UI can gate sections client-side;
   // the server re-checks every request regardless. isTeamLead unlocks the MY
   // TEAM nav section (gated again server-side on /api/team/*).
@@ -464,7 +464,9 @@ app.post('/api/login', (req, res) => {
 app.get('/api/me', auth, (req, res) => {
   // Own pay is fine to return to the person themselves (never bundled, never
   // another person's). Keyed by name; created-via-Pulse staff use u.salary.
-  const own = rosterPay[req.user.name] || (req.user.salary ? { base: 0, commission: 0, transport: 0, total: Number(req.user.salary) } : null)
+  const own = rosterPay[req.user.name]
+    || (req.user.pay ? { base: Number(req.user.pay.base) || 0, commission: Number(req.user.pay.commission) || 0, transport: Number(req.user.pay.transport) || 0, total: Number(req.user.pay.total) || 0 } : null)
+    || (req.user.salary ? { base: 0, commission: 0, transport: 0, total: Number(req.user.salary) } : null)
   res.json({ user: publicUser(req.user), pay: own })
 })
 
@@ -751,10 +753,14 @@ app.get('/api/staff', auth, requirePower('team'), (req, res) => {
       role: u.role,
       status: u.status,
       salary: u.salary,
+      pay: u.pay || null,
+      phone: u.phone || '',
+      address: u.address || '',
       target: u.target,
       kpi: u.kpi,
       contract: u.contract,
       contractEnd: u.contractEnd,
+      probationEnd: u.probationEnd || null,
       joined: u.joined,
       createdAt: u.createdAt,
     }))
@@ -763,7 +769,7 @@ app.get('/api/staff', auth, requirePower('team'), (req, res) => {
 
 // create a sales staff account
 app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (req, res) => {
-  const { type, name, email, title, salary, target, contractMonths } = req.body || {}
+  const { type, name, email, title, salary, target, contractMonths, baseSalary, transport, commission, probationMonths, phone, address } = req.body || {}
   if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name is required' })
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'A valid email is required' })
   const users = seedUsers()
@@ -782,6 +788,14 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
   // managers oversee everything across departments — no preset sales goal (set manually later)
   const tgt = isMgr ? 0 : Number(target) || 5
   const cleanTitle = String(title || (isMgr ? 'Manager' : 'Sales Agent')).trim()
+  // Pay split mirrors rosterPay's shape ({base, commission, transport, total},
+  // total = the "up to" figure). `salary` stays the guaranteed monthly payment
+  // (base + transport) — it's what payroll suggests; commission is on-target only.
+  const payBase = Number(baseSalary ?? salary) || 0
+  const payTransport = Number(transport) || 0
+  const payCommission = Number(commission) || 0
+  const probMonths = Number(probationMonths) || 0
+  const probationEnd = probMonths > 0 ? addMonths(joined, probMonths) : null
 
   const rec = {
     username,
@@ -792,7 +806,11 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
     title: cleanTitle,
     passwordHash: bcrypt.hashSync(DEFAULT_PASSWORD, 10),
     mustChangePassword: true,
-    salary: Number(salary) || 0,
+    salary: payBase + payTransport,
+    pay: { base: payBase, commission: payCommission, transport: payTransport, total: payBase + payCommission + payTransport },
+    phone: String(phone || '').trim(),
+    address: String(address || '').trim(),
+    probationEnd,
     target: tgt,
     kpi: isMgr ? '' : `Close ${tgt} tracker sales per month`,
     weeklyTarget: isMgr ? '' : 'Close 2 sales, generate 5 leads',
@@ -806,7 +824,7 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
     history: [
       {
         date: joined,
-        event: `Joined as ${cleanTitle} — ${contract}${contractEnd ? ` (ends ${contractEnd})` : ''}`,
+        event: `Joined as ${cleanTitle} — ${contract}${contractEnd ? ` (ends ${contractEnd})` : ''}${probationEnd ? ` · probation to ${probationEnd}` : ''}`,
       },
     ],
   }
@@ -3270,7 +3288,7 @@ app.get('/api/payroll/people', auth, requirePower('payroll'), (req, res) => {
     // Pay lives server-side (lib/roster-pay.js), keyed by name. Created-via-Pulse
     // staff carry their figure on the user record (u.salary) instead. Confirmed
     // by Adama 15 Jul: rosterPay holds the identical figures moved out of team.js.
-    const pay = rosterPay[p.name] || (u?.salary ? { total: Number(u.salary) } : {})
+    const pay = rosterPay[p.name] || u?.pay || (u?.salary ? { total: Number(u.salary) } : {})
     return {
       username: u?.username || null,
       name: p.name,
@@ -3337,9 +3355,12 @@ app.get('/api/payslips/draft', auth, requirePower('payroll'), (req, res) => {
   const { username, period } = req.query
   const r = rosterFor(username)
   if (!r) return res.status(404).json({ error: 'No salary on file for this person' })
-  const earnings = [{ label: 'Base salary', amount: Number(r.base) || 0 }]
-  if (Number(r.commission) > 0) earnings.push({ label: 'Commission', amount: Number(r.commission) })
-  if (Number(r.transport) > 0) earnings.push({ label: 'Transport allowance', amount: Number(r.transport) })
+  // Pay moved off roster entries on 15 Jul — read rosterPay / the user's pay
+  // split. Commission is left off the draft: it's "up to", not automatic.
+  const u = findUser(username)
+  const pay = rosterPay[r.name] || u?.pay || (u?.salary ? { base: Number(u.salary) } : {})
+  const earnings = [{ label: 'Base salary', amount: Number(pay.base) || 0 }]
+  if (Number(pay.transport) > 0) earnings.push({ label: 'Transport allowance', amount: Number(pay.transport) })
   res.json({ draft: { username, period: /^\d{4}-\d{2}$/.test(period || '') ? period : '', earnings, deductions: [] } })
 })
 
