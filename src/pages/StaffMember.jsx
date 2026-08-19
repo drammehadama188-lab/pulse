@@ -63,6 +63,7 @@ export default function StaffMember() {
   const [loaded, setLoaded] = useState(false)
   const [savingKey, setSavingKey] = useState(null)
   const [email, setEmail] = useState('')
+  const [personalEmail, setPersonalEmail] = useState('')
   const [emailBusy, setEmailBusy] = useState(false)
   const [emailMsg, setEmailMsg] = useState('')
   const [resetOpen, setResetOpen] = useState(false)
@@ -74,6 +75,7 @@ export default function StaffMember() {
       setUser(found)
       setRoster((u.users || []).filter((x) => x.username !== username))
       setEmail(found?.email || '')
+      setPersonalEmail(found?.personalEmail || '')
       setCatalogue(pw.powers || [])
       setLoaded(true)
     })
@@ -174,8 +176,8 @@ export default function StaffMember() {
   async function saveEmail() {
     setEmailBusy(true); setEmailMsg('')
     try {
-      await api(`/staff/${username}/access`, { method: 'POST', body: { powers: [...powers], canSignIn, email: email.trim() } })
-      setUser((u) => ({ ...u, email: email.trim() }))
+      await api(`/staff/${username}/access`, { method: 'POST', body: { powers: [...powers], canSignIn, email: email.trim(), personalEmail: personalEmail.trim() } })
+      setUser((u) => ({ ...u, email: email.trim(), personalEmail: personalEmail.trim() }))
       setEmailMsg('Saved')
     } catch (e) {
       setEmailMsg(e.message || 'Could not save')
@@ -224,10 +226,14 @@ export default function StaffMember() {
         <h2 className="text-base font-semibold text-gray-900 mb-4">Login</h2>
         <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div className="flex-1">
-            <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Login email</label>
+            <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Work email (login)</label>
             <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setEmailMsg('') }} placeholder="name@damiatracker.com" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
           </div>
-          <Button onClick={saveEmail} disabled={emailBusy || email.trim() === (user.email || '')}>{emailBusy ? <Spinner size={16} /> : 'Save email'}</Button>
+          <div className="flex-1">
+            <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Personal email</label>
+            <input type="email" value={personalEmail} onChange={(e) => { setPersonalEmail(e.target.value); setEmailMsg('') }} placeholder="name@gmail.com" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <Button onClick={saveEmail} disabled={emailBusy || (email.trim() === (user.email || '') && personalEmail.trim() === (user.personalEmail || ''))}>{emailBusy ? <Spinner size={16} /> : 'Save emails'}</Button>
           {hasRealPower('staffadmin') && <Button variant="outline" icon={KeyRound} onClick={() => setResetOpen(true)}>Reset password</Button>}
         </div>
         {emailMsg && <p className={`text-xs mt-2 ${emailMsg === 'Saved' ? 'text-emerald-600' : 'text-red-600'}`}>{emailMsg}</p>}

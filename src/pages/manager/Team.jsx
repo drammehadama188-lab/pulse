@@ -186,7 +186,7 @@ function ArchiveDialog({ target, onClose, onDone }) {
 }
 
 function AddStaffForm({ onClose, onCreated }) {
-  const [v, setV] = useState({ type: 'agent', name: '', email: '', title: 'Sales Agent', customTitle: '', baseSalary: '', transport: '', commission: '', target: '5', contractMonths: '3', probationMonths: '3', phone: '', address: '', joined: new Date().toISOString().slice(0, 10) })
+  const [v, setV] = useState({ type: 'agent', name: '', email: '', personalEmail: '', title: 'Sales Agent', customTitle: '', baseSalary: '', transport: '', commission: '', target: '5', contractMonths: '3', probationMonths: '3', phone: '', address: '', joined: new Date().toISOString().slice(0, 10) })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
@@ -199,7 +199,8 @@ function AddStaffForm({ onClose, onCreated }) {
 
   async function save() {
     if (!v.name.trim()) return setError('Enter their full name')
-    if (!/^\S+@\S+\.\S+$/.test(v.email)) return setError('Enter a valid email')
+    if (!/^\S+@\S+\.\S+$/.test(v.email)) return setError('Enter a valid work email — the login link goes there')
+    if (v.personalEmail.trim() && !/^\S+@\S+\.\S+$/.test(v.personalEmail)) return setError('The personal email is not valid')
     if (!finalTitle) return setError('Type the job title')
     setBusy(true)
     setError('')
@@ -210,6 +211,7 @@ function AddStaffForm({ onClose, onCreated }) {
           type: v.type,
           name: v.name,
           email: v.email,
+          personalEmail: v.personalEmail,
           title: finalTitle,
           baseSalary: v.baseSalary,
           transport: v.transport,
@@ -283,7 +285,8 @@ function AddStaffForm({ onClose, onCreated }) {
           ))}
         </div>
         <Field label="Full name"><Input value={v.name} onChange={set('name')} placeholder="e.g. Modou Njie" /></Field>
-        <Field label="Email"><Input type="email" value={v.email} onChange={set('email')} placeholder="name@example.com" /></Field>
+        <Field label="Work email (login & invite)"><Input type="email" value={v.email} onChange={set('email')} placeholder="name@damiatracker.com" /></Field>
+        <Field label="Personal email"><Input type="email" value={v.personalEmail} onChange={set('personalEmail')} placeholder="name@gmail.com" /></Field>
         <Field label="Title">
           <MenuSelect value={v.title} onChange={(t) => setV((p) => ({ ...p, title: t }))} options={isMgr ? ['Manager', 'Operations Manager', 'General Manager', 'Team Lead', OTHER] : ['Sales Agent', 'Sales Intern', 'Senior Sales Agent', 'Technician / Installer', 'Customer Service Supervisor', 'Office Cleaner', OTHER]} />
         </Field>
@@ -352,6 +355,7 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
   const [selected, setSelected] = useState(new Set(target.powers || []))
   const [canSignIn, setCanSignIn] = useState(!target.suspended)
   const [email, setEmail] = useState(target.email || '')
+  const [personalEmail, setPersonalEmail] = useState(target.personalEmail || '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   // Reset-password sub-state
@@ -378,6 +382,7 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
     try {
       const body = { powers: [...selected], canSignIn }
       if (email.trim() && email.trim().toLowerCase() !== (target.email || '')) body.email = email.trim()
+      if (personalEmail.trim().toLowerCase() !== (target.personalEmail || '')) body.personalEmail = personalEmail.trim()
       await api(`/staff/${target.username}/access`, { method: 'POST', body })
       onSaved()
     } catch (e) {
@@ -434,8 +439,11 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
             </span>
             <Pill tone={canSignIn ? 'good' : 'bad'}>{canSignIn ? 'On' : 'Paused'}</Pill>
           </button>
-          <Field label="Email (for their invite & login link)">
+          <Field label="Work email (for their invite & login link)">
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@damiatracker.com" />
+          </Field>
+          <Field label="Personal email">
+            <Input type="email" value={personalEmail} onChange={(e) => setPersonalEmail(e.target.value)} placeholder="name@gmail.com" />
           </Field>
 
           {/* Reset password — email-first, matches the profile page dialog */}

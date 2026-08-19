@@ -535,6 +535,12 @@ app.post('/api/staff/:username/access', auth, notViewAs, requireCeo, (req, res) 
       return res.status(409).json({ error: 'Another staff member already uses that email' })
     user.email = email
   }
+  // Personal email — on-file contact only, never a login. Empty string clears it.
+  if (typeof req.body?.personalEmail === 'string') {
+    const pe = req.body.personalEmail.trim().toLowerCase()
+    if (pe && !/^\S+@\S+\.\S+$/.test(pe)) return res.status(400).json({ error: 'Invalid personal email' })
+    user.personalEmail = pe
+  }
   // Master switch: pause/resume their Pulse sign-in entirely (reversible —
   // different from Archive, which means they left). Pausing kills sessions.
   let signInChange = null
@@ -748,6 +754,7 @@ app.get('/api/staff', auth, requirePower('team'), (req, res) => {
       username: u.username,
       name: u.name,
       email: u.email,
+      personalEmail: u.personalEmail || '',
       title: u.title,
       department: u.department,
       role: u.role,
@@ -769,9 +776,14 @@ app.get('/api/staff', auth, requirePower('team'), (req, res) => {
 
 // create a sales staff account
 app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (req, res) => {
-  const { type, name, email, title, salary, target, contractMonths, baseSalary, transport, commission, probationMonths, phone, address } = req.body || {}
+  const { type, name, email, personalEmail, title, salary, target, contractMonths, baseSalary, transport, commission, probationMonths, phone, address } = req.body || {}
   if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name is required' })
-  if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'A valid email is required' })
+  // Two emails (Adama 19 Aug, Mustapha entered under his gmail): `email` is
+  // the WORK one — it's the login and where the invite goes; personalEmail
+  // is the on-file contact only, never a login.
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'A valid work email is required — the login link goes there' })
+  const cleanPersonal = String(personalEmail || '').trim().toLowerCase()
+  if (cleanPersonal && !/^\S+@\S+\.\S+$/.test(cleanPersonal)) return res.status(400).json({ error: 'The personal email is not valid' })
   const users = seedUsers()
   if (users.some((u) => (u.email || '').toLowerCase() === String(email).toLowerCase()))
     return res.status(409).json({ error: 'A staff member with that email already exists' })
@@ -801,6 +813,7 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
     username,
     name: String(name).trim(),
     email: String(email).trim().toLowerCase(),
+    personalEmail: cleanPersonal,
     role: isMgr ? 'manager' : 'staff',
     department: isMgr ? 'Management' : 'Sales',
     title: cleanTitle,
@@ -934,6 +947,7 @@ app.get('/api/users', auth, requirePower('team'), (req, res) => {
       department: u.department,
       title: u.title,
       email: u.email || null,
+      personalEmail: u.personalEmail || '', // on-file contact — never a login
       powers: powersFor(u), // drives the Access toggles on the Team page
       permissionScopes: u.permissionScopes || {}, // named sub-toggles: who each power affects
       permissionSubs: u.permissionSubs || {}, // capability sub-toggles: what they can do inside it
