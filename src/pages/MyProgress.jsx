@@ -65,23 +65,27 @@ function Empty({ children }) {
 // Built only from real signals (score, goal %, improving streak); never invents.
 // Early in the month a low % is normal, not a failure — no nagging before a
 // third of the month is gone (Adama 4 Jul: "behind, push!" on the 4th is noise).
-function statusLine({ score, goalPct, series, monthElapsedPct, daysLeft }) {
+function statusLine({ score, goalPct, series, monthElapsedPct, daysLeft, daysSinceJoined, firstName }) {
+  // A brand-new joiner is never "behind" — welcome them for their first two weeks.
+  if (daysSinceJoined != null && daysSinceJoined >= 0 && daysSinceJoined <= 14) {
+    return { tone: 'blue', text: `Welcome to the team${firstName ? `, ${firstName}` : ''}! Your goals for the month are below. Your score builds as you close your first sales.` }
+  }
   if (series && series.length >= 3) {
     let run = 1
     for (let i = series.length - 1; i > 0; i--) { if (series[i].v > series[i - 1].v) run++; else break }
-    if (run >= 3) return { tone: 'blue', text: `Great work — your score has improved ${run - 1} months in a row.` }
+    if (run >= 3) return { tone: 'blue', text: `Great work. Your score has improved ${run - 1} months in a row.` }
   }
   if (goalPct != null) {
-    if (goalPct >= 70) return { tone: 'green', text: `You're having a strong month — you've completed ${goalPct}% of your goals.` }
+    if (goalPct >= 70) return { tone: 'green', text: `You're having a strong month with ${goalPct}% of your goals completed.` }
     if (goalPct < 40 && monthElapsedPct != null && monthElapsedPct <= 33) {
-      return { tone: 'blue', text: `The month is young — ${daysLeft} days to hit your goals.` }
+      return { tone: 'blue', text: `The month is young. ${daysLeft} days to hit your goals.` }
     }
-    if (goalPct < 40) return { tone: 'amber', text: `You're behind on your goals — ${goalPct}% done. Push to finish them this month.` }
-    return { tone: 'amber', text: `You're making progress — ${goalPct}% of your goals done. Keep going.` }
+    if (goalPct < 40) return { tone: 'amber', text: `You're behind on your goals at ${goalPct}% done. Push to finish them this month.` }
+    return { tone: 'amber', text: `You're making progress with ${goalPct}% of your goals done. Keep going.` }
   }
   if (score != null) {
     if (score >= 70) return { tone: 'green', text: `You're on track this month. Keep it up.` }
-    return { tone: 'amber', text: `There's room to improve this month — talk to your manager about your goals.` }
+    return { tone: 'amber', text: `There's room to improve this month. Talk to your manager about your goals.` }
   }
   return { tone: 'blue', text: `Your score builds here as your KPIs connect and your monthly reviews are locked.` }
 }
@@ -177,7 +181,10 @@ export default function MyProgress() {
   const monthElapsedPct = Math.round((nowD.getDate() / daysInMonth) * 100)
   const daysLeft = daysInMonth - nowD.getDate()
 
-  const line = statusLine({ score, goalPct, series, monthElapsedPct, daysLeft })
+  const daysSinceJoined = data.joined ? Math.floor((nowD - new Date(data.joined)) / 86400000) : null
+  const firstName = (data.name || '').split(' ')[0]
+
+  const line = statusLine({ score, goalPct, series, monthElapsedPct, daysLeft, daysSinceJoined, firstName })
   const tone = TONE[line.tone]
 
   return (
@@ -214,7 +221,7 @@ export default function MyProgress() {
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Overall progress</div>
             <div className="mt-1 flex items-end gap-3">
-              <span className={`text-5xl font-extrabold tracking-tight ${b.text}`}>{score == null ? '—' : `${score}%`}</span>
+              <span className={`text-5xl font-extrabold tracking-tight ${b.text}`}>{score == null ? '' : `${score}%`}</span>
               <div className="pb-1">
                 <Stars score={score} />
                 <div className="mt-1"><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusFor(score).tone}`}>{st}</span></div>
@@ -235,7 +242,7 @@ export default function MyProgress() {
           </div>
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Current score</div>
-            <div className="mt-1 text-2xl font-bold text-[var(--color-ink)]">{score == null ? '—' : `${score}%`}</div>
+            <div className="mt-1 text-2xl font-bold text-[var(--color-ink)]">{score == null ? 'Not scored' : `${score}%`}</div>
           </div>
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Manager review</div>
@@ -387,7 +394,7 @@ export default function MyProgress() {
             )}
           </div>
         ) : (
-          <Empty>Your record builds here month by month — sales, scores and reviews.</Empty>
+          <Empty>Your record builds here month by month: sales, scores and reviews.</Empty>
         )}
       </div>
 
@@ -446,7 +453,7 @@ export default function MyProgress() {
       {/* Next actions */}
       {tab === 'now' && actions.length > 0 && (
         <div>
-          <SectionTitle>This month — still to do</SectionTitle>
+          <SectionTitle>Still to do this month</SectionTitle>
           <Card className="p-5">
             <ul className="space-y-2.5">
               {actions.map((a, i) => (

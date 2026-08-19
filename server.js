@@ -4724,11 +4724,11 @@ app.get('/api/my/progress', auth, async (req, res) => {
   // manager's locked-review checklist rides along separately as additions.
   const GOAL_TEXT = {
     sales: (t) => `Close your ${t} tracker sales for the month.`,
-    online: (t) => `Keep your customers' trackers online — ${t}% or above.`,
+    online: (t) => `Keep your customers' trackers online at ${t}% or above.`,
     retention: (t) => `Keep customer retention at ${t}% or above.`, // legacy key — moved to CS as 'renewal'
     renewal: (t, k) => k?.due
       ? `Renew at least ${Math.ceil(k.due * t / 100)} of the ${k.due} customers due this month.`
-      : `Customers due this month renew — at least ${t}%.`,
+      : `Renew at least ${t}% of the customers due this month.`,
     reviews: (t) => `Bring in ${t} five-star Google reviews.`,
     cases: (t) => `Resolve ${t}% of customer cases.`,
     install: (t) => `Complete ${t}% of installations within 3 days.`,
@@ -4740,13 +4740,13 @@ app.get('/api/my/progress', auth, async (req, res) => {
     // from whatever is actually due each month (Adama 5 Jul).
     'team-retention': (t, k) => k?.due
       ? `Renew at least ${Math.ceil(k.due * t / 100)} of the ${k.due} customers due this month.`
-      : `Customers due this month renew — at least ${t}%.`,
-    'team-online': (t) => `Keep your team's customers' trackers online — at least ${t}%.`,
+      : `Renew at least ${t}% of the customers due this month.`,
+    'team-online': (t) => `Keep your team's customers' trackers online at ${t}% or above.`,
     'team-reviews': (t, k) => t != null
-      ? `The team brings in ${t} five-star Google reviews${k?.perSeller != null ? ` — ${k.perSeller} per agent` : ''}.`
+      ? `The team brings in ${t} five-star Google reviews${k?.perSeller != null ? ` (${k.perSeller} per agent)` : ''}.`
       : 'Get happy customers to leave five-star Google reviews.',
     'team-active': () => 'Every agent makes at least one sale this month.',
-    'team-attendance': (t) => `Your team shows up — at least ${t}% of scheduled days.`,
+    'team-attendance': (t) => `Your team shows up at least ${t}% of scheduled days.`,
   }
   const goals = (scorecard?.kpis || []).map((k) => ({
     key: k.key,
@@ -4764,6 +4764,7 @@ app.get('/api/my/progress', auth, async (req, res) => {
     role: person?.role || u?.title || '',
     department: person?.type || u?.department || '',
     manager: profile.manager || '',
+    joined: u?.joined || person?.joined || null, // lets the page welcome a new joiner instead of "behind"
     goals,
     liveScore: Number.isFinite(sc) ? sc : null,
     liveStatus: profile.performanceStatus || '',
