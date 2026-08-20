@@ -416,8 +416,10 @@ export default function InterviewRoom() {
       {/* the bar that follows you down the page */}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--color-line)] bg-[var(--color-surface)]/95 backdrop-blur md:pl-[216px]">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-2.5 md:px-8">
-          <span className="inline-flex items-center gap-1.5 text-[11.5px] text-[var(--color-ink-faint)]">
-            {savedAt ? <><Check size={13} className="text-[var(--color-good)]" /> Saved {savedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</> : 'Every answer saves as you go'}
+          <span className={`inline-flex items-center gap-1.5 text-[11.5px] ${error ? 'font-semibold text-[var(--color-stage-out)]' : 'text-[var(--color-ink-faint)]'}`}>
+            {error ? `Not saved — ${error}` : savedAt
+              ? <><Check size={13} className="text-[var(--color-good)]" /> Saved {savedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</>
+              : 'Every answer saves as you go'}
           </span>
           <div className="flex items-center gap-2">
             <Link to="/recruitment/interviews" className={BTN_LIGHT}>Save and exit</Link>

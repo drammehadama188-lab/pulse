@@ -4659,6 +4659,14 @@ app.post('/api/interviews', auth, requireSub('hr', 'records'), notViewAs, (req, 
     || templates.find((t) => t.id === settings.defaultTemplateId)
     || templates.find((t) => t.isDefault) || templates[0]
   if (!template) return res.status(400).json({ error: 'no interview template' })
+  // 🔒 Starting an interview on someone who already has one OPEN returns that
+  // one. Two blank interviews for the same person is how scoring gets "lost":
+  // the work is safe on the first record and the second looks like nothing
+  // saved. Pass force to deliberately run a second interview.
+  if (!b.force) {
+    const open = db.read('interviews', []).find((i) => i.applicantId === applicant.id && i.status !== 'completed')
+    if (open) return res.json({ interview: withScores(open), resumed: true })
+  }
   const now = new Date().toISOString()
   const rec = {
     id: crypto.randomUUID(),

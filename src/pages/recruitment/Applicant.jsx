@@ -83,10 +83,10 @@ export default function Applicant() {
     }
   }
 
-  async function startInterview(templateId) {
+  async function startInterview(templateId, force = false) {
     setStarting(true);
     try {
-      const { interview } = await api('/interviews', { method: 'POST', body: { applicantId: id, templateId } });
+      const { interview } = await api('/interviews', { method: 'POST', body: { applicantId: id, templateId, force } });
       navigate(`/recruitment/interviews/${interview.id}`);
     } catch (e) {
       setUploadError(e.message);
@@ -99,6 +99,8 @@ export default function Applicant() {
   const cvUrl = useMemo(() => (a?.cv ? `/api/applicants/${id}/cv?t=${encodeURIComponent(getToken() || '')}` : null), [a?.cv, id]);
   const answers = Object.entries(a?.answers || {});
   const position = positions.find(p => p.id === a?.positionId);
+  // An interview that is booked or half-scored is the one to go back to.
+  const openInterview = interviews.find(i => i.status !== 'completed');
 
   if (loading) return <p className="text-sm text-[var(--color-ink-faint)]">Loading…</p>;
   if (!a) return (
@@ -136,9 +138,15 @@ export default function Applicant() {
               className="text-sm border border-[var(--color-line)] rounded-lg px-3 py-2.5 bg-white">
               {STAGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
-            <button onClick={() => startInterview(templates.find(t => t.isDefault)?.id)} disabled={starting || !templates.length} className={`${BTN_PRIMARY} disabled:opacity-50`}>
-              <ClipboardCheck size={16} /> {starting ? 'Starting…' : 'Start interview'}
-            </button>
+            {openInterview ? (
+              <Link to={`/recruitment/interviews/${openInterview.id}`} className={BTN_PRIMARY}>
+                <ClipboardCheck size={16} /> Continue interview
+              </Link>
+            ) : (
+              <button onClick={() => startInterview(templates.find(t => t.isDefault)?.id)} disabled={starting || !templates.length} className={`${BTN_PRIMARY} disabled:opacity-50`}>
+                <ClipboardCheck size={16} /> {starting ? 'Starting…' : 'Start interview'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -239,8 +247,8 @@ export default function Applicant() {
             </Link>
           ))}
           {interviews.length > 0 && (
-            <button onClick={() => startInterview(templates.find(t => t.isDefault)?.id)} disabled={starting} className={BTN_LIGHT}>
-              <ClipboardCheck size={16} /> Start another interview
+            <button onClick={() => startInterview(templates.find(t => t.isDefault)?.id, true)} disabled={starting} className={BTN_LIGHT}>
+              <ClipboardCheck size={16} /> Start a second interview
             </button>
           )}
         </div>
