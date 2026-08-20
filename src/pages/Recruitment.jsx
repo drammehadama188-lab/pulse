@@ -10,8 +10,17 @@ import { api } from '../lib/api.js';
 // four-column board cannot be worked through by phone. The board stays for the
 // handful of walk-in CVs it was built for.
 
+// In the order a call actually goes. The outcomes between the first call and
+// the interview are separate on purpose: "no answer" (call again), "unreachable"
+// (number is dead), "not interested" and "not qualified" answer different
+// questions about a hiring round. Keys are stored — keep them in step with
+// APPLICANT_STAGES in server.js or the stage will not save.
 const STAGES = [
   ['cv_received', 'CV Received', 'bg-blue-50 text-blue-700', 'bg-blue-500'],
+  ['no_answer', 'Called, no answer', 'bg-orange-50 text-orange-700', 'bg-orange-400'],
+  ['unreachable', 'Unreachable', 'bg-gray-100 text-gray-500', 'bg-gray-400'],
+  ['not_interested', 'Not interested', 'bg-rose-50 text-rose-700', 'bg-rose-400'],
+  ['not_qualified', 'Not qualified', 'bg-gray-100 text-gray-500', 'bg-gray-400'],
   ['interviewed', 'Interviewed', 'bg-amber-50 text-amber-700', 'bg-amber-500'],
   ['hired', 'Hired', 'bg-emerald-50 text-emerald-700', 'bg-emerald-500'],
   ['rejected', 'Rejected', 'bg-gray-100 text-gray-500', 'bg-gray-400'],

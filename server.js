@@ -4240,7 +4240,9 @@ app.put('/api/employee-checklist', auth, requireSub('hr', 'records'), notViewAs,
 })
 
 // ---------- recruitment: applicants pipeline ----------
-const APPLICANT_STAGES = ['cv_received', 'interviewed', 'hired', 'rejected']
+// Call outcomes are stages of their own: at the end of a hiring round the
+// dead numbers must be countable apart from the people who said no.
+const APPLICANT_STAGES = ['cv_received', 'no_answer', 'unreachable', 'not_interested', 'not_qualified', 'interviewed', 'hired', 'rejected']
 const APPLICANT_FIELDS = ['name', 'role', 'email', 'phone', 'source', 'notes']
 app.get('/api/applicants', auth, requireSub('hr', 'records'), (req, res) => {
   // Two repairs on the way out, so records imported before the fixes read
