@@ -7,21 +7,28 @@
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
-  /* Brand — Damia red (primary action / active state) */
-  --color-brand: #d6294f;
-  --color-brand-600: #c01f44;
-  --color-brand-700: #a3173a;
-  --color-brand-50: #fdebef;
-  --color-brand-100: #fbd5dd;
+  /* Brand — blue is the interface accent (Adama picked the mockup's chrome,
+     20 Aug 2026): primary buttons, active nav, links, focus. Damia red stays
+     the company's mark and lives on in --color-damia for the logo. */
+  --color-brand: #2563eb;
+  --color-brand-600: #1d4ed8;
+  --color-brand-700: #1e40af;
+  --color-brand-50: #eff5ff;
+  --color-brand-100: #dbe7fe;
+  --color-damia: #d6294f;
 
   /* Accent — teal (the cool counter to red; logo tile, soft highlights) */
   --color-mint: #e3f4f1;
   --color-mint-tile: #d2ece8;
   --color-mint-deep: #0f9e94;
 
-  /* Teal toolbar (sidebar + mobile nav) */
-  --color-sidebar: #0c6f66;
-  --color-sidebar-edge: #0a5a53;
+  /* Sidebar is white now, separated by the same hairline as every card. The
+     active row is a soft blue pill, not a block of colour. */
+  --color-sidebar: #ffffff;
+  --color-sidebar-edge: #e8eaf0;
+  --color-sidebar-ink: #5b6472;
+  --color-sidebar-ink-active: #2563eb;
+  --color-sidebar-active: #eff5ff;
 
   /* Neutral surfaces — clean white + cool grey (founder-style, no green) */
   --color-paper: #f7f8fa;

@@ -23,12 +23,12 @@ export function MobileNav() {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors ${isActive ? 'text-white' : 'text-white/60'}`
+                `flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors ${isActive ? 'text-[var(--color-sidebar-ink-active)]' : 'text-[var(--color-sidebar-ink)]'}`
               }
             >
               {({ isActive }) => (
                 <>
-                  <span className={`flex h-8 w-12 items-center justify-center rounded-full transition-colors ${isActive ? 'bg-white text-[var(--color-sidebar)]' : ''}`}>
+                  <span className={`flex h-8 w-12 items-center justify-center rounded-full transition-colors ${isActive ? 'bg-[var(--color-sidebar-active)]' : ''}`}>
                     <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                   </span>
                   {item.label}
@@ -38,7 +38,7 @@ export function MobileNav() {
           ))}
           <button
             onClick={() => setMoreOpen(true)}
-            className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold text-white/60"
+            className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold text-[var(--color-sidebar-ink)]"
           >
             <span className="flex h-8 w-12 items-center justify-center rounded-full">
               <MORE.icon size={20} strokeWidth={2} />
