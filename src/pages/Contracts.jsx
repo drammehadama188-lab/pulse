@@ -53,7 +53,7 @@ function StatCard({ label, value, tone }) {
   return (
     <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
-      <p className={`mt-0.5 text-[27px] font-semibold tabular-nums ${c}`}>{value}</p>
+      <p className={`mt-0.5 text-[26px] font-semibold tabular-nums ${c}`}>{value}</p>
     </div>
   )
 }
@@ -112,9 +112,9 @@ export default function Contracts() {
   }, [roster, q])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Contracts</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Contracts</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Which contracts need your attention — renew, extend or let expire</p>
       </div>
 
@@ -129,7 +129,7 @@ export default function Contracts() {
 
       <div className="relative w-full sm:w-72">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)]" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="w-full rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] py-2 pl-9 pr-3 text-sm focus:border-[var(--color-ink-faint)] focus:outline-none" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="w-full rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] py-2 pl-9 pr-3 text-[13px] focus:border-[var(--color-ink-faint)] focus:outline-none" />
       </div>
 
       {/* Contract cards */}
@@ -147,15 +147,15 @@ export default function Contracts() {
                 <div className="flex items-start gap-4">
                   {/* days-left badge */}
                   <div className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg text-center ${d == null ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]' : d < 0 ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : d <= 30 ? 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
-                    {d == null ? <CheckCircle2 size={22} /> : <><span className="text-lg font-semibold leading-none tabular-nums">{Math.abs(d)}</span><span className="text-[9px] font-bold uppercase">{d < 0 ? 'days ago' : 'days'}</span></>}
+                    {d == null ? <CheckCircle2 size={22} /> : <><span className="text-[15px] font-semibold leading-none tabular-nums">{Math.abs(d)}</span><span className="text-[9px] font-semibold uppercase">{d < 0 ? 'days ago' : 'days'}</span></>}
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-base font-bold text-[var(--color-ink)]">{t.name}</span>
+                      <span className="text-base font-semibold text-[var(--color-ink)]">{t.name}</span>
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${sb.cls}`}><i className="h-1.5 w-1.5 rounded-full" style={{ background: sb.dot }} />{sb.label}</span>
                     </div>
-                    <p className="text-sm text-[var(--color-ink-soft)]">{t.role} · {t.contract || contractKind(t)}</p>
-                    <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs">
+                    <p className="text-[13px] text-[var(--color-ink-soft)]">{t.role} · {t.contract || contractKind(t)}</p>
+                    <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-[11.5px]">
                       <div><span className="text-[var(--color-ink-faint)]">Started </span><span className="font-semibold text-[var(--color-ink)]">{fmtStart(t.joined)}</span></div>
                       <div><span className="text-[var(--color-ink-faint)]">Ends </span><span className="font-semibold text-[var(--color-ink)]">{t.contractEnd ? fmtDate(t.contractEnd) : 'No end date'}</span></div>
                       <div><span className="text-[var(--color-ink-faint)]">Performance </span><span className="font-semibold text-[var(--color-ink)]">{score == null ? '—' : `${score}%`}</span></div>
@@ -163,7 +163,7 @@ export default function Contracts() {
                     </div>
                   </div>
                 </div>
-                <button onClick={() => navigate(`/agents/${slugify(t.name)}`)} className="inline-flex items-center gap-1.5 self-center rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2 text-sm font-semibold text-[var(--color-ink)] hover:border-[var(--color-line)]">
+                <button onClick={() => navigate(`/agents/${slugify(t.name)}`)} className="inline-flex items-center gap-1.5 self-center rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2 text-[13px] font-semibold text-[var(--color-ink)] hover:border-[var(--color-line)]">
                   Review contract <ChevronRight size={15} />
                 </button>
               </div>

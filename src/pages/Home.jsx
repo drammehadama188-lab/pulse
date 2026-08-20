@@ -112,11 +112,11 @@ export default function Home() {
   const done = !!att?.checkOut
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* greeting */}
       <div className="flex items-center justify-between gap-4 rise">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)] md:text-[27px]">
+          <h1 className="text-[22px] font-semibold tracking-tight text-[var(--color-ink)] md:text-[26px]">
             {greeting()}, {firstName(user.name)} <span className="inline-block">👋</span>
           </h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()}</p>
@@ -132,7 +132,7 @@ export default function Home() {
         {/* attendance */}
         <Card className="flex flex-col gap-3 p-5">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-[var(--color-ink-soft)]">Attendance</span>
+            <span className="text-[13px] font-semibold text-[var(--color-ink-soft)]">Attendance</span>
             <span
               className={`flex h-9 w-9 items-center justify-center rounded-lg ${
                 checkedIn
@@ -146,22 +146,22 @@ export default function Home() {
           <div>
             {done ? (
               <>
-                <div className="text-2xl font-semibold tracking-tight">Day complete</div>
-                <div className="text-sm text-[var(--color-ink-faint)]">
+                <div className="text-[22px] font-semibold tracking-tight">Day complete</div>
+                <div className="text-[13px] text-[var(--color-ink-faint)]">
                   {timeShort(att.checkIn)} – {timeShort(att.checkOut)}
                 </div>
               </>
             ) : checkedIn ? (
               <>
-                <div className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+                <div className="flex items-center gap-2 text-[22px] font-semibold tracking-tight">
                   Checked in {att.late && <Pill tone="warn">Late</Pill>}
                 </div>
-                <div className="text-sm text-[var(--color-ink-faint)]">since {timeShort(att.checkIn)}</div>
+                <div className="text-[13px] text-[var(--color-ink-faint)]">since {timeShort(att.checkIn)}</div>
               </>
             ) : (
               <>
-                <div className="text-2xl font-semibold tracking-tight">Not checked in</div>
-                <div className="text-sm text-[var(--color-ink-faint)]">Tap below to start your day</div>
+                <div className="text-[22px] font-semibold tracking-tight">Not checked in</div>
+                <div className="text-[13px] text-[var(--color-ink-faint)]">Tap below to start your day</div>
               </>
             )}
           </div>
@@ -236,8 +236,8 @@ export default function Home() {
               <ClipboardCheck size={20} />
             </span>
             <div>
-              <div className="text-xl font-semibold leading-none">{mgr.pending}</div>
-              <div className="text-sm text-[var(--color-ink-faint)]">pending approvals</div>
+              <div className="text-[18px] font-semibold leading-none">{mgr.pending}</div>
+              <div className="text-[13px] text-[var(--color-ink-faint)]">pending approvals</div>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -245,10 +245,10 @@ export default function Home() {
               <Clock size={20} />
             </span>
             <div>
-              <div className="text-xl font-semibold leading-none">
+              <div className="text-[18px] font-semibold leading-none">
                 {mgr.present}/{mgr.total}
               </div>
-              <div className="text-sm text-[var(--color-ink-faint)]">checked in today</div>
+              <div className="text-[13px] text-[var(--color-ink-faint)]">checked in today</div>
             </div>
           </div>
           <div className="ml-auto flex gap-2">
@@ -272,7 +272,7 @@ export default function Home() {
       {/* follow-ups — who to chase next (sales) */}
       {isSales && followUps.length > 0 && (
         <div className="rise" style={{ animationDelay: '140ms' }}>
-          <SectionTitle action={<Link to="/sales" className="text-sm font-semibold text-[var(--color-brand)]">View all</Link>}>
+          <SectionTitle action={<Link to="/sales" className="text-[13px] font-semibold text-[var(--color-brand)]">View all</Link>}>
             Follow up with
           </SectionTitle>
           <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden">
@@ -287,7 +287,7 @@ export default function Home() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold text-[var(--color-ink)]">{c.company}</div>
-                  <div className="truncate text-sm text-[var(--color-ink-faint)]">
+                  <div className="truncate text-[13px] text-[var(--color-ink-faint)]">
                     {c.nextAction || c.status}{c.phone ? ` · ${c.phone}` : ''}
                   </div>
                 </div>
@@ -300,23 +300,23 @@ export default function Home() {
       )}
 
       {/* focus + quick actions */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2 rise" style={{ animationDelay: '160ms' }}>
           <SectionTitle>This week's focus</SectionTitle>
           <Card className="p-5">
             {me ? (
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-brand-50)] text-xs font-bold text-[var(--color-brand)]">
+                  <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-brand-50)] text-[11.5px] font-semibold text-[var(--color-brand)]">
                     ★
                   </span>
                   <div>
                     <div className="font-semibold text-[var(--color-ink)]">{me.weeklyTarget || me.coreResponsibility}</div>
-                    <div className="text-sm text-[var(--color-ink-faint)]">{me.coreResponsibility}</div>
+                    <div className="text-[13px] text-[var(--color-ink-faint)]">{me.coreResponsibility}</div>
                   </div>
                 </div>
                 {me.kpi && (
-                  <div className="rounded-lg bg-[var(--color-fill)] px-4 py-3 text-sm">
+                  <div className="rounded-lg bg-[var(--color-fill)] px-4 py-3 text-[13px]">
                     <span className="font-semibold text-[var(--color-ink-soft)]">Goal · </span>
                     <span className="text-[var(--color-ink)]">{me.kpi}</span>
                   </div>
@@ -352,7 +352,7 @@ function ContractChip({ contract, end }) {
   const dateStr = new Date(end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   return (
     <div className="mt-2">
-      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${
+      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold ${
         tone === 'bad' ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : tone === 'warn' ? 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' : 'bg-[var(--color-rest-bg)] text-[var(--color-rest)]'
       }`}>
         <CalendarClock size={14} />
@@ -368,8 +368,8 @@ function TodayStat({ icon: Icon, label, value }) {
       <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-brand-50)] text-[var(--color-brand)]">
         <Icon size={18} strokeWidth={2.2} />
       </span>
-      <div className="text-2xl font-semibold leading-none text-[var(--color-ink)]">{value}</div>
-      <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
+      <div className="text-[22px] font-semibold leading-none text-[var(--color-ink)]">{value}</div>
+      <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
         {label} today
       </div>
     </div>

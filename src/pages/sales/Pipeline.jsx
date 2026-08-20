@@ -46,13 +46,13 @@ export default function Pipeline() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Pipeline</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Pipeline</h1>
         <PeriodSelector period={period} onChange={setPeriod} />
       </div>
 
       {/* current pipeline (all-time state) */}
       <Card className="p-5">
-        <div className="mb-4 text-sm font-semibold text-[var(--color-ink-soft)]">Current pipeline</div>
+        <div className="mb-4 text-[13px] font-semibold text-[var(--color-ink-soft)]">Current pipeline</div>
         <div className="flex items-center justify-between gap-2 text-center">
           <FunnelStep label="Customers" value={calc.total} />
           <Arrow />
@@ -60,7 +60,7 @@ export default function Pipeline() {
           <Arrow />
           <FunnelStep label="Won" value={calc.won} tone="good" />
         </div>
-        <div className="mt-4 flex items-center justify-center gap-2 text-sm">
+        <div className="mt-4 flex items-center justify-center gap-2 text-[13px]">
           <span className="text-[var(--color-ink-faint)]">Conversion</span>
           <Pill tone={calc.conversion >= 20 ? 'good' : 'warn'}>{calc.conversion}%</Pill>
           <span className="text-[var(--color-ink-faint)]">· {calc.lost} lost</span>
@@ -71,9 +71,9 @@ export default function Pipeline() {
       <Card className="p-5">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-semibold text-[var(--color-ink-soft)]">Sales · {period.label}</div>
-            <div className="mt-1 text-[27px] font-semibold tracking-tight">
-              {calc.wonInPeriod} {period.months && <span className="text-lg text-[var(--color-ink-faint)]">/ {target}</span>}
+            <div className="text-[13px] font-semibold text-[var(--color-ink-soft)]">Sales · {period.label}</div>
+            <div className="mt-1 text-[26px] font-semibold tracking-tight">
+              {calc.wonInPeriod} {period.months && <span className="text-[15px] text-[var(--color-ink-faint)]">/ {target}</span>}
             </div>
           </div>
           {period.months ? <Pill tone={onTarget ? 'good' : 'warn'} dot>{onTarget ? 'Target hit' : `${Math.max(0, target - calc.wonInPeriod)} to go`}</Pill> : null}
@@ -84,15 +84,15 @@ export default function Pipeline() {
           </div>
         ) : null}
         {data.me?.commission > 0 && period.key === 'this_month' && (
-          <div className="mt-3 text-sm text-[var(--color-ink-soft)]">
-            Commission {onTarget ? 'earned' : 'on hitting target'}: <span className="font-bold text-[var(--color-ink)]">{dalasi(data.me.commission)}</span>
+          <div className="mt-3 text-[13px] text-[var(--color-ink-soft)]">
+            Commission {onTarget ? 'earned' : 'on hitting target'}: <span className="font-semibold text-[var(--color-ink)]">{dalasi(data.me.commission)}</span>
           </div>
         )}
       </Card>
 
       {/* period-scoped activity */}
       <Card className="p-5">
-        <div className="mb-3 text-sm font-semibold text-[var(--color-ink-soft)]">Activity · {period.label}</div>
+        <div className="mb-3 text-[13px] font-semibold text-[var(--color-ink-soft)]">Activity · {period.label}</div>
         <div className="grid grid-cols-2 gap-4 text-center sm:grid-cols-4">
           <Activity label="Calls" v={calc.calls} />
           <Activity label="Visits" v={calc.visits} />
@@ -103,18 +103,18 @@ export default function Pipeline() {
 
       {/* status breakdown (current) */}
       <Card className="p-5">
-        <div className="mb-3 text-sm font-semibold text-[var(--color-ink-soft)]">Customers by status</div>
+        <div className="mb-3 text-[13px] font-semibold text-[var(--color-ink-soft)]">Customers by status</div>
         {counts.length === 0 ? (
-          <p className="text-sm text-[var(--color-ink-faint)]">No data.</p>
+          <p className="text-[13px] text-[var(--color-ink-faint)]">No data.</p>
         ) : (
           <div className="space-y-2.5">
             {counts.map(([status, n]) => (
               <div key={status} className="flex items-center gap-3">
-                <span className="w-28 shrink-0 text-sm text-[var(--color-ink-soft)]">{status}</span>
+                <span className="w-28 shrink-0 text-[13px] text-[var(--color-ink-soft)]">{status}</span>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--color-line)]">
                   <div className="h-full rounded-full bg-[var(--color-brand)]" style={{ width: `${calc.total ? (n / calc.total) * 100 : 0}%` }} />
                 </div>
-                <span className="w-6 text-right text-sm font-bold text-[var(--color-ink)]">{n}</span>
+                <span className="w-6 text-right text-[13px] font-semibold text-[var(--color-ink)]">{n}</span>
               </div>
             ))}
           </div>
@@ -132,8 +132,8 @@ function countBy(rows, order) {
 function FunnelStep({ label, value, tone }) {
   return (
     <div className="flex-1">
-      <div className={`text-2xl font-semibold tracking-tight ${tone === 'good' ? 'text-[var(--color-good)]' : 'text-[var(--color-ink)]'}`}>{value}</div>
-      <div className="text-xs text-[var(--color-ink-faint)]">{label}</div>
+      <div className={`text-[22px] font-semibold tracking-tight ${tone === 'good' ? 'text-[var(--color-good)]' : 'text-[var(--color-ink)]'}`}>{value}</div>
+      <div className="text-[11.5px] text-[var(--color-ink-faint)]">{label}</div>
     </div>
   )
 }
@@ -143,8 +143,8 @@ function Arrow() {
 function Activity({ label, v }) {
   return (
     <div>
-      <div className="text-xl font-semibold tracking-tight text-[var(--color-ink)]">{v}</div>
-      <div className="text-xs text-[var(--color-ink-faint)]">{label}</div>
+      <div className="text-[18px] font-semibold tracking-tight text-[var(--color-ink)]">{v}</div>
+      <div className="text-[11.5px] text-[var(--color-ink-faint)]">{label}</div>
     </div>
   )
 }

@@ -65,7 +65,7 @@ export default function MyWeek() {
     }, 600)
   }
 
-  if (error) return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'My Workday is for team leads.' : `Couldn't load — ${error}`}</Card>
+  if (error) return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'My Workday is for team leads.' : `Couldn't load — ${error}`}</Card>
   if (!data || !selDate) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
 
   const dateLabel = new Date(`${data.today}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
@@ -77,7 +77,7 @@ export default function MyWeek() {
     <div className="space-y-8">
       {/* header + always-visible month strip */}
       <div>
-        <h1 className="text-[27px] font-semibold tracking-tight text-[var(--color-ink)]">{greeting()}, {firstName(data.lead.name)} 👋</h1>
+        <h1 className="text-[26px] font-semibold tracking-tight text-[var(--color-ink)]">{greeting()}, {firstName(data.lead.name)} 👋</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{dateLabel}</p>
         {data.week.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
@@ -85,11 +85,11 @@ export default function MyWeek() {
               const pct = w.target ? Math.min(100, Math.round(((w.actual || 0) / w.target) * 100)) : 0
               return (
                 <div key={w.label} className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-[var(--color-ink-soft)]">{w.label}</span>
+                  <span className="text-[11.5px] font-semibold text-[var(--color-ink-soft)]">{w.label}</span>
                   <span className="h-1.5 w-16 overflow-hidden rounded-full bg-[var(--color-fill)]">
                     <span className={`block h-full rounded-full ${pct >= 66 ? 'bg-[var(--color-good)]' : pct >= 33 ? 'bg-amber-400' : 'bg-[var(--color-bad)]'}`} style={{ width: `${pct}%` }} />
                   </span>
-                  <span className="text-xs font-bold tabular-nums text-[var(--color-ink)]">{w.actual ?? '—'}{w.unit || `/${w.target}`}</span>
+                  <span className="text-[11.5px] font-semibold tabular-nums text-[var(--color-ink)]">{w.actual ?? '—'}{w.unit || `/${w.target}`}</span>
                 </div>
               )
             })}
@@ -127,10 +127,10 @@ export default function MyWeek() {
       <section>
         <div className="border-t border-[var(--color-line)] pt-3">
           <div className="text-[11px] font-semibold uppercase tracking-widest text-[var(--color-ink-faint)]">Other objective</div>
-          <h2 className="mt-0.5 text-lg font-bold text-[var(--color-ink)]">{otherTitle || <span className="font-semibold text-[var(--color-ink-faint)]">Adama hasn't named this objective yet</span>}</h2>
+          <h2 className="mt-0.5 text-[15px] font-semibold text-[var(--color-ink)]">{otherTitle || <span className="font-semibold text-[var(--color-ink-faint)]">Adama hasn't named this objective yet</span>}</h2>
         </div>
         <div className="mt-3">
-          <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
+          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
           <PlanArea items={itemsFor('other')} canAct={canAct} canTick={canAct && isToday} focusKey="other" date={selDate} cap={5} placeholder="e.g. Coaching session with Sally" onToggle={toggle} onRemove={remove} onAdd={add} onEdit={editItem} />
         </div>
         <CommentBox label="Comments" value={objNotes.other || ''} saved={!!noteSaved.other} onChange={(text) => saveObjNote('other', text)} />
@@ -139,12 +139,12 @@ export default function MyWeek() {
       {/* from Adama */}
       {data.fromAdama.length > 0 && (
         <section>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-brand)]">From Adama</h2>
+          <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-brand)]">From Adama</h2>
           <div className="space-y-1 border-l-2 border-[var(--color-brand)] pl-3">
             {data.fromAdama.map((a) => (
               <button key={a.id} onClick={canAct ? () => toggleAssignment(a.id) : undefined} className={`flex w-full items-start gap-2 rounded-lg px-1 py-1 text-left ${canAct ? 'hover:bg-[var(--color-paper)]' : 'cursor-default'}`}>
                 <span className="mt-0.5 shrink-0">{a.done ? <CheckCircle2 size={16} className="text-[var(--color-good)]" /> : <Circle size={16} className="text-[var(--color-ink-faint)]" />}</span>
-                <span className={`text-sm font-medium ${a.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>{a.title}{a.due ? <span className="ml-2 text-xs font-semibold text-[var(--color-ink-faint)]">due {new Date(`${a.due}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span> : null}</span>
+                <span className={`text-[13px] font-medium ${a.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>{a.title}{a.due ? <span className="ml-2 text-[11.5px] font-semibold text-[var(--color-ink-faint)]">due {new Date(`${a.due}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span> : null}</span>
               </button>
             ))}
           </div>
@@ -163,8 +163,8 @@ export function DayStrip({ days, today, selDate, onSelect, planByDate }) {
         const sel = d === selDate
         return (
           <button key={d} onClick={() => onSelect(d)} className={`rounded-lg px-3 py-1.5 text-center ${sel ? 'bg-[var(--color-ink)] text-white' : 'border border-[var(--color-line-soft)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-line)]'}`}>
-            <span className="block text-[10px] font-bold uppercase tracking-wide opacity-75">{d === today ? 'Today' : dt.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })}</span>
-            <span className="block text-sm font-semibold tabular-nums">{dt.getUTCDate()}{n ? <span className="ml-1 text-[10px] font-bold opacity-70">·{n}</span> : null}</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wide opacity-75">{d === today ? 'Today' : dt.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })}</span>
+            <span className="block text-[13px] font-semibold tabular-nums">{dt.getUTCDate()}{n ? <span className="ml-1 text-[10px] font-semibold opacity-70">·{n}</span> : null}</span>
           </button>
         )
       })}
@@ -177,26 +177,26 @@ function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, pr
     <section>
       {primary ? (
         <div className="border-t-4 border-[var(--color-brand)] pt-3">
-          <div className="text-xs font-semibold uppercase tracking-widest text-[var(--color-brand)]">{slot}</div>
-          <h2 className="mt-0.5 text-2xl font-semibold text-[var(--color-ink)]">{title}</h2>
+          <div className="text-[11.5px] font-semibold uppercase tracking-widest text-[var(--color-brand)]">{slot}</div>
+          <h2 className="mt-0.5 text-[22px] font-semibold text-[var(--color-ink)]">{title}</h2>
         </div>
       ) : (
         <div className="border-t border-[var(--color-line)] pt-3">
           <div className="text-[11px] font-semibold uppercase tracking-widest text-[var(--color-ink-faint)]">{slot}</div>
-          <h2 className="mt-0.5 text-lg font-bold text-[var(--color-ink)]">{title}</h2>
+          <h2 className="mt-0.5 text-[15px] font-semibold text-[var(--color-ink)]">{title}</h2>
         </div>
       )}
       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
         {metrics.map((m) => (
           <div key={m.label}>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{m.label}</div>
-            <div className={`font-semibold tabular-nums text-[var(--color-ink)] ${primary ? 'text-xl' : 'text-base'}`}>{m.value}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{m.label}</div>
+            <div className={`font-semibold tabular-nums text-[var(--color-ink)] ${primary ? 'text-[18px]' : 'text-base'}`}>{m.value}</div>
           </div>
         ))}
         {agents && (
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Agents</div>
-            <div className={`font-semibold text-[var(--color-ink)] ${primary ? 'text-base' : 'text-sm'}`}>{agents.map((a) => `${a.name} ${a.won}`).join(' · ')}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Agents</div>
+            <div className={`font-semibold text-[var(--color-ink)] ${primary ? 'text-base' : 'text-[13px]'}`}>{agents.map((a) => `${a.name} ${a.won}`).join(' · ')}</div>
           </div>
         )}
       </div>
@@ -204,19 +204,19 @@ function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, pr
         <div className="mt-3 flex flex-wrap gap-1.5">
           {weekPlan.map((d) => (
             <div key={d.date} className={`rounded-lg px-2.5 py-1.5 text-center ${d.today ? 'bg-[var(--color-brand)] text-white' : d.past ? 'bg-[var(--color-fill)] text-[var(--color-ink-faint)]' : 'bg-[var(--color-surface)] border border-[var(--color-line-soft)] text-[var(--color-ink)]'}`}>
-              <div className="text-[10px] font-bold uppercase tracking-wide opacity-80">{d.label}</div>
-              <div className="text-sm font-semibold tabular-nums">{d.past ? (d.did == null ? '—' : `✓${d.did}`) : d.need}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide opacity-80">{d.label}</div>
+              <div className="text-[13px] font-semibold tabular-nums">{d.past ? (d.did == null ? '—' : `✓${d.did}`) : d.need}</div>
             </div>
           ))}
           <div className="self-center pl-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">per-day pace to hit the month</div>
         </div>
       )}
       <div className="mt-4">
-        <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
+        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
         <PlanArea items={items} canAct={canAct} canTick={canTick} focusKey={focusKey} date={date} cap={cap} placeholder={placeholder} onToggle={onToggle} onRemove={onRemove} onAdd={onAdd} onEdit={onEdit} />
       </div>
       {progress && (
-        <p className="mt-3 text-sm text-[var(--color-ink-soft)]">
+        <p className="mt-3 text-[13px] text-[var(--color-ink-soft)]">
           Progress today: <span className="font-semibold tabular-nums text-[var(--color-ink)]">{progress.actual}/{progress.goal}</span> {progress.unit}
         </p>
       )}
@@ -228,11 +228,11 @@ function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, pr
 function CommentBox({ label, value, saved, onChange }) {
   return (
     <div className="mt-3">
-      <div className="mb-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{label} {saved && <span className="normal-case tracking-normal text-[var(--color-good)]">Saved ✓</span>}</div>
+      <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label} {saved && <span className="normal-case tracking-normal text-[var(--color-good)]">Saved ✓</span>}</div>
       <textarea
         value={value} onChange={(e) => onChange(e.target.value)} rows={2}
         placeholder="Why wasn't the goal met, or anything the business should know — saves by itself."
-        className="w-full rounded-lg border border-[var(--color-line-soft)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+        className="w-full rounded-lg border border-[var(--color-line-soft)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
       />
     </div>
   )
@@ -257,7 +257,7 @@ export function PlanArea({ items, canAct, canTick, focusKey, date, cap, placehol
   return (
     <div className="rounded-lg border border-[var(--color-line-soft)] bg-[var(--color-surface)] p-4">
       <div className="space-y-0.5">
-        {items.length === 0 && <p className="py-1 text-sm text-[var(--color-ink-faint)]">Nothing planned for this day yet — write below.</p>}
+        {items.length === 0 && <p className="py-1 text-[13px] text-[var(--color-ink-faint)]">Nothing planned for this day yet — write below.</p>}
         {items.map((it) => (
           <div key={it.id} className="group flex items-start gap-2 rounded-lg px-1 py-1">
             <button onClick={canTick ? () => onToggle(it.id) : undefined} title={canTick ? undefined : 'Ticking counts on the day itself'} className={`mt-0.5 shrink-0 ${canTick ? '' : 'cursor-default opacity-50'}`}>
@@ -268,7 +268,7 @@ export function PlanArea({ items, canAct, canTick, focusKey, date, cap, placehol
                 autoFocus value={editText} onChange={(e) => setEditText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(it.id); if (e.key === 'Escape') setEditing(null) }}
                 onBlur={() => saveEdit(it.id)}
-                className="min-w-0 flex-1 rounded border border-[var(--color-line)] px-1.5 py-0.5 text-sm"
+                className="min-w-0 flex-1 rounded border border-[var(--color-line)] px-1.5 py-0.5 text-[13px]"
               />
             ) : (
               <span
@@ -276,9 +276,9 @@ export function PlanArea({ items, canAct, canTick, focusKey, date, cap, placehol
                 className={`min-w-0 flex-1 ${canAct && !it.done && !it.byAdama ? 'cursor-text' : ''}`}
                 title={it.byAdama ? 'From management — only Adama can change it' : canAct && !it.done ? 'Click to edit' : undefined}
               >
-                <span className={`text-sm font-medium ${it.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>{it.title}</span>
-                {it.byAdama ? <span className="ml-2 rounded-full bg-[var(--color-brand-50)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-brand)]">from Adama</span> : null}
-                {it.carried ? <span className="ml-2 rounded-full bg-[var(--color-bad-bg,#fef2f2)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-bad)]">from yesterday</span> : null}
+                <span className={`text-[13px] font-medium ${it.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>{it.title}</span>
+                {it.byAdama ? <span className="ml-2 rounded-full bg-[var(--color-brand-50)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-brand)]">from Adama</span> : null}
+                {it.carried ? <span className="ml-2 rounded-full bg-[var(--color-bad-bg,#fef2f2)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-bad)]">from yesterday</span> : null}
               </span>
             )}
             {canAct && editing !== it.id && !it.byAdama && (
@@ -288,11 +288,11 @@ export function PlanArea({ items, canAct, canTick, focusKey, date, cap, placehol
         ))}
       </div>
       {canAct && (full ? (
-        <p className="mt-1.5 text-xs font-semibold text-[var(--color-ink-faint)]">{items.length}/{cap} — the plan is full. Finish or remove something first.</p>
+        <p className="mt-1.5 text-[11.5px] font-semibold text-[var(--color-ink-faint)]">{items.length}/{cap} — the plan is full. Finish or remove something first.</p>
       ) : (
         <div className="mt-1.5 flex items-center gap-2">
           <Plus size={15} className="shrink-0 text-[var(--color-ink-faint)]" />
-          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder={`${placeholder} — Enter to add`} className="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm outline-none placeholder:text-[var(--color-ink-faint)]" />
+          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder={`${placeholder} — Enter to add`} className="min-w-0 flex-1 border-0 bg-transparent py-1 text-[13px] outline-none placeholder:text-[var(--color-ink-faint)]" />
           {cap != null && <span className="shrink-0 text-[10px] font-semibold tabular-nums text-[var(--color-ink-faint)]">{items.length}/{cap}</span>}
         </div>
       ))}

@@ -81,9 +81,9 @@ export default function Sales() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Customers</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Customers</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{isViewAs ? `${user.name}'s` : 'Your'} prospects &amp; customers.</p>
       </div>
 
@@ -102,7 +102,7 @@ export default function Sales() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${tab === t.key ? 'bg-[var(--color-surface)] text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)]'}`}
+            className={`rounded-lg px-4 py-2 text-[13px] font-semibold transition-colors ${tab === t.key ? 'bg-[var(--color-surface)] text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)]'}`}
           >
             {t.label} <span className="ml-1 text-[var(--color-ink-faint)]">{t.count}</span>
           </button>
@@ -136,7 +136,7 @@ export default function Sales() {
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${filter === f ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition-colors ${filter === f ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}
                 >
                   {f}
                 </button>
@@ -154,16 +154,16 @@ export default function Sales() {
                 <Link key={c.id} to={`/sales/c/${c.id}`} className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-[var(--color-line-soft)] sm:px-5">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-[var(--color-ink)]">{c.company}</span>
+                      <span className="font-semibold text-[var(--color-ink)]">{c.company}</span>
                       <Pill tone={STATUS_TONE[c.status] || 'neutral'}>{c.status}</Pill>
                     </div>
-                    <div className="mt-0.5 text-sm text-[var(--color-ink-faint)]">
+                    <div className="mt-0.5 text-[13px] text-[var(--color-ink-faint)]">
                       {[c.segment, c.contact].filter(Boolean).join(' · ')}
                       {c.phone ? ` · ${c.phone}` : ''}
                     </div>
                   </div>
                   {tab === 'paid' ? (
-                    <span className="shrink-0 font-bold text-[var(--color-good)]">{dalasi(Number(c.amountPaid) || Number(c.amountExpected) || 0)}</span>
+                    <span className="shrink-0 font-semibold text-[var(--color-good)]">{dalasi(Number(c.amountPaid) || Number(c.amountExpected) || 0)}</span>
                   ) : (
                     c.phone && (
                       <a href={`tel:${c.phone}`} onClick={(e) => e.stopPropagation()} className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-good-bg)] text-[var(--color-good)]">
@@ -179,12 +179,12 @@ export default function Sales() {
 
           {shown.length > PAGE_SIZE && (
             <div className="flex items-center justify-between gap-3 px-1">
-              <span className="text-sm text-[var(--color-ink-soft)]">
+              <span className="text-[13px] text-[var(--color-ink-soft)]">
                 Showing <span className="font-semibold text-[var(--color-ink)]">{firstRow}–{lastRow}</span> of {shown.length}
               </span>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>Prev</Button>
-                <span className="text-sm font-semibold text-[var(--color-ink-soft)]">{safePage} / {pageCount}</span>
+                <span className="text-[13px] font-semibold text-[var(--color-ink-soft)]">{safePage} / {pageCount}</span>
                 <Button variant="outline" size="sm" disabled={safePage >= pageCount} onClick={() => setPage(safePage + 1)}>Next</Button>
               </div>
             </div>

@@ -191,7 +191,7 @@ export default function SupervisorProfile({ supervisor }) {
 
   // Team status pill
   const teamStatusLabel = teamPerf >= 80 ? 'Excellent' : teamPerf >= 50 ? 'On track' : teamPerf >= 20 ? 'At risk' : 'Critical';
-  const teamStatusColor = teamPerf >= 80 ? 'bg-emerald-100 text-emerald-700' : teamPerf >= 50 ? 'bg-blue-100 text-blue-700' : teamPerf >= 20 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
+  const teamStatusColor = teamPerf >= 80 ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]' : teamPerf >= 50 ? 'bg-blue-100 text-blue-700' : teamPerf >= 20 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
 
   // Supervisor's own sales — for selected period
   const supervisorPersonalSales = (crmTrackers || []).filter(tr => {
@@ -240,24 +240,24 @@ export default function SupervisorProfile({ supervisor }) {
 
   return (
     <div>
-      <button onClick={() => navigate('/sales')} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6">
+      <button onClick={() => navigate('/sales')} className="flex items-center gap-2 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6">
         <ArrowLeft size={14} /> Back to Sales
       </button>
 
       {/* IDENTITY — minimal with status pills + contract row */}
-      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
         <div className="flex items-start justify-between gap-5 flex-wrap">
           <div className="flex items-start gap-5">
-            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white text-lg font-semibold shrink-0">
+            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white text-[15px] font-semibold shrink-0">
               {initials}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-1 flex-wrap">
-                <h1 className="text-2xl font-semibold text-[var(--color-ink)]">{supervisor.name}</h1>
+                <h1 className="text-[22px] font-semibold text-[var(--color-ink)]">{supervisor.name}</h1>
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-700">Supervisor</span>
                 {(() => {
                   const isActive = !supervisor.contractEnd || new Date(supervisor.contractEnd) > new Date();
-                  return <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{isActive ? 'Active' : 'Expired'}</span>;
+                  return <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${isActive ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]' : 'bg-red-100 text-red-700'}`}>{isActive ? 'Active' : 'Expired'}</span>;
                 })()}
               </div>
               <p className="text-[var(--color-ink-soft)]">{supervisor.role}</p>
@@ -266,13 +266,13 @@ export default function SupervisorProfile({ supervisor }) {
           </div>
           <div className="flex flex-col items-end gap-2 text-right">
             <div>
-              <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)] mb-0.5">Team status</p>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${teamStatusColor}`}>{teamStatusLabel}</span>
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-0.5">Team status</p>
+              <span className={`px-3 py-1 rounded-full text-[11.5px] font-semibold ${teamStatusColor}`}>{teamStatusLabel}</span>
             </div>
             {decision && (
               <div>
-                <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)] mb-0.5">Last review</p>
-                <p className="text-sm text-[var(--color-ink)] font-medium">{DECISIONS.find(d => d.value === decision.decision)?.label || decision.decision}</p>
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-0.5">Last review</p>
+                <p className="text-[13px] text-[var(--color-ink)] font-medium">{DECISIONS.find(d => d.value === decision.decision)?.label || decision.decision}</p>
               </div>
             )}
           </div>
@@ -304,10 +304,10 @@ export default function SupervisorProfile({ supervisor }) {
       </div>
 
       {/* COMMAND PANEL — team metrics, big and clean */}
-      <div className="bg-[var(--color-ink)] rounded-lg p-6 mb-4 text-white">
+      <div className="bg-[var(--color-ink)] rounded-lg p-5 mb-4 text-white">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
-            <p className="text-[10px] uppercase tracking-wider font-bold text-white/50">Team Command · {rangeLabel}</p>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-white/50">Team Command · {rangeLabel}</p>
             <p className="text-[10px] text-white/40 mt-0.5">
               {rangeStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               {' — '}
@@ -326,41 +326,41 @@ export default function SupervisorProfile({ supervisor }) {
             />
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold mb-1">Team Size</p>
-            <p className="text-4xl font-bold">{teamSize}</p>
+            <p className="text-4xl font-semibold">{teamSize}</p>
           </div>
           <div>
             <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold mb-1">Team Sales</p>
-            <p className="text-4xl font-bold">{teamSales}<span className="text-white/30 text-2xl font-normal"> / {teamTarget}</span></p>
-            <p className={`text-xs mt-1 ${teamPerf >= 80 ? 'text-emerald-300' : teamPerf >= 50 ? 'text-amber-300' : 'text-red-300'}`}>{teamPerf}% of team target</p>
+            <p className="text-4xl font-semibold">{teamSales}<span className="text-white/30 text-[22px] font-normal"> / {teamTarget}</span></p>
+            <p className={`text-[11.5px] mt-1 ${teamPerf >= 80 ? 'text-emerald-300' : teamPerf >= 50 ? 'text-amber-300' : 'text-red-300'}`}>{teamPerf}% of team target</p>
           </div>
           <div>
             <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold mb-1">Team Revenue</p>
-            <p className="text-4xl font-bold">D{(teamRevenue / 1000).toFixed(1)}k</p>
-            <p className="text-xs text-white/40 mt-1">D{teamRevenue.toLocaleString()}</p>
+            <p className="text-4xl font-semibold">D{(teamRevenue / 1000).toFixed(1)}k</p>
+            <p className="text-[11.5px] text-white/40 mt-1">D{teamRevenue.toLocaleString()}</p>
           </div>
           <div>
             <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold mb-1">Need Attention</p>
-            <p className={`text-4xl font-bold ${zeroSalesReports.length > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{zeroSalesReports.length + goingSilent.length}</p>
-            <p className="text-xs text-white/40 mt-1">{zeroSalesReports.length} zero · {goingSilent.length} silent</p>
+            <p className={`text-4xl font-semibold ${zeroSalesReports.length > 0 ? 'text-red-400' : 'text-[var(--color-good)]'}`}>{zeroSalesReports.length + goingSilent.length}</p>
+            <p className="text-[11.5px] text-white/40 mt-1">{zeroSalesReports.length} zero · {goingSilent.length} silent</p>
           </div>
         </div>
       </div>
 
       {/* SUPERVISOR EFFECTIVENESS — judges her management, not just team data */}
-      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
         <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Shield size={18} className="text-[var(--color-ink-faint)]" />
             <h2 className="text-[var(--color-ink)] font-semibold">Supervisor Effectiveness</h2>
           </div>
           <div className="flex items-baseline gap-2">
-            <p className={`text-2xl font-bold ${effColor === 'emerald' ? 'text-emerald-600' : effColor === 'blue' ? 'text-blue-600' : effColor === 'amber' ? 'text-amber-600' : 'text-red-600'}`}>
-              {effScore}<span className="text-[var(--color-ink-faint)] text-sm font-normal">/100</span>
+            <p className={`text-[22px] font-semibold ${effColor === 'emerald' ? 'text-[var(--color-good)]' : effColor === 'blue' ? 'text-blue-600' : effColor === 'amber' ? 'text-amber-600' : 'text-red-600'}`}>
+              {effScore}<span className="text-[var(--color-ink-faint)] text-[13px] font-normal">/100</span>
             </p>
-            <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${effColor === 'emerald' ? 'bg-emerald-100 text-emerald-700' : effColor === 'blue' ? 'bg-blue-100 text-blue-700' : effColor === 'amber' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+            <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${effColor === 'emerald' ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]' : effColor === 'blue' ? 'bg-blue-100 text-blue-700' : effColor === 'amber' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
               {effRating}
             </span>
           </div>
@@ -369,27 +369,27 @@ export default function SupervisorProfile({ supervisor }) {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-1">Team target hit</p>
-            <p className={`text-lg font-bold ${teamTargetHit ? 'text-emerald-600' : 'text-red-600'}`}>{teamTargetHit ? 'Yes' : 'No'}</p>
+            <p className={`text-[15px] font-semibold ${teamTargetHit ? 'text-[var(--color-good)]' : 'text-red-600'}`}>{teamTargetHit ? 'Yes' : 'No'}</p>
             <p className="text-[11px] text-[var(--color-ink-soft)] mt-0.5">{teamSales}/{teamTarget} sales</p>
           </div>
           <div>
             <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-1">Active agents</p>
-            <p className={`text-lg font-bold ${activeAgents.length === teamSize ? 'text-emerald-600' : activeAgents.length > 0 ? 'text-amber-600' : 'text-red-600'}`}>
-              {activeAgents.length}<span className="text-[var(--color-ink-faint)] text-sm font-normal">/{teamSize}</span>
+            <p className={`text-[15px] font-semibold ${activeAgents.length === teamSize ? 'text-[var(--color-good)]' : activeAgents.length > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+              {activeAgents.length}<span className="text-[var(--color-ink-faint)] text-[13px] font-normal">/{teamSize}</span>
             </p>
             <p className="text-[11px] text-[var(--color-ink-soft)] mt-0.5">{zeroSalesReports.length} inactive</p>
           </div>
           <div>
             <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-1">Check-ins (7d)</p>
-            <p className={`text-lg font-bold ${checkInsDone === teamSize ? 'text-emerald-600' : checkInsDone > 0 ? 'text-amber-600' : 'text-red-600'}`}>
-              {checkInsDone}<span className="text-[var(--color-ink-faint)] text-sm font-normal">/{teamSize}</span>
+            <p className={`text-[15px] font-semibold ${checkInsDone === teamSize ? 'text-[var(--color-good)]' : checkInsDone > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+              {checkInsDone}<span className="text-[var(--color-ink-faint)] text-[13px] font-normal">/{teamSize}</span>
             </p>
             <p className="text-[11px] text-[var(--color-ink-soft)] mt-0.5">recent contact</p>
           </div>
           <div>
             <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-1">Coaching done</p>
-            <p className={`text-lg font-bold ${followUpDiscipline === 'good' ? 'text-emerald-600' : followUpDiscipline === 'partial' ? 'text-amber-600' : 'text-red-600'}`}>
-              {coachedCount}<span className="text-[var(--color-ink-faint)] text-sm font-normal">/{teamSize}</span>
+            <p className={`text-[15px] font-semibold ${followUpDiscipline === 'good' ? 'text-[var(--color-good)]' : followUpDiscipline === 'partial' ? 'text-amber-600' : 'text-red-600'}`}>
+              {coachedCount}<span className="text-[var(--color-ink-faint)] text-[13px] font-normal">/{teamSize}</span>
             </p>
             <p className="text-[11px] text-[var(--color-ink-soft)] mt-0.5">
               {zeroSalesReports.length > 0 ? `${zeroSalesCoached}/${zeroSalesReports.length} weak coached` : 'no weak agents'}
@@ -397,14 +397,14 @@ export default function SupervisorProfile({ supervisor }) {
           </div>
           <div>
             <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-1">vs last month</p>
-            <p className={`text-lg font-bold ${trendDir === 'up' ? 'text-emerald-600' : trendDir === 'flat' ? 'text-[var(--color-ink-soft)]' : 'text-red-600'}`}>
+            <p className={`text-[15px] font-semibold ${trendDir === 'up' ? 'text-[var(--color-good)]' : trendDir === 'flat' ? 'text-[var(--color-ink-soft)]' : 'text-red-600'}`}>
               {trendDir === 'up' ? '↑ Up' : trendDir === 'flat' ? '→ Flat' : '↓ Down'}
             </p>
             <p className="text-[11px] text-[var(--color-ink-soft)] mt-0.5">{teamDelta >= 0 ? '+' : ''}{teamDelta} sales</p>
           </div>
           <div>
             <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-1">Follow-up</p>
-            <p className={`text-lg font-bold capitalize ${followUpDiscipline === 'good' ? 'text-emerald-600' : followUpDiscipline === 'partial' ? 'text-amber-600' : 'text-red-600'}`}>
+            <p className={`text-[15px] font-semibold capitalize ${followUpDiscipline === 'good' ? 'text-[var(--color-good)]' : followUpDiscipline === 'partial' ? 'text-amber-600' : 'text-red-600'}`}>
               {followUpDiscipline}
             </p>
             <p className="text-[11px] text-[var(--color-ink-soft)] mt-0.5">discipline</p>
@@ -420,7 +420,7 @@ export default function SupervisorProfile({ supervisor }) {
         const roi = cost > 0 ? Math.round((totalRevenue / cost) * 100) : 0;
         const costPerSale = totalSales > 0 ? Math.round(cost / totalSales) : null;
         return (
-          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
             <div className="flex items-center gap-2 mb-5">
               <DollarSign size={18} className="text-[var(--color-ink-faint)]" />
               <h2 className="text-[var(--color-ink)] font-semibold">Business Cost</h2>
@@ -429,44 +429,44 @@ export default function SupervisorProfile({ supervisor }) {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
               <div>
                 <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Monthly cost</p>
-                <p className="text-2xl font-semibold text-[var(--color-ink)]">D{cost.toLocaleString()}</p>
-                <p className="text-[var(--color-ink-soft)] text-xs mt-1 font-medium">D{Math.round(cost / 30).toLocaleString()}/day</p>
+                <p className="text-[22px] font-semibold text-[var(--color-ink)]">D{cost.toLocaleString()}</p>
+                <p className="text-[var(--color-ink-soft)] text-[11.5px] mt-1 font-medium">D{Math.round(cost / 30).toLocaleString()}/day</p>
               </div>
               <div>
                 <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Revenue</p>
-                <p className="text-2xl font-semibold text-[var(--color-ink)]">D{totalRevenue.toLocaleString()}</p>
-                <p className="text-[var(--color-ink-faint)] text-xs mt-1">D{personalRevenue.toLocaleString()} personal · D{teamRevenue.toLocaleString()} team</p>
+                <p className="text-[22px] font-semibold text-[var(--color-ink)]">D{totalRevenue.toLocaleString()}</p>
+                <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">D{personalRevenue.toLocaleString()} personal · D{teamRevenue.toLocaleString()} team</p>
               </div>
               <div>
                 <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Revenue − Cost</p>
-                <p className={`text-2xl font-semibold ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                <p className={`text-[22px] font-semibold ${profit >= 0 ? 'text-[var(--color-good)]' : 'text-red-600'}`}>
                   {profit >= 0 ? '+' : '−'}D{Math.abs(profit).toLocaleString()}
                 </p>
-                <p className="text-[var(--color-ink-faint)] text-xs mt-1">{profit >= 0 ? 'net contribution' : 'short of cost'}</p>
+                <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">{profit >= 0 ? 'net contribution' : 'short of cost'}</p>
               </div>
               <div>
                 <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">ROI</p>
-                <p className={`text-2xl font-semibold ${roi >= 100 ? 'text-emerald-600' : roi >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                <p className={`text-[22px] font-semibold ${roi >= 100 ? 'text-[var(--color-good)]' : roi >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
                   {cost > 0 ? `${roi}%` : '—'}
                 </p>
-                <p className="text-[var(--color-ink-faint)] text-xs mt-1">revenue / cost</p>
+                <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">revenue / cost</p>
               </div>
               <div>
                 <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Cost per sale</p>
-                <p className="text-2xl font-semibold text-[var(--color-ink)]">{costPerSale !== null ? `D${costPerSale.toLocaleString()}` : '—'}</p>
-                <p className="text-[var(--color-ink-faint)] text-xs mt-1">{costPerSale !== null ? `${totalSales} sales` : 'no sales'}</p>
+                <p className="text-[22px] font-semibold text-[var(--color-ink)]">{costPerSale !== null ? `D${costPerSale.toLocaleString()}` : '—'}</p>
+                <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">{costPerSale !== null ? `${totalSales} sales` : 'no sales'}</p>
               </div>
               <div>
                 <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Break-even</p>
                 {profit >= 0 ? (
                   <>
-                    <p className="text-2xl font-semibold text-emerald-600">✓</p>
-                    <p className="text-emerald-600 text-xs mt-1 font-medium">+D{profit.toLocaleString()} above</p>
+                    <p className="text-[22px] font-semibold text-[var(--color-good)]">✓</p>
+                    <p className="text-[var(--color-good)] text-[11.5px] mt-1 font-medium">+D{profit.toLocaleString()} above</p>
                   </>
                 ) : (
                   <>
-                    <p className="text-2xl font-semibold text-red-600">−D{Math.abs(profit).toLocaleString()}</p>
-                    <p className="text-red-600 text-xs mt-1 font-medium">
+                    <p className="text-[22px] font-semibold text-red-600">−D{Math.abs(profit).toLocaleString()}</p>
+                    <p className="text-red-600 text-[11.5px] mt-1 font-medium">
                       {Math.ceil(Math.abs(profit) / 7500)} more sales needed
                     </p>
                   </>
@@ -479,11 +479,11 @@ export default function SupervisorProfile({ supervisor }) {
 
       {/* CRITICAL — only when there are issues, plain list */}
       {(zeroSalesReports.length > 0 || goingSilent.length > 0) && (
-        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
-          <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)] mb-3">Team Priorities</p>
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
+          <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-3">Team Priorities</p>
           <div className="space-y-2">
             {zeroSalesReports.length > 0 && (
-              <div className="flex items-start gap-3 text-sm">
+              <div className="flex items-start gap-3 text-[13px]">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
                 <p className="text-[var(--color-ink-soft)]">
                   <span className="font-semibold">{zeroSalesReports.length} zero-sales</span> this month —{' '}
@@ -499,7 +499,7 @@ export default function SupervisorProfile({ supervisor }) {
               </div>
             )}
             {goingSilent.length > 0 && (
-              <div className="flex items-start gap-3 text-sm">
+              <div className="flex items-start gap-3 text-[13px]">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                 <p className="text-[var(--color-ink-soft)]">
                   <span className="font-semibold">{goingSilent.length} going silent</span> (over 14 days) —{' '}
@@ -518,7 +518,7 @@ export default function SupervisorProfile({ supervisor }) {
       )}
 
       {/* TEAM GRID — clickable people */}
-      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <Users size={18} className="text-[var(--color-ink-faint)]" />
@@ -534,12 +534,12 @@ export default function SupervisorProfile({ supervisor }) {
               <div key={r.name} onClick={() => navigate(`/agents/${slug}`)}
                 className={`p-4 rounded-lg border cursor-pointer transition-all hover:border-[var(--color-line)] ${
                   r.salesCount === 0 ? 'bg-red-50/40 border-red-100' :
-                  r.perf >= 80 ? 'bg-emerald-50/40 border-emerald-100' :
+                  r.perf >= 80 ? 'bg-[var(--color-good-bg)] border-[var(--color-good-bg)]' :
                   'bg-white border-[var(--color-line-soft)]'
                 }`}
               >
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-[11.5px] font-semibold shrink-0">
                     {repInitials}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -551,12 +551,12 @@ export default function SupervisorProfile({ supervisor }) {
 
                 <div className="flex items-baseline justify-between mb-2">
                   <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)] font-semibold">Sales</p>
-                  <p className={`text-2xl font-bold ${r.perf >= 80 ? 'text-emerald-600' : r.perf >= 50 ? 'text-amber-600' : r.salesCount > 0 ? 'text-red-600' : 'text-red-600'}`}>
-                    {r.salesCount}<span className="text-[var(--color-ink-faint)] text-sm font-normal"> / {r.target}</span>
+                  <p className={`text-[22px] font-semibold ${r.perf >= 80 ? 'text-[var(--color-good)]' : r.perf >= 50 ? 'text-amber-600' : r.salesCount > 0 ? 'text-red-600' : 'text-red-600'}`}>
+                    {r.salesCount}<span className="text-[var(--color-ink-faint)] text-[13px] font-normal"> / {r.target}</span>
                   </p>
                 </div>
                 <div className="w-full h-1.5 bg-[var(--color-fill)] rounded-full overflow-hidden mb-3">
-                  <div className={`h-full ${r.perf >= 80 ? 'bg-emerald-500' : r.perf >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, Math.max(2, r.perf))}%` }} />
+                  <div className={`h-full ${r.perf >= 80 ? 'bg-[var(--color-good-bg)]0' : r.perf >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, Math.max(2, r.perf))}%` }} />
                 </div>
 
                 <div className="flex items-center justify-between text-[11px]">
@@ -564,7 +564,7 @@ export default function SupervisorProfile({ supervisor }) {
                     {r.daysSilent === null ? <span className="text-red-600 font-medium">Never sold</span>
                       : r.daysSilent > 30 ? <span className="text-red-600 font-medium">{r.daysSilent}d silent</span>
                       : r.daysSilent > 14 ? <span className="text-amber-600 font-medium">{r.daysSilent}d silent</span>
-                      : <span className="text-emerald-600 font-medium">{r.daysSilent}d ago</span>}
+                      : <span className="text-[var(--color-good)] font-medium">{r.daysSilent}d ago</span>}
                   </span>
                   <span className="text-[var(--color-ink-soft)] font-medium">D{(r.revenue / 1000).toFixed(1)}k</span>
                 </div>
@@ -576,27 +576,27 @@ export default function SupervisorProfile({ supervisor }) {
 
 
       {/* NOTES */}
-      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
         <div className="flex items-center gap-2 mb-4">
           <MessageSquare size={16} className="text-[var(--color-ink-faint)]" />
-          <h2 className="text-[var(--color-ink)] font-semibold text-sm">Coaching Notes</h2>
-          <span className="text-[var(--color-ink-faint)] text-xs ml-auto">{feedback.length}</span>
+          <h2 className="text-[var(--color-ink)] font-semibold text-[13px]">Coaching Notes</h2>
+          <span className="text-[var(--color-ink-faint)] text-[11.5px] ml-auto">{feedback.length}</span>
         </div>
         <div className="flex gap-2 mb-4">
           <input type="text" value={newNote} onChange={e => setNewNote(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addFeedback()}
             placeholder={`Note about ${supervisor.name.split(' ')[0]}…`}
-            className="flex-1 px-4 py-2.5 border border-[var(--color-line)] rounded-full text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
-          <button onClick={addFeedback} className="px-5 py-2.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-white text-sm font-medium rounded-full">Add</button>
+            className="flex-1 px-4 py-2.5 border border-[var(--color-line)] rounded-full text-[13px] focus:outline-none focus:border-[var(--color-ink-faint)]" />
+          <button onClick={addFeedback} className="px-5 py-2.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-white text-[13px] font-medium rounded-full">Add</button>
         </div>
         {feedback.length === 0 ? (
-          <p className="text-[var(--color-ink-faint)] text-xs">No notes yet.</p>
+          <p className="text-[var(--color-ink-faint)] text-[11.5px]">No notes yet.</p>
         ) : (
           <div className="space-y-2">
             {feedback.slice(0, 5).map(n => (
               <div key={n.id} className="flex items-start gap-3 p-3 bg-[var(--color-fill)] rounded-lg group">
                 <div className="flex-1">
-                  <p className="text-[var(--color-ink-soft)] text-sm">{n.text}</p>
+                  <p className="text-[var(--color-ink-soft)] text-[13px]">{n.text}</p>
                   <p className="text-[var(--color-ink-faint)] text-[11px] mt-0.5">{new Date(n.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {n.createdBy || 'Damia'}</p>
                 </div>
                 <button onClick={() => removeFeedback(n.id)} className="text-[var(--color-ink-faint)] hover:text-red-500 opacity-0 group-hover:opacity-100"><Trash2 size={13} /></button>
@@ -607,16 +607,16 @@ export default function SupervisorProfile({ supervisor }) {
       </div>
 
       {/* CEO DECISION */}
-      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-8">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Shield size={16} className="text-[var(--color-ink-faint)]" />
-          <h2 className="text-[var(--color-ink)] font-semibold text-sm">CEO Decision · Supervisor Review</h2>
+          <h2 className="text-[var(--color-ink)] font-semibold text-[13px]">CEO Decision · Supervisor Review</h2>
         </div>
         {decision && (
           <div className="mb-4 p-3 rounded-lg bg-[var(--color-ink)] text-white flex items-center gap-3">
             <div className="flex-1">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-white/60">Current</p>
-              <p className="text-sm font-medium">
+              <p className="text-[13px] font-medium">
                 {DECISIONS.find(d => d.value === decision.decision)?.label || decision.decision}
                 <span className="text-white/60 font-normal"> · {new Date(decision.setAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
               </p>
@@ -632,7 +632,7 @@ export default function SupervisorProfile({ supervisor }) {
               blue: active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-blue-400',
               red: active ? 'bg-red-600 text-white border-red-600' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-red-400',
               amber: active ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-amber-400',
-              emerald: active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-emerald-400',
+              emerald: active ? 'bg-[var(--color-good)] text-white border-[var(--color-good)]' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-emerald-400',
             };
             return (
               <button key={d.value} onClick={() => setPickedDecision(d.value)}
@@ -645,10 +645,10 @@ export default function SupervisorProfile({ supervisor }) {
         </div>
         <textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)}
           placeholder="Reason or next step (optional)…"
-          className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)] resize-none" rows={2} />
+          className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-[13px] focus:outline-none focus:border-[var(--color-ink-faint)] resize-none" rows={2} />
         <div className="flex justify-end mt-3">
           <button onClick={saveDecision} disabled={!pickedDecision}
-            className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${decisionSaved ? 'bg-emerald-600 text-white' : pickedDecision ? 'bg-[var(--color-ink)] text-white hover:bg-[var(--color-ink)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-faint)] cursor-not-allowed'}`}>
+            className={`px-5 py-2 rounded-full text-[13px] font-medium transition-colors ${decisionSaved ? 'bg-[var(--color-good)] text-white' : pickedDecision ? 'bg-[var(--color-ink)] text-white hover:bg-[var(--color-ink)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-faint)] cursor-not-allowed'}`}>
             {decisionSaved ? 'Saved ✓' : 'Save decision'}
           </button>
         </div>
@@ -657,7 +657,7 @@ export default function SupervisorProfile({ supervisor }) {
             <p className="text-[var(--color-ink-faint)] text-[10px] uppercase tracking-wider font-semibold mb-2">History</p>
             <div className="space-y-1.5">
               {decisionHistory.slice(0, 3).map((h, i) => (
-                <div key={h.id || i} className="flex items-center justify-between text-xs">
+                <div key={h.id || i} className="flex items-center justify-between text-[11.5px]">
                   <span className="text-[var(--color-ink-soft)]">{DECISIONS.find(d => d.value === h.decision)?.label || h.decision}</span>
                   <span className="text-[var(--color-ink-faint)]">{new Date(h.setAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                 </div>

@@ -50,7 +50,7 @@ export default function Calls() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-[var(--color-ink-soft)]">{rows.length} calls logged</p>
+        <p className="text-[13px] text-[var(--color-ink-soft)]">{rows.length} calls logged</p>
         {!isViewAs && (
           <Button icon={Plus} size="sm" onClick={() => setEditor({ mode: 'add', record: EMPTY })}>
             Log call
@@ -66,15 +66,15 @@ export default function Calls() {
             <div key={r.id} className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-bold text-[var(--color-ink)]">{r.name || 'Unknown'}</span>
+                  <span className="font-semibold text-[var(--color-ink)]">{r.name || 'Unknown'}</span>
                   {r.phone && (
-                    <a href={`tel:${r.phone}`} className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-brand)]">
+                    <a href={`tel:${r.phone}`} className="inline-flex items-center gap-1 text-[13px] font-medium text-[var(--color-brand)]">
                       <Phone size={12} /> {r.phone}
                     </a>
                   )}
                 </div>
-                {r.note && <div className="mt-0.5 text-sm text-[var(--color-ink-soft)]">{r.note}</div>}
-                {r.nextAction && <div className="mt-1 text-xs font-semibold text-[var(--color-ink-faint)]">Next: {r.nextAction}</div>}
+                {r.note && <div className="mt-0.5 text-[13px] text-[var(--color-ink-soft)]">{r.note}</div>}
+                {r.nextAction && <div className="mt-1 text-[11.5px] font-semibold text-[var(--color-ink-faint)]">Next: {r.nextAction}</div>}
               </div>
               <div className="flex flex-col items-end gap-2">
                 <Pill tone={TONE[r.callStatus] || 'neutral'}>{r.callStatus}</Pill>

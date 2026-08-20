@@ -46,10 +46,10 @@ export default function ChangePassword() {
           <KeyRound size={20} className="text-[var(--color-brand,#d6294f)]" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-[var(--color-ink)]">
+          <h1 className="text-[18px] font-semibold tracking-tight text-[var(--color-ink)]">
             {forced ? 'Set your password' : 'Change password'}
           </h1>
-          <p className="text-sm text-[var(--color-ink-soft)]">
+          <p className="text-[13px] text-[var(--color-ink-soft)]">
             {forced
               ? 'Before you continue, replace the starter password with one only you know.'
               : 'Pick a new password — at least 8 characters.'}
@@ -57,7 +57,7 @@ export default function ChangePassword() {
         </div>
       </div>
 
-      <Card className="p-6">
+      <Card className="p-5">
         <form onSubmit={onSubmit} className="space-y-4">
           <Field label={forced ? 'Starter password' : 'Current password'}>
             <Input
@@ -85,7 +85,7 @@ export default function ChangePassword() {
           </Field>
 
           {error && (
-            <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">
+            <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-bad)]">
               {error}
             </div>
           )}

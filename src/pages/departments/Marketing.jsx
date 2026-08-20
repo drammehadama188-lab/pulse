@@ -44,9 +44,9 @@ export default function Marketing() {
   const activeCampaigns = (data.campaigns || []).filter((c) => (c.status || '').toLowerCase() === 'active').length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Marketing</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Marketing</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Department · social, leads, content, campaigns</p>
       </div>
 
@@ -108,13 +108,13 @@ function EditableSection({ section, rows, onSaved }) {
         {/* header */}
         <div className="hidden gap-3 border-b border-[var(--color-line-soft)] px-4 py-2.5 sm:flex">
           {section.cols.map((c) => (
-            <div key={c.k} className="flex-1 text-xs font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{c.label}</div>
+            <div key={c.k} className="flex-1 text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{c.label}</div>
           ))}
           <div className="w-9" />
         </div>
 
         {items.length === 0 && (
-          <div className="px-4 py-8 text-center text-sm text-[var(--color-ink-faint)]">
+          <div className="px-4 py-8 text-center text-[13px] text-[var(--color-ink-faint)]">
             Nothing yet — hit <span className="font-semibold">Add</span> to start.
           </div>
         )}
@@ -123,7 +123,7 @@ function EditableSection({ section, rows, onSaved }) {
           <div key={i} className="flex flex-col gap-2 border-b border-[var(--color-line-soft)] px-3 py-2.5 last:border-0 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
             {section.cols.map((c) => (
               <div key={c.k} className="flex-1">
-                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)] sm:hidden">{c.label}</span>
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)] sm:hidden">{c.label}</span>
                 <Input
                   type={c.type || 'text'}
                   value={row[c.k] ?? ''}
@@ -146,7 +146,7 @@ function EditableSection({ section, rows, onSaved }) {
         {items.length > 0 && (
           <div className="flex items-center justify-between gap-3 px-4 py-3">
             <Button size="sm" variant="ghost" icon={Plus} onClick={addRow}>Add row</Button>
-            {dirty && <span className="text-xs font-semibold text-[var(--color-warn)]">Unsaved changes</span>}
+            {dirty && <span className="text-[11.5px] font-semibold text-[var(--color-warn)]">Unsaved changes</span>}
           </div>
         )}
       </Card>

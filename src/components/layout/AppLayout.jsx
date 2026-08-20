@@ -13,7 +13,7 @@ function ViewAsBanner() {
   return (
     <div className="sticky top-0 z-40 flex items-center gap-3 bg-[var(--color-brand)] px-4 py-2.5 text-white">
       <Eye size={18} />
-      <span className="text-sm font-semibold">
+      <span className="text-[13px] font-semibold">
         {ownerActing ? 'Acting as' : 'Viewing as'} <span className="font-semibold">{user.name}</span>
         <span className="hidden opacity-75 sm:inline"> · {user.title}{ownerActing ? ' · changes save as them, logged to you' : ' · read-only'}</span>
       </span>
@@ -22,7 +22,7 @@ function ViewAsBanner() {
           exitViewAs()
           navigate('/team')
         }}
-        className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-white/25"
+        className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[13px] font-semibold transition-colors hover:bg-white/25"
       >
         <X size={16} /> Exit
       </button>

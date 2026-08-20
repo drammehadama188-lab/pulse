@@ -49,7 +49,7 @@ export default function TeamDashboard() {
   if (loading) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
   if (error) {
     return (
-      <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">
+      <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">
         {error === 'not-a-team-lead' ? "You don't lead a team." : `Couldn't load your team — ${error}`}
       </Card>
     )
@@ -60,7 +60,7 @@ export default function TeamDashboard() {
   return (
     <div className="space-y-7">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">My Team</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">My Team</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()} · {stats.total} {stats.total === 1 ? 'person' : 'people'}</p>
       </div>
 
@@ -83,7 +83,7 @@ export default function TeamDashboard() {
       <div>
         <SectionTitle>Needs my attention today</SectionTitle>
         {attention.length === 0 ? (
-          <Card className="p-6 text-center text-sm text-[var(--color-ink-faint)]">Nothing needs attention right now.</Card>
+          <Card className="p-5 text-center text-[13px] text-[var(--color-ink-faint)]">Nothing needs attention right now.</Card>
         ) : (
           <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden p-0">
             {attention.map((a, i) => {
@@ -99,7 +99,7 @@ export default function TeamDashboard() {
                   <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${a.type === 'warning' ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]'}`}>
                     <Icon size={16} />
                   </span>
-                  <span className="text-sm text-[var(--color-ink)]">{a.message}</span>
+                  <span className="text-[13px] text-[var(--color-ink)]">{a.message}</span>
                   {clickable && <ChevronRight size={16} className="ml-auto shrink-0 text-[var(--color-ink-faint)]" />}
                 </button>
               )
@@ -123,8 +123,8 @@ export default function TeamDashboard() {
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar name={m.name} size={42} />
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-bold text-[var(--color-ink)]">{m.name}</div>
-                    <div className="truncate text-xs text-[var(--color-ink-soft)]">{m.title} · {m.department}</div>
+                    <div className="truncate text-[13px] font-semibold text-[var(--color-ink)]">{m.name}</div>
+                    <div className="truncate text-[11.5px] text-[var(--color-ink-soft)]">{m.title} · {m.department}</div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                       <Pill tone={st.tone} dot>{st.label}{m.checkIn && (m.status === 'working' || m.status === 'late') ? ` · ${timeShort(m.checkIn)}` : ''}</Pill>
                       {m.onOfficeNetwork === true && <span title="Checked in on the office network" className="text-[var(--color-good)]"><Building2 size={15} /></span>}
@@ -146,7 +146,7 @@ export default function TeamDashboard() {
             )
           })}
         </Card>
-        <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
+        <p className="mt-2 text-[11.5px] text-[var(--color-ink-faint)]">
           Scores and other KPIs fill in as monthly reviews are locked and the Admin feed is connected — nothing here is a placeholder.
         </p>
       </div>

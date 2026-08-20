@@ -107,19 +107,19 @@ export default function CustomerDetail() {
           </button>
           <div className="flex gap-2">
             {customer.phone && (
-              <a href={`tel:${customer.phone}`} className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3.5 py-2 text-sm font-semibold backdrop-blur-sm transition-colors hover:bg-white/25">
+              <a href={`tel:${customer.phone}`} className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3.5 py-2 text-[13px] font-semibold backdrop-blur-sm transition-colors hover:bg-white/25">
                 <Phone size={15} /> Call
               </a>
             )}
           </div>
         </div>
         <div className="relative flex items-center gap-4 px-5 pb-6 pt-2 sm:px-7 sm:pb-8">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-white/15 text-2xl font-semibold text-white ring-4 ring-white/30 backdrop-blur-sm sm:h-24 sm:w-24">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-white/15 text-[22px] font-semibold text-white ring-4 ring-white/30 backdrop-blur-sm sm:h-24 sm:w-24">
             {initials(customer.company)}
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-[27px]">{customer.company}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/85">
+            <h1 className="truncate text-[22px] font-semibold tracking-tight sm:text-[26px]">{customer.company}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-white/85">
               {customer.contact && <span>{customer.contact}{customer.role ? ` · ${customer.role}` : ''}</span>}
               {customer.phone && <span>{customer.phone}</span>}
             </div>
@@ -130,27 +130,27 @@ export default function CustomerDetail() {
       {/* ---- quick bar ---- */}
       <Card className="flex flex-wrap items-center gap-x-6 gap-y-3 p-4 sm:px-5">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-[var(--color-ink-soft)]">Status</span>
+          <span className="text-[13px] font-semibold text-[var(--color-ink-soft)]">Status</span>
           {isViewAs ? (
             <Pill tone={STATUS_TONE[customer.status] || 'neutral'}>{customer.status}</Pill>
           ) : (
-            <select value={customer.status} onChange={(e) => changeStatus(e.target.value)} className="focus-ring rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1.5 text-sm font-semibold text-[var(--color-ink)] outline-none">
+            <select value={customer.status} onChange={(e) => changeStatus(e.target.value)} className="focus-ring rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1.5 text-[13px] font-semibold text-[var(--color-ink)] outline-none">
               {CUSTOMER_STATUS.map((s) => <option key={s}>{s}</option>)}
             </select>
           )}
         </div>
         {customer.nextAction && (
-          <div className="text-sm text-[var(--color-ink-faint)]">Next: <span className="font-semibold text-[var(--color-ink-soft)]">{customer.nextAction}</span></div>
+          <div className="text-[13px] text-[var(--color-ink-faint)]">Next: <span className="font-semibold text-[var(--color-ink-soft)]">{customer.nextAction}</span></div>
         )}
         {(Number(customer.amountExpected) > 0 || Number(customer.amountPaid) > 0) && (
-          <div className="text-sm text-[var(--color-ink-soft)]">Deal <span className="font-bold text-[var(--color-ink)]">{dalasi(customer.amountExpected)}</span></div>
+          <div className="text-[13px] text-[var(--color-ink-soft)]">Deal <span className="font-semibold text-[var(--color-ink)]">{dalasi(customer.amountExpected)}</span></div>
         )}
       </Card>
 
       {/* ---- Details ---- */}
-      <Card className="p-5 sm:p-6">
+      <Card className="p-5 sm:p-5">
         <div className="mb-5 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold tracking-tight text-[var(--color-ink)]">Customer information</h2>
+          <h2 className="text-[15px] font-semibold tracking-tight text-[var(--color-ink)]">Customer information</h2>
           {!isViewAs && (
             <Button variant="outline" size="sm" icon={Pencil} onClick={() => setEditing(true)}>
               Edit
@@ -180,7 +180,7 @@ export default function CustomerDetail() {
 
       {/* ---- Activity history ---- */}
       <div>
-        <h2 className="mb-3 text-base font-bold text-[var(--color-ink)]">Activity {acts.length > 0 && <span className="text-[var(--color-ink-faint)]">({acts.length})</span>}</h2>
+        <h2 className="mb-3 text-base font-semibold text-[var(--color-ink)]">Activity {acts.length > 0 && <span className="text-[var(--color-ink-faint)]">({acts.length})</span>}</h2>
         {acts.length === 0 ? (
           <Card className="px-5 py-10 text-center text-[var(--color-ink-faint)]">No activity yet. Add a note above.</Card>
         ) : (
@@ -194,16 +194,16 @@ export default function CustomerDetail() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-[var(--color-ink)]">{meta.label}</span>
+                      <span className="font-semibold text-[var(--color-ink)]">{meta.label}</span>
                       {a.type === 'call' && a.callStatus && <Pill tone="brand">{a.callStatus}</Pill>}
                       {a.type === 'visit' && a.outcome && <Pill tone="rest">{a.outcome}</Pill>}
                     </div>
                     {a.type === 'visit' && (a.from || a.to) && (
-                      <div className="mt-0.5 text-sm text-[var(--color-ink-soft)]">{a.from || '—'} → {a.to || '—'}{Number(a.cost) > 0 ? ` · ${dalasi(a.cost)}` : ''}</div>
+                      <div className="mt-0.5 text-[13px] text-[var(--color-ink-soft)]">{a.from || '—'} → {a.to || '—'}{Number(a.cost) > 0 ? ` · ${dalasi(a.cost)}` : ''}</div>
                     )}
-                    {a.note && <div className="mt-0.5 text-sm text-[var(--color-ink-soft)]">{a.note}</div>}
-                    {a.nextAction && <div className="mt-1 text-xs font-semibold text-[var(--color-ink-faint)]">Next: {a.nextAction}</div>}
-                    <div className="mt-1 text-xs text-[var(--color-ink-faint)]">{fmtWhen(a.createdAt)}</div>
+                    {a.note && <div className="mt-0.5 text-[13px] text-[var(--color-ink-soft)]">{a.note}</div>}
+                    {a.nextAction && <div className="mt-1 text-[11.5px] font-semibold text-[var(--color-ink-faint)]">Next: {a.nextAction}</div>}
+                    <div className="mt-1 text-[11.5px] text-[var(--color-ink-faint)]">{fmtWhen(a.createdAt)}</div>
                   </div>
                   {!isViewAs && a.type !== 'status' && (
                     <div className="flex shrink-0 gap-1">
@@ -260,8 +260,8 @@ function Composer({ onSave, busy }) {
   }
 
   return (
-    <Card className="p-5 sm:p-6">
-      <h2 className="mb-4 text-lg font-semibold tracking-tight text-[var(--color-ink)]">Add note</h2>
+    <Card className="p-5 sm:p-5">
+      <h2 className="mb-4 text-[15px] font-semibold tracking-tight text-[var(--color-ink)]">Add note</h2>
       <TypeTabs value={v.type} onChange={(type) => set({ type })} />
       <div className="rounded-lg border-2 border-[var(--color-line)] p-3 transition-colors focus-within:border-[var(--color-brand)]">
         <ActivityBody v={v} set={set} bare />
@@ -284,7 +284,7 @@ function TypeTabs({ value, onChange }) {
           <button
             key={t.key}
             onClick={() => onChange(t.key)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
               active ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-line-soft)] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'
             }`}
           >
@@ -358,8 +358,8 @@ function ModalSaveButton({ busy }) {
 function Row({ label, value, href, link, icon: Icon }) {
   return (
     <div className="flex items-start gap-4 border-b border-[var(--color-line-soft)] pb-4 last:border-0 sm:border-0 sm:pb-0">
-      <dt className="w-36 shrink-0 text-sm text-[var(--color-ink-faint)]">{label}</dt>
-      <dd className="min-w-0 flex-1 text-sm font-semibold text-[var(--color-ink)]">
+      <dt className="w-36 shrink-0 text-[13px] text-[var(--color-ink-faint)]">{label}</dt>
+      <dd className="min-w-0 flex-1 text-[13px] font-semibold text-[var(--color-ink)]">
         {value ? (
           href ? (
             <a href={href} className={`inline-flex items-center gap-1.5 ${link ? 'break-all text-[var(--color-brand)]' : 'text-[var(--color-ink)]'}`}>

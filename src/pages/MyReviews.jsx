@@ -35,7 +35,7 @@ function DownloadLink({ id }) {
   )
 }
 function EmptyState({ children }) {
-  return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">{children}</Card>
+  return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">{children}</Card>
 }
 
 export default function MyReviews() {
@@ -60,7 +60,7 @@ export default function MyReviews() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)] md:text-[27px]">Reviews</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight text-[var(--color-ink)] md:text-[26px]">Reviews</h1>
         <p className="mt-1 text-[var(--color-ink-faint)]">Your performance reviews and coaching notes.</p>
       </div>
 
@@ -77,8 +77,8 @@ export default function MyReviews() {
                   <FileText size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold text-[var(--color-ink)]">{r.period ? `Review — ${r.period}` : r.name}</div>
-                  <div className="text-xs text-[var(--color-ink-faint)]">
+                  <div className="font-semibold text-[var(--color-ink)]">{r.period ? `Review — ${r.period}` : r.name}</div>
+                  <div className="text-[11.5px] text-[var(--color-ink-faint)]">
                     {dateLabel(r.uploadedAt)}{r.uploadedBy ? ` · from ${r.uploadedBy}` : ''}
                   </div>
                 </div>
@@ -106,12 +106,12 @@ export default function MyReviews() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-[var(--color-ink)]">{c.title || m.label}</span>
+                      <span className="font-semibold text-[var(--color-ink)]">{c.title || m.label}</span>
                       <Pill tone={m.tone}>{m.label}</Pill>
                       {upcoming && <Pill tone="good" dot>Upcoming</Pill>}
                     </div>
-                    {c.note && <div className="mt-0.5 text-sm text-[var(--color-ink-soft)]">{c.note}</div>}
-                    <div className="mt-1 text-xs text-[var(--color-ink-faint)]">
+                    {c.note && <div className="mt-0.5 text-[13px] text-[var(--color-ink-soft)]">{c.note}</div>}
+                    <div className="mt-1 text-[11.5px] text-[var(--color-ink-faint)]">
                       {c.datetime ? whenLabel(c.datetime) + ' · ' : ''}{c.createdBy ? `from ${c.createdBy}` : ''}
                     </div>
                   </div>

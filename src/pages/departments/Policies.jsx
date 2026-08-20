@@ -9,27 +9,27 @@ import { Card } from '../../components/ui.jsx'
 const BLUE_BOOK_URL = '/docs/blue-book.pdf'
 
 const linkBtn =
-  'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all focus-ring active:scale-[0.98]'
+  'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-all focus-ring active:scale-[0.98]'
 const linkPrimary = `${linkBtn} bg-[var(--color-brand)] text-white shadow-[0_6px_16px_rgba(214,41,79,0.25)] hover:bg-[var(--color-brand-600)]`
 const linkOutline = `${linkBtn} border border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-brand)] hover:text-[var(--color-brand)]`
 
 export default function Policies() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Policies</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Policies</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Company</p>
       </div>
 
       <Card className="overflow-hidden p-0">
-        <div className="flex flex-col gap-4 border-b border-[var(--color-line-soft)] p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 border-b border-[var(--color-line-soft)] p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--color-mint-tile)] text-[var(--color-brand)]">
               <BookOpen size={24} strokeWidth={2} />
             </div>
             <div>
-              <div className="text-lg font-bold text-[var(--color-ink)]">The Blue Book</div>
-              <p className="mt-0.5 max-w-xl text-sm text-[var(--color-ink-soft)]">
+              <div className="text-[15px] font-semibold text-[var(--color-ink)]">The Blue Book</div>
+              <p className="mt-0.5 max-w-xl text-[13px] text-[var(--color-ink-soft)]">
                 Damia Security Solutions employee handbook — working hours, leave,
                 conduct and benefits. The authoritative company policy.
               </p>

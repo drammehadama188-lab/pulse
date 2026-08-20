@@ -56,9 +56,9 @@ export default function SetPassword() {
   const inputCls = 'focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]'
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6 py-12">
+    <div className="flex min-h-screen items-center justify-center px-5 py-12">
       <div className="w-full max-w-sm rise">
-        <div className="mb-8">
+        <div className="mb-6">
           <Brand />
         </div>
 
@@ -68,9 +68,9 @@ export default function SetPassword() {
           </div>
         ) : linkError ? (
           <>
-            <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">This link no longer works</h2>
+            <h2 className="text-[22px] font-semibold tracking-tight text-[var(--color-ink)]">This link no longer works</h2>
             <p className="mt-2 text-[var(--color-ink-soft)]">{linkError}</p>
-            <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
+            <p className="mt-4 text-[13px] text-[var(--color-ink-soft)]">
               Already have a password? <Link to="/login" className="font-semibold text-[var(--color-brand)]">Sign in</Link>
             </p>
           </>
@@ -79,9 +79,9 @@ export default function SetPassword() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-good-bg)] text-[var(--color-good)]">
               <CheckCircle2 size={30} />
             </div>
-            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-[var(--color-ink)]">Password saved</h2>
+            <h2 className="mt-4 text-[22px] font-semibold tracking-tight text-[var(--color-ink)]">Password saved</h2>
             <p className="mt-2 text-[var(--color-ink-soft)]">
-              Sign in with your email <span className="font-bold text-[var(--color-ink)]">{who.email || who.username}</span> and your new password.
+              Sign in with your email <span className="font-semibold text-[var(--color-ink)]">{who.email || who.username}</span> and your new password.
             </p>
             <Link to="/login">
               <Button className="mt-6 w-full" icon={KeyRound}>Go to sign in</Button>
@@ -89,24 +89,24 @@ export default function SetPassword() {
           </div>
         ) : (
           <>
-            <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
+            <h2 className="text-[22px] font-semibold tracking-tight text-[var(--color-ink)]">
               Hi {who.name.split(' ')[0]}, choose your password
             </h2>
             <p className="mt-1.5 text-[var(--color-ink-soft)]">
-              You'll sign in with <span className="font-bold text-[var(--color-ink)]">{who.email || who.username}</span>. Pick a password only you know — at least 8 characters.
+              You'll sign in with <span className="font-semibold text-[var(--color-ink)]">{who.email || who.username}</span>. Pick a password only you know — at least 8 characters.
             </p>
 
             <form onSubmit={onSubmit} className="mt-7 space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[var(--color-ink)]">New password</label>
+                <label className="mb-1.5 block text-[13px] font-semibold text-[var(--color-ink)]">New password</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" className={inputCls} />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[var(--color-ink)]">Type it again</label>
+                <label className="mb-1.5 block text-[13px] font-semibold text-[var(--color-ink)]">Type it again</label>
                 <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Same password" className={inputCls} />
               </div>
               {error && (
-                <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
+                <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-bad)]">{error}</div>
               )}
               <Button type="submit" className="w-full" disabled={busy} icon={busy ? undefined : KeyRound}>
                 {busy ? <Spinner size={16} /> : 'Save password'}

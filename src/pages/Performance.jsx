@@ -27,9 +27,9 @@ export default function Performance() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Performance</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Performance</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Who is performing and who isn’t — click anyone to open their full performance page</p>
       </div>
 
@@ -38,7 +38,7 @@ export default function Performance() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${tab === t.id ? 'bg-white text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)] hover:text-[var(--color-ink-soft)]'}`}
+            className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${tab === t.id ? 'bg-white text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)] hover:text-[var(--color-ink-soft)]'}`}
           >
             {t.label}
           </button>

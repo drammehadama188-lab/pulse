@@ -34,8 +34,8 @@ const ACTION_CONFIRM = { renew: 'Renew', extend: 'Extend', convert: 'Convert', t
 function Field({ label, value, accent }) {
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)] mb-1">{label}</p>
-      <p className={`text-sm font-medium ${accent || 'text-[var(--color-ink)]'}`}>{value || <span className="text-[var(--color-ink-faint)] font-normal">Not set</span>}</p>
+      <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-1">{label}</p>
+      <p className={`text-[13px] font-medium ${accent || 'text-[var(--color-ink)]'}`}>{value || <span className="text-[var(--color-ink-faint)] font-normal">Not set</span>}</p>
     </div>
   );
 }
@@ -96,7 +96,7 @@ export default function EmployeeProfile() {
   if (!agent) {
     return (
       <div>
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
         <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-10 text-center text-[var(--color-ink-faint)]">Employee not found.</div>
       </div>
     );
@@ -131,7 +131,7 @@ export default function EmployeeProfile() {
     : agent.status === 'training' ? 'bg-orange-100 text-orange-700'
     : agent.status === 'probation' ? 'bg-amber-100 text-amber-700'
     : (daysToEnd != null && daysToEnd < 0) ? 'bg-red-100 text-red-700'
-    : 'bg-emerald-100 text-emerald-700';
+    : 'bg-[var(--color-good-bg)] text-[var(--color-good)]';
 
   const documents = files.filter((f) => f.category !== 'monthly-review');
   const reviews = files.filter((f) => f.category === 'monthly-review');
@@ -148,10 +148,10 @@ export default function EmployeeProfile() {
     : Number(profile.performanceScore);
   const contractBadge = terminated ? { label: 'Terminated', cls: 'bg-[var(--color-ink)] text-white' }
     : (agent.status === 'probation' || agent.status === 'training') ? { label: 'Probation', cls: 'bg-violet-100 text-violet-700' }
-    : permanent ? { label: 'Permanent', cls: 'bg-emerald-100 text-emerald-700' }
+    : permanent ? { label: 'Permanent', cls: 'bg-[var(--color-good-bg)] text-[var(--color-good)]' }
     : daysToEnd < 0 ? { label: 'Expired', cls: 'bg-red-100 text-red-700' }
     : daysToEnd <= 30 ? { label: 'Expiring soon', cls: 'bg-amber-100 text-amber-700' }
-    : { label: 'Active', cls: 'bg-emerald-100 text-emerald-700' };
+    : { label: 'Active', cls: 'bg-[var(--color-good-bg)] text-[var(--color-good)]' };
   const recommendation = terminated ? null
     : permanent ? 'Permanent — no action'
     : daysToEnd == null ? null
@@ -230,15 +230,15 @@ export default function EmployeeProfile() {
 
   return (
     <div className="max-w-4xl">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
 
       {/* Identity */}
-      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
         <div className="flex items-start gap-5">
-          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white text-xl font-semibold shrink-0">{initials}</div>
+          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--color-good)] to-[var(--color-good)] flex items-center justify-center text-white text-[18px] font-semibold shrink-0">{initials}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h1 className="text-2xl font-semibold text-[var(--color-ink)]">{agent.name}</h1>
+              <h1 className="text-[22px] font-semibold text-[var(--color-ink)]">{agent.name}</h1>
               <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusColor}`}>{statusLabel}</span>
             </div>
             <p className="text-[var(--color-ink-soft)]">{agent.role}{agent.type ? ` · ${agent.type}` : ''}</p>
@@ -252,8 +252,8 @@ export default function EmployeeProfile() {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 flex items-start gap-3">
           <UserX size={18} className="text-red-600 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-red-800">Contract terminated{termEvent?.toEnd ? ` — ${formatDate(termEvent.toEnd)}` : ''}</p>
-            <p className="text-sm text-red-700">{termEvent?.reason || 'No reason recorded.'}</p>
+            <p className="text-[13px] font-semibold text-red-800">Contract terminated{termEvent?.toEnd ? ` — ${formatDate(termEvent.toEnd)}` : ''}</p>
+            <p className="text-[13px] text-red-700">{termEvent?.reason || 'No reason recorded.'}</p>
             <p className="text-[11px] text-red-500 mt-0.5">This employee has been deactivated across Pulse and signed out.</p>
           </div>
         </div>
@@ -262,14 +262,14 @@ export default function EmployeeProfile() {
       {/* Tabs */}
       <div className="flex items-center gap-1 bg-white rounded-lg border border-[var(--color-line)] p-1.5 w-fit mb-4">
         {tabs.map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === k ? 'bg-[var(--color-ink)] text-white' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>{label}</button>
+          <button key={k} type="button" onClick={() => setTab(k)} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${tab === k ? 'bg-[var(--color-ink)] text-white' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>{label}</button>
         ))}
       </div>
 
       {tab === 'overview' && (
         <div className="space-y-4">
           {/* Contract — the management layer: status + recommendation + actions */}
-          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-[var(--color-ink)]">Contract</h2>
               <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${contractBadge.cls}`}>{contractBadge.label}</span>
@@ -280,42 +280,42 @@ export default function EmployeeProfile() {
               <Field label="End date" value={cEnd ? formatDate(cEnd) : 'No end date'} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : daysToEnd !== null && daysToEnd <= 90 ? 'text-amber-600' : 'text-[var(--color-ink)]'} />
               <Field label="Days left" value={daysToEnd == null ? '—' : daysToEnd < 0 ? `${-daysToEnd} days ago` : `${daysToEnd} days`} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : 'text-[var(--color-ink)]'} />
               <Field label="Performance" value={score == null ? '—' : `${score}%`} />
-              <Field label="Recommendation" value={recommendation || '—'} accent={recommendation === 'Renew' ? 'text-emerald-700' : /under|extend|end/i.test(recommendation || '') ? 'text-red-600' : 'text-[var(--color-ink)]'} />
+              <Field label="Recommendation" value={recommendation || '—'} accent={recommendation === 'Renew' ? 'text-[var(--color-good)]' : /under|extend|end/i.test(recommendation || '') ? 'text-red-600' : 'text-[var(--color-ink)]'} />
             </div>
             {!terminated ? (
               <div className="mt-5 flex flex-wrap gap-2">
                 {ACTIONS.filter((a) => !a.hide).map((a) => (
                   <button key={a.key} type="button" onClick={() => openAction(a.key)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${a.danger ? 'border-red-200 text-red-700 hover:bg-red-50' : 'border-[var(--color-line)] text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-medium border transition-colors ${a.danger ? 'border-red-200 text-red-700 hover:bg-red-50' : 'border-[var(--color-line)] text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
                     <a.icon size={14} /> {a.label}
                   </button>
                 ))}
               </div>
             ) : (
-              <p className="mt-4 text-xs text-[var(--color-ink-faint)]">Contract ended. The full timeline is in the History tab.</p>
+              <p className="mt-4 text-[11.5px] text-[var(--color-ink-faint)]">Contract ended. The full timeline is in the History tab.</p>
             )}
           </div>
 
-          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
             <h2 className="text-base font-semibold text-[var(--color-ink)] mb-5">Employment</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
               <Field label="Role" value={agent.role} />
               <Field label="Department" value={agent.type} />
-              <Field label="Status" value={statusLabel} accent={isActive ? 'text-emerald-700' : 'text-[var(--color-ink)]'} />
+              <Field label="Status" value={statusLabel} accent={isActive ? 'text-[var(--color-good)]' : 'text-[var(--color-ink)]'} />
               <Field label="Base salary" value={`D${(pay?.base || 0).toLocaleString()}`} />
-              <Field label="Commission" value={pay?.commission > 0 ? `Up to D${pay.commission.toLocaleString()}` : '—'} accent={pay?.commission > 0 ? 'text-emerald-700' : 'text-[var(--color-ink)]'} />
+              <Field label="Commission" value={pay?.commission > 0 ? `Up to D${pay.commission.toLocaleString()}` : '—'} accent={pay?.commission > 0 ? 'text-[var(--color-good)]' : 'text-[var(--color-ink)]'} />
               <Field label="Warnings" value={String(warnings.length)} accent={warnings.length > 0 ? 'text-red-600' : 'text-[var(--color-ink)]'} />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-[var(--color-ink)]">Personal &amp; contact</h2>
               {!editing
-                ? <button onClick={() => { setDraft(profile); setEditing(true); }} className="flex items-center gap-1.5 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><Pencil size={14} /> Edit</button>
+                ? <button onClick={() => { setDraft(profile); setEditing(true); }} className="flex items-center gap-1.5 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><Pencil size={14} /> Edit</button>
                 : <div className="flex gap-2">
-                    <button onClick={() => setEditing(false)} disabled={saving} className="px-3 py-1.5 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-                    <button onClick={saveProfile} disabled={saving} className="px-3 py-1.5 rounded-lg text-sm bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">{saving ? 'Saving…' : 'Save'}</button>
+                    <button onClick={() => setEditing(false)} disabled={saving} className="px-3 py-1.5 rounded-lg text-[13px] bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
+                    <button onClick={saveProfile} disabled={saving} className="px-3 py-1.5 rounded-lg text-[13px] bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-60">{saving ? 'Saving…' : 'Save'}</button>
                   </div>}
             </div>
             {!editing ? (
@@ -326,8 +326,8 @@ export default function EmployeeProfile() {
               <div className="grid grid-cols-2 gap-4">
                 {PERSONAL.map(([k, label]) => (
                   <label key={k} className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">{label}</span>
-                    <input type={k === 'nextReview' ? 'date' : 'text'} value={draft[k] || ''} onChange={(e) => setDraft(s => ({ ...s, [k]: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">{label}</span>
+                    <input type={k === 'nextReview' ? 'date' : 'text'} value={draft[k] || ''} onChange={(e) => setDraft(s => ({ ...s, [k]: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                 ))}
               </div>
@@ -337,24 +337,24 @@ export default function EmployeeProfile() {
       )}
 
       {tab === 'documents' && (
-        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-semibold text-[var(--color-ink)]">Documents</h2>
-            <label className="flex items-center gap-1.5 text-sm text-emerald-700 hover:text-emerald-800 cursor-pointer">
+            <label className="flex items-center gap-1.5 text-[13px] text-[var(--color-good)] hover:text-[var(--color-good)] cursor-pointer">
               <Upload size={14} /> {uploading ? 'Uploading…' : 'Upload'}
               <input type="file" className="hidden" onChange={uploadDoc} disabled={uploading} />
             </label>
           </div>
           {documents.length === 0 ? (
-            <p className="text-sm text-[var(--color-ink-faint)] py-8 text-center">No documents yet. Upload a CV, ID, contract or certificate.</p>
+            <p className="text-[13px] text-[var(--color-ink-faint)] py-8 text-center">No documents yet. Upload a CV, ID, contract or certificate.</p>
           ) : (
             <div className="divide-y divide-[var(--color-line-soft)]">
               {documents.map((f) => (
                 <div key={f.id} className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3 min-w-0"><FileText size={16} className="text-[var(--color-ink-faint)] shrink-0" /><div className="min-w-0"><p className="text-sm text-[var(--color-ink)] truncate">{f.name}</p><p className="text-xs text-[var(--color-ink-faint)]">{formatDate(f.uploadedAt)}</p></div></div>
+                  <div className="flex items-center gap-3 min-w-0"><FileText size={16} className="text-[var(--color-ink-faint)] shrink-0" /><div className="min-w-0"><p className="text-[13px] text-[var(--color-ink)] truncate">{f.name}</p><p className="text-[11.5px] text-[var(--color-ink-faint)]">{formatDate(f.uploadedAt)}</p></div></div>
                   <div className="flex items-center gap-4 shrink-0">
-                    <a href={`/api/agent-files/${f.id}/download`} className="flex items-center gap-1.5 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><Download size={14} /> Download</a>
-                    <button type="button" onClick={() => deleteDoc(f)} className="flex items-center gap-1.5 text-sm text-[var(--color-ink-faint)] hover:text-red-600"><Trash2 size={14} /> Delete</button>
+                    <a href={`/api/agent-files/${f.id}/download`} className="flex items-center gap-1.5 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><Download size={14} /> Download</a>
+                    <button type="button" onClick={() => deleteDoc(f)} className="flex items-center gap-1.5 text-[13px] text-[var(--color-ink-faint)] hover:text-red-600"><Trash2 size={14} /> Delete</button>
                   </div>
                 </div>
               ))}
@@ -365,23 +365,23 @@ export default function EmployeeProfile() {
 
       {tab === 'performance' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
             <h2 className="text-base font-semibold text-[var(--color-ink)] mb-3">Latest review</h2>
-            {review ? <p className="text-sm text-[var(--color-ink-soft)]">{review.decision} {review.reason && <span className="text-[var(--color-ink-soft)]">— {review.reason}</span>} <span className="text-xs text-[var(--color-ink-faint)] ml-1">{review.setAt ? formatDate(review.setAt) : ''}</span></p> : <p className="text-sm text-[var(--color-ink-faint)]">No review on file.</p>}
+            {review ? <p className="text-[13px] text-[var(--color-ink-soft)]">{review.decision} {review.reason && <span className="text-[var(--color-ink-soft)]">— {review.reason}</span>} <span className="text-[11.5px] text-[var(--color-ink-faint)] ml-1">{review.setAt ? formatDate(review.setAt) : ''}</span></p> : <p className="text-[13px] text-[var(--color-ink-faint)]">No review on file.</p>}
           </div>
-          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
             <h2 className="text-base font-semibold text-[var(--color-ink)] mb-3">Warnings</h2>
-            {warnings.length === 0 ? <p className="text-sm text-[var(--color-ink-faint)]">No warnings on file.</p> : (
+            {warnings.length === 0 ? <p className="text-[13px] text-[var(--color-ink-faint)]">No warnings on file.</p> : (
               <div className="space-y-2">{warnings.map((w) => (
-                <div key={w.id} className="flex items-start gap-2 text-sm"><AlertTriangle size={14} className="text-amber-500 mt-0.5 shrink-0" /><div><span className="text-[var(--color-ink)]">{w.reason}</span><span className="block text-xs text-[var(--color-ink-faint)]">{w.type} · {formatDate(w.date)}{w.issuedBy ? ` · ${w.issuedBy}` : ''}</span></div></div>
+                <div key={w.id} className="flex items-start gap-2 text-[13px]"><AlertTriangle size={14} className="text-amber-500 mt-0.5 shrink-0" /><div><span className="text-[var(--color-ink)]">{w.reason}</span><span className="block text-[11.5px] text-[var(--color-ink-faint)]">{w.type} · {formatDate(w.date)}{w.issuedBy ? ` · ${w.issuedBy}` : ''}</span></div></div>
               ))}</div>
             )}
           </div>
-          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
             <h2 className="text-base font-semibold text-[var(--color-ink)] mb-3">Review documents</h2>
-            {reviews.length === 0 ? <p className="text-sm text-[var(--color-ink-faint)]">No review documents.</p> : (
+            {reviews.length === 0 ? <p className="text-[13px] text-[var(--color-ink-faint)]">No review documents.</p> : (
               <div className="divide-y divide-[var(--color-line-soft)]">{reviews.map((f) => (
-                <div key={f.id} className="flex items-center justify-between py-2.5"><span className="text-sm text-[var(--color-ink)]">{f.name}</span><a href={`/api/agent-files/${f.id}/download`} className="text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">Download</a></div>
+                <div key={f.id} className="flex items-center justify-between py-2.5"><span className="text-[13px] text-[var(--color-ink)]">{f.name}</span><a href={`/api/agent-files/${f.id}/download`} className="text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">Download</a></div>
               ))}</div>
             )}
           </div>
@@ -395,19 +395,19 @@ export default function EmployeeProfile() {
             const done = items.filter(i => i.done).length;
             const pct = items.length ? Math.round((done / items.length) * 100) : 0;
             return (
-              <div key={type} className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
+              <div key={type} className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
                 <div className="flex items-center justify-between mb-1">
                   <h2 className="text-base font-semibold text-[var(--color-ink)]">{title}</h2>
-                  <span className="text-xs font-medium text-[var(--color-ink-soft)]">{done}/{items.length} done</span>
+                  <span className="text-[11.5px] font-medium text-[var(--color-ink-soft)]">{done}/{items.length} done</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-[var(--color-fill)] mb-5 overflow-hidden">
-                  <div className={`h-full rounded-full ${color === 'emerald' ? 'bg-emerald-500' : 'bg-red-400'}`} style={{ width: `${pct}%` }} />
+                  <div className={`h-full rounded-full ${color === 'emerald' ? 'bg-[var(--color-good-bg)]0' : 'bg-red-400'}`} style={{ width: `${pct}%` }} />
                 </div>
                 <div className="divide-y divide-[var(--color-line-soft)]">
                   {items.map((it) => (
                     <button key={it.label} type="button" onClick={() => toggleCheck(type, it.label, !it.done)} className="w-full flex items-center gap-3 py-3 text-left hover:bg-[var(--color-fill)] -mx-2 px-2 rounded-lg">
-                      {it.done ? <CheckCircle2 size={18} className={color === 'emerald' ? 'text-emerald-600' : 'text-red-500'} /> : <Circle size={18} className="text-[var(--color-ink-faint)]" />}
-                      <span className={`flex-1 text-sm ${it.done ? 'text-[var(--color-ink-soft)] line-through' : 'text-[var(--color-ink)]'}`}>{it.label}</span>
+                      {it.done ? <CheckCircle2 size={18} className={color === 'emerald' ? 'text-[var(--color-good)]' : 'text-red-500'} /> : <Circle size={18} className="text-[var(--color-ink-faint)]" />}
+                      <span className={`flex-1 text-[13px] ${it.done ? 'text-[var(--color-ink-soft)] line-through' : 'text-[var(--color-ink)]'}`}>{it.label}</span>
                       {it.done && it.doneAt && <span className="text-[11px] text-[var(--color-ink-faint)]">{formatDate(it.doneAt)}</span>}
                     </button>
                   ))}
@@ -419,19 +419,19 @@ export default function EmployeeProfile() {
       )}
 
       {tab === 'activity' && (
-        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
           <h2 className="text-base font-semibold text-[var(--color-ink)] mb-5">Employment history</h2>
-          {activity.length === 0 ? <p className="text-sm text-[var(--color-ink-faint)]">No recorded history yet.</p> : (
+          {activity.length === 0 ? <p className="text-[13px] text-[var(--color-ink-faint)]">No recorded history yet.</p> : (
             <div className="space-y-0">
               {activity.map((a, i) => (
                 <div key={i} className="flex gap-4 pb-4 last:pb-0">
                   <div className="flex flex-col items-center">
-                    <div className={`w-2 h-2 rounded-full mt-1.5 ${a.warn ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                    <div className={`w-2 h-2 rounded-full mt-1.5 ${a.warn ? 'bg-amber-500' : 'bg-[var(--color-good-bg)]0'}`} />
                     {i < activity.length - 1 && <div className="w-px flex-1 bg-[var(--color-line)] my-1" />}
                   </div>
                   <div className="min-w-0 pb-1">
-                    <p className="text-sm text-[var(--color-ink)]">{a.text}</p>
-                    <p className="text-xs text-[var(--color-ink-faint)]">{formatDate(a.date)}</p>
+                    <p className="text-[13px] text-[var(--color-ink)]">{a.text}</p>
+                    <p className="text-[11.5px] text-[var(--color-ink-faint)]">{formatDate(a.date)}</p>
                   </div>
                 </div>
               ))}
@@ -443,9 +443,9 @@ export default function EmployeeProfile() {
       {/* Contract action modal */}
       {action && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !actionBusy && setAction(null)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[var(--color-ink)]">{ACTION_TITLES[action]}</h3>
+              <h3 className="text-[15px] font-semibold text-[var(--color-ink)]">{ACTION_TITLES[action]}</h3>
               <button onClick={() => setAction(null)} disabled={actionBusy} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
 
@@ -453,61 +453,61 @@ export default function EmployeeProfile() {
               {action === 'renew' && (
                 <>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">New contract type</span>
-                    <input type="text" value={form.newType || ''} onChange={(e) => setF('newType', e.target.value)} placeholder="e.g. 6-month fixed" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">New contract type</span>
+                    <input type="text" value={form.newType || ''} onChange={(e) => setF('newType', e.target.value)} placeholder="e.g. 6-month fixed" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">New start date (optional)</span>
-                    <input type="date" value={form.newStart || ''} onChange={(e) => setF('newStart', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">New start date (optional)</span>
+                    <input type="date" value={form.newStart || ''} onChange={(e) => setF('newStart', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">New end date</span>
-                    <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">New end date</span>
+                    <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                 </>
               )}
               {action === 'extend' && (
                 <label className="block">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Extend end date to</span>
-                  <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Extend end date to</span>
+                  <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                 </label>
               )}
               {action === 'convert' && (
                 <>
-                  <p className="text-sm text-[var(--color-ink-soft)]">This makes the contract permanent — no end date, no expiry reminders.</p>
+                  <p className="text-[13px] text-[var(--color-ink-soft)]">This makes the contract permanent — no end date, no expiry reminders.</p>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Contract type</span>
-                    <input type="text" value={form.newType || ''} onChange={(e) => setF('newType', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Contract type</span>
+                    <input type="text" value={form.newType || ''} onChange={(e) => setF('newType', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                 </>
               )}
               {action === 'terminate' && (
                 <>
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-[13px] text-red-700">
                     Terminating deactivates <span className="font-semibold">{agent.name}</span> across Pulse — removed from the roster, payroll and attendance, and signed out immediately. This is recorded permanently.
                   </div>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Reason (required)</span>
-                    <textarea value={form.reason || ''} onChange={(e) => setF('reason', e.target.value)} rows={3} placeholder="Why is this contract being terminated?" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Reason (required)</span>
+                    <textarea value={form.reason || ''} onChange={(e) => setF('reason', e.target.value)} rows={3} placeholder="Why is this contract being terminated?" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Termination date</span>
-                    <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Termination date</span>
+                    <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                 </>
               )}
               {action !== 'terminate' && (
                 <label className="block">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Note (optional)</span>
-                  <input type="text" value={form.note || ''} onChange={(e) => setF('note', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Note (optional)</span>
+                  <input type="text" value={form.note || ''} onChange={(e) => setF('note', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                 </label>
               )}
             </div>
 
-            {actionErr && <p className="text-sm text-red-600 mt-3">{actionErr}</p>}
+            {actionErr && <p className="text-[13px] text-red-600 mt-3">{actionErr}</p>}
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setAction(null)} disabled={actionBusy} className="px-4 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-              <button onClick={runAction} disabled={actionBusy} className={`px-4 py-2 rounded-lg text-sm text-white disabled:opacity-60 ${action === 'terminate' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>{actionBusy ? 'Working…' : ACTION_CONFIRM[action]}</button>
+              <button onClick={() => setAction(null)} disabled={actionBusy} className="px-4 py-2 rounded-lg text-[13px] bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
+              <button onClick={runAction} disabled={actionBusy} className={`px-4 py-2 rounded-lg text-[13px] text-white disabled:opacity-60 ${action === 'terminate' ? 'bg-red-600 hover:bg-red-700' : 'bg-[var(--color-brand)] hover:bg-[var(--color-brand-600)]'}`}>{actionBusy ? 'Working…' : ACTION_CONFIRM[action]}</button>
             </div>
           </div>
         </div>

@@ -68,7 +68,7 @@ export default function PeriodSelector({ period, onChange }) {
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2 text-sm font-semibold text-[var(--color-ink)] shadow-[var(--shadow-soft)]"
+        className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2 text-[13px] font-semibold text-[var(--color-ink)] shadow-[var(--shadow-soft)]"
       >
         <Calendar size={16} className="text-[var(--color-ink-faint)]" />
         {period.label}
@@ -84,7 +84,7 @@ export default function PeriodSelector({ period, onChange }) {
                 <button
                   key={k}
                   onClick={() => choose(k)}
-                  className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-semibold transition-colors hover:bg-[var(--color-line-soft)] ${period.key === k ? 'text-[var(--color-brand)]' : 'text-[var(--color-ink)]'}`}
+                  className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] font-semibold transition-colors hover:bg-[var(--color-line-soft)] ${period.key === k ? 'text-[var(--color-brand)]' : 'text-[var(--color-ink)]'}`}
                 >
                   <Calendar size={16} className={period.key === k ? 'text-[var(--color-brand)]' : 'text-[var(--color-ink-faint)]'} />
                   {label}
@@ -92,10 +92,10 @@ export default function PeriodSelector({ period, onChange }) {
               ))}
             </div>
             <div className="border-t border-[var(--color-line-soft)] p-3">
-              <div className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Custom range</div>
+              <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Custom range</div>
               <div className="space-y-2">
-                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none" />
-                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none" />
+                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13px] outline-none" />
+                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13px] outline-none" />
                 <Button size="sm" className="w-full" onClick={applyCustom} disabled={!from || !to}>
                   Apply
                 </Button>

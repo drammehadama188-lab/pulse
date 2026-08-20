@@ -56,7 +56,7 @@ export default function Visits() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-[var(--color-ink-soft)]">
+        <p className="text-[13px] text-[var(--color-ink-soft)]">
           {rows.length} visits · {dalasi(monthSpend)} transport this month
         </p>
         {!isViewAs && (
@@ -79,19 +79,19 @@ export default function Visits() {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-bold text-[var(--color-ink)]">
+                  <span className="font-semibold text-[var(--color-ink)]">
                     {r.from || '—'} → {r.to || '—'}
                   </span>
-                  {Number(r.cost) > 0 && <span className="text-sm font-semibold text-[var(--color-ink-soft)]">{dalasi(r.cost)}</span>}
+                  {Number(r.cost) > 0 && <span className="text-[13px] font-semibold text-[var(--color-ink-soft)]">{dalasi(r.cost)}</span>}
                 </div>
                 {(r.reason || r.company) && (
-                  <div className="mt-0.5 text-sm text-[var(--color-ink-faint)]">
+                  <div className="mt-0.5 text-[13px] text-[var(--color-ink-faint)]">
                     {[r.company, r.reason].filter(Boolean).join(' · ')}
                   </div>
                 )}
-                {r.notes && <div className="mt-1 text-sm italic text-[var(--color-ink-soft)]">“{r.notes}”</div>}
+                {r.notes && <div className="mt-1 text-[13px] italic text-[var(--color-ink-soft)]">“{r.notes}”</div>}
                 {r.date && (
-                  <div className="mt-1 text-xs text-[var(--color-ink-faint)]">
+                  <div className="mt-1 text-[11.5px] text-[var(--color-ink-faint)]">
                     {new Date(r.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
                   </div>
                 )}

@@ -22,8 +22,8 @@ const monthTitle = (m) => `${MONTH_LABEL[Number(m.slice(5, 7))]} ${m.slice(0, 4)
 const prettyDay = (k) => new Date(`${k}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 const D = (n) => `D${Number(n || 0).toLocaleString()}`
 
-const th = 'px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]'
-const td = 'px-3 py-2.5 text-sm text-[var(--color-ink)]'
+const th = 'px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]'
+const td = 'px-3 py-2.5 text-[13px] text-[var(--color-ink)]'
 
 export default function Reports() {
   const [month, setMonth] = useState(thisMonth())
@@ -41,15 +41,15 @@ export default function Reports() {
   const sections = data ? ['attendance', 'coaching', 'leave', 'performance', 'payroll'].filter((k) => data[k]) : []
 
   return (
-    <div className="max-w-6xl space-y-6">
+    <div className="max-w-6xl space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Reports</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Reports</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">The month's story — attendance, coaching, performance, leave and pay.</p>
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-1 py-1">
           <button onClick={() => setMonth((m) => shiftMonth(m, -1))} className="rounded-lg p-1.5 hover:bg-[var(--color-paper)]" aria-label="Previous month"><ChevronLeft size={16} /></button>
-          <span className="min-w-[9rem] text-center text-sm font-bold">{monthTitle(month)}</span>
+          <span className="min-w-[9rem] text-center text-[13px] font-semibold">{monthTitle(month)}</span>
           <button onClick={() => setMonth((m) => shiftMonth(m, 1))} disabled={month >= thisMonth()} className="rounded-lg p-1.5 hover:bg-[var(--color-paper)] disabled:opacity-30" aria-label="Next month"><ChevronRight size={16} /></button>
         </div>
       </div>
@@ -80,7 +80,7 @@ function AttendanceReport({ rows }) {
         <span className="flex items-center gap-2"><Clock size={16} className="text-[var(--color-ink-faint)]" /> Who came to work</span>
       </SectionTitle>
       <Card className="overflow-x-auto p-0">
-        <div className="border-b border-[var(--color-line-soft)] px-4 py-2.5 text-xs font-medium text-[var(--color-ink-soft)]">
+        <div className="border-b border-[var(--color-line-soft)] px-4 py-2.5 text-[11.5px] font-medium text-[var(--color-ink-soft)]">
           {totals.worked} work-days done · {totals.late} late arrival{totals.late === 1 ? '' : 's'} · {totals.absent} unexcused absence{totals.absent === 1 ? '' : 's'}
         </div>
         <table className="w-full">
@@ -94,9 +94,9 @@ function AttendanceReport({ rows }) {
                 <tr key={r.username} className="border-b border-[var(--color-line-soft)] last:border-0 align-top">
                   <td className={td}>
                     <p className="font-semibold">{r.name}</p>
-                    <p className="text-xs text-[var(--color-ink-faint)]">{r.department}</p>
+                    <p className="text-[11.5px] text-[var(--color-ink-faint)]">{r.department}</p>
                     {r.absentDays.length > 0 && (
-                      <p className="mt-1 text-xs font-medium text-red-600">Missed: {r.absentDays.map(prettyDay).join(' · ')}</p>
+                      <p className="mt-1 text-[11.5px] font-medium text-red-600">Missed: {r.absentDays.map(prettyDay).join(' · ')}</p>
                     )}
                   </td>
                   <td className={`${td} tabular-nums`}>{r.scheduled}</td>
@@ -105,7 +105,7 @@ function AttendanceReport({ rows }) {
                   <td className={`${td} tabular-nums`}>{r.onLeave}</td>
                   <td className={`${td} tabular-nums ${r.absent ? 'font-semibold text-red-600' : ''}`}>{r.absent}</td>
                   <td className={td}>
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-bold ${b.chip}`}>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-semibold ${b.chip}`}>
                       {r.pct == null ? '—' : `${r.pct}%`} <span className="font-medium">{b.label}</span>
                     </span>
                   </td>
@@ -128,19 +128,19 @@ function CoachingReport({ items }) {
         <span className="flex items-center gap-2"><MessageSquareText size={16} className="text-[var(--color-ink-faint)]" /> Coaching — what was said</span>
       </SectionTitle>
       {!items.length ? (
-        <Card className="px-5 py-8 text-center text-sm text-[var(--color-ink-faint)]">No coaching logged this month.</Card>
+        <Card className="px-5 py-8 text-center text-[13px] text-[var(--color-ink-faint)]">No coaching logged this month.</Card>
       ) : (
         <Card className="divide-y divide-[var(--color-line-soft)] p-0">
           {items.map((c, i) => (
             <div key={i} className="px-4 py-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold tabular-nums text-[var(--color-ink-faint)]">{prettyDay(c.date)}</span>
-                <span className="text-sm font-semibold">{c.person}</span>
+                <span className="text-[11.5px] font-semibold tabular-nums text-[var(--color-ink-faint)]">{prettyDay(c.date)}</span>
+                <span className="text-[13px] font-semibold">{c.person}</span>
                 <Pill tone={typeTone[c.type] || 'neutral'}>{c.type}</Pill>
-                {c.title && <span className="text-sm text-[var(--color-ink-soft)]">{c.title}</span>}
+                {c.title && <span className="text-[13px] text-[var(--color-ink-soft)]">{c.title}</span>}
               </div>
-              {c.note && <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-ink)]">{c.note}</p>}
-              <p className="mt-1 text-xs text-[var(--color-ink-faint)]">by {c.by}</p>
+              {c.note && <p className="mt-1 whitespace-pre-wrap text-[13px] text-[var(--color-ink)]">{c.note}</p>}
+              <p className="mt-1 text-[11.5px] text-[var(--color-ink-faint)]">by {c.by}</p>
             </div>
           ))}
         </Card>
@@ -157,7 +157,7 @@ function PerformanceReport({ rows }) {
         <span className="flex items-center gap-2"><TrendingUp size={16} className="text-[var(--color-ink-faint)]" /> Who's doing what</span>
       </SectionTitle>
       {!rows.length ? (
-        <Card className="px-5 py-8 text-center text-sm text-[var(--color-ink-faint)]">No one in your performance scope.</Card>
+        <Card className="px-5 py-8 text-center text-[13px] text-[var(--color-ink-faint)]">No one in your performance scope.</Card>
       ) : (
         <Card className="overflow-x-auto p-0">
           <table className="w-full">
@@ -169,15 +169,15 @@ function PerformanceReport({ rows }) {
                 <tr key={r.name} className="border-b border-[var(--color-line-soft)] last:border-0 align-top">
                   <td className={td}>
                     <p className="font-semibold">{r.name}</p>
-                    {r.customers.length > 0 && <p className="mt-0.5 text-xs text-[var(--color-ink-faint)]">{r.customers.join(' · ')}</p>}
+                    {r.customers.length > 0 && <p className="mt-0.5 text-[11.5px] text-[var(--color-ink-faint)]">{r.customers.join(' · ')}</p>}
                   </td>
                   <td className={`${td} tabular-nums`}>{r.sales ?? '—'}</td>
                   <td className={`${td} tabular-nums`}>{r.revenue != null ? D(r.revenue) : '—'}</td>
-                  <td className={td}>{r.reviewScore != null ? <span className="font-semibold">{r.reviewScore}<span className="text-xs text-[var(--color-ink-faint)]"> · {r.reviewStatus || 'locked'}</span></span> : <span className="text-[var(--color-ink-faint)]">not locked</span>}</td>
+                  <td className={td}>{r.reviewScore != null ? <span className="font-semibold">{r.reviewScore}<span className="text-[11.5px] text-[var(--color-ink-faint)]"> · {r.reviewStatus || 'locked'}</span></span> : <span className="text-[var(--color-ink-faint)]">not locked</span>}</td>
                   <td className={`${td} tabular-nums`}>{r.coachingCount || '—'}</td>
                   <td className={td}>
                     {!r.warnings.length ? <span className="text-[var(--color-ink-faint)]">none</span> : r.warnings.map((w, i) => (
-                      <p key={i} className="text-xs"><span className="font-bold text-red-600">{w.type}</span>{w.reason ? ` — ${w.reason}` : ''} <span className="text-[var(--color-ink-faint)]">({w.date})</span></p>
+                      <p key={i} className="text-[11.5px]"><span className="font-semibold text-red-600">{w.type}</span>{w.reason ? ` — ${w.reason}` : ''} <span className="text-[var(--color-ink-faint)]">({w.date})</span></p>
                     ))}
                   </td>
                 </tr>
@@ -209,7 +209,7 @@ function LeaveReport({ rows }) {
                 <td className={`${td} tabular-nums`}>{r.taken || '—'}</td>
                 <td className={td}>{Object.keys(r.byType).length ? Object.entries(r.byType).map(([t, n]) => `${t} ${n}d`).join(' · ') : <span className="text-[var(--color-ink-faint)]">none</span>}</td>
                 <td className={`${td} tabular-nums`}>{r.sickUsed} of {r.sickAllowance}</td>
-                <td className={td}>{!r.upcoming.length ? <span className="text-[var(--color-ink-faint)]">—</span> : r.upcoming.map((l, i) => <p key={i} className="text-xs">{l.type}: {l.from} → {l.to}</p>)}</td>
+                <td className={td}>{!r.upcoming.length ? <span className="text-[var(--color-ink-faint)]">—</span> : r.upcoming.map((l, i) => <p key={i} className="text-[11.5px]">{l.type}: {l.from} → {l.to}</p>)}</td>
               </tr>
             ))}
           </tbody>
@@ -228,7 +228,7 @@ function PayrollReport({ rows }) {
         <span className="flex items-center gap-2"><Wallet size={16} className="text-[var(--color-ink-faint)]" /> Payroll cost</span>
       </SectionTitle>
       {!rows.length ? (
-        <Card className="px-5 py-8 text-center text-sm text-[var(--color-ink-faint)]">No payroll recorded for this month yet.</Card>
+        <Card className="px-5 py-8 text-center text-[13px] text-[var(--color-ink-faint)]">No payroll recorded for this month yet.</Card>
       ) : (
         <Card className="overflow-x-auto p-0">
           <table className="w-full">
@@ -241,11 +241,11 @@ function PayrollReport({ rows }) {
                   <td className={`${td} font-semibold`}>{r.name}</td>
                   <td className={`${td} tabular-nums`}>{D(r.base)}</td>
                   <td className={`${td} tabular-nums`}>{D(r.commission)}</td>
-                  <td className={`${td} font-bold tabular-nums`}>{D(r.total)}</td>
+                  <td className={`${td} font-semibold tabular-nums`}>{D(r.total)}</td>
                 </tr>
               ))}
               <tr>
-                <td className={`${td} font-bold`}>Company total</td><td className={td} /><td className={td} />
+                <td className={`${td} font-semibold`}>Company total</td><td className={td} /><td className={td} />
                 <td className={`${td} font-semibold tabular-nums`}>{D(total)}</td>
               </tr>
             </tbody>

@@ -24,15 +24,15 @@ export default function MyDocuments() {
   if (!docs) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Documents</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Documents</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Your CV, contract, ID and certificates.</p>
       </div>
 
       <SectionTitle>My documents</SectionTitle>
       {docs.length === 0 ? (
-        <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">No documents on file yet.</Card>
+        <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">No documents on file yet.</Card>
       ) : (
         <div className="space-y-3">
           {docs.map((d) => (
@@ -41,8 +41,8 @@ export default function MyDocuments() {
                 <FolderOpen size={18} />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="truncate font-bold text-[var(--color-ink)]">{d.name}</div>
-                <div className="text-xs text-[var(--color-ink-faint)]">
+                <div className="truncate font-semibold text-[var(--color-ink)]">{d.name}</div>
+                <div className="text-[11.5px] text-[var(--color-ink-faint)]">
                   <Pill tone="neutral">{DOC_LABEL[d.category] || 'Document'}</Pill>
                   <span className="ml-2">{dateLabel(d.uploadedAt)}</span>
                 </div>

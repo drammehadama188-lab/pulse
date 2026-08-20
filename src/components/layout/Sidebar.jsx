@@ -12,7 +12,7 @@ import { Avatar } from '../ui.jsx'
 
 function SectionLabel({ children }) {
   return (
-    <div className="mb-1.5 mt-6 px-3.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-ink-faint)] first:mt-0">
+    <div className="mb-1.5 mt-6 px-3.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-faint)] first:mt-0">
       {children}
     </div>
   )
@@ -36,7 +36,7 @@ function NavRow({ item, soon = false }) {
           <item.icon size={20} strokeWidth={isActive ? 2.4 : 2} className="shrink-0" />
           <span className="flex-1">{item.label}</span>
           {soon && (
-            <span className="rounded-full bg-[var(--color-fill)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">
+            <span className="rounded-full bg-[var(--color-fill)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
               Soon
             </span>
           )}
@@ -56,14 +56,14 @@ export function Sidebar() {
   const inRecruitment = pathname.startsWith('/recruitment')
 
   return (
-    <aside className="hidden w-[216px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-sidebar-edge)] bg-[var(--color-sidebar)] px-4 py-6 md:flex">
+    <aside className="hidden w-[216px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-sidebar-edge)] bg-[var(--color-sidebar)] px-4 py-5 md:flex">
       <div className="px-2">
         <Brand />
       </div>
 
       {inRecruitment ? (
         <nav className="mt-8 flex flex-1 flex-col gap-1">
-          <NavLink to="/" className="mb-3 flex items-center gap-2 px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-ink)]">
+          <NavLink to="/" className="mb-3 flex items-center gap-2 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-ink)]">
             <ArrowLeft size={14} /> Pulse
           </NavLink>
           <SectionLabel>Recruitment</SectionLabel>

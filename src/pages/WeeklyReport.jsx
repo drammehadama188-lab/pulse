@@ -45,7 +45,7 @@ export default function WeeklyReport() {
       .then(setData).catch((e) => setError(e.message))
   }, [lead, weekStart])
 
-  if (error) return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'Weekly reports are for team leads.' : `Couldn't load — ${error}`}</Card>
+  if (error) return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'Weekly reports are for team leads.' : `Couldn't load — ${error}`}</Card>
   if (!data) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
 
   const planKeys = Object.keys(data.plan)
@@ -53,11 +53,11 @@ export default function WeeklyReport() {
   return (
     <div className="max-w-4xl space-y-7">
       <div>
-        <h1 className="text-[27px] font-semibold tracking-tight text-[var(--color-ink)]">Weekly report</h1>
+        <h1 className="text-[26px] font-semibold tracking-tight text-[var(--color-ink)]">Weekly report</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{data.lead.name} · week of {fmt(data.week.start)} – {fmt(data.week.end)} · the same document for both of you.</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {weeks.map((w) => (
-            <button key={w} onClick={() => setWeekStart(w)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${w === weekStart ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
+            <button key={w} onClick={() => setWeekStart(w)} className={`rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${w === weekStart ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
               {w === weeks[0] ? 'This week' : fmt(w)}
             </button>
           ))}
@@ -66,15 +66,15 @@ export default function WeeklyReport() {
 
       {/* the goals — what this week added, where the month stands */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Goals</h2>
+        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Goals</h2>
         <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden p-0">
           {data.goals.map((g) => (
             <div key={g.key} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
-              <span className="w-40 text-sm font-bold text-[var(--color-ink)]">{g.title}</span>
-              <span className="text-sm tabular-nums text-[var(--color-ink-soft)]">this week: <span className="font-semibold text-[var(--color-ink)]">{g.weekDone != null ? `+${g.weekDone}` : '—'}</span></span>
-              <span className="text-sm tabular-nums text-[var(--color-ink-soft)]">month: <span className="font-semibold text-[var(--color-ink)]">{g.actual ?? '—'}{g.unit === '%' ? '%' : ''}</span>{g.target != null ? ` of ${g.target}${g.unit === '%' ? '%' : ''}` : ''}</span>
+              <span className="w-40 text-[13px] font-semibold text-[var(--color-ink)]">{g.title}</span>
+              <span className="text-[13px] tabular-nums text-[var(--color-ink-soft)]">this week: <span className="font-semibold text-[var(--color-ink)]">{g.weekDone != null ? `+${g.weekDone}` : '—'}</span></span>
+              <span className="text-[13px] tabular-nums text-[var(--color-ink-soft)]">month: <span className="font-semibold text-[var(--color-ink)]">{g.actual ?? '—'}{g.unit === '%' ? '%' : ''}</span>{g.target != null ? ` of ${g.target}${g.unit === '%' ? '%' : ''}` : ''}</span>
               {g.target != null && g.actual != null && (
-                <span className={`ml-auto text-xs font-bold ${g.actual >= g.target ? 'text-[var(--color-good)]' : 'text-[var(--color-bad)]'}`}>{g.actual >= g.target ? 'On target' : 'Behind'}</span>
+                <span className={`ml-auto text-[11.5px] font-semibold ${g.actual >= g.target ? 'text-[var(--color-good)]' : 'text-[var(--color-bad)]'}`}>{g.actual >= g.target ? 'On target' : 'Behind'}</span>
               )}
             </div>
           ))}
@@ -84,12 +84,12 @@ export default function WeeklyReport() {
 
       {/* who held the chair each day */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Objectives by day</h2>
+        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Objectives by day</h2>
         <div className="flex flex-wrap gap-1.5">
           {data.objectivesByDay.map((d) => (
             <Card key={d.date} className="px-3 py-2 text-center">
-              <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{new Date(`${d.date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })} {fmt(d.date)}</div>
-              <div className="text-xs font-bold text-[var(--color-ink)]">{KEY_TITLES[d.primary] || d.primary}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{new Date(`${d.date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })} {fmt(d.date)}</div>
+              <div className="text-[11.5px] font-semibold text-[var(--color-ink)]">{KEY_TITLES[d.primary] || d.primary}</div>
               <div className="text-[11px] text-[var(--color-ink-soft)]">{KEY_TITLES[d.supporting] || d.supporting}</div>
             </Card>
           ))}
@@ -98,14 +98,14 @@ export default function WeeklyReport() {
 
       {/* plan discipline */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">His plan — written vs done</h2>
+        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">His plan — written vs done</h2>
         <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden p-0">
-          {planKeys.length === 0 && <p className="p-4 text-sm text-[var(--color-ink-faint)]">No plan written this week.</p>}
+          {planKeys.length === 0 && <p className="p-4 text-[13px] text-[var(--color-ink-faint)]">No plan written this week.</p>}
           {planKeys.map((k) => (
-            <div key={k} className="flex items-center gap-4 px-4 py-3 text-sm">
-              <span className="w-40 font-bold text-[var(--color-ink)]">{KEY_TITLES[k] || k}</span>
+            <div key={k} className="flex items-center gap-4 px-4 py-3 text-[13px]">
+              <span className="w-40 font-semibold text-[var(--color-ink)]">{KEY_TITLES[k] || k}</span>
               <span className="tabular-nums text-[var(--color-ink-soft)]"><span className="font-semibold text-[var(--color-ink)]">{data.plan[k].done}</span> done of {data.plan[k].total}</span>
-              {data.plan[k].carried > 0 && <span className="text-xs font-bold text-[var(--color-bad)]">{data.plan[k].carried} carried over</span>}
+              {data.plan[k].carried > 0 && <span className="text-[11.5px] font-semibold text-[var(--color-bad)]">{data.plan[k].carried} carried over</span>}
             </div>
           ))}
         </Card>
@@ -113,8 +113,8 @@ export default function WeeklyReport() {
 
       {/* management items */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-brand)]">From Adama</h2>
-        <Card className="p-4 text-sm">
+        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-brand)]">From Adama</h2>
+        <Card className="p-4 text-[13px]">
           {data.fromAdama.total === 0 ? (
             <p className="text-[var(--color-ink-faint)]">No management items this week.</p>
           ) : (
@@ -130,11 +130,11 @@ export default function WeeklyReport() {
 
       {/* his words */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">His comments</h2>
-        <Card className="space-y-2 p-4 text-sm">
+        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">His comments</h2>
+        <Card className="space-y-2 p-4 text-[13px]">
           {Object.keys(data.comments).length === 0 && <p className="text-[var(--color-ink-faint)]">No comments written this week.</p>}
           {Object.entries(data.comments).map(([k, text]) => (
-            <p key={k}><span className="font-bold text-[var(--color-ink)]">{KEY_TITLES[k] || k}:</span> <span className="text-[var(--color-ink-soft)]">{text}</span></p>
+            <p key={k}><span className="font-semibold text-[var(--color-ink)]">{KEY_TITLES[k] || k}:</span> <span className="text-[var(--color-ink-soft)]">{text}</span></p>
           ))}
         </Card>
       </section>
@@ -142,8 +142,8 @@ export default function WeeklyReport() {
       {/* honesty notes */}
       {data.flags.length > 0 && (
         <section>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Worth asking about</h2>
-          <Card className="space-y-1 p-4 text-sm">
+          <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Worth asking about</h2>
+          <Card className="space-y-1 p-4 text-[13px]">
             {data.flags.map((f, i) => (
               <p key={i} className="text-amber-700">{f.action === 'unticked' ? 'Unticked' : 'Removed'}: “{f.title}” · {fmt(f.at.slice(0, 10))}</p>
             ))}
@@ -153,13 +153,13 @@ export default function WeeklyReport() {
 
       {/* team attendance */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Team attendance</h2>
+        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Team attendance</h2>
         <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden p-0">
           {data.attendance.map((a) => (
-            <div key={a.name} className="flex items-center gap-4 px-4 py-2.5 text-sm">
+            <div key={a.name} className="flex items-center gap-4 px-4 py-2.5 text-[13px]">
               <span className="w-40 font-semibold text-[var(--color-ink)]">{a.name}</span>
               <span className="tabular-nums text-[var(--color-ink-soft)]">{a.worked}/{a.scheduled} days{a.late ? ` · ${a.late} late` : ''}</span>
-              {a.scheduled > 0 && a.worked < a.scheduled && <span className="ml-auto text-xs font-bold text-[var(--color-bad)]">{a.scheduled - a.worked} missed</span>}
+              {a.scheduled > 0 && a.worked < a.scheduled && <span className="ml-auto text-[11.5px] font-semibold text-[var(--color-bad)]">{a.scheduled - a.worked} missed</span>}
             </div>
           ))}
         </Card>

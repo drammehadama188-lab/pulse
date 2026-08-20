@@ -48,30 +48,30 @@ export default function Notices() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Notices</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Notices</h1>
 
       {/* pricing reference */}
       <Card className="overflow-hidden">
         <div className="flex items-center gap-2 border-b border-[var(--color-line-soft)] px-5 py-4">
           <Tag size={18} className="text-[var(--color-good)]" />
-          <h3 className="font-bold text-[var(--color-ink)]">Pricing & discount policy</h3>
+          <h3 className="font-semibold text-[var(--color-ink)]">Pricing & discount policy</h3>
         </div>
         <div className="divide-y divide-[var(--color-line-soft)]">
           {PRICING.map((p, i) => (
             <div key={i} className="flex items-center gap-4 px-5 py-3">
               <div className="flex-1">
                 <div className="font-semibold text-[var(--color-ink)]">{p.tier}</div>
-                <div className="text-sm text-[var(--color-ink-faint)]">{p.vehicles}</div>
+                <div className="text-[13px] text-[var(--color-ink-faint)]">{p.vehicles}</div>
               </div>
               {p.price != null ? (
-                <div className="text-lg font-semibold text-[var(--color-ink)]">{dalasi(p.price)}</div>
+                <div className="text-[15px] font-semibold text-[var(--color-ink)]">{dalasi(p.price)}</div>
               ) : (
                 <Pill tone="warn">Needs approval</Pill>
               )}
             </div>
           ))}
         </div>
-        <div className="bg-[var(--color-fill)] px-5 py-3 text-xs text-[var(--color-ink-soft)]">
+        <div className="bg-[var(--color-fill)] px-5 py-3 text-[11.5px] text-[var(--color-ink-soft)]">
           Always use approved pricing. Any other discount must be authorised before promising it.
         </div>
       </Card>
@@ -81,7 +81,7 @@ export default function Notices() {
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Megaphone size={18} className="text-[var(--color-brand)]" />
-            <h3 className="font-bold text-[var(--color-ink)]">Announcements</h3>
+            <h3 className="font-semibold text-[var(--color-ink)]">Announcements</h3>
           </div>
           {canManage && (
             <Button icon={Plus} size="sm" onClick={() => setOpen(true)}>
@@ -102,10 +102,10 @@ export default function Notices() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Pill tone={TYPE_TONE[a.type] || 'brand'}>{a.type}</Pill>
-                      <span className="font-bold text-[var(--color-ink)]">{a.title}</span>
+                      <span className="font-semibold text-[var(--color-ink)]">{a.title}</span>
                     </div>
-                    {a.body && <div className="mt-1.5 text-sm text-[var(--color-ink-soft)]">{a.body}</div>}
-                    <div className="mt-1.5 text-xs text-[var(--color-ink-faint)]">
+                    {a.body && <div className="mt-1.5 text-[13px] text-[var(--color-ink-soft)]">{a.body}</div>}
+                    <div className="mt-1.5 text-[11.5px] text-[var(--color-ink-faint)]">
                       {a.author} · {new Date(a.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                     </div>
                   </div>
@@ -149,7 +149,7 @@ function NoticeForm({ onClose, onSave, busy }) {
         <Field label="Type"><Select value={v.type} onChange={set('type')} options={TYPES} /></Field>
         <Field label="Title"><Input value={v.title} onChange={set('title')} placeholder="e.g. New fleet pricing" /></Field>
         <Field label="Message"><Textarea rows={3} value={v.body} onChange={set('body')} /></Field>
-        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )

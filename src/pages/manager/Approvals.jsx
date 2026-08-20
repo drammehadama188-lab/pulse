@@ -35,9 +35,9 @@ export default function Approvals({ scope }) {
   const decided = requests.filter((r) => r.status !== 'pending')
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">{team ? 'Team Requests' : 'Approvals'}</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">{team ? 'Team Requests' : 'Approvals'}</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{team ? 'Leave requests from your team.' : 'Review and decide leave requests.'}</p>
       </div>
 
@@ -54,11 +54,11 @@ export default function Approvals({ scope }) {
               <Card key={r.id} className="flex flex-wrap items-center gap-4 p-4">
                 <Avatar name={r.name} size={44} />
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold text-[var(--color-ink)]">{r.name}</div>
-                  <div className="text-sm text-[var(--color-ink-faint)]">
+                  <div className="font-semibold text-[var(--color-ink)]">{r.name}</div>
+                  <div className="text-[13px] text-[var(--color-ink-faint)]">
                     {r.type} · {r.days} day{r.days > 1 ? 's' : ''} · {dateShort(r.from)}–{dateShort(r.to)}
                   </div>
-                  {r.reason && <div className="mt-1 text-sm italic text-[var(--color-ink-soft)]">“{r.reason}”</div>}
+                  {r.reason && <div className="mt-1 text-[13px] italic text-[var(--color-ink-soft)]">“{r.reason}”</div>}
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="good" icon={Check} onClick={() => setDecision({ request: r, action: 'approve' })}>
@@ -91,21 +91,21 @@ export default function Approvals({ scope }) {
                       <span className="font-semibold text-[var(--color-ink)]">{r.name}</span>
                       <Pill tone={STATUS_TONE[r.status]}>{r.status[0].toUpperCase() + r.status.slice(1)}</Pill>
                     </div>
-                    <div className="text-sm text-[var(--color-ink-faint)]">
+                    <div className="text-[13px] text-[var(--color-ink-faint)]">
                       {r.type} · {dateShort(r.from)}–{dateShort(r.to)}
                     </div>
                     {r.decidedBy && (
-                      <div className="mt-0.5 text-xs text-[var(--color-ink-faint)]">
+                      <div className="mt-0.5 text-[11.5px] text-[var(--color-ink-faint)]">
                         by {r.decidedBy}{r.decidedAt ? ` · ${decidedOn(r.decidedAt)}` : ''}
                       </div>
                     )}
                     {r.decisionNote && (
-                      <div className="mt-1.5 text-sm text-[var(--color-ink-soft)]">
+                      <div className="mt-1.5 text-[13px] text-[var(--color-ink-soft)]">
                         <span className="font-semibold text-[var(--color-ink)]">To {r.name.split(' ')[0]}:</span> {r.decisionNote}
                       </div>
                     )}
                     {r.approverWhy && (
-                      <div className="mt-1.5 flex items-start gap-1.5 rounded-lg bg-[var(--color-fill)] px-2.5 py-1.5 text-xs text-[var(--color-ink-soft)]">
+                      <div className="mt-1.5 flex items-start gap-1.5 rounded-lg bg-[var(--color-fill)] px-2.5 py-1.5 text-[11.5px] text-[var(--color-ink-soft)]">
                         <Lock size={12} className="mt-0.5 shrink-0" />
                         <span><span className="font-semibold">CEO-only:</span> {r.approverWhy}</span>
                       </div>
@@ -164,7 +164,7 @@ function DecisionModal({ request, action, endpoint, showWhy = true, onClose, onD
       }
     >
       <div className="space-y-4">
-        <div className="rounded-lg bg-[var(--color-fill)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+        <div className="rounded-lg bg-[var(--color-fill)] px-4 py-3 text-[13px] text-[var(--color-ink-soft)]">
           {request.type} · {request.days} day{request.days > 1 ? 's' : ''} · {dateShort(request.from)}–{dateShort(request.to)}
           {request.reason && <div className="mt-1 italic">“{request.reason}”</div>}
         </div>

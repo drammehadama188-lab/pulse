@@ -17,10 +17,11 @@
   --color-brand-100: #dbe7fe;
   --color-damia: #d6294f;
 
-  /* Accent — teal (the cool counter to red; logo tile, soft highlights) */
-  --color-mint: #e3f4f1;
-  --color-mint-tile: #d2ece8;
-  --color-mint-deep: #0f9e94;
+  /* Soft accent surfaces — the logo tile and quiet highlights. Blue, like
+     everything else that identifies Pulse. */
+  --color-mint: #eff5ff;
+  --color-mint-tile: #dbe7fe;
+  --color-mint-deep: #1d4ed8;
 
   /* Sidebar is white now, separated by the same hairline as every card. The
      active row is a soft blue pill, not a block of colour. */
@@ -41,7 +42,7 @@
   --color-fill: #f4f5f8;
 
   /* Status (soft, friendly) */
-  --color-good: #1aa179;
+  --color-good: #059669;
   --color-good-bg: #e6f6f0;
   --color-warn: #d98a23;
   --color-warn-bg: #fbf0dd;

@@ -57,7 +57,7 @@ export default function Login() {
               <div className="text-5xl font-semibold tracking-tight text-[var(--color-ink)]">
                 Pulse
               </div>
-              <div className="mt-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--color-ink-soft)]">
+              <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-ink-soft)]">
                 by Damia Tracker
               </div>
             </div>
@@ -66,25 +66,25 @@ export default function Login() {
             Check in, request leave, track your targets and pay — built for the Damia team.
           </p>
         </div>
-        <div className="absolute bottom-12 left-12 text-sm text-[var(--color-ink-faint)]">
+        <div className="absolute bottom-12 left-12 text-[13px] text-[var(--color-ink-faint)]">
           Damia Security Solutions Ltd
         </div>
       </div>
 
       {/* form */}
-      <div className="flex items-center justify-center px-6 py-12">
+      <div className="flex items-center justify-center px-5 py-12">
         <div className="w-full max-w-sm rise">
-          <div className="mb-8 md:hidden">
+          <div className="mb-6 md:hidden">
             <Brand />
           </div>
-          <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
+          <h2 className="text-[22px] font-semibold tracking-tight text-[var(--color-ink)]">
             Welcome back
           </h2>
           <p className="mt-1.5 text-[var(--color-ink-soft)]">Sign in with your email and password.</p>
 
           <form onSubmit={onSubmit} className="mt-7 space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-[var(--color-ink)]">
+              <label className="mb-1.5 block text-[13px] font-semibold text-[var(--color-ink)]">
                 Email
               </label>
               <input
@@ -98,7 +98,7 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-[var(--color-ink)]">
+              <label className="mb-1.5 block text-[13px] font-semibold text-[var(--color-ink)]">
                 Password
               </label>
               <input
@@ -111,7 +111,7 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">
+              <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-bad)]">
                 {error}
               </div>
             )}
@@ -127,7 +127,7 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-[var(--color-ink-faint)]">
+          <p className="mt-6 text-center text-[11.5px] text-[var(--color-ink-faint)]">
             Trouble signing in? Ask your manager.
           </p>
         </div>

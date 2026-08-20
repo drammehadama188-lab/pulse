@@ -34,7 +34,7 @@ export function Avatar({ name, size = 40, src }) {
   }
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full font-bold"
+      className="flex shrink-0 items-center justify-center rounded-full font-semibold"
       style={{ width: size, height: size, background: bg, color: fg, fontSize: size * 0.38 }}
     >
       {initials(name)}
@@ -54,7 +54,7 @@ const TONES = {
 export function Pill({ tone = 'neutral', children, dot = false }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${TONES[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${TONES[tone]}`}
     >
       {dot && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
       {children}
@@ -74,15 +74,15 @@ export function StatCard({ icon: Icon, label, value, sub, tone = 'brand' }) {
   return (
     <Card className="flex flex-col gap-3 p-5">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-[var(--color-ink-soft)]">{label}</span>
+        <span className="text-[13px] font-semibold text-[var(--color-ink-soft)]">{label}</span>
         {Icon && (
           <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${TONES[tone]}`}>
             <Icon size={18} strokeWidth={2.2} />
           </span>
         )}
       </div>
-      <div className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">{value}</div>
-      {sub && <div className="text-sm text-[var(--color-ink-faint)]">{sub}</div>}
+      <div className="text-[22px] font-semibold tracking-tight text-[var(--color-ink)]">{value}</div>
+      {sub && <div className="text-[13px] text-[var(--color-ink-faint)]">{sub}</div>}
     </Card>
   )
 }
@@ -97,7 +97,7 @@ export function Button({
 }) {
   const base =
     'inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all focus-ring disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]'
-  const sizes = { sm: 'px-3.5 py-2 text-sm', md: 'px-5 py-2.5 text-sm', lg: 'px-6 py-3 text-base' }
+  const sizes = { sm: 'px-3.5 py-2 text-[13px]', md: 'px-5 py-2.5 text-[13px]', lg: 'px-5 py-3 text-base' }
   const variants = {
     primary:
       'bg-[var(--color-brand)] text-white shadow-[0_6px_16px_rgba(214,41,79,0.25)] hover:bg-[var(--color-brand-600)]',
@@ -128,7 +128,7 @@ export function Spinner({ size = 22 }) {
 export function SectionTitle({ children, action }) {
   return (
     <div className="mb-3 flex items-center justify-between">
-      <h2 className="text-base font-bold text-[var(--color-ink)]">{children}</h2>
+      <h2 className="text-base font-semibold text-[var(--color-ink)]">{children}</h2>
       {action}
     </div>
   )
@@ -140,7 +140,7 @@ const FIELD_CLS =
 export function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-semibold text-[var(--color-ink)]">{label}</span>
+      <span className="mb-1.5 block text-[13px] font-semibold text-[var(--color-ink)]">{label}</span>
       {children}
     </label>
   )
@@ -193,7 +193,7 @@ export function MenuSelect({ value, onChange, options = [], placeholder = 'Choos
                 type="button"
                 key={o.value}
                 onClick={() => { onChange(o.value); setOpen(false) }}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${active ? 'bg-blue-50 font-semibold text-blue-600' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors ${active ? 'bg-blue-50 font-semibold text-blue-600' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}
               >
                 {o.label}
                 {active && <Check size={15} className="shrink-0 text-blue-500" />}
@@ -218,7 +218,7 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = 'max-
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-[var(--color-line-soft)] px-5 py-4">
-          <h3 className="text-lg font-semibold tracking-tight text-[var(--color-ink)]">{title}</h3>
+          <h3 className="text-[15px] font-semibold tracking-tight text-[var(--color-ink)]">{title}</h3>
           <button
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-line-soft)] hover:text-[var(--color-ink)]"

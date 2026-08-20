@@ -23,7 +23,7 @@ export default function TimePeriodSelector({ selected, onChange, showExport = tr
       <div className="relative">
         <button
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-3 px-4 py-2.5 bg-white border border-[var(--color-line)] rounded-lg text-sm text-[var(--color-ink)] hover:border-[var(--color-ink-faint)] transition-colors min-w-[180px]"
+          className="flex items-center gap-3 px-4 py-2.5 bg-white border border-[var(--color-line)] rounded-lg text-[13px] text-[var(--color-ink)] hover:border-[var(--color-ink-faint)] transition-colors min-w-[180px]"
         >
           <Calendar size={16} className="text-[var(--color-ink-faint)]" />
           <span className="flex-1 text-left">{label}</span>
@@ -35,22 +35,22 @@ export default function TimePeriodSelector({ selected, onChange, showExport = tr
               <button
                 key={period.value}
                 onClick={() => { onChange(period.value); setOpen(false); }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--color-fill)] transition-colors ${selected === period.value ? 'bg-blue-50 text-blue-600' : 'text-[var(--color-ink-soft)]'}`}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-[var(--color-fill)] transition-colors ${selected === period.value ? 'bg-blue-50 text-blue-600' : 'text-[var(--color-ink-soft)]'}`}
               >
                 <Calendar size={14} className="text-[var(--color-ink-faint)]" />
                 {period.label}
               </button>
             ))}
             <div className="border-t border-[var(--color-line)] p-4">
-              <p className="text-sm font-medium text-[var(--color-ink-soft)] mb-3">Custom Range</p>
+              <p className="text-[13px] font-medium text-[var(--color-ink-soft)] mb-3">Custom Range</p>
               <div className="space-y-2">
                 <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
-                  className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-sm" />
+                  className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-[13px]" />
                 <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
-                  className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-sm" />
+                  className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-[13px]" />
                 <button onClick={() => { onChange('custom', { from: customFrom, to: customTo }); setOpen(false); }}
                   disabled={!customFrom || !customTo}
-                  className="w-full py-2.5 bg-[var(--color-ink)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-ink)] disabled:bg-[var(--color-ink-faint)] disabled:cursor-not-allowed">
+                  className="w-full py-2.5 bg-[var(--color-ink)] text-white rounded-lg text-[13px] font-medium hover:bg-[var(--color-ink)] disabled:bg-[var(--color-ink-faint)] disabled:cursor-not-allowed">
                   Apply
                 </button>
               </div>
@@ -64,7 +64,7 @@ export default function TimePeriodSelector({ selected, onChange, showExport = tr
         <div className="flex items-center gap-1 border border-[var(--color-line)] rounded-lg overflow-hidden">
           {exportFormats.map((fmt) => (
             <button key={fmt}
-              className="px-3 py-2 text-xs font-medium text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)] hover:text-[var(--color-ink)] transition-colors border-r border-[var(--color-line)] last:border-0 flex items-center gap-1">
+              className="px-3 py-2 text-[11.5px] font-medium text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)] hover:text-[var(--color-ink)] transition-colors border-r border-[var(--color-line)] last:border-0 flex items-center gap-1">
               <Download size={12} /> {fmt}
             </button>
           ))}

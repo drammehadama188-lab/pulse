@@ -74,9 +74,9 @@ export default function WorkdayMonitor() {
     } catch (e) { alert(e.message) }
   }
 
-  if (error) return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">Couldn't load — {error}</Card>
+  if (error) return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">Couldn't load — {error}</Card>
   if (!leads) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
-  if (!leads.length) return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">No team leads yet.</Card>
+  if (!leads.length) return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">No team leads yet.</Card>
   if (!data || !selDate) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
 
   const dayItems = data.planByDate[selDate] || []
@@ -95,12 +95,12 @@ export default function WorkdayMonitor() {
   return (
     <div className="max-w-5xl space-y-7">
       <div>
-        <h1 className="text-[27px] font-semibold text-[var(--color-ink)]">Team Workday</h1>
+        <h1 className="text-[26px] font-semibold text-[var(--color-ink)]">Team Workday</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{data.lead.name}'s plans, live — add to them, and read the full history below. Ticking stays his.</p>
         {leads.length > 1 && (
           <div className="mt-2 flex gap-2">
             {leads.map((l) => (
-              <button key={l.lead.username} onClick={() => setLead(l.lead.username)} className={`rounded-full px-3 py-1.5 text-sm font-semibold ${lead === l.lead.username ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>{l.lead.name}</button>
+              <button key={l.lead.username} onClick={() => setLead(l.lead.username)} className={`rounded-full px-3 py-1.5 text-[13px] font-semibold ${lead === l.lead.username ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>{l.lead.name}</button>
             ))}
           </div>
         )}
@@ -113,11 +113,11 @@ export default function WorkdayMonitor() {
             const pct = w.target ? Math.min(100, Math.round(((w.actual || 0) / w.target) * 100)) : 0
             return (
               <div key={w.label} className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-[var(--color-ink-soft)]">{w.label}</span>
+                <span className="text-[11.5px] font-semibold text-[var(--color-ink-soft)]">{w.label}</span>
                 <span className="h-1.5 w-16 overflow-hidden rounded-full bg-[var(--color-fill)]">
-                  <span className={`block h-full rounded-full ${pct >= 66 ? 'bg-emerald-500' : pct >= 33 ? 'bg-amber-400' : 'bg-red-500'}`} style={{ width: `${pct}%` }} />
+                  <span className={`block h-full rounded-full ${pct >= 66 ? 'bg-[var(--color-good-bg)]0' : pct >= 33 ? 'bg-amber-400' : 'bg-red-500'}`} style={{ width: `${pct}%` }} />
                 </span>
-                <span className="text-xs font-bold tabular-nums text-[var(--color-ink)]">{w.actual ?? '—'}{w.unit || `/${w.target}`}</span>
+                <span className="text-[11.5px] font-semibold tabular-nums text-[var(--color-ink)]">{w.actual ?? '—'}{w.unit || `/${w.target}`}</span>
               </div>
             )
           })}
@@ -127,10 +127,10 @@ export default function WorkdayMonitor() {
       {/* management items he did NOT do on their day */}
       {(data.adamaOverdue || []).length > 0 && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm font-bold text-red-700">Your items he hasn't done:</p>
+          <p className="text-[13px] font-semibold text-red-700">Your items he hasn't done:</p>
           <div className="mt-1 space-y-0.5">
             {data.adamaOverdue.map((o, i) => (
-              <p key={i} className="text-sm text-red-700">“{o.title}” — was for {new Date(`${o.date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}</p>
+              <p key={i} className="text-[13px] text-red-700">“{o.title}” — was for {new Date(`${o.date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}</p>
             ))}
           </div>
         </div>
@@ -139,15 +139,15 @@ export default function WorkdayMonitor() {
       <DayStrip days={data.days} today={data.today} selDate={selDate} onSelect={setSelDate} planByDate={data.planByDate} />
 
       {/* objectives rotate daily; Adama can pin them here — only he can */}
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--color-line)] bg-white px-4 py-3 text-sm">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--color-line)] bg-white px-4 py-3 text-[13px]">
         <span className="font-semibold text-[var(--color-ink-soft)]">Objectives:</span>
         {['primary', 'supporting'].map((field) => (
           <label key={field} className="flex items-center gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{field}</span>
+            <span className="text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{field}</span>
             <select
               value={(data.objectivePick || {})[field] || ''}
               onChange={(e) => setObjectives(field, e.target.value)}
-              className="rounded-lg border border-[var(--color-line)] px-2 py-1 text-sm"
+              className="rounded-lg border border-[var(--color-line)] px-2 py-1 text-[13px]"
             >
               <option value="">Auto — rotates daily</option>
               {Object.entries({ renewals: 'Renewals', sales: 'Sales', cases: 'Customer cases', online: 'Trackers online', reviews: 'Google reviews' }).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -161,25 +161,25 @@ export default function WorkdayMonitor() {
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             {sec.key === 'other' ? (
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="text-base font-bold text-[var(--color-ink)]">Other —</span>
-                <input value={otherDraft} onChange={(e) => setOtherDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveOther()} onBlur={saveOther} placeholder="Name his other objective — e.g. Coaching" className="min-w-0 flex-1 border-0 border-b border-dashed border-[var(--color-line)] bg-transparent py-0.5 text-base font-bold text-[var(--color-ink)] outline-none placeholder:font-medium placeholder:text-[var(--color-ink-faint)]" />
+                <span className="text-base font-semibold text-[var(--color-ink)]">Other —</span>
+                <input value={otherDraft} onChange={(e) => setOtherDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveOther()} onBlur={saveOther} placeholder="Name his other objective — e.g. Coaching" className="min-w-0 flex-1 border-0 border-b border-dashed border-[var(--color-line)] bg-transparent py-0.5 text-base font-semibold text-[var(--color-ink)] outline-none placeholder:font-medium placeholder:text-[var(--color-ink-faint)]" />
               </div>
             ) : (
-              <h2 className="text-base font-bold text-[var(--color-ink)]">{sec.label}</h2>
+              <h2 className="text-base font-semibold text-[var(--color-ink)]">{sec.label}</h2>
             )}
             {sec.metrics.length > 0 && (
-              <span className="text-xs text-[var(--color-ink-soft)]">{sec.metrics.map((m) => `${m.label.toLowerCase()} ${m.value}`).join(' · ')}{sec.progress ? ` · today ${sec.progress.actual}/${sec.progress.goal}` : ''}</span>
+              <span className="text-[11.5px] text-[var(--color-ink-soft)]">{sec.metrics.map((m) => `${m.label.toLowerCase()} ${m.value}`).join(' · ')}{sec.progress ? ` · today ${sec.progress.actual}/${sec.progress.goal}` : ''}</span>
             )}
           </div>
           <div className="mt-3 space-y-1">
-            {itemsFor(sec.key).length === 0 && <p className="text-sm text-[var(--color-ink-faint)]">Nothing planned for this day.</p>}
+            {itemsFor(sec.key).length === 0 && <p className="text-[13px] text-[var(--color-ink-faint)]">Nothing planned for this day.</p>}
             {itemsFor(sec.key).map((it) => (
-              <div key={it.id} className="flex items-start gap-2 text-sm">
-                <span className="mt-0.5 shrink-0">{it.done ? <CheckCircle2 size={16} className="text-emerald-600" /> : <Circle size={16} className="text-[var(--color-ink-faint)]" />}</span>
+              <div key={it.id} className="flex items-start gap-2 text-[13px]">
+                <span className="mt-0.5 shrink-0">{it.done ? <CheckCircle2 size={16} className="text-[var(--color-good)]" /> : <Circle size={16} className="text-[var(--color-ink-faint)]" />}</span>
                 <span className={`flex-1 ${it.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>
                   {it.title}
-                  {it.byAdama && <span className="ml-2 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-600">from you</span>}
-                  {it.carried ? <span className="ml-2 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-600">carried</span> : null}
+                  {it.byAdama && <span className="ml-2 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600">from you</span>}
+                  {it.carried ? <span className="ml-2 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">carried</span> : null}
                 </span>
               </div>
             ))}
@@ -191,23 +191,23 @@ export default function WorkdayMonitor() {
               onChange={(e) => setDrafts((s) => ({ ...s, [sec.key]: e.target.value }))}
               onKeyDown={(e) => e.key === 'Enter' && addFor(sec.key)}
               placeholder={`Add to his ${selDate === data.today ? 'today' : selDate} plan — Enter to send`}
-              className="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm outline-none placeholder:text-[var(--color-ink-faint)]"
+              className="min-w-0 flex-1 border-0 bg-transparent py-1 text-[13px] outline-none placeholder:text-[var(--color-ink-faint)]"
             />
           </div>
-          <p className="mt-2 rounded-lg bg-[var(--color-fill)] px-2.5 py-2 text-xs text-[var(--color-ink-soft)]"><span className="font-semibold">His comment:</span> {sec.note || <span className="text-[var(--color-ink-faint)]">nothing written yet</span>}</p>
+          <p className="mt-2 rounded-lg bg-[var(--color-fill)] px-2.5 py-2 text-[11.5px] text-[var(--color-ink-soft)]"><span className="font-semibold">His comment:</span> {sec.note || <span className="text-[var(--color-ink-faint)]">nothing written yet</span>}</p>
         </div>
       ))}
 
       {/* the timeline — nothing disappears quietly */}
       <div>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Timeline — every change, who and when</h2>
+        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Timeline — every change, who and when</h2>
         <div className="rounded-lg border border-[var(--color-line)] bg-white">
-          {(audit || []).length === 0 && <p className="p-6 text-center text-sm text-[var(--color-ink-faint)]">No activity logged yet.</p>}
+          {(audit || []).length === 0 && <p className="p-5 text-center text-[13px] text-[var(--color-ink-faint)]">No activity logged yet.</p>}
           <div className="max-h-[28rem] divide-y divide-[var(--color-line-soft)] overflow-y-auto">
             {(audit || []).map((e) => (
-              <div key={e.id} className="flex items-start gap-3 px-4 py-2.5 text-sm">
-                <span className="w-24 shrink-0 text-xs tabular-nums text-[var(--color-ink-faint)]">{new Date(e.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })} {timeShort(e.at)}</span>
-                <span className={`w-20 shrink-0 text-xs font-bold ${e.actor === 'adama' ? 'text-red-600' : 'text-[var(--color-ink-soft)]'}`}>{e.actor === 'adama' ? 'You' : e.actor}</span>
+              <div key={e.id} className="flex items-start gap-3 px-4 py-2.5 text-[13px]">
+                <span className="w-24 shrink-0 text-[11.5px] tabular-nums text-[var(--color-ink-faint)]">{new Date(e.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })} {timeShort(e.at)}</span>
+                <span className={`w-20 shrink-0 text-[11.5px] font-semibold ${e.actor === 'adama' ? 'text-red-600' : 'text-[var(--color-ink-soft)]'}`}>{e.actor === 'adama' ? 'You' : e.actor}</span>
                 <span className={`flex-1 ${RED_FLAGS.has(e.action) ? 'font-semibold text-amber-700' : 'text-[var(--color-ink-soft)]'}`}>
                   {(ACTION_TEXT[e.action] || (() => e.action))(e.detail || {})}
                 </span>

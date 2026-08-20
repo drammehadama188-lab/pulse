@@ -22,7 +22,7 @@ export function Brand({ compact = false, onDark = false }) {
           <div className={`text-[16px] font-semibold tracking-tight ${onDark ? 'text-white' : 'text-[var(--color-ink)]'}`}>
             Pulse
           </div>
-          <div className={`-mt-0.5 text-[9px] font-bold uppercase tracking-[0.16em] ${onDark ? 'text-white/60' : 'text-[var(--color-ink-faint)]'}`}>
+          <div className={`-mt-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] ${onDark ? 'text-white/60' : 'text-[var(--color-ink-faint)]'}`}>
             by Damia Tracker
           </div>
         </div>

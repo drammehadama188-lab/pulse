@@ -171,7 +171,7 @@ function WeekStat({ label, value, tone }) {
   return (
     <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
-      <p className={`mt-0.5 text-2xl font-semibold tabular-nums ${c.text}`}>{value}</p>
+      <p className={`mt-0.5 text-[22px] font-semibold tabular-nums ${c.text}`}>{value}</p>
     </div>
   )
 }
@@ -302,7 +302,7 @@ function WeekNav({ days, isThis, onPrev, onNext }) {
   return (
     <div className="flex items-center gap-1">
       <button onClick={onPrev} className="rounded-lg p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-paper)]" aria-label="Previous week"><ChevronLeft size={18} /></button>
-      <span className="min-w-[132px] text-center text-sm font-semibold text-[var(--color-ink)]">{isThis ? 'This week' : label}</span>
+      <span className="min-w-[132px] text-center text-[13px] font-semibold text-[var(--color-ink)]">{isThis ? 'This week' : label}</span>
       <button onClick={onNext} className="rounded-lg p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-paper)]" aria-label="Next week"><ChevronRight size={18} /></button>
     </div>
   )
@@ -350,7 +350,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
               return (
                 <div key={k} className={`px-2 py-2 text-center ${isToday ? 'bg-[var(--color-good-bg)] border-x-2 border-[var(--color-good)]' : weekend ? 'bg-[var(--color-fill)]/60' : ''}`}>
                   <div className={`text-[11px] font-semibold ${isToday ? 'text-[var(--color-good)]' : 'text-[var(--color-ink-faint)]'}`}>{isToday ? 'TODAY' : DAY_FULL[dow].slice(0, 3)}</div>
-                  <div className={`mx-auto mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold tabular-nums ${isToday ? 'bg-[var(--color-good)] text-white' : weekend ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink)]'}`}>{d.getUTCDate()}</div>
+                  <div className={`mx-auto mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-semibold tabular-nums ${isToday ? 'bg-[var(--color-good)] text-white' : weekend ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink)]'}`}>{d.getUTCDate()}</div>
                 </div>
               )
             })}
@@ -363,11 +363,11 @@ function WeekSchedule({ people, days, today, onCellClick }) {
                 <div className="sticky left-0 z-10 flex items-center gap-2.5 bg-[var(--color-surface)] px-4 py-3.5">
                   <Avatar name={p.name} size={34} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-bold leading-tight text-[var(--color-ink)]">{p.name}</div>
+                    <div className="truncate text-[13px] font-semibold leading-tight text-[var(--color-ink)]">{p.name}</div>
                     <div className="truncate text-[11px] text-[var(--color-ink-soft)]">{p.department}</div>
                     <div className="mt-1 flex items-center gap-1.5">
                       {(() => { const c = CHIP[liveStatusKey(p.byDate?.[today], nowMin)]; return (
-                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${c.cls}`} title="Status right now">
+                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.cls}`} title="Status right now">
                           <i className="h-1.5 w-1.5 rounded-full" style={{ background: c.dot }} />{c.label}
                         </span>
                       ) })()}
@@ -392,7 +392,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
                         {view ? (
                           <div className={`rounded-md border border-[var(--color-line-soft)] border-l-[3px] px-2 py-1.5 ${TONE[view.tone]} ${clickable ? 'transition-shadow' : ''}`}>
                             <div className="flex items-center justify-between gap-1">
-                              <div className="text-[11px] font-bold leading-tight tabular-nums text-[var(--color-ink)]">{view.primary}</div>
+                              <div className="text-[11px] font-semibold leading-tight tabular-nums text-[var(--color-ink)]">{view.primary}</div>
                               {cell?.onOfficeNetwork === false && <span title="Checked in off the office network" className="shrink-0 text-[var(--color-bad)]"><AlertTriangle size={11} /></span>}
                               {cell?.fixedBy && <span title={`Time fixed by ${cell.fixedBy}: ${cell.fixReason || ''}`} className="shrink-0 text-[var(--color-ink-faint)]"><Wrench size={11} /></span>}
                             </div>
@@ -411,7 +411,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
 
           {/* day totals — darker bar so weekly hours read instantly */}
           <div className="grid border-t border-[var(--color-line)] bg-[var(--color-fill)]" style={{ gridTemplateColumns: cols }}>
-            <div className="sticky left-0 z-10 bg-[var(--color-fill)] px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">Totals</div>
+            <div className="sticky left-0 z-10 bg-[var(--color-fill)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">Totals</div>
             {totals.map((t, i) => {
               const isToday = days[i] === today
               return (
@@ -483,9 +483,9 @@ function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
         </>
       }
     >
-      <p className="text-sm font-semibold text-[var(--color-ink)]">{dateLabel}</p>
+      <p className="text-[13px] font-semibold text-[var(--color-ink)]">{dateLabel}</p>
       {(cell.checkIn || cell.leaveType || cell.shift) && (
-        <p className="mb-3 mt-0.5 text-sm text-[var(--color-ink-soft)]">
+        <p className="mb-3 mt-0.5 text-[13px] text-[var(--color-ink-soft)]">
           Currently:{' '}
           {cell.checkIn
             ? `worked ${timeShort(cell.checkIn)}${cell.checkOut ? ' – ' + timeShort(cell.checkOut) : ''}`
@@ -507,18 +507,18 @@ function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
       {status === 'worked' && (
         <div className="mt-3 flex items-center gap-2">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-semibold text-[var(--color-ink-soft)]">Checked in</label>
+            <label className="mb-1 block text-[11.5px] font-semibold text-[var(--color-ink-soft)]">Checked in</label>
             <input type="time" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
           </div>
           <span className="mt-5 text-[var(--color-ink-faint)]">–</span>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-semibold text-[var(--color-ink-soft)]">Checked out</label>
+            <label className="mb-1 block text-[11.5px] font-semibold text-[var(--color-ink-soft)]">Checked out</label>
             <input type="time" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
           </div>
         </div>
       )}
       {status === 'clear' && (
-        <p className="mt-3 rounded-lg bg-[var(--color-fill)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+        <p className="mt-3 rounded-lg bg-[var(--color-fill)] px-4 py-3 text-[13px] text-[var(--color-ink-soft)]">
           Removes any check-in, worked, sick or leave record for this day — back to a blank scheduled day.
         </p>
       )}
@@ -528,7 +528,7 @@ function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
           onChange={(e) => setNote(e.target.value)}
           rows={2}
           placeholder="Optional note (e.g. called in, fever)"
-          className="focus-ring mt-3 w-full resize-none rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-sm outline-none"
+          className="focus-ring mt-3 w-full resize-none rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[13px] outline-none"
         />
       )}
     </Modal>
@@ -560,9 +560,9 @@ function MyHours() {
   const done = !!today?.checkOut
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">My hours</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">My hours</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()}</p>
       </div>
 
@@ -578,17 +578,17 @@ function MyHours() {
 
           {done ? (
             <div>
-              <div className="text-2xl font-semibold">Day complete</div>
+              <div className="text-[22px] font-semibold">Day complete</div>
               <div className="mt-1 text-[var(--color-ink-soft)]">{timeShort(today.checkIn)} – {timeShort(today.checkOut)}</div>
             </div>
           ) : checkedIn ? (
             <div>
-              <div className="flex items-center justify-center gap-2 text-2xl font-semibold">Checked in {today.late && <Pill tone="warn">Late</Pill>}</div>
+              <div className="flex items-center justify-center gap-2 text-[22px] font-semibold">Checked in {today.late && <Pill tone="warn">Late</Pill>}</div>
               <div className="mt-1 text-[var(--color-ink-soft)]">since {timeShort(today.checkIn)}</div>
             </div>
           ) : (
             <div>
-              <div className="text-2xl font-semibold">Ready to start?</div>
+              <div className="text-[22px] font-semibold">Ready to start?</div>
               <div className="mt-1 text-[var(--color-ink-soft)]">You haven't checked in today.</div>
             </div>
           )}
@@ -600,7 +600,7 @@ function MyHours() {
           )}
 
           {(today?.checkInLoc || today?.checkOutLoc) && (
-            <div className="flex flex-wrap justify-center gap-3 text-sm">
+            <div className="flex flex-wrap justify-center gap-3 text-[13px]">
               {today.checkInLoc && (
                 <a href={mapsUrl(today.checkInLoc)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[var(--color-brand)]">
                   <MapPin size={14} /> In location
@@ -620,12 +620,12 @@ function MyHours() {
             </Button>
           )}
           {checkedIn && !isViewAs && (
-            <button onClick={() => setUndoOpen(true)} disabled={busy} className="text-xs font-semibold text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-brand)]">
+            <button onClick={() => setUndoOpen(true)} disabled={busy} className="text-[11.5px] font-semibold text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-brand)]">
               Checked in by mistake? Undo
             </button>
           )}
-          {locating && <div className="text-xs text-[var(--color-ink-faint)]">Getting your location…</div>}
-          {isViewAs && <span className="text-sm font-medium text-[var(--color-ink-faint)]">Read-only view</span>}
+          {locating && <div className="text-[11.5px] text-[var(--color-ink-faint)]">Getting your location…</div>}
+          {isViewAs && <span className="text-[13px] font-medium text-[var(--color-ink-faint)]">Read-only view</span>}
         </div>
       </Card>
 
@@ -655,7 +655,7 @@ function MyHours() {
         {hist.loading ? (
           <Card className="flex justify-center py-10"><Spinner size={22} /></Card>
         ) : hist.records.length === 0 ? (
-          <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">No attendance recorded yet.</Card>
+          <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">No attendance recorded yet.</Card>
         ) : (
           <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden">
             {hist.records.map((r) => {
@@ -663,10 +663,10 @@ function MyHours() {
               return (
                 <div key={r.date} className="flex items-center justify-between px-4 py-3 sm:px-5">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-[var(--color-ink)]">{new Date(`${r.date}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                    <div className="text-xs text-[var(--color-ink-faint)]">{r.checkIn ? timeShort(r.checkIn) : '—'}{r.checkOut ? ` – ${timeShort(r.checkOut)}` : ''}</div>
+                    <div className="text-[13px] font-semibold text-[var(--color-ink)]">{new Date(`${r.date}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                    <div className="text-[11.5px] text-[var(--color-ink-faint)]">{r.checkIn ? timeShort(r.checkIn) : '—'}{r.checkOut ? ` – ${timeShort(r.checkOut)}` : ''}</div>
                     {r.fixReason && (
-                      <div className="mt-0.5 flex items-center gap-1 text-xs text-[var(--color-ink-faint)]">
+                      <div className="mt-0.5 flex items-center gap-1 text-[11.5px] text-[var(--color-ink-faint)]">
                         <Wrench size={11} /> Time fixed by {r.fixedByName || r.fixedBy} — {r.fixReason}
                       </div>
                     )}
@@ -675,7 +675,7 @@ function MyHours() {
                     {r.onOfficeNetwork === false && <Pill tone="bad"><AlertTriangle size={12} /> Off-site</Pill>}
                     {r.onOfficeNetwork === true && <span title="Checked in on the office network" className="text-[var(--color-good)]"><Building2 size={15} /></span>}
                     {r.late && <Pill tone="warn">Late</Pill>}
-                    <span className="text-sm font-semibold text-[var(--color-ink)]">{fmtMins(mins)}</span>
+                    <span className="text-[13px] font-semibold text-[var(--color-ink)]">{fmtMins(mins)}</span>
                   </div>
                 </div>
               )
@@ -722,10 +722,10 @@ function ManagerHours() {
   })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Schedule</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Schedule</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">Team shifts, attendance &amp; leave</p>
         </div>
         <Button icon={CalendarCog} onClick={() => setEditorOpen(true)} disabled={!people.length}>Edit schedules</Button>
@@ -739,7 +739,7 @@ function ManagerHours() {
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-1.5">
             {FILTERS.map((f) => (
-              <button key={f.id} onClick={() => setFilter(f.id)} className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${filter === f.id ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]'}`}>{f.label}</button>
+              <button key={f.id} onClick={() => setFilter(f.id)} className={`rounded-full px-3 py-1 text-[11.5px] font-medium transition-colors ${filter === f.id ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]'}`}>{f.label}</button>
             ))}
           </div>
           <WeekNav days={w.data?.days} isThis={w.isThis} onPrev={() => w.shift(-1)} onNext={() => w.shift(1)} />
@@ -793,10 +793,10 @@ function TeamHours() {
   const [fixOpen, setFixOpen] = useState(false)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Team Schedule</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Team Schedule</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">Your team's shifts, attendance &amp; leave</p>
         </div>
         <div className="flex items-center gap-2">
@@ -859,11 +859,11 @@ function FixCheckInDialog({ people, onClose, onSaved }) {
     }
   }
 
-  const inputCls = 'focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)] outline-none'
+  const inputCls = 'focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13px] text-[var(--color-ink)] outline-none'
   return (
     <Modal open onClose={onClose} title="Fix a check-in" footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={save} disabled={busy}>{busy ? <Spinner size={16} /> : 'Save fix'}</Button></>}>
       <div className="space-y-4">
-        <p className="text-sm text-[var(--color-ink-soft)]">
+        <p className="text-[13px] text-[var(--color-ink-soft)]">
           For when someone was at work but couldn't check in, or was wrongly marked late. The real time counts everywhere; the record keeps who fixed it and why.
         </p>
         <Field label="Who">
@@ -879,7 +879,7 @@ function FixCheckInDialog({ people, onClose, onSaved }) {
         <Field label={`Why couldn't ${first || 'they'} check in?`}>
           <Input value={v.reason} onChange={set('reason')} placeholder="e.g. office network was down, phone broken" />
         </Field>
-        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )
@@ -896,11 +896,11 @@ function SelfCheckInCompact({ today, loading, busy, act, undo }) {
         {done ? <CheckCircle2 size={22} /> : <Clock size={22} />}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 font-bold text-[var(--color-ink)]">
+        <div className="flex items-center gap-2 font-semibold text-[var(--color-ink)]">
           {done ? 'You: day complete' : checkedIn ? 'You: checked in' : 'You: not checked in'}
           {today?.late && <Pill tone="warn">Late</Pill>}
         </div>
-        <div className="text-xs text-[var(--color-ink-soft)]">
+        <div className="text-[11.5px] text-[var(--color-ink-soft)]">
           {done ? `${timeShort(today.checkIn)} – ${timeShort(today.checkOut)}` : checkedIn ? `since ${timeShort(today.checkIn)}` : dateLong()}
         </div>
       </div>
@@ -997,7 +997,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
   }
 
   const sqBtn = (on) => `flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border transition-colors ${on ? 'border-[var(--color-good)] bg-[var(--color-good)] text-white' : 'border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink-faint)] hover:bg-[var(--color-paper)]'}`
-  const quick = 'rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1 text-xs font-semibold text-[var(--color-ink-soft)] hover:bg-[var(--color-paper)]'
+  const quick = 'rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1 text-[11.5px] font-semibold text-[var(--color-ink-soft)] hover:bg-[var(--color-paper)]'
   const todayStr = new Date().toISOString().slice(0, 10)
   const nextMondayStr = (() => { const d = new Date(); const add = ((1 - d.getDay() + 7) % 7) || 7; d.setDate(d.getDate() + add); return d.toISOString().slice(0, 10) })()
   const prettyDate = (s) => new Date(`${s}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -1032,8 +1032,8 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
             <CheckCircle2 size={30} />
           </div>
           <div>
-            <div className="text-lg font-bold text-[var(--color-ink)]">Schedule saved</div>
-            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            <div className="text-[15px] font-semibold text-[var(--color-ink)]">Schedule saved</div>
+            <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">
               {start}–{end} starts {prettyDate(saved.from)} for {saved.count === 1 ? '1 person' : `${saved.count} people`}. Earlier weeks stay as they are.
             </p>
           </div>
@@ -1059,7 +1059,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
       <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-paper)] p-4">
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Schedule starts</p>
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <input type="date" value={startDate} min={todayStr} onChange={(e) => setStartDate(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm" />
+          <input type="date" value={startDate} min={todayStr} onChange={(e) => setStartDate(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13px]" />
           <button className={quick} onClick={() => setStartDate(todayStr)}>Today</button>
           <button className={quick} onClick={() => setStartDate(nextMondayStr)}>Next Monday</button>
           {startDate > todayStr && <span className="text-[11px] font-medium text-[var(--color-good)]">Takes over from {prettyDate(startDate)} — earlier weeks stay as they are</span>}
@@ -1073,7 +1073,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
             const before = iso && iso < startDate
             return (
               <button key={dow} onClick={() => toggleDay(dow)} title={dt ? dt.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }) : DAY_FULL[dow]} aria-label={`${DAY_FULL[dow]} ${days[dow] ? 'on' : 'off'}`} className={sqBtn(days[dow])}>
-                <span className="text-[11px] font-bold">{DAY_FULL[dow].slice(0, 2)}</span>
+                <span className="text-[11px] font-semibold">{DAY_FULL[dow].slice(0, 2)}</span>
                 <span className={`text-[10px] font-semibold tabular-nums ${days[dow] ? 'text-white/80' : before ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink-soft)]'}`}>{dt ? dt.getDate() : ''}</span>
               </button>
             )
@@ -1082,7 +1082,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
         <p className="mt-1.5 text-[11px] text-[var(--color-ink-faint)]">First week: {weekDates.label} · repeats every week</p>
 
         <p className="mb-1.5 mt-4 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Working hours</p>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-[13px]">
           <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
           <span className="text-[var(--color-ink-faint)]">→</span>
           <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
@@ -1104,8 +1104,8 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
       {/* 2 · Assign to employees */}
       <div className="mt-4">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Assign to</p>
-          <div className="flex items-center gap-3 text-xs font-semibold">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Assign to</p>
+          <div className="flex items-center gap-3 text-[11.5px] font-semibold">
             <button className="text-[var(--color-brand)]" onClick={() => setSelected(new Set(people.map((p) => p.username)))}>Select All</button>
             <button className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]" onClick={() => setSelected(new Set())} disabled={!selected.size}>Clear Selection</button>
           </div>
@@ -1120,7 +1120,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
               <div key={dept} className="rounded-lg border border-[var(--color-line-soft)] p-2.5">
                 <div className="flex items-center gap-2">
                   <input type="checkbox" checked={deptAll} onChange={(e) => setDeptAll(dept, e.target.checked)} className="accent-[var(--color-brand)]" onClick={(e) => e.stopPropagation()} />
-                  <button onClick={() => toggleDept(dept)} className="flex flex-1 items-center gap-1.5 text-left text-[12px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                  <button onClick={() => toggleDept(dept)} className="flex flex-1 items-center gap-1.5 text-left text-[12px] font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
                     <ChevronRight size={14} className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                     {dept} <span className="font-medium text-[var(--color-ink-faint)]">({members.length}{picked ? ` · ${picked} selected` : ''})</span>
                   </button>
@@ -1133,7 +1133,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
                         <input type="checkbox" checked={on} onChange={() => togglePerson(p.username)} className="accent-[var(--color-brand)]" />
                         <Avatar name={p.name} size={26} />
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-[var(--color-ink)]">{p.name}</div>
+                          <div className="truncate text-[13px] font-semibold text-[var(--color-ink)]">{p.name}</div>
                           <div className="truncate text-[11px] text-[var(--color-ink-faint)]">Now: {summarizeSchedule(p.schedule)}</div>
                           {p.upcoming && <div className="truncate text-[11px] font-medium text-[var(--color-good)]">From {prettyDate(p.upcoming.from)}: {summarizeSchedule(p.upcoming.days)}</div>}
                         </div>

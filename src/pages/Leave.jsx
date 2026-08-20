@@ -64,10 +64,10 @@ export default function Leave() {
   const effectiveType = availableTypes.includes(form.type) ? form.type : availableTypes[0]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Requests</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Requests</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">Request time off and track approvals.</p>
         </div>
         {!isViewAs && (
@@ -99,7 +99,7 @@ export default function Leave() {
           <SectionTitle>New leave request</SectionTitle>
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-sm font-semibold">Type</label>
+              <label className="mb-1.5 block text-[13px] font-semibold">Type</label>
               <select
                 value={effectiveType}
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
@@ -110,24 +110,24 @@ export default function Leave() {
             </div>
             <div className="hidden sm:block" />
             <div>
-              <label className="mb-1.5 block text-sm font-semibold">From</label>
+              <label className="mb-1.5 block text-[13px] font-semibold">From</label>
               <input type="date" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold">To</label>
+              <label className="mb-1.5 block text-[13px] font-semibold">To</label>
               <input type="date" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" />
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1.5 block text-sm font-semibold">Reason (optional)</label>
+              <label className="mb-1.5 block text-[13px] font-semibold">Reason (optional)</label>
               <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} className="focus-ring w-full resize-none rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" placeholder="A short note for your manager" />
             </div>
             {form.type === 'Sick' && (
-              <div className="sm:col-span-2 rounded-lg bg-[var(--color-rest-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-rest)]">
+              <div className="sm:col-span-2 rounded-lg bg-[var(--color-rest-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-rest)]">
                 Valid medical certificate required.{data.sickAllowance != null ? ` ${data.sickRemaining} of ${data.sickAllowance} paid sick days left this year — beyond that is unpaid unless approved.` : ''}
               </div>
             )}
             {error && (
-              <div className="sm:col-span-2 rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
+              <div className="sm:col-span-2 rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-bad)]">{error}</div>
             )}
             <div className="flex gap-2 sm:col-span-2">
               <Button type="submit" disabled={busy}>{busy ? <Spinner size={16} /> : 'Submit request'}</Button>
@@ -157,14 +157,14 @@ export default function Leave() {
                     <span className="font-semibold text-[var(--color-ink)]">{r.type} · {r.days} day{r.days > 1 ? 's' : ''}</span>
                     <Pill tone={STATUS_TONE[r.status]}>{r.status[0].toUpperCase() + r.status.slice(1)}</Pill>
                   </div>
-                  <div className="text-sm text-[var(--color-ink-faint)]">{dateShort(r.from)} – {dateShort(r.to)}{r.reason ? ` · ${r.reason}` : ''}</div>
+                  <div className="text-[13px] text-[var(--color-ink-faint)]">{dateShort(r.from)} – {dateShort(r.to)}{r.reason ? ` · ${r.reason}` : ''}</div>
                   {r.status !== 'pending' && r.decidedBy && (
-                    <div className="mt-1 text-xs text-[var(--color-ink-faint)]">
+                    <div className="mt-1 text-[11.5px] text-[var(--color-ink-faint)]">
                       {r.status === 'approved' ? 'Approved' : 'Rejected'} by {r.decidedBy}{r.decidedAt ? ` · ${dateShort(r.decidedAt)}` : ''}
                     </div>
                   )}
                   {r.decisionNote && (
-                    <div className="mt-1 text-sm text-[var(--color-ink-soft)]">
+                    <div className="mt-1 text-[13px] text-[var(--color-ink-soft)]">
                       <span className="font-semibold text-[var(--color-ink)]">Note:</span> {r.decisionNote}
                     </div>
                   )}

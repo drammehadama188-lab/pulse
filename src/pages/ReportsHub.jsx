@@ -48,33 +48,33 @@ export default function ReportsHub() {
   }, [report, period])
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-4xl space-y-4">
       {/* selector 1: which question */}
       <div className="flex flex-wrap gap-1.5">
         {reports.map(([k, label]) => (
-          <button key={k} onClick={() => setReport(k)} className={`rounded-lg px-3.5 py-2 text-sm font-bold ${report === k ? 'bg-[var(--color-ink)] text-white' : 'border border-[var(--color-line-soft)] bg-[var(--color-surface)] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>{label}</button>
+          <button key={k} onClick={() => setReport(k)} className={`rounded-lg px-3.5 py-2 text-[13px] font-semibold ${report === k ? 'bg-[var(--color-ink)] text-white' : 'border border-[var(--color-line-soft)] bg-[var(--color-surface)] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>{label}</button>
         ))}
       </div>
       {/* selector 2: which period */}
       <div className="flex flex-wrap gap-1.5">
         {PERIODS.map(([k, label]) => (
-          <button key={k} onClick={() => setPeriod(k)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${period === k ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>{label}</button>
+          <button key={k} onClick={() => setPeriod(k)} className={`rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${period === k ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>{label}</button>
         ))}
       </div>
 
-      {error && <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">Couldn't load — {error}</Card>}
+      {error && <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">Couldn't load — {error}</Card>}
       {!data && !error && <div className="flex justify-center py-24"><Spinner size={28} /></div>}
       {data && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* 1 · title */}
           <div>
-            <h1 className="text-[27px] font-semibold tracking-tight text-[var(--color-ink)]">{reports.find(([k]) => k === report)?.[1]} report</h1>
+            <h1 className="text-[26px] font-semibold tracking-tight text-[var(--color-ink)]">{reports.find(([k]) => k === report)?.[1]} report</h1>
             <p className="mt-0.5 text-[var(--color-ink-soft)]">{data.period.label} · <span className="italic">{data.question}</span></p>
           </div>
 
           {/* 2 · summary */}
           <Card className="border-l-4 border-[var(--color-brand)] p-4">
-            <p className="text-sm leading-relaxed text-[var(--color-ink)]">{data.summary}</p>
+            <p className="text-[13px] leading-relaxed text-[var(--color-ink)]">{data.summary}</p>
           </Card>
 
           {/* 3 · key metrics */}
@@ -82,9 +82,9 @@ export default function ReportsHub() {
             <div className="flex flex-wrap gap-3">
               {data.metrics.map((m) => (
                 <Card key={m.label} className="min-w-[9rem] p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{m.label}</div>
-                  <div className="mt-1 text-2xl font-semibold tabular-nums text-[var(--color-ink)]">{m.value}</div>
-                  {m.sub && <div className="text-xs text-[var(--color-ink-faint)]">{m.sub}</div>}
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{m.label}</div>
+                  <div className="mt-1 text-[22px] font-semibold tabular-nums text-[var(--color-ink)]">{m.value}</div>
+                  {m.sub && <div className="text-[11.5px] text-[var(--color-ink-faint)]">{m.sub}</div>}
                 </Card>
               ))}
             </div>
@@ -93,11 +93,11 @@ export default function ReportsHub() {
           {/* 4 · detail */}
           {data.sections.map((sec) => (
             <section key={sec.title}>
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{sec.title}</h2>
+              <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{sec.title}</h2>
               <Card className="overflow-x-auto p-0">
-                <table className="w-full text-sm">
+                <table className="w-full text-[13px]">
                   {sec.head && (
-                    <thead><tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">
+                    <thead><tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
                       {sec.head.map((h) => <th key={h} className="px-4 py-2.5">{h}</th>)}
                     </tr></thead>
                   )}
@@ -116,9 +116,9 @@ export default function ReportsHub() {
           {/* 5 · recent activity */}
           {data.activity.length > 0 && (
             <section>
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Recent activity</h2>
+              <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Recent activity</h2>
               <Card className="space-y-1 p-4">
-                {data.activity.map((a, i) => <p key={i} className="text-sm text-[var(--color-ink-soft)]">{a}</p>)}
+                {data.activity.map((a, i) => <p key={i} className="text-[13px] text-[var(--color-ink-soft)]">{a}</p>)}
               </Card>
             </section>
           )}
@@ -126,9 +126,9 @@ export default function ReportsHub() {
           {/* 6 · notes */}
           {data.notes.length > 0 && (
             <section>
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Notes</h2>
+              <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Notes</h2>
               <Card className="space-y-1 p-4">
-                {data.notes.map((n, i) => <p key={i} className="text-xs text-[var(--color-ink-faint)]">{n}</p>)}
+                {data.notes.map((n, i) => <p key={i} className="text-[11.5px] text-[var(--color-ink-faint)]">{n}</p>)}
               </Card>
             </section>
           )}

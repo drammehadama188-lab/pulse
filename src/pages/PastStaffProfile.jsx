@@ -26,8 +26,8 @@ function pastCategory(reason) {
 function Field({ label, value, accent }) {
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)] mb-1">{label}</p>
-      <p className={`text-sm font-medium ${accent || 'text-[var(--color-ink)]'}`}>{value ?? <span className="text-[var(--color-ink-faint)] font-normal">—</span>}</p>
+      <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-1">{label}</p>
+      <p className={`text-[13px] font-medium ${accent || 'text-[var(--color-ink)]'}`}>{value ?? <span className="text-[var(--color-ink-faint)] font-normal">—</span>}</p>
     </div>
   );
 }
@@ -45,7 +45,7 @@ export default function PastStaffProfile() {
   if (!person) {
     return (
       <div>
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
         <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-10 text-center text-[var(--color-ink-faint)]">Former employee not found.</div>
       </div>
     );
@@ -69,15 +69,15 @@ export default function PastStaffProfile() {
 
   return (
     <div className="max-w-4xl">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
 
       {/* Identity */}
-      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
         <div className="flex items-start gap-5">
-          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--color-ink-faint)] to-[var(--color-ink-soft)] flex items-center justify-center text-white text-xl font-semibold shrink-0">{initials}</div>
+          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--color-ink-faint)] to-[var(--color-ink-soft)] flex items-center justify-center text-white text-[18px] font-semibold shrink-0">{initials}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h1 className="text-2xl font-semibold text-[var(--color-ink)]">{person.name}</h1>
+              <h1 className="text-[22px] font-semibold text-[var(--color-ink)]">{person.name}</h1>
               <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${cat.cls}`}>{cat.label}</span>
             </div>
             <p className="text-[var(--color-ink-soft)]">{person.role}</p>
@@ -87,7 +87,7 @@ export default function PastStaffProfile() {
       </div>
 
       {/* Exit summary */}
-      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
         <h2 className="text-base font-semibold text-[var(--color-ink)] mb-5">Exit record</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
           <Field label="Left" value={person.date} />
@@ -101,20 +101,20 @@ export default function PastStaffProfile() {
       </div>
 
       {/* Pay history (real ledger lines only) */}
-      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
         <h2 className="text-base font-semibold text-[var(--color-ink)] mb-1">Pay history</h2>
-        <p className="text-sm text-[var(--color-ink-soft)] mb-5">What was actually recorded as paid, month by month.</p>
+        <p className="text-[13px] text-[var(--color-ink-soft)] mb-5">What was actually recorded as paid, month by month.</p>
         {payLines.length === 0 ? (
-          <p className="text-sm text-[var(--color-ink-faint)] py-6 text-center">No itemised monthly pay on record for this person. (Their pay may have been recorded only in combined team totals.)</p>
+          <p className="text-[13px] text-[var(--color-ink-faint)] py-5 text-center">No itemised monthly pay on record for this person. (Their pay may have been recorded only in combined team totals.)</p>
         ) : (
           <div className="divide-y divide-[var(--color-line-soft)]">
             {payLines.map((l, i) => (
               <div key={i} className="flex items-start justify-between gap-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-[var(--color-ink)]">{l.month}</p>
-                  {l.note && <p className="text-xs text-[var(--color-ink-soft)] mt-0.5">{l.note}</p>}
+                  <p className="text-[13px] font-medium text-[var(--color-ink)]">{l.month}</p>
+                  {l.note && <p className="text-[11.5px] text-[var(--color-ink-soft)] mt-0.5">{l.note}</p>}
                 </div>
-                <p className={`text-sm font-semibold shrink-0 ${l.amount > 0 ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)]'}`}>{money(l.amount)}</p>
+                <p className={`text-[13px] font-semibold shrink-0 ${l.amount > 0 ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)]'}`}>{money(l.amount)}</p>
               </div>
             ))}
           </div>

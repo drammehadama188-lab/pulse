@@ -89,10 +89,10 @@ export default function Pay() {
   const sortedBenefits = [...benefits].sort((a, b) => (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Payslips</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Payslips</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">
             {isManager ? 'Salary, benefits and monthly payslips.' : 'Your salary, benefits and payslips.'}
           </p>
@@ -109,9 +109,9 @@ export default function Pay() {
       {/* salary summary */}
       {roster ? (
         <Card className="overflow-hidden">
-          <div className="flex items-center justify-between p-6" style={{ background: 'linear-gradient(150deg, var(--color-brand-50), var(--color-surface) 75%)' }}>
+          <div className="flex items-center justify-between p-5" style={{ background: 'linear-gradient(150deg, var(--color-brand-50), var(--color-surface) 75%)' }}>
             <div>
-              <div className="text-sm font-semibold text-[var(--color-ink-soft)]">Monthly total</div>
+              <div className="text-[13px] font-semibold text-[var(--color-ink-soft)]">Monthly total</div>
               <div className="mt-1 text-4xl font-semibold tracking-tight text-[var(--color-ink)]">{dalasi(roster.total)}</div>
             </div>
             <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-[var(--color-brand)] text-white"><Wallet size={26} /></span>
@@ -123,7 +123,7 @@ export default function Pay() {
           </div>
         </Card>
       ) : (
-        <Card className="p-6 text-[var(--color-ink-soft)]">No salary on file{isManager ? ' for this person' : ''}.</Card>
+        <Card className="p-5 text-[var(--color-ink-soft)]">No salary on file{isManager ? ' for this person' : ''}.</Card>
       )}
 
       {/* benefits */}
@@ -143,12 +143,12 @@ export default function Pay() {
                     <span className="font-semibold text-[var(--color-ink)]">{b.title}</span>
                     <Pill tone={STATUS_TONE[b.status] || 'neutral'}>{b.status}</Pill>
                   </div>
-                  {b.detail && <div className="mt-0.5 text-sm text-[var(--color-ink-soft)]">{b.detail}</div>}
-                  <div className="mt-0.5 text-xs text-[var(--color-ink-faint)]">
+                  {b.detail && <div className="mt-0.5 text-[13px] text-[var(--color-ink-soft)]">{b.detail}</div>}
+                  <div className="mt-0.5 text-[11.5px] text-[var(--color-ink-faint)]">
                     {[rangeLabel(b.from, b.to), b.note].filter(Boolean).join(' · ')}
                   </div>
                 </div>
-                {b.amount > 0 && <span className="shrink-0 font-bold text-[var(--color-ink)]">{dalasi(b.amount)}</span>}
+                {b.amount > 0 && <span className="shrink-0 font-semibold text-[var(--color-ink)]">{dalasi(b.amount)}</span>}
                 {canEdit && (
                   <button onClick={() => setDel({ kind: 'benefit', id: b.id })} className="shrink-0 text-[var(--color-ink-faint)] hover:text-[var(--color-bad)]" title="Remove benefit">
                     <Trash2 size={16} />
@@ -158,7 +158,7 @@ export default function Pay() {
             ))}
           </Card>
         ) : (
-          <Card className="px-5 py-8 text-center text-sm text-[var(--color-ink-faint)]">No benefits recorded.</Card>
+          <Card className="px-5 py-8 text-center text-[13px] text-[var(--color-ink-faint)]">No benefits recorded.</Card>
         )}
       </div>
 
@@ -176,7 +176,7 @@ export default function Pay() {
         ) : (
           <Card className="flex items-center gap-4 px-5 py-8">
             <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--color-line-soft)] text-[var(--color-ink-faint)]"><FileText size={20} /></span>
-            <div className="text-sm text-[var(--color-ink-faint)]">No payslips yet.{canEdit && roster ? ' Add one with the button above.' : ''}</div>
+            <div className="text-[13px] text-[var(--color-ink-faint)]">No payslips yet.{canEdit && roster ? ' Add one with the button above.' : ''}</div>
           </Card>
         )}
       </div>
@@ -224,30 +224,30 @@ function Payslip({ slip, canEdit, onDelete }) {
         <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-brand-50)] text-[var(--color-brand)]"><FileText size={18} /></span>
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-[var(--color-ink)]">{monthLabel(slip.period)}</div>
-          <div className="truncate text-xs text-[var(--color-ink-faint)]">{breakdown || 'Net pay'}</div>
+          <div className="truncate text-[11.5px] text-[var(--color-ink-faint)]">{breakdown || 'Net pay'}</div>
         </div>
-        <span className="text-lg font-semibold text-[var(--color-ink)]">{dalasi(slip.net)}</span>
+        <span className="text-[15px] font-semibold text-[var(--color-ink)]">{dalasi(slip.net)}</span>
         <ChevronDown size={18} className={`text-[var(--color-ink-faint)] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div className="border-t border-[var(--color-line-soft)] px-5 py-4">
-          <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Earnings</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Earnings</div>
           {slip.earnings?.length ? slip.earnings.map((l, i) => (
             <Line key={i} label={l.label} amount={l.amount} />
-          )) : <div className="py-1 text-sm text-[var(--color-ink-faint)]">—</div>}
+          )) : <div className="py-1 text-[13px] text-[var(--color-ink-faint)]">—</div>}
           {slip.deductions?.length > 0 && (
             <>
-              <div className="mt-3 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Deductions</div>
+              <div className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Deductions</div>
               {slip.deductions.map((l, i) => <Line key={i} label={l.label} amount={-l.amount} />)}
             </>
           )}
           <div className="mt-3 flex items-center justify-between border-t border-[var(--color-line-soft)] pt-3">
-            <span className="font-bold text-[var(--color-ink)]">Net pay</span>
+            <span className="font-semibold text-[var(--color-ink)]">Net pay</span>
             <span className="font-semibold text-[var(--color-ink)]">{dalasi(slip.net)}</span>
           </div>
-          {slip.note && <p className="mt-2 text-xs text-[var(--color-ink-faint)]">{slip.note}</p>}
+          {slip.note && <p className="mt-2 text-[11.5px] text-[var(--color-ink-faint)]">{slip.note}</p>}
           {canEdit && (
-            <button onClick={onDelete} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-ink-faint)] hover:text-[var(--color-bad)]">
+            <button onClick={onDelete} className="mt-3 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--color-ink-faint)] hover:text-[var(--color-bad)]">
               <Trash2 size={14} /> Delete payslip
             </button>
           )}
@@ -259,7 +259,7 @@ function Payslip({ slip, canEdit, onDelete }) {
 
 function Line({ label, amount }) {
   return (
-    <div className="flex items-center justify-between py-1 text-sm">
+    <div className="flex items-center justify-between py-1 text-[13px]">
       <span className="text-[var(--color-ink-soft)]">{label}</span>
       <span className={`font-semibold ${amount < 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink)]'}`}>{dalasi(amount)}</span>
     </div>
@@ -268,10 +268,10 @@ function Line({ label, amount }) {
 
 function Row({ icon: Icon, label, value }) {
   return (
-    <div className="flex items-center gap-3 px-6 py-4">
+    <div className="flex items-center gap-3 px-5 py-4">
       {Icon && <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-line-soft)] text-[var(--color-ink-soft)]"><Icon size={17} /></span>}
       <span className="text-[var(--color-ink-soft)]">{label}</span>
-      <span className="ml-auto font-bold text-[var(--color-ink)]">{value}</span>
+      <span className="ml-auto font-semibold text-[var(--color-ink)]">{value}</span>
     </div>
   )
 }
@@ -378,8 +378,8 @@ function PayslipModal({ personName, username, onClose, onSaved }) {
           <LineEditor title="Earnings" lines={earnings} setLines={setEarnings} addLabel="Add earning" />
           <LineEditor title="Deductions" lines={deductions} setLines={setDeductions} addLabel="Add deduction" />
           <div className="mt-4 flex items-center justify-between rounded-lg bg-[var(--color-fill)] px-4 py-3">
-            <span className="font-bold text-[var(--color-ink)]">Net pay</span>
-            <span className="text-lg font-semibold text-[var(--color-ink)]">{dalasi(net)}</span>
+            <span className="font-semibold text-[var(--color-ink)]">Net pay</span>
+            <span className="text-[15px] font-semibold text-[var(--color-ink)]">{dalasi(net)}</span>
           </div>
         </>
       )}
@@ -393,7 +393,7 @@ function LineEditor({ title, lines, setLines, addLabel }) {
   const add = () => setLines((ls) => [...ls, { label: '', amount: '' }])
   return (
     <div className="mt-4">
-      <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{title}</div>
+      <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{title}</div>
       <div className="space-y-2">
         {lines.map((l, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -403,7 +403,7 @@ function LineEditor({ title, lines, setLines, addLabel }) {
           </div>
         ))}
       </div>
-      <button onClick={add} className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--color-brand)]"><Plus size={15} /> {addLabel}</button>
+      <button onClick={add} className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-brand)]"><Plus size={15} /> {addLabel}</button>
     </div>
   )
 }

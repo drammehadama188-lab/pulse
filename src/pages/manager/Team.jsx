@@ -24,7 +24,7 @@ function StatCard({ icon: Icon, label, value }) {
         <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">{label}</p>
         {Icon && <Icon size={15} className="text-[var(--color-ink-faint)]" />}
       </div>
-      <p className="mt-1 text-2xl font-semibold text-[var(--color-ink)]">{value}</p>
+      <p className="mt-1 text-[22px] font-semibold text-[var(--color-ink)]">{value}</p>
     </Card>
   )
 }
@@ -69,8 +69,8 @@ export default function Team() {
   if (!users && loadError) {
     return (
       <div className="mx-auto max-w-md py-24 text-center">
-        <p className="text-sm font-medium text-[var(--color-bad)]">Couldn't load the staff list — {loadError}</p>
-        <button onClick={load} className="mt-3 rounded-lg bg-[var(--color-ink)] px-4 py-2 text-sm font-semibold text-white">Try again</button>
+        <p className="text-[13px] font-medium text-[var(--color-bad)]">Couldn't load the staff list — {loadError}</p>
+        <button onClick={load} className="mt-3 rounded-lg bg-[var(--color-ink)] px-4 py-2 text-[13px] font-semibold text-white">Try again</button>
       </div>
     )
   }
@@ -80,9 +80,9 @@ export default function Team() {
   const managers = users.filter((u) => u.role === 'manager').length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Staff</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Staff</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Roles, permissions and accounts.</p>
       </div>
 
@@ -114,10 +114,10 @@ export default function Team() {
                     <Avatar name={u.name} size={38} />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-semibold text-[var(--color-ink)] group-hover:underline">{u.name}</span>
+                        <span className="truncate text-[13px] font-semibold text-[var(--color-ink)] group-hover:underline">{u.name}</span>
                         {u.role === 'manager' && <Pill tone="good">Manager</Pill>}
                       </div>
-                      <div className="truncate text-xs text-[var(--color-ink-faint)]">{u.title}{u.department ? ` · ${u.department}` : ''}</div>
+                      <div className="truncate text-[11.5px] text-[var(--color-ink-faint)]">{u.title}{u.department ? ` · ${u.department}` : ''}</div>
                       {/* Access shown inline so permissions are visible at a glance */}
                       <div className="mt-1.5 flex flex-wrap items-center gap-1">
                         {u.suspended && <span className="rounded-full bg-[var(--color-bad-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-bad)]">Sign-in paused</span>}
@@ -133,7 +133,7 @@ export default function Team() {
             })}
           </div>
         </Card>
-        <p className="mt-2 text-xs text-[var(--color-ink-faint)]">Former staff and their pay records live in <button onClick={() => navigate('/people?tab=past')} className="font-semibold text-[var(--color-brand)] hover:underline">Employees &amp; Records → Past Staff</button>.</p>
+        <p className="mt-2 text-[11.5px] text-[var(--color-ink-faint)]">Former staff and their pay records live in <button onClick={() => navigate('/people?tab=past')} className="font-semibold text-[var(--color-brand)] hover:underline">Employees &amp; Records → Past Staff</button>.</p>
       </div>
 
       {coachTarget && <CoachingForm target={coachTarget} onClose={() => setCoachTarget(null)} />}
@@ -172,14 +172,14 @@ function ArchiveDialog({ target, onClose, onDone }) {
       }
     >
       <div className="space-y-4">
-        <p className="text-sm text-[var(--color-ink-soft)]">
+        <p className="text-[13px] text-[var(--color-ink-soft)]">
           They’ll move to <span className="font-semibold text-[var(--color-ink)]">Past Staff</span>, can no longer log in,
           and drop out of the active team and targets. Their record and history are kept — you can restore them from Past Staff anytime.
         </p>
         <Field label="Reason (optional)">
           <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Resigned, contract ended, let go" />
         </Field>
-        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )
@@ -245,12 +245,12 @@ function AddStaffForm({ onClose, onCreated }) {
             <CheckCircle2 size={30} />
           </div>
           <div>
-            <div className="text-lg font-bold text-[var(--color-ink)]">{created.name} is set up</div>
+            <div className="text-[15px] font-semibold text-[var(--color-ink)]">{created.name} is set up</div>
             <div className="mt-1 text-[var(--color-ink-soft)]">
-              They sign in with: <span className="font-bold text-[var(--color-ink)]">{created.email}</span>
+              They sign in with: <span className="font-semibold text-[var(--color-ink)]">{created.email}</span>
             </div>
           </div>
-          <p className="rounded-lg bg-[var(--color-fill)] px-4 py-3 text-left text-sm text-[var(--color-ink-soft)]">
+          <p className="rounded-lg bg-[var(--color-fill)] px-4 py-3 text-left text-[13px] text-[var(--color-ink-soft)]">
             {created.invited
               ? `We emailed ${created.email} a link to choose their password. The link works for 60 minutes — if it expires, open their profile and press Reset password to send a new one.`
               : `The invite email could not be sent right now. Open their profile and press Reset password to email them a link, or set a temporary password there.`}
@@ -278,7 +278,7 @@ function AddStaffForm({ onClose, onCreated }) {
             <button
               key={k}
               onClick={() => pickType(k)}
-              className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold transition-colors ${v.type === k ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}
+              className={`flex-1 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${v.type === k ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}
             >
               {label}
             </button>
@@ -307,7 +307,7 @@ function AddStaffForm({ onClose, onCreated }) {
           <Field label="Start date">
             <Input type="date" value={v.joined} onChange={set('joined')} />
           </Field>
-          <p className="mt-1 text-xs text-[var(--color-ink-faint)]">The day they actually started — set a past date if you're entering them late. Payroll only shows people from their start month onward.</p>
+          <p className="mt-1 text-[11.5px] text-[var(--color-ink-faint)]">The day they actually started — set a past date if you're entering them late. Payroll only shows people from their start month onward.</p>
         </div>
         <Field label="Contract length">
           <MenuSelect
@@ -336,12 +336,12 @@ function AddStaffForm({ onClose, onCreated }) {
             ]}
           />
         </Field>
-        <p className="text-xs text-[var(--color-ink-faint)]">
+        <p className="text-[11.5px] text-[var(--color-ink-faint)]">
           {isMgr
             ? 'Role is Manager — they clock in and get the management view (team schedule, approvals, attendance override). Cross-department goals are set separately.'
             : 'Salary is visible to managers only. Role is Sales — they get an empty pipeline of their own.'}
         </p>
-        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )
@@ -430,10 +430,10 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
             }`}
           >
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-[var(--color-ink)]">
+              <span className="block text-[13px] font-semibold text-[var(--color-ink)]">
                 {canSignIn ? 'Can sign in to Pulse' : 'Sign-in paused'}
               </span>
-              <span className="block text-xs text-[var(--color-ink-faint)]">
+              <span className="block text-[11.5px] text-[var(--color-ink-faint)]">
                 {canSignIn ? 'Switch off to pause their access instantly (reversible).' : 'They cannot log in until you switch this back on.'}
               </span>
             </span>
@@ -448,14 +448,14 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
 
           {/* Reset password — email-first, matches the profile page dialog */}
           <div className="rounded-lg border border-[var(--color-line)] px-4 py-3">
-            <div className="text-sm font-semibold text-[var(--color-ink)]">Reset password</div>
-            <p className="mb-2 text-xs text-[var(--color-ink-faint)]">Emails {target.name.split(' ')[0]} a link to choose a new password. Works for 60 minutes, one use.</p>
+            <div className="text-[13px] font-semibold text-[var(--color-ink)]">Reset password</div>
+            <p className="mb-2 text-[11.5px] text-[var(--color-ink-faint)]">Emails {target.name.split(' ')[0]} a link to choose a new password. Works for 60 minutes, one use.</p>
             <Button variant="outline" onClick={resetPassword} disabled={pwBusy}>{pwBusy ? <Spinner size={16} /> : 'Send reset email'}</Button>
-            {pwDone && <div className="mt-2 rounded-lg bg-[var(--color-good-bg)] px-3 py-2 text-xs font-medium text-[var(--color-good)]">{pwDone}</div>}
-            {pwError && <div className="mt-2 rounded-lg bg-[var(--color-bad-bg)] px-3 py-2 text-xs font-medium text-[var(--color-bad)]">{pwError}</div>}
+            {pwDone && <div className="mt-2 rounded-lg bg-[var(--color-good-bg)] px-3 py-2 text-[11.5px] font-medium text-[var(--color-good)]">{pwDone}</div>}
+            {pwError && <div className="mt-2 rounded-lg bg-[var(--color-bad-bg)] px-3 py-2 text-[11.5px] font-medium text-[var(--color-bad)]">{pwError}</div>}
           </div>
 
-          <p className="text-sm text-[var(--color-ink-soft)]">
+          <p className="text-[13px] text-[var(--color-ink-soft)]">
             Tick a power to open it for {target.name.split(' ')[0]}. Changes apply on their next page load.
           </p>
           {catalogue.map((p) => {
@@ -478,20 +478,20 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
                   {on ? <CheckCircle2 size={14} /> : null}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-[var(--color-ink)]">
+                  <span className="block text-[13px] font-semibold text-[var(--color-ink)]">
                     {p.label}
-                    {locked && <span className="ml-2 text-xs font-medium text-[var(--color-ink-faint)]">CEO only</span>}
+                    {locked && <span className="ml-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">CEO only</span>}
                   </span>
-                  <span className="block truncate text-xs text-[var(--color-ink-faint)]">{p.detail}</span>
+                  <span className="block truncate text-[11.5px] text-[var(--color-ink-faint)]">{p.detail}</span>
                 </span>
               </button>
             )
           })}
-          {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+          {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-bad)]">{error}</div>}
         </div>
       )}
       {!catalogue && error && (
-        <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
+        <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-bad)]">{error}</div>
       )}
     </Modal>
   )
@@ -534,7 +534,7 @@ function CoachingForm({ target, onClose }) {
             <button
               key={k}
               onClick={() => setV({ ...v, type: k })}
-              className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold transition-colors ${v.type === k ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}
+              className={`flex-1 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${v.type === k ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}
             >
               {label}
             </button>
@@ -545,7 +545,7 @@ function CoachingForm({ target, onClose }) {
           <Field label="When"><Input type="datetime-local" value={v.datetime} onChange={set('datetime')} /></Field>
         )}
         <Field label="Note"><Textarea rows={3} value={v.note} onChange={set('note')} /></Field>
-        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )

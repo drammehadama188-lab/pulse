@@ -28,17 +28,17 @@ export default function BusinessReport() {
     api(`/report/business?month=${month}`).then(setData).catch((e) => setError(e.message))
   }, [month])
 
-  if (error) return <Card className="p-8 text-center text-sm text-[var(--color-ink-faint)]">Couldn't load — {error}</Card>
+  if (error) return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">Couldn't load — {error}</Card>
   if (!data) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
 
   return (
     <div className="max-w-4xl space-y-7">
       <div>
-        <h1 className="text-[27px] font-semibold tracking-tight text-[var(--color-ink)]">Business report</h1>
+        <h1 className="text-[26px] font-semibold tracking-tight text-[var(--color-ink)]">Business report</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{monthLabel(data.month)} — derived live from Admin, Books and Pulse.</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {months.map((m) => (
-            <button key={m} onClick={() => setMonth(m)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${m === month ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>{monthLabel(m)}</button>
+            <button key={m} onClick={() => setMonth(m)} className={`rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${m === month ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>{monthLabel(m)}</button>
           ))}
         </div>
       </div>
@@ -46,8 +46,8 @@ export default function BusinessReport() {
       {/* flags first — what needs a decision */}
       {data.flags.length > 0 && (
         <Card className="border-l-4 border-[var(--color-bad)] p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-bad)]">Needs your attention</h2>
-          <div className="mt-1 space-y-0.5 text-sm text-[var(--color-ink)]">
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-[var(--color-bad)]">Needs your attention</h2>
+          <div className="mt-1 space-y-0.5 text-[13px] text-[var(--color-ink)]">
             {data.flags.map((f, i) => <p key={i}>{f}</p>)}
           </div>
         </Card>
@@ -55,18 +55,18 @@ export default function BusinessReport() {
 
       {/* goals scoreboard */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Goals</h2>
+        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Goals</h2>
         <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden p-0">
           {data.goals.map((g) => {
             const hit = g.target != null && g.actual != null && g.actual >= g.target
             return (
-              <div key={g.title} className="flex items-center gap-4 px-4 py-3 text-sm">
-                <span className="w-52 font-bold text-[var(--color-ink)]">{g.title}</span>
-                <span className="tabular-nums text-[var(--color-ink-soft)]"><span className="text-lg font-semibold text-[var(--color-ink)]">{g.actual ?? '—'}</span>{g.unit === '%' ? '%' : ''} {g.target != null ? `of ${g.target}${g.unit === '%' ? '%' : ''}` : ''} <span className="text-xs">{g.unit !== '%' ? g.unit : ''}</span></span>
+              <div key={g.title} className="flex items-center gap-4 px-4 py-3 text-[13px]">
+                <span className="w-52 font-semibold text-[var(--color-ink)]">{g.title}</span>
+                <span className="tabular-nums text-[var(--color-ink-soft)]"><span className="text-[15px] font-semibold text-[var(--color-ink)]">{g.actual ?? '—'}</span>{g.unit === '%' ? '%' : ''} {g.target != null ? `of ${g.target}${g.unit === '%' ? '%' : ''}` : ''} <span className="text-[11.5px]">{g.unit !== '%' ? g.unit : ''}</span></span>
                 {g.actual != null && g.target != null && (
-                  <span className={`ml-auto text-xs font-bold ${hit ? 'text-[var(--color-good)]' : 'text-[var(--color-bad)]'}`}>{hit ? '✓ Hit' : 'Missed'}</span>
+                  <span className={`ml-auto text-[11.5px] font-semibold ${hit ? 'text-[var(--color-good)]' : 'text-[var(--color-bad)]'}`}>{hit ? '✓ Hit' : 'Missed'}</span>
                 )}
-                {g.actual == null && <span className="ml-auto text-xs font-semibold text-[var(--color-ink-faint)]">no data</span>}
+                {g.actual == null && <span className="ml-auto text-[11.5px] font-semibold text-[var(--color-ink-faint)]">no data</span>}
               </div>
             )
           })}
@@ -75,42 +75,42 @@ export default function BusinessReport() {
 
       {/* money */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Money</h2>
+        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Money</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           <Card className="p-4">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Payroll paid</div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-[var(--color-ink)]">{dalasi(data.money.payrollCost)}</div>
-            <div className="text-xs text-[var(--color-ink-faint)]">{data.money.payrollPeople} payment{data.money.payrollPeople === 1 ? '' : 's'} recorded</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Payroll paid</div>
+            <div className="mt-1 text-[22px] font-semibold tabular-nums text-[var(--color-ink)]">{dalasi(data.money.payrollCost)}</div>
+            <div className="text-[11.5px] text-[var(--color-ink-faint)]">{data.money.payrollPeople} payment{data.money.payrollPeople === 1 ? '' : 's'} recorded</div>
           </Card>
           <Card className="p-4">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Renewal revenue</div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-[var(--color-good)]">{data.money.renewalRevenue != null ? dalasi(data.money.renewalRevenue) : '—'}</div>
-            <div className="text-xs text-[var(--color-ink-faint)]">renewals recorded × D6,500</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Renewal revenue</div>
+            <div className="mt-1 text-[22px] font-semibold tabular-nums text-[var(--color-good)]">{data.money.renewalRevenue != null ? dalasi(data.money.renewalRevenue) : '—'}</div>
+            <div className="text-[11.5px] text-[var(--color-ink-faint)]">renewals recorded × D6,500</div>
           </Card>
           <Card className="p-4">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Still out there</div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-[var(--color-bad)]">{data.money.renewalOutstanding != null ? dalasi(data.money.renewalOutstanding) : '—'}</div>
-            <div className="text-xs text-[var(--color-ink-faint)]">customers due, not yet renewed</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Still out there</div>
+            <div className="mt-1 text-[22px] font-semibold tabular-nums text-[var(--color-bad)]">{data.money.renewalOutstanding != null ? dalasi(data.money.renewalOutstanding) : '—'}</div>
+            <div className="text-[11.5px] text-[var(--color-ink-faint)]">customers due, not yet renewed</div>
           </Card>
         </div>
       </section>
 
       {/* team */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Team</h2>
+        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Team</h2>
         <Card className="flex flex-wrap gap-x-8 gap-y-2 p-4">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Headcount</div>
-            <div className="text-xl font-semibold tabular-nums text-[var(--color-ink)]">{data.team.headcount}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Headcount</div>
+            <div className="text-[18px] font-semibold tabular-nums text-[var(--color-ink)]">{data.team.headcount}</div>
           </div>
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Attendance</div>
-            <div className="text-xl font-semibold tabular-nums text-[var(--color-ink)]">{data.team.attendancePct != null ? `${data.team.attendancePct}%` : '—'}</div>
-            <div className="text-xs text-[var(--color-ink-faint)]">{data.team.worked} of {data.team.scheduled} scheduled days worked</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Attendance</div>
+            <div className="text-[18px] font-semibold tabular-nums text-[var(--color-ink)]">{data.team.attendancePct != null ? `${data.team.attendancePct}%` : '—'}</div>
+            <div className="text-[11.5px] text-[var(--color-ink-faint)]">{data.team.worked} of {data.team.scheduled} scheduled days worked</div>
           </div>
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Late arrivals</div>
-            <div className="text-xl font-semibold tabular-nums text-[var(--color-ink)]">{data.team.late}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Late arrivals</div>
+            <div className="text-[18px] font-semibold tabular-nums text-[var(--color-ink)]">{data.team.late}</div>
           </div>
         </Card>
       </section>
