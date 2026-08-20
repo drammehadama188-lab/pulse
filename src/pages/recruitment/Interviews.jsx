@@ -128,7 +128,9 @@ export default function Interviews() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span className={`text-base font-semibold ${scoreTone(i.totalScore)}`}>{i.totalScore ?? '—'}</span>
-                        <span className="block text-[11px] text-[var(--color-ink-faint)]">{i.totalScore != null ? scoreWord(i.totalScore) : `${i.answered}/${i.totalQuestions}`}</span>
+                        <span className="block text-[11px] text-[var(--color-ink-faint)]">
+                          {i.totalScore != null ? `${scoreWord(i.totalScore)} · ${i.answered}/${i.totalQuestions} scored` : `${i.answered}/${i.totalQuestions} scored`}
+                        </span>
                       </td>
                     </tr>
                   ))}

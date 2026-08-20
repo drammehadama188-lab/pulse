@@ -78,6 +78,12 @@ export default function InterviewRoom() {
 
   async function complete() {
     if (!iv.recommendation) return setError('Choose a recommendation first — strong yes, yes, unsure or no.');
+    // A total built from two answers out of sixteen is not a score of the
+    // candidate, and once completed it is what every other screen quotes.
+    const total = (iv.sections || []).reduce((n, s) => n + s.questions.length, 0);
+    if (iv.answered < total && !window.confirm(
+      `Only ${iv.answered} of ${total} questions are scored. The total (${iv.totalScore ?? '—'}/100) is the average of those ${iv.answered}.\n\nComplete the interview anyway?`
+    )) return;
     setError(null);
     await patch({ status: 'completed', summary });
     navigate('/recruitment/interviews');
@@ -158,6 +164,10 @@ export default function InterviewRoom() {
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ${done ? 'bg-[var(--color-stage-hired-bg)] text-[var(--color-stage-hired)]' : iv.status === 'in_progress' ? 'bg-[var(--color-stage-short-bg)] text-[var(--color-stage-short)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
             {done ? 'Completed' : iv.status === 'in_progress' ? 'Interview in progress' : 'Not started'}
+          </span>
+          <span className="text-[12px] text-[var(--color-ink-soft)]">
+            {iv.answered} of {iv.totalQuestions} scored
+            {iv.totalScore != null && <span className="ml-2 font-semibold text-[var(--color-ink)]">{iv.totalScore}/100</span>}
           </span>
           <button onClick={exportScorecard} className={BTN_LIGHT}><Download size={15} /> Export</button>
           <button onClick={removeInterview} title="Delete interview" className="rounded-[8px] border border-[var(--color-line)] p-2 text-[var(--color-ink-faint)] hover:text-[var(--color-stage-out)]"><Trash2 size={15} /></button>
