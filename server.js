@@ -4243,10 +4243,16 @@ app.put('/api/employee-checklist', auth, requireSub('hr', 'records'), notViewAs,
 const APPLICANT_STAGES = ['cv_received', 'interviewed', 'hired', 'rejected']
 const APPLICANT_FIELDS = ['name', 'role', 'email', 'phone', 'source', 'notes']
 app.get('/api/applicants', auth, requireSub('hr', 'records'), (req, res) => {
-  // Records imported before the "p:" strip keep their prefix on disk; clean it
-  // on the way out so the 259 already in there dial correctly too.
+  // Two repairs on the way out, so records imported before the fixes read
+  // correctly without rewriting anyone's file. The "p:" prefix Meta puts on
+  // phone numbers is stripped; and the first import stored the FORM's name as
+  // the source, which made ad applicants uncountable against the other
+  // channels — an imported record (it has answers) is the Ads channel, with
+  // the form name kept beside it.
+  const imported = (a) => a.answers && Object.keys(a.answers).length > 0
   const list = db.read('applicants', []).slice().sort((a, b) => ((a.updatedAt || a.createdAt) < (b.updatedAt || b.createdAt) ? 1 : -1))
     .map((a) => (a.phone ? { ...a, phone: cleanPhone(a.phone) } : a))
+    .map((a) => (imported(a) && a.source !== 'Ads' ? { ...a, form: a.form || a.source, source: 'Ads' } : a))
   res.json({ applicants: list })
 })
 app.post('/api/applicants', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
@@ -4389,7 +4395,10 @@ app.post('/api/applicants/import', auth, requireSub('hr', 'records'), notViewAs,
     added.push({
       id: crypto.randomUUID(),
       name, role, email: cell(iEmail), phone,
-      source: cell(iForm) || 'Lead form',
+      // Source is the CHANNEL, so it can be counted against WhatsApp,
+      // referrals and the rest. Which form/campaign it was is kept beside it.
+      source: 'Ads',
+      form: cell(iForm) || '',
       notes: '',
       stage: 'cv_received',
       answers,

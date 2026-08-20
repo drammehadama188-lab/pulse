@@ -20,7 +20,7 @@ const BLANK = { name: '', role: '', email: '', phone: '', source: '', notes: '' 
 const SORTS = [['best', 'Best first'], ['newest', 'Newest'], ['name', 'Name']];
 // Where the applicant came from. Imported rows carry the lead form's name;
 // these are the channels a CV arrives through by hand.
-const SOURCES = ['WhatsApp', 'Referral', 'Walk-in', 'Recruitment agency', 'Email'];
+const SOURCES = ['Ads', 'WhatsApp', 'Referral', 'Walk-in', 'Recruitment agency', 'Email'];
 
 export default function Recruitment() {
   const [applicants, setApplicants] = useState([]);
@@ -375,8 +375,8 @@ function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
                     <p className="text-sm text-gray-800">{v}</p>
                   </div>
                 ))}
-                {(a.email || a.dob || a.source) && (
-                  <p className="text-[11px] text-gray-400 pt-1">{[a.email, a.dob, a.source].filter(Boolean).join(' · ')}</p>
+                {(a.email || a.dob || a.source || a.form) && (
+                  <p className="text-[11px] text-gray-400 pt-1">{[a.email, a.dob, a.source, a.form].filter(Boolean).join(' · ')}</p>
                 )}
               </div>
               <div>
