@@ -208,6 +208,10 @@ function createdStaffRoster() {
 
 const app = express()
 app.use(cors())
+// A hiring-list import is one whole CSV in the body — a few hundred applicants
+// is well past the 100kb default, and this parser has to run BEFORE the global
+// one or the request is rejected before reaching the route (19 Aug).
+app.use('/api/applicants/import', express.json({ limit: '10mb' }))
 app.use(express.json())
 // Behind nginx (and maybe Cloudflare) in prod, so the real client IP lives in
 // X-Forwarded-For. Trust exactly the proxy hop count (default 1 = nginx) so the
@@ -4313,7 +4317,7 @@ const DOB_KEYS = ['dateofbirth', 'dob', 'birthday']
 // equal. The last 7 digits are the number itself in The Gambia.
 function phoneDigits(v) { return String(v || '').replace(/\D/g, '') }
 function phoneKey(v) { const d = phoneDigits(v); return d.length >= 7 ? d.slice(-7) : '' }
-app.post('/api/applicants/import', auth, requireSub('hr', 'records'), notViewAs, express.json({ limit: '10mb' }), (req, res) => {
+app.post('/api/applicants/import', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
   const rows = parseDelimited((req.body || {}).csv)
   if (rows.length < 2) return res.status(400).json({ error: 'That file has no rows to read.' })
   const role = String((req.body || {}).role || '').trim()

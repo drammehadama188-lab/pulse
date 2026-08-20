@@ -65,7 +65,7 @@ export default function Recruitment() {
   // The file goes in exactly as downloaded from Meta — no spreadsheet step.
   async function importFile(file) {
     if (!file) return;
-    setImporting(true); setImportError(null); setImportResult(null);
+    setImporting(file.name); setImportError(null); setImportResult(null);
     try {
       const csv = await file.text();
       const r = await api('/applicants/import', { method: 'POST', body: { csv, role: 'Sales Agent' } });
@@ -73,9 +73,9 @@ export default function Recruitment() {
       setStageFilter('cv_received');
       load();
     } catch (e) {
-      setImportError(e.message);
+      setImportError(`${file.name}: ${e.message}`);
     } finally {
-      setImporting(false);
+      setImporting(null);
       if (fileRef.current) fileRef.current.value = '';
     }
   }
@@ -118,20 +118,22 @@ export default function Recruitment() {
           <p className="text-gray-500 mt-1">Applicants and interview pipeline</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-50">
+          {/* A label opens the picker itself. Scripting a click on a hidden
+              input looked like a working button and did nothing (19 Aug). */}
+          <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-50 cursor-pointer">
             <Upload size={16} /> Import list
-          </button>
+            <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain,text/tab-separated-values"
+              className="sr-only" onChange={e => importFile(e.target.files?.[0])} />
+          </label>
           <button onClick={() => { setForm(BLANK); setAdding(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800">
             <Plus size={16} /> Add applicant
           </button>
         </div>
       </div>
 
-      <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={e => importFile(e.target.files?.[0])} />
-
       {(importing || importResult || importError) && (
         <div className="mb-5 rounded-2xl border border-gray-200 bg-white p-4">
-          {importing && <p className="text-sm text-gray-500">Reading the file…</p>}
+          {importing && <p className="text-sm text-gray-500">Reading {importing}…</p>}
           {importError && <p className="text-sm text-red-600">{importError}</p>}
           {importResult && (
             <div className="flex items-center justify-between gap-4 flex-wrap">
