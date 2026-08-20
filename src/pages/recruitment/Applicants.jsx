@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, Trash2, Mail, Phone, X, Upload, ClipboardPaste, ChevronDown, ChevronRight, FileText, ClipboardCheck } from 'lucide-react';
 import { api } from '../../lib/api.js';
-import { STAGES } from './stages.js';
+import { STAGES, DROPPED } from './stages.js';
 import { CARD, BTN_LIGHT, BTN_DARK, shortDate, fullDate } from './ui.jsx';
 
 // Recruitment — applicants pipeline (CV received → interviewed → hired/rejected).
@@ -109,7 +109,12 @@ export default function Applicants() {
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let list = applicants.filter(a => (stageFilter === 'all' || a.stage === stageFilter));
+    // "dropped" is not a stage, it is every way out of the pipeline — the
+    // dashboard links here so its numbers add up to the total.
+    let list = applicants.filter(a => (
+      stageFilter === 'all' ? true
+        : stageFilter === 'dropped' ? DROPPED.includes(a.stage)
+          : a.stage === stageFilter));
     // Older records carry only a typed role, so a position also matches by its
     // title — otherwise the 259 imported as "Sales Agent" vanish from the job
     // they actually applied for.
@@ -186,6 +191,7 @@ export default function Applicants() {
 
       <div className="mb-4 flex items-center gap-2 flex-wrap">
         <button onClick={() => setStageFilter('all')} className={`${chip} ${stageFilter === 'all' ? chipOn : chipOff}`}>All {counts.all}</button>
+        {stageFilter === 'dropped' && <button className={`${chip} ${chipOn}`}>Left the pipeline {applicants.filter(a => DROPPED.includes(a.stage)).length}</button>}
         {STAGES.map(([k, label]) => (
           <button key={k} onClick={() => setStageFilter(k)} className={`${chip} ${stageFilter === k ? chipOn : chipOff}`}>{label} {counts[k] || 0}</button>
         ))}

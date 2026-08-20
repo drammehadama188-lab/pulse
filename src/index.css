@@ -107,6 +107,12 @@ body {
   transition: border-color 0.2s ease;
 }
 
+/* Supporting cards sit a shade quieter than the one that matters on a screen.
+   Hierarchy comes from weight, not from more boxes. */
+.card-quiet {
+  border-color: var(--color-line-soft);
+}
+
 /* Type scale. Bold marks hierarchy, never decoration — nothing above 700. */
 .t-page {
   font-size: 27px;

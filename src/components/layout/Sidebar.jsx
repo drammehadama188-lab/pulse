@@ -56,7 +56,7 @@ export function Sidebar() {
   const inRecruitment = pathname.startsWith('/recruitment')
 
   return (
-    <aside className="hidden w-[248px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-sidebar-edge)] bg-[var(--color-sidebar)] px-4 py-6 md:flex">
+    <aside className="hidden w-[216px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-sidebar-edge)] bg-[var(--color-sidebar)] px-4 py-6 md:flex">
       <div className="px-2">
         <Brand />
       </div>

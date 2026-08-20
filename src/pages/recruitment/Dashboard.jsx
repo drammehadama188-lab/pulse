@@ -77,7 +77,7 @@ export default function Dashboard() {
   }
 
   const days = RANGES.find(r => r[0] === range)?.[2] || 7;
-  const rangeLabel = `from last ${days} days`;
+  const rangeLabel = `in the last ${days} days`;
 
   const m = useMemo(() => {
     const total = applicants.length;
@@ -202,7 +202,7 @@ export default function Dashboard() {
       </div>
       <div className="mb-5 flex justify-end"><RangePicker value={range} onChange={setRange} /></div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
         <Kpi icon={Users} label="Total applicants" value={m.total} delta={m.newDelta} deltaLabel={rangeLabel}
           tint="var(--color-stage-new-bg)" ink="var(--color-stage-new)" onClick={() => navigate('/recruitment/applicants?stage=all')} />
         <Kpi icon={CalendarCheck} label="Interviews scheduled" value={m.scheduled} delta={m.scheduledDelta} deltaLabel={rangeLabel}
@@ -221,75 +221,88 @@ export default function Dashboard() {
             <Link to="/recruitment/applicants?stage=all" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
               View full pipeline <ArrowRight size={14} />
             </Link>} />
-          <div className="grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] bg-[var(--color-line-soft)] sm:grid-cols-4 lg:grid-cols-7">
             {m.stages.map(s => {
               const Icon = STAGE_ICON[s.key];
               return (
-                <button key={s.key} onClick={() => navigate(s.to)} className="group text-left">
-                  <span className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-[7px]" style={{ background: STAGE_TINT[s.key], color: s.color }}>
-                      <Icon size={13} strokeWidth={2.2} />
+                <button key={s.key} onClick={() => navigate(s.to)} className="group bg-[var(--color-surface)] px-3.5 py-3 text-left">
+                  <span className="flex items-center gap-1.5">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-[6px]" style={{ background: STAGE_TINT[s.key], color: s.color }}>
+                      <Icon size={11} strokeWidth={2.4} />
                     </span>
-                    <span className="t-label group-hover:text-[var(--color-ink)]">{s.label}</span>
+                    <span className="text-[12px] font-medium text-[var(--color-ink-soft)] group-hover:text-[var(--color-ink)]">{s.label}</span>
                   </span>
-                  <span className="mt-2 flex items-baseline gap-2">
-                    <span className="text-[24px] font-semibold leading-none text-[var(--color-ink)]">{s.count}</span>
-                    {s.delta > 0 && <span className="text-[12.5px] font-medium text-[var(--color-good)]">+{s.delta} in</span>}
+                  <span className="mt-1.5 flex items-baseline gap-1.5">
+                    <span className="text-[22px] font-semibold leading-none text-[var(--color-ink)]">{s.count}</span>
+                    {s.delta > 0 && <span className="text-[11.5px] font-semibold text-[var(--color-good)]">+{s.delta}</span>}
                   </span>
-                  <span className="mt-3 block h-[3px] rounded-full" style={{ background: s.color, opacity: s.count ? 1 : 0.25 }} />
+                  <span className="mt-2 block h-[3px] rounded-full" style={{ background: s.color, opacity: s.count ? 1 : 0.25 }} />
                 </button>
               );
             })}
+            {/* The pipeline is only the people still in it. Without this the
+                stages would not add up to the total and the dashboard would
+                look wrong even though every count was right. */}
+            <button onClick={() => navigate('/recruitment/applicants?stage=dropped')} className="group bg-[var(--color-surface)] px-3.5 py-3 text-left">
+              <span className="flex items-center gap-1.5">
+                <span className="flex h-5 w-5 items-center justify-center rounded-[6px] bg-[var(--color-fill)] text-[var(--color-ink-faint)]">
+                  <XCircle size={11} strokeWidth={2.4} />
+                </span>
+                <span className="text-[12px] font-medium text-[var(--color-ink-soft)] group-hover:text-[var(--color-ink)]">Left the pipeline</span>
+              </span>
+              <span className="mt-1.5 block text-[22px] font-semibold leading-none text-[var(--color-ink-faint)]">{m.dropped}</span>
+              <span className="mt-2 block h-[3px] rounded-full bg-[var(--color-ink-faint)]" style={{ opacity: m.dropped ? 0.5 : 0.2 }} />
+            </button>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-4 rounded-[10px] bg-[var(--color-fill)] p-5">
+          <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-3 rounded-[10px] bg-[var(--color-fill)] px-4 py-3.5">
             <div>
-              <div className="t-label">Drop-off rate</div>
-              <div className="mt-1 text-[26px] font-semibold leading-none text-[var(--color-ink)]">{m.dropRate}%</div>
+              <div className="text-[12px] font-medium text-[var(--color-ink-soft)]">Drop-off rate</div>
+              <div className="mt-1 text-[22px] font-semibold leading-none text-[var(--color-ink)]">{m.dropRate}%</div>
             </div>
-            <div className="min-w-[180px] flex-1">
-              <div className="t-support mb-2">Overall drop-off</div>
-              <div className="h-2 rounded-full bg-[var(--color-line)]">
+            <div className="min-w-[160px] flex-1">
+              <div className="h-1.5 rounded-full bg-[var(--color-line)]">
                 <div className="h-full rounded-full bg-[var(--color-stage-new)]" style={{ width: `${m.dropRate}%` }} />
               </div>
             </div>
-            <p className="t-support max-w-xs flex-1">
-              {m.dropped} of the {m.worked} people worked so far dropped out{m.dropWhere ? `, most at ${m.dropWhere}` : ''}.
+            <p className="t-support max-w-sm flex-1">
+              {m.dropped} of the {m.worked} people worked so far left the pipeline{m.dropWhere ? `, most at ${m.dropWhere}` : ''}.
             </p>
           </div>
         </div>
 
-        <div className={`${CARD} flex flex-col p-6`}>
+        <div className={`${CARD} flex flex-col p-5`}>
           <CardHead title="Applicants by source" />
-          <div className="flex flex-1 flex-wrap items-center justify-center gap-6">
-            <Donut total={m.total} slices={m.sources.map(([, v], i) => ({ value: v, color: SOURCE_COLORS[i % SOURCE_COLORS.length] }))} />
-            <div className="min-w-[150px] flex-1 space-y-3">
+          <div className="flex flex-1 flex-wrap items-center gap-5">
+            <Donut total={m.total} size={m.sources.length > 1 ? 132 : 96} thickness={m.sources.length > 1 ? 16 : 12}
+              slices={m.sources.map(([, v], i) => ({ value: v, color: SOURCE_COLORS[i % SOURCE_COLORS.length] }))} />
+            <div className="min-w-[140px] flex-1 space-y-2">
               {m.sources.map(([label, n], i) => (
                 <div key={label} className="flex items-center gap-2.5">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: SOURCE_COLORS[i % SOURCE_COLORS.length] }} />
-                  <span className="t-body flex-1 truncate text-[var(--color-ink-soft)]">{label}</span>
-                  <span className="text-[13.5px] font-semibold text-[var(--color-ink)]">{n}</span>
-                  <span className="w-14 text-right text-[12.5px] text-[var(--color-ink-faint)]">({pct(n, m.total)}%)</span>
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: SOURCE_COLORS[i % SOURCE_COLORS.length] }} />
+                  <span className="flex-1 truncate text-[13px] text-[var(--color-ink-soft)]">{label}</span>
+                  <span className="text-[13px] font-semibold text-[var(--color-ink)]">{n}</span>
+                  <span className="w-12 text-right text-[12px] text-[var(--color-ink-faint)]">{pct(n, m.total)}%</span>
                 </div>
               ))}
             </div>
           </div>
-          <Link to="/recruitment/reports" className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+          <Link to="/recruitment/reports" className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
             View full report <ArrowRight size={14} />
           </Link>
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className={`${CARD} flex flex-col p-6`}>
+      <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <div className={`${CARD} p-5`}>
           <CardHead title="Open positions" action={
             <Link to="/recruitment/positions" className="text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">View all</Link>} />
           {m.openPositions.length === 0
             ? <Empty>No open position yet. Add the job you are hiring for and applicants file under it.</Empty>
             : (
-              <div className="flex-1 divide-y divide-[var(--color-line-soft)]">
+              <div className="divide-y divide-[var(--color-line-soft)]">
                 {m.openPositions.slice(0, 4).map(p => (
-                  <Link key={p.id} to={`/recruitment/applicants?position=${p.id}&stage=all`} className="group flex items-center gap-3 py-4 first:pt-0">
+                  <Link key={p.id} to={`/recruitment/applicants?position=${p.id}&stage=all`} className="group flex items-center gap-3 py-3 first:pt-0">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--color-fill)] text-[var(--color-ink-soft)]">
                       <Briefcase size={16} />
                     </span>
@@ -309,12 +322,12 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
-          <Link to="/recruitment/positions" className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+          <Link to="/recruitment/positions" className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
             <Plus size={14} /> Create new position
           </Link>
         </div>
 
-        <div className={`${CARD} flex flex-col p-6`}>
+        <div className={`${CARD} p-5`}>
           <CardHead title="Upcoming interviews" action={
             <Link to="/recruitment/calendar" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
               View calendar <ArrowRight size={14} />
@@ -322,9 +335,9 @@ export default function Dashboard() {
           {m.upcoming.length === 0
             ? <Empty>Nothing booked. Open an applicant and start an interview.</Empty>
             : (
-              <div className="flex-1 divide-y divide-[var(--color-line-soft)]">
+              <div className="divide-y divide-[var(--color-line-soft)]">
                 {m.upcoming.slice(0, 4).map(i => (
-                  <div key={i.id} className="flex items-center gap-3 py-4 first:pt-0">
+                  <div key={i.id} className="flex items-center gap-3 py-3 first:pt-0">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[12px] font-semibold text-[var(--color-ink-soft)]">
                       {(i.applicantName || '?').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
                     </span>
@@ -340,28 +353,28 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
-          <Link to="/recruitment/interviews" className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+          <Link to="/recruitment/interviews" className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
             View all interviews <ArrowRight size={14} />
           </Link>
         </div>
 
-        <div className={`${CARD} flex flex-col p-6`}>
+        <div className={`${CARD} p-5`}>
           <CardHead title="Recent activity" />
-          <div className="flex-1 divide-y divide-[var(--color-line-soft)]">
+          <div className="divide-y divide-[var(--color-line-soft)]">
             {m.events.map((e, i) => {
               const [Icon, tint, ink] = ACT[e.kind] || ACT.moved;
               return <FeedRow key={i} as={Link} to={e.to} icon={Icon} tint={tint} ink={ink} title={e.title} line={e.line} meta={ago(e.at)} />;
             })}
             {m.events.length === 0 && <Empty>Nothing has happened yet.</Empty>}
           </div>
-          <Link to="/recruitment/applicants?stage=all" className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+          <Link to="/recruitment/applicants?stage=all" className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
             View all activity <ArrowRight size={14} />
           </Link>
         </div>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
-        <div className={`${CARD} p-6`}>
+        <div className={`${CARD} card-quiet p-5`}>
           <CardHead title="Recruitment performance" action={
             <Link to="/recruitment/reports" className="text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">Reports</Link>} />
           <div className="grid grid-cols-2 gap-x-6 gap-y-7 md:grid-cols-3 lg:grid-cols-5">
@@ -385,7 +398,7 @@ export default function Dashboard() {
           <p className="t-support mt-5">Lines cover the last {days} days. Rates are of all applicants and count only moves recorded in Pulse.</p>
         </div>
 
-        <div className={`${CARD} flex flex-col justify-center p-6`}>
+        <div className={`${CARD} card-quiet flex flex-col justify-center p-5`}>
           <span className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-[var(--color-brand-50)] text-[var(--color-brand)]">
             <Rocket size={22} strokeWidth={2} />
           </span>

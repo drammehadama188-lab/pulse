@@ -85,37 +85,39 @@ export function PageHead({ title, count, children }) {
 // its own bordered strip.
 export function CardHead({ title, action }) {
   return (
-    <div className="mb-5 flex items-center justify-between gap-3">
+    <div className="mb-4 flex items-center justify-between gap-3">
       <h2 className="t-card text-[var(--color-ink)]">{title}</h2>
       {action}
     </div>
   );
 }
 
-// KPI card: tinted icon square on the left, label, number, and what moved in
-// the window underneath. Fixed height so the row reads as one band.
-export function Kpi({ icon: Icon, label, value, delta, deltaLabel = 'from last 7 days', tint = 'var(--color-fill)', ink = 'var(--color-ink-soft)', onClick }) {
+// KPI card: the NUMBER is the card. The label and the change sit under it in
+// a lighter weight, and the icon is small and calm — it labels the card, it
+// does not compete with the figure. Height is deliberately tight: whitespace
+// belongs between cards, not underneath their contents.
+export function Kpi({ icon: Icon, label, value, delta, deltaLabel = 'in the last 7 days', tint = 'var(--color-fill)', ink = 'var(--color-ink-soft)', onClick }) {
   const Tag = onClick ? 'button' : 'div';
   const props = onClick ? { onClick, type: 'button' } : {};
   return (
-    <Tag {...props} className={`card flex min-h-[104px] w-full items-start gap-4 p-5 text-left ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''}`}>
-      {Icon && (
-        <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px]" style={{ background: tint, color: ink }}>
-          <Icon size={20} strokeWidth={2} />
-        </span>
-      )}
-      <span className="min-w-0 flex-1">
-        <span className="t-label block leading-snug">{label}</span>
-        <span className="mt-1 block text-[26px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
-        {delta !== undefined && (
-          <span className="mt-1.5 block text-[12.5px] text-[var(--color-ink-faint)]">
-            {delta > 0 ? <span className="font-medium text-[var(--color-good)]">↑ {delta} </span>
-              : delta < 0 ? <span className="font-medium text-[var(--color-bad)]">↓ {Math.abs(delta)} </span>
-                : <span>No change </span>}
-            {deltaLabel}
+    <Tag {...props} className={`card card-quiet w-full p-4 text-left ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''}`}>
+      <span className="flex items-center gap-2">
+        {Icon && (
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px]" style={{ background: tint, color: ink }}>
+            <Icon size={13} strokeWidth={2.2} />
           </span>
         )}
+        <span className="truncate text-[12.5px] font-medium text-[var(--color-ink-soft)]">{label}</span>
       </span>
+      <span className="mt-2 block text-[30px] font-semibold leading-none tracking-[-0.025em] text-[var(--color-ink)]">{value}</span>
+      {delta !== undefined && (
+        <span className="mt-1.5 block text-[12px] text-[var(--color-ink-faint)]">
+          {delta > 0 ? <span className="font-semibold text-[var(--color-good)]">+{delta} </span>
+            : delta < 0 ? <span className="font-semibold text-[var(--color-bad)]">−{Math.abs(delta)} </span>
+              : <span>No change </span>}
+          {deltaLabel}
+        </span>
+      )}
     </Tag>
   );
 }
@@ -206,10 +208,10 @@ export function RangePicker({ value, onChange }) {
 // and by anything else that is a feed, so feeds all look the same.
 export function FeedRow({ icon: Icon, tint, ink, title, line, meta, to, as: Tag = 'div', ...rest }) {
   return (
-    <Tag {...rest} className="group flex items-start gap-3 py-3.5 first:pt-0 last:pb-0">
+    <Tag {...rest} className="group flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
       {Icon && (
-        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px]" style={{ background: tint, color: ink }}>
-          <Icon size={15} strokeWidth={2} />
+        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]" style={{ background: tint, color: ink }}>
+          <Icon size={14} strokeWidth={2} />
         </span>
       )}
       <span className="min-w-0 flex-1">
@@ -224,5 +226,5 @@ export function FeedRow({ icon: Icon, tint, ink, title, line, meta, to, as: Tag 
 // Empty state that keeps a card the same height as its neighbours instead of
 // collapsing into a tall white nothing.
 export function Empty({ children }) {
-  return <div className="flex min-h-[132px] flex-1 items-center justify-center px-4 text-center"><p className="t-support">{children}</p></div>;
+  return <p className="t-support py-6">{children}</p>;
 }
