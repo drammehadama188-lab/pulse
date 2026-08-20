@@ -4,6 +4,8 @@
 // nest — inside one, use space and a hairline divider instead of drawing
 // another box. Colour lives in the small icon square and in status, never as
 // big saturated blocks. Bold marks hierarchy, not decoration.
+import { useState } from 'react';
+import { Calendar, ChevronDown } from 'lucide-react';
 import { STAGES } from './stages.js';
 
 export const shortDate = (iso) => {
@@ -65,6 +67,7 @@ export const CARD = 'card';
 export const BTN = 'inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-[13.5px] font-semibold transition-colors';
 export const BTN_LIGHT = `${BTN} bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] hover:bg-[var(--color-fill)]`;
 export const BTN_DARK = `${BTN} bg-[var(--color-ink)] text-white hover:opacity-90`;
+export const BTN_PRIMARY = `${BTN} bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)]`;
 export const INPUT = 'w-full rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-[13.5px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-faint)] focus:border-[var(--color-ink-faint)] focus:outline-none';
 
 export function PageHead({ title, count, children }) {
@@ -95,14 +98,14 @@ export function Kpi({ icon: Icon, label, value, delta, deltaLabel = 'from last 7
   const Tag = onClick ? 'button' : 'div';
   const props = onClick ? { onClick, type: 'button' } : {};
   return (
-    <Tag {...props} className={`card flex min-h-[104px] w-full items-center gap-4 p-5 text-left ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''}`}>
+    <Tag {...props} className={`card flex min-h-[104px] w-full items-start gap-4 p-5 text-left ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''}`}>
       {Icon && (
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px]" style={{ background: tint, color: ink }}>
+        <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px]" style={{ background: tint, color: ink }}>
           <Icon size={20} strokeWidth={2} />
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="t-label block truncate">{label}</span>
+        <span className="t-label block leading-snug">{label}</span>
         <span className="mt-1 block text-[26px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
         {delta !== undefined && (
           <span className="mt-1.5 block text-[12.5px] text-[var(--color-ink-faint)]">
@@ -172,14 +175,29 @@ export const RANGES = [
   ['90d', 'Last 90 days', 90],
 ];
 export function RangePicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const days = RANGES.find(r => r[0] === value)?.[2] || 7;
+  const to = new Date();
+  const from = new Date(Date.now() - (days - 1) * 24 * 3600 * 1000);
+  const fmt = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   return (
-    <div className="inline-flex rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] p-0.5">
-      {RANGES.map(([k, label]) => (
-        <button key={k} type="button" onClick={() => onChange(k)}
-          className={`rounded-[8px] px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${value === k ? 'bg-[var(--color-fill)] text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]'}`}>
-          {label}
-        </button>
-      ))}
+    <div className="relative">
+      <button type="button" onClick={() => setOpen(o => !o)} onBlur={() => setTimeout(() => setOpen(false), 120)}
+        className="inline-flex items-center gap-2 rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-fill)]">
+        <Calendar size={15} className="text-[var(--color-ink-faint)]" />
+        {fmt(from)} – {fmt(to)}, {to.getFullYear()}
+        <ChevronDown size={15} className="text-[var(--color-ink-faint)]" />
+      </button>
+      {open && (
+        <div className="absolute right-0 z-40 mt-2 w-48 overflow-hidden rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-lift)]">
+          {RANGES.map(([k, label]) => (
+            <button key={k} type="button" onMouseDown={() => { onChange(k); setOpen(false); }}
+              className={`block w-full rounded-[8px] px-3 py-2.5 text-left text-[13px] font-semibold ${value === k ? 'bg-[var(--color-brand-50)] text-[var(--color-brand)]' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -206,5 +224,5 @@ export function FeedRow({ icon: Icon, tint, ink, title, line, meta, to, as: Tag 
 // Empty state that keeps a card the same height as its neighbours instead of
 // collapsing into a tall white nothing.
 export function Empty({ children }) {
-  return <div className="flex min-h-[180px] items-center justify-center px-4 text-center"><p className="t-support">{children}</p></div>;
+  return <div className="flex min-h-[132px] flex-1 items-center justify-center px-4 text-center"><p className="t-support">{children}</p></div>;
 }

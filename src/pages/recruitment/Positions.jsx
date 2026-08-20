@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, X, Trash2, Pencil } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { CARD, BTN_DARK, BTN_LIGHT, PageHead, fullDate } from './ui.jsx';
@@ -17,6 +17,16 @@ export default function Positions() {
   const [form, setForm] = useState(BLANK);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [params, setParams] = useSearchParams();
+
+  // ?new=1 opens the form straight away, so "Create position" anywhere else in
+  // the department lands on a filled-in screen and not just a list.
+  useEffect(() => {
+    if (params.get('new') !== '1') return;
+    setForm(BLANK);
+    setEditing('new');
+    setParams(prev => { const n = new URLSearchParams(prev); n.delete('new'); return n; }, { replace: true });
+  }, [params]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function load() {
     api('/positions').then(d => setPositions(d.positions || [])).catch(() => setPositions([])).finally(() => setLoading(false));

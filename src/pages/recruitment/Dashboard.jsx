@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Users, CalendarCheck, Star, BadgeCheck, XCircle, ArrowRight, Plus, Briefcase,
+  Users, CalendarCheck, Star, BadgeCheck, XCircle, ArrowRight, Plus, Briefcase, Download, Rocket, CalendarDays,
   Inbox, PhoneCall, ClipboardCheck, Handshake, UserCheck, UserPlus, CalendarPlus, FileText,
 } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { PIPELINE, DROPPED, STAGES, INTERVIEWED, SHORTLISTED, OFFERED } from './stages.js';
-import { CARD, CardHead, PageHead, BTN_DARK, BTN_LIGHT, Kpi, Sparkline, Donut, RangePicker, RANGES, FeedRow, Empty, ago, dayTime, scoreWord } from './ui.jsx';
+import { CARD, CardHead, PageHead, BTN_PRIMARY, BTN_LIGHT, Kpi, Sparkline, Donut, RangePicker, RANGES, FeedRow, Empty, ago, dayTime, scoreWord } from './ui.jsx';
 
 // Recruitment Dashboard — see. Not understand, not evaluate, not analyse:
 // those are the applicant profile, the interview room and Reports.
@@ -58,6 +58,24 @@ export default function Dashboard() {
     ]).then(([a, p, i]) => { setApplicants(a); setPositions(p); setInterviews(i); }).finally(() => setLoading(false));
   }, []);
 
+  // Export is the list as it stands — name, phone, stage, source, dates — so
+  // it opens in Excel without anybody re-typing it.
+  function exportReport() {
+    const head = ['Name', 'Phone', 'Email', 'Stage', 'Source', 'Role', 'Can start now', 'Applied', 'Added', 'Notes'];
+    const rows = applicants.map(a => [
+      a.name, a.phone, a.email, (STAGES.find(s => s[0] === a.stage) || [])[1] || a.stage,
+      a.source, a.role, a.startNow === true ? 'Yes' : a.startNow === false ? 'No' : '',
+      a.appliedAt || '', a.createdAt || '', (a.notes || '').replace(/\s+/g, ' '),
+    ]);
+    const csv = [head, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `damia-applicants-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const days = RANGES.find(r => r[0] === range)?.[2] || 7;
   const rangeLabel = `from last ${days} days`;
 
@@ -100,7 +118,7 @@ export default function Dashboard() {
       for (const h of a.history || []) {
         if (h.stage === 'cv_received') continue;
         const label = STAGES.find(s => s[0] === h.stage)?.[1] || h.stage;
-        events.push({ at: h.at, kind: actKind(h.stage), title: label, line: a.name, to: `/recruitment/applicants/${a.id}` });
+        events.push({ at: h.at, kind: actKind(h.stage), title: `Applicant ${label.toLowerCase()}`, line: a.name, to: `/recruitment/applicants/${a.id}` });
       }
     }
     for (const i of interviews) {
@@ -172,21 +190,27 @@ export default function Dashboard() {
 
   return (
     <div>
-      <PageHead title="Recruitment">
-        <RangePicker value={range} onChange={setRange} />
-        <Link to="/recruitment/positions" className={BTN_LIGHT}><Briefcase size={16} /> Positions</Link>
-        <Link to="/recruitment/applicants?stage=cv_received" className={BTN_DARK}><Plus size={16} /> Work the list</Link>
-      </PageHead>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="t-page text-[var(--color-ink)]">Recruitment Dashboard</h1>
+          <p className="t-support mt-1">Overview of your hiring pipeline and recruitment performance.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button type="button" onClick={exportReport} className={BTN_LIGHT}><Download size={16} /> Export report</button>
+          <Link to="/recruitment/positions?new=1" className={BTN_PRIMARY}><Plus size={16} /> Create position</Link>
+        </div>
+      </div>
+      <div className="mb-5 flex justify-end"><RangePicker value={range} onChange={setRange} /></div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Kpi icon={Users} label="Total applicants" value={m.total} delta={m.newDelta} deltaLabel={rangeLabel}
           tint="var(--color-stage-new-bg)" ink="var(--color-stage-new)" onClick={() => navigate('/recruitment/applicants?stage=all')} />
         <Kpi icon={CalendarCheck} label="Interviews scheduled" value={m.scheduled} delta={m.scheduledDelta} deltaLabel={rangeLabel}
-          tint="var(--color-stage-interview-bg)" ink="var(--color-stage-interview)" onClick={() => navigate('/recruitment/interviews')} />
+          tint="var(--color-stage-screening-bg)" ink="var(--color-stage-screening)" onClick={() => navigate('/recruitment/interviews')} />
         <Kpi icon={Star} label="Shortlisted" value={m.shortlisted} delta={m.shortDelta} deltaLabel={rangeLabel}
           tint="var(--color-stage-short-bg)" ink="var(--color-stage-short)" onClick={() => navigate('/recruitment/applicants?stage=shortlisted')} />
         <Kpi icon={BadgeCheck} label="Offers" value={m.offers} delta={m.offerDelta} deltaLabel={rangeLabel}
-          tint="var(--color-stage-offer-bg)" ink="var(--color-stage-offer)" onClick={() => navigate('/recruitment/applicants?stage=offer')} />
+          tint="var(--color-stage-interview-bg)" ink="var(--color-stage-interview)" onClick={() => navigate('/recruitment/applicants?stage=offer')} />
         <Kpi icon={XCircle} label="Rejected" value={m.rejected} delta={m.rejectDelta} deltaLabel={rangeLabel}
           tint="var(--color-stage-out-bg)" ink="var(--color-stage-out)" onClick={() => navigate('/recruitment/applicants?stage=rejected')} />
       </div>
@@ -206,7 +230,7 @@ export default function Dashboard() {
                     <span className="flex h-6 w-6 items-center justify-center rounded-[7px]" style={{ background: STAGE_TINT[s.key], color: s.color }}>
                       <Icon size={13} strokeWidth={2.2} />
                     </span>
-                    <span className="t-label truncate group-hover:text-[var(--color-ink)]">{s.label}</span>
+                    <span className="t-label group-hover:text-[var(--color-ink)]">{s.label}</span>
                   </span>
                   <span className="mt-2 flex items-baseline gap-2">
                     <span className="text-[24px] font-semibold leading-none text-[var(--color-ink)]">{s.count}</span>
@@ -224,6 +248,7 @@ export default function Dashboard() {
               <div className="mt-1 text-[26px] font-semibold leading-none text-[var(--color-ink)]">{m.dropRate}%</div>
             </div>
             <div className="min-w-[180px] flex-1">
+              <div className="t-support mb-2">Overall drop-off</div>
               <div className="h-2 rounded-full bg-[var(--color-line)]">
                 <div className="h-full rounded-full bg-[var(--color-stage-new)]" style={{ width: `${m.dropRate}%` }} />
               </div>
@@ -290,7 +315,10 @@ export default function Dashboard() {
         </div>
 
         <div className={`${CARD} flex flex-col p-6`}>
-          <CardHead title="Upcoming interviews" />
+          <CardHead title="Upcoming interviews" action={
+            <Link to="/recruitment/calendar" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+              View calendar <ArrowRight size={14} />
+            </Link>} />
           {m.upcoming.length === 0
             ? <Empty>Nothing booked. Open an applicant and start an interview.</Empty>
             : (
@@ -302,7 +330,7 @@ export default function Dashboard() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="t-body block truncate font-semibold text-[var(--color-ink)]">{i.applicantName}</span>
-                      <span className="t-support block truncate">{dayTime(i.scheduledAt)}{i.interviewer ? ` · ${i.interviewer}` : ''}</span>
+                      <span className="t-support flex items-center gap-1.5 truncate"><CalendarDays size={12} /> {dayTime(i.scheduledAt)}{i.interviewer ? ` · ${i.interviewer}` : ''}</span>
                     </span>
                     <Link to={`/recruitment/interviews/${i.id}`}
                       className="shrink-0 rounded-[9px] border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-fill)]">
@@ -332,28 +360,39 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className={`${CARD} mt-6 p-6`}>
-        <CardHead title="Recruitment performance" action={
-          <Link to="/recruitment/reports" className="text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">Reports</Link>} />
-        <div className="grid grid-cols-2 gap-x-6 gap-y-7 md:grid-cols-3 lg:grid-cols-5">
-          {[
-            ['Applications', m.rates.applications, m.newDelta, m.trends.applications, 'var(--color-stage-new)'],
-            ['Interview rate', `${m.rates.interview}%`, null, m.trends.interview, 'var(--color-stage-interview)'],
-            ['Shortlist rate', `${m.rates.shortlist}%`, m.shortDelta, m.trends.shortlist, 'var(--color-stage-short)'],
-            ['Offer rate', `${m.rates.offer}%`, m.offerDelta, m.trends.offer, 'var(--color-stage-offer)'],
-            ['Hired', m.rates.hired, null, m.trends.hired, 'var(--color-stage-hired)'],
-          ].map(([label, value, delta, points, color]) => (
-            <div key={label}>
-              <div className="t-label">{label}</div>
-              <div className="mt-1.5 flex items-baseline gap-2">
-                <span className="text-[24px] font-semibold leading-none text-[var(--color-ink)]">{value}</span>
-                {delta > 0 && <span className="text-[12.5px] font-medium text-[var(--color-good)]">↑ {delta}</span>}
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
+        <div className={`${CARD} p-6`}>
+          <CardHead title="Recruitment performance" action={
+            <Link to="/recruitment/reports" className="text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">Reports</Link>} />
+          <div className="grid grid-cols-2 gap-x-6 gap-y-7 md:grid-cols-3 lg:grid-cols-5">
+            {[
+              ['Applications', m.rates.applications, m.newDelta, m.trends.applications, 'var(--color-stage-new)'],
+              ['Interview rate', `${m.rates.interview}%`, null, m.trends.interview, 'var(--color-stage-screening)'],
+              ['Shortlist rate', `${m.rates.shortlist}%`, m.shortDelta, m.trends.shortlist, 'var(--color-stage-short)'],
+              ['Offer rate', `${m.rates.offer}%`, m.offerDelta, m.trends.offer, 'var(--color-stage-interview)'],
+              ['Hired', m.rates.hired, null, m.trends.hired, 'var(--color-stage-hired)'],
+            ].map(([label, value, delta, points, color]) => (
+              <div key={label}>
+                <div className="t-label">{label}</div>
+                <div className="mt-1.5 flex items-baseline gap-2">
+                  <span className="text-[24px] font-semibold leading-none text-[var(--color-ink)]">{value}</span>
+                  {delta > 0 && <span className="text-[12.5px] font-medium text-[var(--color-good)]">↑ {delta}</span>}
+                </div>
+                <div className="mt-2.5"><Sparkline points={points} color={color} /></div>
               </div>
-              <div className="mt-2.5"><Sparkline points={points} color={color} /></div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <p className="t-support mt-5">Lines cover the last {days} days. Rates are of all applicants and count only moves recorded in Pulse.</p>
         </div>
-        <p className="t-support mt-5">Lines cover the last {days} days. Rates are of all applicants and count only moves recorded in Pulse.</p>
+
+        <div className={`${CARD} flex flex-col justify-center p-6`}>
+          <span className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-[var(--color-brand-50)] text-[var(--color-brand)]">
+            <Rocket size={22} strokeWidth={2} />
+          </span>
+          <h2 className="t-card mt-4 text-[var(--color-ink)]">Improve your hiring</h2>
+          <p className="t-support mt-1.5">Ask every candidate the same questions and score them the same way.</p>
+          <Link to="/recruitment/templates" className={`${BTN_LIGHT} mt-5 self-start`}>View templates</Link>
+        </div>
       </div>
     </div>
   );
