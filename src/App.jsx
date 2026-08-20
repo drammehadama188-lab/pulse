@@ -28,7 +28,17 @@ import Approvals from './pages/manager/Approvals.jsx'
 import Team from './pages/manager/Team.jsx'
 import HRTeam from './pages/departments/HRTeam.jsx'
 import EmployeeProfile from './pages/EmployeeProfile.jsx'
-import Recruitment from './pages/Recruitment.jsx'
+import RecruitmentLayout from './pages/recruitment/RecruitmentLayout.jsx'
+import RecruitmentDashboard from './pages/recruitment/Dashboard.jsx'
+import RecruitmentApplicants from './pages/recruitment/Applicants.jsx'
+import RecruitmentApplicant from './pages/recruitment/Applicant.jsx'
+import RecruitmentInterviews from './pages/recruitment/Interviews.jsx'
+import InterviewRoom from './pages/recruitment/InterviewRoom.jsx'
+import RecruitmentCalendar from './pages/recruitment/Calendar.jsx'
+import RecruitmentPositions from './pages/recruitment/Positions.jsx'
+import RecruitmentTemplates from './pages/recruitment/Templates.jsx'
+import RecruitmentReports from './pages/recruitment/Reports.jsx'
+import RecruitmentSettings from './pages/recruitment/Settings.jsx'
 import Performance from './pages/Performance.jsx'
 import PerformancePerson from './pages/PerformancePerson.jsx'
 import Contracts from './pages/Contracts.jsx'
@@ -109,7 +119,21 @@ export default function App() {
         <Route path="/performance/:slug" element={<RequireAuth power="hr"><PerformancePerson /></RequireAuth>} />
         <Route path="/past/:slug" element={<RequireAuth power="hr"><PastStaffProfile /></RequireAuth>} />
         <Route path="/contracts" element={<Navigate to="/people?tab=contracts" replace />} />
-        <Route path="/recruitment" element={<RequireAuth power="hr"><Recruitment /></RequireAuth>} />
+        {/* Recruitment is its own department inside Pulse (Adama, 20 Aug 2026):
+            its own dashboard and pages, and the sidebar becomes hiring's own
+            nav while you are inside it. */}
+        <Route path="/recruitment" element={<RequireAuth power="hr"><RecruitmentLayout /></RequireAuth>}>
+          <Route index element={<RecruitmentDashboard />} />
+          <Route path="applicants" element={<RecruitmentApplicants />} />
+          <Route path="applicants/:id" element={<RecruitmentApplicant />} />
+          <Route path="interviews" element={<RecruitmentInterviews />} />
+          <Route path="interviews/:id" element={<InterviewRoom />} />
+          <Route path="calendar" element={<RecruitmentCalendar />} />
+          <Route path="positions" element={<RecruitmentPositions />} />
+          <Route path="templates" element={<RecruitmentTemplates />} />
+          <Route path="reports" element={<RecruitmentReports />} />
+          <Route path="settings" element={<RecruitmentSettings />} />
+        </Route>
         {/* MANAGEMENT */}
         <Route path="/reviews" element={<RequireAuth power="hr"><ReviewsWarnings /></RequireAuth>} />
         {/* KPI Targets — CEO sets the company's goals here; Pulse scorecards

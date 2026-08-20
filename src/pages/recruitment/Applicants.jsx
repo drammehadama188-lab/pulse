@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Trash2, Mail, Phone, X, Upload, ClipboardPaste, ChevronDown, ChevronRight } from 'lucide-react';
-import { api } from '../lib/api.js';
-import { STAGES } from './recruitment/stages.js';
-import Overview from './recruitment/Overview.jsx';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Plus, Trash2, Mail, Phone, X, Upload, ClipboardPaste, ChevronDown, ChevronRight, FileText, ClipboardCheck } from 'lucide-react';
+import { api } from '../../lib/api.js';
+import { STAGES } from './stages.js';
+import { CARD, BTN_LIGHT, BTN_DARK, shortDate, fullDate } from './ui.jsx';
 
 // Recruitment — applicants pipeline (CV received → interviewed → hired/rejected).
 // New HR module (24 Jun 2026, Adama). All real data via /api/applicants.
@@ -12,31 +13,30 @@ import Overview from './recruitment/Overview.jsx';
 // four-column board cannot be worked through by phone. The board stays for the
 // handful of walk-in CVs it was built for.
 
-const BLANK = { name: '', role: '', email: '', phone: '', source: '', notes: '' };
+const BLANK = { name: '', role: '', email: '', phone: '', source: '', notes: '', positionId: '' };
 const SORTS = [['best', 'Best first'], ['newest', 'Newest'], ['name', 'Name']];
 // Where the applicant came from. Imported rows carry the lead form's name;
 // these are the channels a CV arrives through by hand.
 const SOURCES = ['Ads', 'WhatsApp', 'Referral', 'Walk-in', 'Recruitment agency', 'Email'];
 // A whole batch shares one Added date, which is the point — it says which
 // import someone arrived in. Applied is their own date, from the lead form.
-const shortDate = (iso) => {
-  const d = new Date(iso || '');
-  return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-};
-const fullDate = (iso) => {
-  const d = new Date(iso || '');
-  return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-};
 
-export default function Recruitment() {
+export default function Applicants() {
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(BLANK);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState('overview');
+  const [params, setParams] = useSearchParams();
+  const [positions, setPositions] = useState([]);
   const [view, setView] = useState('list');
-  const [stageFilter, setStageFilter] = useState('cv_received');
+  const stageFilter = params.get('stage') || 'cv_received';
+  const positionFilter = params.get('position') || '';
+  const setStageFilter = (k) => setParams(prev => {
+    const next = new URLSearchParams(prev);
+    next.set('stage', k);
+    return next;
+  }, { replace: true });
   const [query, setQuery] = useState('');
   const [startOnly, setStartOnly] = useState(false);
   const [sort, setSort] = useState('best');
@@ -54,6 +54,7 @@ export default function Recruitment() {
     api('/applicants').then(d => setApplicants(d.applicants || [])).catch(() => setApplicants([])).finally(() => setLoading(false));
   }
   useEffect(load, []);
+  useEffect(() => { api('/positions').then(d => setPositions(d.positions || [])).catch(() => setPositions([])); }, []);
 
   async function addApplicant() {
     if (!form.name.trim()) return;
@@ -64,6 +65,10 @@ export default function Recruitment() {
   async function moveStage(a, stage) {
     setApplicants(list => list.map(x => x.id === a.id ? { ...x, stage } : x));
     try { await api(`/applicants/${a.id}`, { method: 'PUT', body: { stage } }); } catch { load(); }
+  }
+  async function assignPosition(a, positionId) {
+    setApplicants(list => list.map(x => x.id === a.id ? { ...x, positionId } : x));
+    try { await api(`/applicants/${a.id}`, { method: 'PUT', body: { positionId } }); } catch { load(); }
   }
   async function saveNotes(a, notes) {
     setApplicants(list => list.map(x => x.id === a.id ? { ...x, notes } : x));
@@ -81,7 +86,6 @@ export default function Recruitment() {
     try {
       const r = await api('/applicants/import', { method: 'POST', body: { csv, role: 'Sales Agent' } });
       setImportResult(r);
-      setTab('applicants');
       setStageFilter('cv_received');
       setPasting(false); setPasted('');
       load();
@@ -106,6 +110,14 @@ export default function Recruitment() {
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = applicants.filter(a => (stageFilter === 'all' || a.stage === stageFilter));
+    // Older records carry only a typed role, so a position also matches by its
+    // title — otherwise the 259 imported as "Sales Agent" vanish from the job
+    // they actually applied for.
+    if (positionFilter) {
+      const p = positions.find(x => x.id === positionFilter);
+      const title = (p?.title || '').toLowerCase();
+      list = list.filter(a => a.positionId === positionFilter || (!a.positionId && title && String(a.role || '').toLowerCase() === title));
+    }
     if (startOnly) list = list.filter(a => a.startNow === true);
     if (q) list = list.filter(a => `${a.name || ''} ${a.phone || ''} ${a.experience || ''}`.toLowerCase().includes(q));
     const time = (a) => Date.parse(a.appliedAt || a.createdAt || 0) || 0;
@@ -121,7 +133,7 @@ export default function Recruitment() {
       if (e(b) !== e(a)) return e(b) - e(a);
       return time(b) - time(a);
     });
-  }, [applicants, stageFilter, startOnly, query, sort]);
+  }, [applicants, stageFilter, positionFilter, positions, startOnly, query, sort]);
 
   const chip = 'px-3 py-1.5 rounded-lg text-xs font-medium border';
   const chipOn = 'bg-gray-900 text-white border-gray-900';
@@ -131,33 +143,24 @@ export default function Recruitment() {
     <div>
       <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Recruitment</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Applicants<span className="ml-2 text-lg font-semibold text-gray-400">{applicants.length || ''}</span></h1>
         </div>
         <div className="flex items-center gap-2">
           {/* A label opens the picker itself. Scripting a click on a hidden
               input looked like a working button and did nothing (19 Aug). */}
           {/* No accept filter: it greyed out the very file being imported, so
               the picker opened and nothing could be chosen (19 Aug). */}
-          <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-50 cursor-pointer">
+          <label className={`${BTN_LIGHT} cursor-pointer`}>
             <Upload size={16} /> Import list
             <input ref={fileRef} type="file" className="sr-only" onChange={e => importFile(e.target.files?.[0])} />
           </label>
-          <button onClick={() => { setPasted(''); setImportError(null); setPasting(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-50">
+          <button onClick={() => { setPasted(''); setImportError(null); setPasting(true); }} className={BTN_LIGHT}>
             <ClipboardPaste size={16} /> Paste rows
           </button>
-          <button onClick={() => { setForm(BLANK); setOtherSource(false); setAdding(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800">
+          <button onClick={() => { setForm(BLANK); setOtherSource(false); setAdding(true); }} className={BTN_DARK}>
             <Plus size={16} /> Add applicant
           </button>
         </div>
-      </div>
-
-      {/* Recruitment is a section now, not a single list: the dashboard is the
-          first screen, the call sheet is where the work happens. */}
-      <div className="mb-5 flex items-center gap-1 border-b border-gray-200">
-        {[['overview', 'Overview'], ['applicants', `Applicants${applicants.length ? ` (${applicants.length})` : ''}`]].map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setTab(k)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === k ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>
-        ))}
       </div>
 
       {(importing || importResult || importError) && (
@@ -181,17 +184,17 @@ export default function Recruitment() {
         </div>
       )}
 
-      {tab === 'overview' && (
-        <Overview applicants={applicants} loading={loading}
-          onOpenStage={(k) => { setStageFilter(k); setStartOnly(false); setQuery(''); setTab('applicants'); }} />
-      )}
-
-      {tab === 'applicants' && (<>
       <div className="mb-4 flex items-center gap-2 flex-wrap">
         <button onClick={() => setStageFilter('all')} className={`${chip} ${stageFilter === 'all' ? chipOn : chipOff}`}>All {counts.all}</button>
         {STAGES.map(([k, label]) => (
           <button key={k} onClick={() => setStageFilter(k)} className={`${chip} ${stageFilter === k ? chipOn : chipOff}`}>{label} {counts[k] || 0}</button>
         ))}
+        {positionFilter && (
+          <button onClick={() => setParams(prev => { const n = new URLSearchParams(prev); n.delete('position'); return n; }, { replace: true })}
+            className={`${chip} bg-gray-900 text-white border-gray-900 flex items-center gap-1.5`}>
+            {positions.find(p => p.id === positionFilter)?.title || 'Position'} <X size={12} />
+          </button>
+        )}
         <span className="flex-1" />
         <button onClick={() => setStartOnly(v => !v)} className={`${chip} ${startOnly ? chipOn : chipOff}`}>Can start now</button>
         <select value={sort} onChange={e => setSort(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white text-gray-700">
@@ -207,9 +210,9 @@ export default function Recruitment() {
       {loading ? (
         <p className="text-sm text-gray-400">Loading…</p>
       ) : applicants.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center text-gray-400 text-sm">No applicants yet. Import a list or add the first CV you receive.</div>
+        <div className={`${CARD} p-12 text-center text-gray-400 text-sm`}>No applicants yet. Import a list or add the first CV you receive.</div>
       ) : view === 'list' ? (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto">
+        <div className={`${CARD} overflow-x-auto`}>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wider text-gray-400 border-b border-gray-100">
@@ -225,9 +228,9 @@ export default function Recruitment() {
             </thead>
             <tbody>
               {rows.map(a => (
-                <RowGroup key={a.id} a={a} open={openId === a.id}
+                <RowGroup key={a.id} a={a} open={openId === a.id} positions={positions}
                   onToggle={() => setOpenId(openId === a.id ? null : a.id)}
-                  onStage={moveStage} onNotes={saveNotes} onRemove={remove} />
+                  onStage={moveStage} onNotes={saveNotes} onRemove={remove} onPosition={assignPosition} />
               ))}
               {rows.length === 0 && (
                 <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400 text-sm">Nobody matches those filters.</td></tr>
@@ -276,8 +279,6 @@ export default function Recruitment() {
         </div>
       )}
 
-      </>)}
-
       {/* Paste route: open the file in Excel or Numbers, select all, paste here.
           Works when a file picker will not cooperate, and it is what he asked
           for in the first place — put the list in, get it sorted. */}
@@ -315,6 +316,14 @@ export default function Recruitment() {
                   <input value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
                 </label>
               ))}
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Position</span>
+                <select value={form.positionId} onChange={e => setForm(f => ({ ...f, positionId: e.target.value }))}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  <option value="">Not filed</option>
+                  {positions.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                </select>
+              </label>
               {/* Fixed list, so the channels stay countable — typed sources
                   split into "whatsapp", "WhatsApp", "wa" and stop adding up. */}
               <label className="block">
@@ -352,7 +361,7 @@ export default function Recruitment() {
 }
 
 // One applicant: the call line, and everything they answered when opened.
-function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
+function RowGroup({ a, open, positions, onToggle, onStage, onNotes, onRemove, onPosition }) {
   const [note, setNote] = useState(a.notes || '');
   useEffect(() => { setNote(a.notes || ''); }, [a.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // The note box grows with what is written. A fixed height hid the end of
@@ -369,10 +378,13 @@ function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
     <>
       <tr className="border-b border-gray-50 hover:bg-gray-50/60">
         <td className="px-4 py-3 align-top">
-          <button onClick={onToggle} className="flex items-center gap-1.5 text-left">
-            {open ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-300" />}
-            <span className="font-medium text-gray-900">{a.name}</span>
-          </button>
+          <span className="flex items-center gap-1.5">
+            <button onClick={onToggle} className="text-gray-300 hover:text-gray-600">
+              {open ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} />}
+            </button>
+            <Link to={`/recruitment/applicants/${a.id}`} className="font-medium text-gray-900 hover:underline">{a.name}</Link>
+            {a.cv && <FileText size={13} className="text-gray-300" title="CV on file" />}
+          </span>
         </td>
         <td className="px-4 py-3 align-top">
           {a.phoneValid === false
@@ -428,9 +440,18 @@ function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
                 </p>
               </div>
               <div>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Position</p>
+                <select value={a.positionId || ''} onChange={e => onPosition(a, e.target.value)}
+                  className="mt-1 mb-4 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  <option value="">Not filed</option>
+                  {positions.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                </select>
                 <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Notes</p>
                 <textarea value={note} onChange={e => setNote(e.target.value)} onBlur={() => note !== (a.notes || '') && onNotes(a, note)} rows={4}
                   className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white" />
+                <Link to={`/recruitment/applicants/${a.id}`} className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:underline">
+                  <ClipboardCheck size={15} /> Open profile and interview
+                </Link>
               </div>
             </div>
           </td>

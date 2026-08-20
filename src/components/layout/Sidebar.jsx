@@ -1,7 +1,8 @@
-import { NavLink } from 'react-router-dom'
-import { LogOut } from 'lucide-react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { LogOut, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { groupedNavFor, departmentsFor } from './nav.js'
+import { RECRUITMENT_NAV } from '../../pages/recruitment/nav.js'
 import { Brand } from './Brand.jsx'
 import { Avatar } from '../ui.jsx'
 
@@ -11,7 +12,7 @@ import { Avatar } from '../ui.jsx'
 
 function SectionLabel({ children }) {
   return (
-    <div className="mb-1 mt-6 px-3.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">
+    <div className="mb-1 mt-6 px-3.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/50 first:mt-0">
       {children}
     </div>
   )
@@ -21,7 +22,7 @@ function NavRow({ item, soon = false }) {
   return (
     <NavLink
       to={item.to}
-      end={item.to === '/'}
+      end={item.end || item.to === '/'}
       className={({ isActive }) =>
         `group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
           isActive
@@ -49,6 +50,10 @@ export function Sidebar() {
   const { user, logout } = useAuth()
   const { top, sections } = groupedNavFor(user)
   const departments = departmentsFor(user)
+  const { pathname } = useLocation()
+  // Inside Recruitment the sidebar becomes Recruitment's own pages — it is a
+  // department you go into, not one link among twenty. One row back out.
+  const inRecruitment = pathname.startsWith('/recruitment')
 
   return (
     <aside className="hidden w-[248px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-sidebar-edge)] bg-[var(--color-sidebar)] px-4 py-6 md:flex">
@@ -56,6 +61,17 @@ export function Sidebar() {
         <Brand onDark />
       </div>
 
+      {inRecruitment ? (
+        <nav className="mt-8 flex flex-1 flex-col gap-1">
+          <NavLink to="/" className="mb-3 flex items-center gap-2 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.14em] text-white/50 transition-colors hover:text-white">
+            <ArrowLeft size={14} /> Pulse
+          </NavLink>
+          <SectionLabel>Recruitment</SectionLabel>
+          {RECRUITMENT_NAV.map((item) => (
+            <NavRow key={item.id} item={item} />
+          ))}
+        </nav>
+      ) : (
       <nav className="mt-8 flex flex-1 flex-col gap-1">
         {top.map((item) => (
           <NavRow key={item.id} item={item} />
@@ -79,6 +95,7 @@ export function Sidebar() {
           </>
         )}
       </nav>
+      )}
 
       {/* Open Admin SSO button removed 12 Jun 2026 at Adama's request — Pulse is HR-only now. */}
 

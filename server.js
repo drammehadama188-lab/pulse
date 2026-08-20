@@ -212,6 +212,9 @@ app.use(cors())
 // is well past the 100kb default, and this parser has to run BEFORE the global
 // one or the request is rejected before reaching the route (19 Aug).
 app.use('/api/applicants/import', express.json({ limit: '10mb' }))
+// A CV is a PDF in the body, past the default too. Same rule: before the global.
+const bigJson = express.json({ limit: '10mb' })
+app.use('/api/applicants', (req, res, next) => (/\/cv$/.test(req.path) ? bigJson(req, res, next) : next()))
 app.use(express.json())
 // Behind nginx (and maybe Cloudflare) in prod, so the real client IP lives in
 // X-Forwarded-For. Trust exactly the proxy hop count (default 1 = nginx) so the
@@ -4243,7 +4246,7 @@ app.put('/api/employee-checklist', auth, requireSub('hr', 'records'), notViewAs,
 // Call outcomes are stages of their own: at the end of a hiring round the
 // dead numbers must be countable apart from the people who said no.
 const APPLICANT_STAGES = ['cv_received', 'no_answer', 'unreachable', 'not_interested', 'not_qualified', 'interviewed', 'hired', 'rejected']
-const APPLICANT_FIELDS = ['name', 'role', 'email', 'phone', 'source', 'notes']
+const APPLICANT_FIELDS = ['name', 'role', 'email', 'phone', 'source', 'notes', 'positionId']
 app.get('/api/applicants', auth, requireSub('hr', 'records'), (req, res) => {
   // Two repairs on the way out, so records imported before the fixes read
   // correctly without rewriting anyone's file. The "p:" prefix Meta puts on
@@ -4421,6 +4424,360 @@ app.post('/api/applicants/import', auth, requireSub('hr', 'records'), notViewAs,
     ? `No name column found. Columns read: ${headers.filter(Boolean).join(', ') || '(none)'}`
     : null
   res.json({ added: added.length, duplicates, noPhone, rows: rows.length - 1, headers: headers.filter(Boolean), reason })
+})
+
+// ---------- recruitment: positions ----------
+// A position is the job being hired for. Applicants attach to one, so "how is
+// the Sales Agent round going" is a question the system can answer instead of
+// a count of everyone who ever applied for anything.
+const POSITION_FIELDS = ['title', 'department', 'location', 'employment', 'summary']
+const positionCounts = (p, applicants) => {
+  // Older applicants carry only a typed role. Matching on the title as well
+  // keeps the 259 imported as "Sales Agent" counted against the real opening.
+  const mine = applicants.filter((a) => a.positionId === p.id || (!a.positionId && a.role && a.role.toLowerCase() === (p.title || '').toLowerCase()))
+  return {
+    applicantCount: mine.length,
+    hiredCount: mine.filter((a) => a.stage === 'hired').length,
+    interviewedCount: mine.filter((a) => ['interviewed', 'hired', 'rejected'].includes(a.stage)).length,
+  }
+}
+app.get('/api/positions', auth, requireSub('hr', 'records'), (req, res) => {
+  const applicants = db.read('applicants', [])
+  const positions = db.read('positions', []).map((p) => ({ ...p, ...positionCounts(p, applicants) }))
+  res.json({ positions: positions.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) })
+})
+app.post('/api/positions', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const b = req.body || {}
+  if (!b.title) return res.status(400).json({ error: 'title required' })
+  const now = new Date().toISOString()
+  const rec = { id: crypto.randomUUID(), status: 'open', openings: Math.max(1, Number(b.openings) || 1), createdAt: now, updatedAt: now, createdBy: req.user.username }
+  for (const k of POSITION_FIELDS) rec[k] = String(b[k] || '').trim()
+  const all = db.read('positions', [])
+  all.push(rec)
+  db.write('positions', all)
+  res.json({ position: rec })
+})
+app.put('/api/positions/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const all = db.read('positions', [])
+  const rec = all.find((p) => p.id === req.params.id)
+  if (!rec) return res.status(404).json({ error: 'not found' })
+  const b = req.body || {}
+  for (const k of POSITION_FIELDS) if (b[k] !== undefined) rec[k] = String(b[k] || '').trim()
+  if (b.openings !== undefined) rec.openings = Math.max(1, Number(b.openings) || 1)
+  if (b.status === 'open' || b.status === 'closed') rec.status = b.status
+  rec.updatedAt = new Date().toISOString()
+  db.write('positions', all)
+  res.json({ position: rec })
+})
+// Closing a position is the normal end of a round; deleting one is only for a
+// mistake, so it refuses while anyone is attached — the applicants would keep
+// pointing at a job that no longer exists.
+app.delete('/api/positions/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const attached = db.read('applicants', []).filter((a) => a.positionId === req.params.id).length
+  if (attached) return res.status(409).json({ error: `${attached} applicant(s) are on this position. Close it instead.` })
+  db.write('positions', db.read('positions', []).filter((p) => p.id !== req.params.id))
+  res.json({ ok: true })
+})
+
+// ---------- recruitment: interview templates ----------
+// A template is the set of questions an interview runs on. Damia's own sales
+// questions ship as the starting set — a generic HR form scores nothing worth
+// knowing. Every one of them is editable.
+const DEFAULT_TEMPLATE_SECTIONS = [
+  ['Introduction', [
+    'Tell me about yourself and why you applied to Damia Tracker.',
+    'What do you know about vehicle tracking and what we do?',
+  ]],
+  ['Sales ability', [
+    'Tell me about something you have sold and exactly how you sold it.',
+    'A fleet owner with 12 vehicles agrees to see you. What do you do before you meet him?',
+    'Explain a tracker to someone who has never used one.',
+  ]],
+  ['Communication', [
+    'Sell me the phone in my hand in two minutes.',
+    'A customer speaks Wolof and does not read English. How do you take him through the app?',
+  ]],
+  ['Objection handling', [
+    '"It is too expensive." What do you say?',
+    '"My driver is trusted, I do not need this." What do you say?',
+    '"I will think about it and call you." What do you do?',
+  ]],
+  ['Initiative and drive', [
+    'How many people would you approach in a day, and where would you find them?',
+    'Tell me about a target you missed. What did you do next?',
+  ]],
+  ['Integrity and judgment', [
+    'A customer offers to pay you cash directly instead of paying the company. What do you do?',
+    'You promised an installation today and it cannot happen. How do you handle it?',
+  ]],
+  ['Closing', [
+    'How do you ask for the money?',
+    'The customer says yes. What are the next three things you do?',
+  ]],
+]
+function seedTemplates() {
+  const existing = db.read('interview-templates', null)
+  if (existing) return existing
+  const now = new Date().toISOString()
+  const t = [{
+    id: crypto.randomUUID(),
+    name: 'Sales agent interview',
+    role: 'Sales Agent',
+    isDefault: true,
+    createdAt: now,
+    updatedAt: now,
+    sections: DEFAULT_TEMPLATE_SECTIONS.map(([title, questions]) => ({
+      id: crypto.randomUUID(),
+      title,
+      questions: questions.map((text) => ({ id: crypto.randomUUID(), text })),
+    })),
+  }]
+  db.write('interview-templates', t)
+  return t
+}
+// Sections come in whole from the editor. Ids are kept where they exist so an
+// edit to the wording of a question does not orphan the answers already given.
+function cleanSections(sections) {
+  return (Array.isArray(sections) ? sections : []).map((s) => ({
+    id: s.id || crypto.randomUUID(),
+    title: String(s.title || '').trim() || 'Section',
+    questions: (Array.isArray(s.questions) ? s.questions : [])
+      .map((q) => ({ id: q.id || crypto.randomUUID(), text: String(q.text || '').trim() }))
+      .filter((q) => q.text),
+  })).filter((s) => s.questions.length)
+}
+app.get('/api/interview-templates', auth, requireSub('hr', 'records'), (req, res) => {
+  res.json({ templates: seedTemplates() })
+})
+app.post('/api/interview-templates', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const b = req.body || {}
+  if (!b.name) return res.status(400).json({ error: 'name required' })
+  const now = new Date().toISOString()
+  const rec = {
+    id: crypto.randomUUID(),
+    name: String(b.name).trim(),
+    role: String(b.role || '').trim(),
+    isDefault: false,
+    sections: cleanSections(b.sections),
+    createdAt: now, updatedAt: now, createdBy: req.user.username,
+  }
+  const all = seedTemplates()
+  all.push(rec)
+  db.write('interview-templates', all)
+  res.json({ template: rec })
+})
+app.put('/api/interview-templates/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const all = seedTemplates()
+  const rec = all.find((t) => t.id === req.params.id)
+  if (!rec) return res.status(404).json({ error: 'not found' })
+  const b = req.body || {}
+  if (b.name !== undefined) rec.name = String(b.name).trim() || rec.name
+  if (b.role !== undefined) rec.role = String(b.role || '').trim()
+  if (b.sections !== undefined) rec.sections = cleanSections(b.sections)
+  // One default at a time, so "start an interview" never has to guess.
+  if (b.isDefault === true) all.forEach((t) => { t.isDefault = t.id === rec.id })
+  rec.updatedAt = new Date().toISOString()
+  db.write('interview-templates', all)
+  res.json({ template: rec })
+})
+app.delete('/api/interview-templates/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const all = seedTemplates()
+  const rec = all.find((t) => t.id === req.params.id)
+  if (!rec) return res.status(404).json({ error: 'not found' })
+  // Interviews keep their own copy of the questions, so removing a template
+  // never touches a completed scorecard — but the last one cannot go or there
+  // is nothing to start an interview from.
+  if (all.length === 1) return res.status(409).json({ error: 'This is the only template.' })
+  const left = all.filter((t) => t.id !== rec.id)
+  if (rec.isDefault && left.length) left[0].isDefault = true
+  db.write('interview-templates', left)
+  res.json({ ok: true })
+})
+
+// ---------- recruitment: interviews ----------
+// 🔒 An interview SNAPSHOTS the template's questions when it is created. Editing
+// a template afterwards must never change what a scored interview asked, or the
+// scores stop meaning anything.
+const RECOMMENDATIONS = ['strong_yes', 'yes', 'unsure', 'no']
+// Every answered question is scored 1-5. A section's score is the average of
+// its answered questions; the total is the average of all answered questions
+// as a percentage. Unanswered questions are left out rather than counted zero —
+// a half-finished interview should not read as a bad one.
+function scoreInterview(iv) {
+  const answers = iv.answers || {}
+  const sections = (iv.sections || []).map((s) => {
+    const scores = s.questions.map((q) => Number(answers[q.id]?.score)).filter((n) => n >= 1 && n <= 5)
+    return {
+      id: s.id,
+      title: s.title,
+      answered: scores.length,
+      of: s.questions.length,
+      score: scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : null,
+    }
+  })
+  const all = (iv.sections || []).flatMap((s) => s.questions.map((q) => Number(answers[q.id]?.score))).filter((n) => n >= 1 && n <= 5)
+  const totalQuestions = (iv.sections || []).reduce((n, s) => n + s.questions.length, 0)
+  return {
+    sectionScores: sections,
+    answered: all.length,
+    totalQuestions,
+    totalScore: all.length ? Math.round((all.reduce((a, b) => a + b, 0) / all.length) * 20) : null,
+  }
+}
+const withScores = (iv) => ({ ...iv, ...scoreInterview(iv) })
+app.get('/api/interviews', auth, requireSub('hr', 'records'), (req, res) => {
+  const applicants = db.read('applicants', [])
+  const byId = Object.fromEntries(applicants.map((a) => [a.id, a]))
+  let list = db.read('interviews', [])
+  if (req.query.applicantId) list = list.filter((i) => i.applicantId === req.query.applicantId)
+  const out = list.map((iv) => {
+    const a = byId[iv.applicantId]
+    const { sectionScores, ...rest } = withScores(iv)
+    return { ...rest, applicantName: a?.name || iv.applicantName || 'Removed applicant', applicantPhone: a ? cleanPhone(a.phone) : '', applicantStage: a?.stage || null }
+  })
+  res.json({ interviews: out.sort((x, y) => (y.scheduledAt || y.createdAt || '').localeCompare(x.scheduledAt || x.createdAt || '')) })
+})
+app.get('/api/interviews/:id', auth, requireSub('hr', 'records'), (req, res) => {
+  const iv = db.read('interviews', []).find((i) => i.id === req.params.id)
+  if (!iv) return res.status(404).json({ error: 'not found' })
+  const a = db.read('applicants', []).find((x) => x.id === iv.applicantId) || null
+  const applicant = a ? { ...a, phone: cleanPhone(a.phone) } : null
+  res.json({ interview: withScores(iv), applicant })
+})
+app.post('/api/interviews', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const b = req.body || {}
+  const applicant = db.read('applicants', []).find((a) => a.id === b.applicantId)
+  if (!applicant) return res.status(400).json({ error: 'applicant required' })
+  const templates = seedTemplates()
+  const settings = db.read('recruitment-settings', {})
+  const template = templates.find((t) => t.id === b.templateId)
+    || templates.find((t) => t.id === settings.defaultTemplateId)
+    || templates.find((t) => t.isDefault) || templates[0]
+  if (!template) return res.status(400).json({ error: 'no interview template' })
+  const now = new Date().toISOString()
+  const rec = {
+    id: crypto.randomUUID(),
+    applicantId: applicant.id,
+    applicantName: applicant.name,
+    positionId: applicant.positionId || b.positionId || '',
+    templateId: template.id,
+    templateName: template.name,
+    sections: JSON.parse(JSON.stringify(template.sections || [])),
+    answers: {},
+    interviewer: String(b.interviewer || settings.defaultInterviewer || req.user.name || '').trim(),
+    scheduledAt: b.scheduledAt || now,
+    status: 'scheduled',
+    recommendation: '',
+    summary: '',
+    createdAt: now, updatedAt: now, createdBy: req.user.username,
+  }
+  const all = db.read('interviews', [])
+  all.push(rec)
+  db.write('interviews', all)
+  res.json({ interview: withScores(rec) })
+})
+app.put('/api/interviews/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const all = db.read('interviews', [])
+  const iv = all.find((i) => i.id === req.params.id)
+  if (!iv) return res.status(404).json({ error: 'not found' })
+  const b = req.body || {}
+  if (b.interviewer !== undefined) iv.interviewer = String(b.interviewer || '').trim()
+  if (b.scheduledAt !== undefined) iv.scheduledAt = b.scheduledAt || iv.scheduledAt
+  if (b.summary !== undefined) iv.summary = String(b.summary || '')
+  if (b.recommendation !== undefined && RECOMMENDATIONS.includes(b.recommendation)) iv.recommendation = b.recommendation
+  // One answer at a time: {questionId, score, notes}. Sending the whole answer
+  // map would let a stale tab wipe scores typed in another.
+  if (b.answer && b.answer.questionId) {
+    const known = (iv.sections || []).some((s) => s.questions.some((q) => q.id === b.answer.questionId))
+    if (!known) return res.status(400).json({ error: 'unknown question' })
+    const prev = iv.answers[b.answer.questionId] || {}
+    const score = b.answer.score === null ? null : Number(b.answer.score)
+    iv.answers[b.answer.questionId] = {
+      score: b.answer.score === undefined ? (prev.score ?? null) : (score >= 1 && score <= 5 ? score : null),
+      notes: b.answer.notes === undefined ? (prev.notes || '') : String(b.answer.notes || ''),
+      at: new Date().toISOString(),
+    }
+    if (iv.status === 'scheduled') iv.status = 'in_progress'
+  }
+  if (b.status && ['scheduled', 'in_progress', 'completed'].includes(b.status)) {
+    iv.status = b.status
+    if (b.status === 'completed') {
+      iv.completedAt = new Date().toISOString()
+      const { totalScore } = scoreInterview(iv)
+      iv.finalScore = totalScore
+      // Everything connected: a completed interview moves the applicant on,
+      // unless a decision has already been recorded past that point.
+      const applicants = db.read('applicants', [])
+      const a = applicants.find((x) => x.id === iv.applicantId)
+      if (a && !['interviewed', 'hired', 'rejected'].includes(a.stage)) {
+        a.stage = 'interviewed'
+        a.updatedAt = new Date().toISOString()
+        a.history = [...(a.history || []), { stage: 'interviewed', at: a.updatedAt, by: req.user.username }]
+        db.write('applicants', applicants)
+      }
+    }
+  }
+  iv.updatedAt = new Date().toISOString()
+  db.write('interviews', all)
+  res.json({ interview: withScores(iv) })
+})
+app.delete('/api/interviews/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  db.write('interviews', db.read('interviews', []).filter((i) => i.id !== req.params.id))
+  res.json({ ok: true })
+})
+
+// ---------- recruitment: settings ----------
+// Small and real: which template an interview starts on, and who is put down
+// as the interviewer when nobody says otherwise.
+app.get('/api/recruitment-settings', auth, requireSub('hr', 'records'), (req, res) => {
+  res.json({ settings: db.read('recruitment-settings', { defaultTemplateId: '', defaultInterviewer: '' }) })
+})
+app.put('/api/recruitment-settings', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const cur = db.read('recruitment-settings', { defaultTemplateId: '', defaultInterviewer: '' })
+  const b = req.body || {}
+  if (b.defaultTemplateId !== undefined) cur.defaultTemplateId = String(b.defaultTemplateId || '')
+  if (b.defaultInterviewer !== undefined) cur.defaultInterviewer = String(b.defaultInterviewer || '').trim()
+  db.write('recruitment-settings', cur)
+  res.json({ settings: cur })
+})
+
+// ---------- recruitment: CVs ----------
+// One CV per applicant, on disk beside the record. Same shape as agent files:
+// base64 in, metadata on the record, download carries the token as ?t= because
+// it is reached by a plain link.
+const CV_DIR = path.join(DATA_DIR, 'applicant-cvs')
+app.post('/api/applicants/:id/cv', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const all = db.read('applicants', [])
+  const a = all.find((x) => x.id === req.params.id)
+  if (!a) return res.status(404).json({ error: 'not found' })
+  const { name, mimeType, base64 } = req.body || {}
+  if (!name || !base64) return res.status(400).json({ error: 'name and base64 required' })
+  const buffer = Buffer.from(base64.includes(',') ? base64.split(',').pop() : base64, 'base64')
+  if (!buffer.length) return res.status(400).json({ error: 'empty file' })
+  fs.mkdirSync(CV_DIR, { recursive: true })
+  const ext = (String(name).split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '')
+  const storedAs = `${a.id}.${ext || 'bin'}`
+  fs.writeFileSync(path.join(CV_DIR, storedAs), buffer)
+  a.cv = { name: String(name), mimeType: mimeType || 'application/octet-stream', sizeBytes: buffer.length, storedAs, uploadedAt: new Date().toISOString(), uploadedBy: req.user.name || req.user.username }
+  a.updatedAt = new Date().toISOString()
+  db.write('applicants', all)
+  res.json({ cv: a.cv })
+})
+app.get('/api/applicants/:id/cv', (req, res) => {
+  const t = req.query.t || (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
+  const s = sessions[t]
+  if (!s || s.exp < Date.now()) return res.status(401).json({ error: 'unauthorized' })
+  const user = findUser(s.username)
+  if (!user || user.suspended || !canSub(user, 'hr', 'records')) return res.status(403).json({ error: 'forbidden' })
+  const a = db.read('applicants', []).find((x) => x.id === req.params.id)
+  if (!a?.cv) return res.status(404).json({ error: 'no cv' })
+  const filePath = path.join(CV_DIR, a.cv.storedAs)
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'file missing' })
+  res.setHeader('Content-Type', a.cv.mimeType || 'application/octet-stream')
+  // Inline so it renders in the CV pane next to the questions; ?download=1
+  // hands it over as a file instead.
+  res.setHeader('Content-Disposition', `${req.query.download ? 'attachment' : 'inline'}; filename="${String(a.cv.name).replace(/"/g, '')}"`)
+  res.sendFile(filePath)
 })
 
 seedUsers()

@@ -42,6 +42,8 @@ const ALLOWLIST = {
     'Alternate auth: shared-secret header x-pulse-key (PULSE_SYNC_KEY), machine-to-machine bridge.',
   'GET /api/agent-files/:id/download':
     'Alternate auth: validates the session token from ?t= inline, because a browser download link cannot set the Authorization header.',
+  'GET /api/applicants/:id/cv':
+    'Alternate auth: validates the session token from ?t= inline AND re-checks hr/records, because the CV is rendered in an <iframe>/<img> that cannot set the Authorization header.',
 }
 
 const src = fs.readFileSync(SERVER, 'utf8').split('\n')
