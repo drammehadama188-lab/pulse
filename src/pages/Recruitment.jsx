@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Trash2, Mail, Phone, X, Upload, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Mail, Phone, X, Upload, ClipboardPaste, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api.js';
 
 // Recruitment — applicants pipeline (CV received → interviewed → hired/rejected).
@@ -34,6 +34,8 @@ export default function Recruitment() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [importError, setImportError] = useState(null);
+  const [pasting, setPasting] = useState(false);
+  const [pasted, setPasted] = useState('');
   const fileRef = useRef(null);
 
   function load() {
@@ -63,21 +65,24 @@ export default function Recruitment() {
   }
 
   // The file goes in exactly as downloaded from Meta — no spreadsheet step.
-  async function importFile(file) {
-    if (!file) return;
-    setImporting(file.name); setImportError(null); setImportResult(null);
+  async function importText(csv, label) {
+    setImporting(label); setImportError(null); setImportResult(null);
     try {
-      const csv = await file.text();
       const r = await api('/applicants/import', { method: 'POST', body: { csv, role: 'Sales Agent' } });
       setImportResult(r);
       setStageFilter('cv_received');
+      setPasting(false); setPasted('');
       load();
     } catch (e) {
-      setImportError(`${file.name}: ${e.message}`);
+      setImportError(`${label}: ${e.message}`);
     } finally {
       setImporting(null);
       if (fileRef.current) fileRef.current.value = '';
     }
+  }
+  async function importFile(file) {
+    if (!file) return;
+    importText(await file.text(), file.name);
   }
 
   const counts = useMemo(() => {
@@ -120,11 +125,15 @@ export default function Recruitment() {
         <div className="flex items-center gap-2">
           {/* A label opens the picker itself. Scripting a click on a hidden
               input looked like a working button and did nothing (19 Aug). */}
+          {/* No accept filter: it greyed out the very file being imported, so
+              the picker opened and nothing could be chosen (19 Aug). */}
           <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-50 cursor-pointer">
             <Upload size={16} /> Import list
-            <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain,text/tab-separated-values"
-              className="sr-only" onChange={e => importFile(e.target.files?.[0])} />
+            <input ref={fileRef} type="file" className="sr-only" onChange={e => importFile(e.target.files?.[0])} />
           </label>
+          <button onClick={() => { setPasted(''); setImportError(null); setPasting(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-50">
+            <ClipboardPaste size={16} /> Paste rows
+          </button>
           <button onClick={() => { setForm(BLANK); setAdding(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800">
             <Plus size={16} /> Add applicant
           </button>
@@ -232,6 +241,29 @@ export default function Recruitment() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Paste route: open the file in Excel or Numbers, select all, paste here.
+          Works when a file picker will not cooperate, and it is what he asked
+          for in the first place — put the list in, get it sorted. */}
+      {pasting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !importing && setPasting(false)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Paste rows</h3>
+              <button onClick={() => setPasting(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <textarea value={pasted} onChange={e => setPasted(e.target.value)} rows={12} autoFocus
+              placeholder={'full_name\tphone_number\tcan you start immediately\thave you sold anything before'}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono" />
+            <p className="text-xs text-gray-400 mt-2">First row must be the column headings.</p>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setPasting(false)} disabled={!!importing} className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+              <button onClick={() => importText(pasted, 'Pasted rows')} disabled={!!importing || pasted.trim().split('\n').length < 2}
+                className="px-3 py-2 rounded-lg text-sm bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">{importing ? 'Importing…' : 'Import'}</button>
+            </div>
+          </div>
         </div>
       )}
 
