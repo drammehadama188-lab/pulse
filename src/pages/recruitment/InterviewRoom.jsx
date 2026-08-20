@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, Check, Circle, Download, Phone, Mail, MapPin, Plus, Flag,
+  ArrowLeft, ArrowRight, Check, Circle, Download, Phone, Mail, Tag, User, Plus, Flag,
   ThumbsUp, ThumbsDown, HelpCircle, ChevronDown, ChevronRight, Trash2, MessageSquarePlus,
 } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
@@ -69,6 +69,7 @@ export default function InterviewRoom() {
   }
 
   const done = iv?.status === 'completed';
+  const profileUrl = applicant ? `/recruitment/applicants/${applicant.id}` : '/recruitment/applicants';
   const section = iv?.sections?.[sectionIdx];
   const cvUrl = useMemo(() => (applicant?.cv ? `/api/applicants/${applicant.id}/cv?t=${encodeURIComponent(getToken() || '')}` : null), [applicant]);
   const totals = useMemo(() => {
@@ -138,24 +139,27 @@ export default function InterviewRoom() {
     <div className="pb-20">
       <Link to={applicant ? `/recruitment/applicants/${applicant.id}` : '/recruitment/interviews'}
         className="mb-3 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-brand)] hover:underline">
-        <ArrowLeft size={14} /> Back to applicant
+        <ArrowLeft size={14} /> Back to {applicant?.name || 'applicant'}
       </Link>
 
       {/* who, where they are in the process, and the two things you can do */}
       <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3.5">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[16px] font-semibold text-[var(--color-ink-soft)]">
+          <Link to={profileUrl} className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[16px] font-semibold text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]" title="Open profile">
             {initials}
-          </span>
+          </Link>
           <div className="min-w-0">
             <div className="flex flex-wrap items-baseline gap-2">
-              <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-[var(--color-ink)]">{iv.applicantName}</h1>
+              <Link to={profileUrl} className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-[var(--color-ink)] hover:underline">{iv.applicantName}</Link>
               <span className="text-[13px] text-[var(--color-ink-soft)]">{applicant?.role || iv.templateName}</span>
+              <Link to={profileUrl} className="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--color-brand)] hover:underline">
+                <User size={12} /> View profile
+              </Link>
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-[var(--color-ink-soft)]">
               {applicant?.phone && <a href={`tel:${applicant.phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-1.5 hover:text-[var(--color-ink)]"><Phone size={12} /> {applicant.phone}</a>}
               {applicant?.email && <span className="inline-flex items-center gap-1.5"><Mail size={12} /> {applicant.email}</span>}
-              {applicant?.source && <span className="inline-flex items-center gap-1.5"><MapPin size={12} /> {applicant.source}</span>}
+              {applicant?.source && <span className="inline-flex items-center gap-1.5"><Tag size={12} /> {applicant.source}</span>}
             </div>
           </div>
         </div>
