@@ -1149,7 +1149,9 @@ const KPI_CATALOG = {
   'sales': { role: 'Sales agent', kpis: [
     // Retention MOVED to Customer Service as "Customer renewals" (Adama 9 Jul)
     // — renewal outreach is Yafatou's job. Remaining weights auto-normalize.
-    { key: 'sales', label: 'Tracker sales', kind: 'count', unit: 'sales', target: 5, weight: 40 },
+    // Adama 20 Aug: 10 a month across the sales team. The live number still
+    // comes from a KPI Targets entry; this is the catalog fallback.
+    { key: 'sales', label: 'Tracker sales', kind: 'count', unit: 'sales', target: 10, weight: 40 },
     { key: 'online', label: 'Trackers online', kind: 'percent', unit: '%', target: 75, weight: 20 },
     // 5-star Google reviews REMOVED as an agent goal (Adama 19 Aug).
   ] },
