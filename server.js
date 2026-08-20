@@ -822,7 +822,11 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
     email: String(email).trim().toLowerCase(),
     personalEmail: cleanPersonal,
     role: isMgr ? 'manager' : 'staff',
-    department: isMgr ? 'Management' : 'Sales',
+    // Picked on the form; a manager still defaults to Management and
+    // everyone else to Sales when nothing is chosen (Adama 20 Aug).
+    department: DEPARTMENTS.includes(String(req.body?.department || '').trim())
+      ? String(req.body.department).trim()
+      : (isMgr ? 'Management' : 'Sales'),
     title: cleanTitle,
     passwordHash: bcrypt.hashSync(DEFAULT_PASSWORD, 10),
     mustChangePassword: true,
@@ -878,6 +882,27 @@ app.post('/api/staff/:username/contractor', auth, requireSub('staffadmin', 'add'
   ;(u.history ||= []).push({ date: todayKey(), event: u.contractor ? 'Marked as contractor — no check-in or schedule' : 'Contractor mark removed — back on schedules and check-in' })
   db.write('users', users)
   res.json({ ok: true, contractor: u.contractor })
+})
+
+// Move someone to another department (Adama 20 Aug). Department was set once
+// at creation — non-managers always landed in Sales — and nothing could change
+// it after, so a Lead Technician sat on the sales leaderboard with a sales goal
+// he was never given. Department decides the sales goal, the leaderboard and
+// My Team, so the move is logged on the person's history like any other change.
+const DEPARTMENTS = ['Sales', 'Customer Service', 'Operations', 'Marketing', 'Training', 'Management', 'Leadership']
+app.get('/api/departments', auth, (_req, res) => res.json({ departments: DEPARTMENTS }))
+app.post('/api/staff/:username/department', auth, requireSub('staffadmin', 'add'), notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === req.params.username)
+  if (!u) return res.status(404).json({ error: 'No such staff member' })
+  const next = String(req.body?.department || '').trim()
+  if (!DEPARTMENTS.includes(next)) return res.status(400).json({ error: 'Unknown department' })
+  const prev = u.department || '—'
+  if (prev === next) return res.json({ ok: true, department: next })
+  u.department = next
+  ;(u.history ||= []).push({ date: todayKey(), event: `Moved from ${prev} to ${next}` })
+  db.write('users', users)
+  res.json({ ok: true, department: next })
 })
 
 // archive a staff member — keeps the record forever, blocks login, removes from active lists

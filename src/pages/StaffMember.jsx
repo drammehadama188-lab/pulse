@@ -62,6 +62,7 @@ export default function StaffMember() {
   const [catalogue, setCatalogue] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [savingKey, setSavingKey] = useState(null)
+  const [departments, setDepartments] = useState([])
   const [email, setEmail] = useState('')
   const [personalEmail, setPersonalEmail] = useState('')
   const [emailBusy, setEmailBusy] = useState(false)
@@ -81,6 +82,7 @@ export default function StaffMember() {
     })
   }
   useEffect(() => { load() }, [username])
+  useEffect(() => { api('/departments').then((d) => setDepartments(d.departments || [])).catch(() => {}) }, [])
 
   if (!loaded) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
   if (!user) {
@@ -160,6 +162,22 @@ export default function StaffMember() {
   function toggleSignIn() {
     persist([...powers], !canSignIn, '__signin')
   }
+  // Department decides the sales goal, the leaderboard and My Team, so it is
+  // changed here rather than being fixed at creation (Adama 20 Aug).
+  async function changeDepartment(next) {
+    const prev = user.department
+    if (!next || next === prev) return
+    setSavingKey('__department')
+    setUser((u) => ({ ...u, department: next }))
+    try {
+      await api(`/staff/${username}/department`, { method: 'POST', body: { department: next } })
+    } catch {
+      setUser((u) => ({ ...u, department: prev }))
+    } finally {
+      setSavingKey(null)
+    }
+  }
+
   async function toggleContractor() {
     const next = !user.contractor
     setSavingKey('__contractor')
@@ -217,7 +235,22 @@ export default function StaffMember() {
       {/* Top cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
         <Stat icon={Mail} label="Email" value={user.email || '—'} />
-        <Stat icon={Building2} label="Department" value={user.department || '—'} />
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
+          <div className="flex items-center gap-2 mb-3"><Building2 size={15} className="text-[var(--color-ink-faint)]" /><p className="text-[13px] font-semibold text-[var(--color-ink)]">Department</p></div>
+          {hasRealPower('staffadmin') ? (
+            <select
+              value={user.department || ''}
+              disabled={savingKey === '__department'}
+              onChange={(e) => changeDepartment(e.target.value)}
+              className="w-full border border-[var(--color-line)] rounded-lg px-2 py-1.5 text-[13px] bg-white disabled:opacity-50"
+            >
+              {!user.department && <option value="">—</option>}
+              {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          ) : (
+            <p className="text-[13px] text-[var(--color-ink-soft)]">{user.department || '—'}</p>
+          )}
+        </div>
         <Stat icon={ShieldCheck} label="Access" value={`${powers.size} ${powers.size === 1 ? 'power' : 'powers'} granted`} accent={powers.size > 0 ? 'text-[var(--color-good)]' : 'text-[var(--color-ink-faint)]'} />
       </div>
 

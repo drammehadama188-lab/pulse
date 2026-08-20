@@ -186,13 +186,17 @@ function ArchiveDialog({ target, onClose, onDone }) {
 }
 
 function AddStaffForm({ onClose, onCreated }) {
-  const [v, setV] = useState({ type: 'agent', name: '', email: '', personalEmail: '', title: 'Sales Agent', customTitle: '', baseSalary: '', transport: '', commission: '', target: '5', contractMonths: '3', probationMonths: '3', phone: '', address: '', joined: new Date().toISOString().slice(0, 10) })
+  const [v, setV] = useState({ type: 'agent', name: '', email: '', personalEmail: '', title: 'Sales Agent', customTitle: '', department: 'Sales', baseSalary: '', transport: '', commission: '', target: '5', contractMonths: '3', probationMonths: '3', phone: '', address: '', joined: new Date().toISOString().slice(0, 10) })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
   const set = (k) => (e) => setV({ ...v, [k]: e.target.value })
   const isMgr = v.type === 'manager'
-  const pickType = (t) => setV((p) => ({ ...p, type: t, title: t === 'manager' ? 'Manager' : 'Sales Agent' }))
+  const pickType = (t) => setV((p) => ({ ...p, type: t, title: t === 'manager' ? 'Manager' : 'Sales Agent', department: t === 'manager' ? 'Management' : 'Sales' }))
+  // Everyone used to be created into Sales, which put technicians on the
+  // sales leaderboard with a sales goal (Adama 20 Aug). Same list the server
+  // accepts; department decides goals, leaderboard and My Team.
+  const DEPARTMENTS = ['Sales', 'Customer Service', 'Operations', 'Marketing', 'Training', 'Management', 'Leadership']
 
   const OTHER = 'Other — type it in'
   const finalTitle = v.title === OTHER ? v.customTitle.trim() : v.title
@@ -213,6 +217,7 @@ function AddStaffForm({ onClose, onCreated }) {
           email: v.email,
           personalEmail: v.personalEmail,
           title: finalTitle,
+          department: v.department,
           baseSalary: v.baseSalary,
           transport: v.transport,
           commission: v.commission,
@@ -293,6 +298,9 @@ function AddStaffForm({ onClose, onCreated }) {
         {v.title === OTHER && (
           <Field label="Job title"><Input value={v.customTitle} onChange={set('customTitle')} placeholder="e.g. Driver" /></Field>
         )}
+        <Field label="Department">
+          <MenuSelect value={v.department} onChange={(d) => setV((p) => ({ ...p, department: d }))} options={DEPARTMENTS} />
+        </Field>
         <Field label="Phone"><Input type="tel" value={v.phone} onChange={set('phone')} placeholder="e.g. 3XX XX XX" /></Field>
         <Field label="Address"><Input value={v.address} onChange={set('address')} placeholder="e.g. Bakau, New Town Road" /></Field>
         <div className="grid grid-cols-2 gap-3">
