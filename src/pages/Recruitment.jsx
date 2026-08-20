@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Plus, Trash2, Mail, Phone, X, Upload, ClipboardPaste, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api.js';
+import { STAGES } from './recruitment/stages.js';
+import Overview from './recruitment/Overview.jsx';
 
 // Recruitment — applicants pipeline (CV received → interviewed → hired/rejected).
 // New HR module (24 Jun 2026, Adama). All real data via /api/applicants.
@@ -10,21 +12,6 @@ import { api } from '../lib/api.js';
 // four-column board cannot be worked through by phone. The board stays for the
 // handful of walk-in CVs it was built for.
 
-// In the order a call actually goes. The outcomes between the first call and
-// the interview are separate on purpose: "no answer" (call again), "unreachable"
-// (number is dead), "not interested" and "not qualified" answer different
-// questions about a hiring round. Keys are stored — keep them in step with
-// APPLICANT_STAGES in server.js or the stage will not save.
-const STAGES = [
-  ['cv_received', 'CV Received', 'bg-blue-50 text-blue-700', 'bg-blue-500'],
-  ['no_answer', 'Called, no answer', 'bg-orange-50 text-orange-700', 'bg-orange-400'],
-  ['unreachable', 'Unreachable', 'bg-gray-100 text-gray-500', 'bg-gray-400'],
-  ['not_interested', 'Not interested', 'bg-rose-50 text-rose-700', 'bg-rose-400'],
-  ['not_qualified', 'Not qualified', 'bg-gray-100 text-gray-500', 'bg-gray-400'],
-  ['interviewed', 'Interviewed', 'bg-amber-50 text-amber-700', 'bg-amber-500'],
-  ['hired', 'Hired', 'bg-emerald-50 text-emerald-700', 'bg-emerald-500'],
-  ['rejected', 'Rejected', 'bg-gray-100 text-gray-500', 'bg-gray-400'],
-];
 const BLANK = { name: '', role: '', email: '', phone: '', source: '', notes: '' };
 const SORTS = [['best', 'Best first'], ['newest', 'Newest'], ['name', 'Name']];
 // Where the applicant came from. Imported rows carry the lead form's name;
@@ -47,6 +34,7 @@ export default function Recruitment() {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(BLANK);
   const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState('overview');
   const [view, setView] = useState('list');
   const [stageFilter, setStageFilter] = useState('cv_received');
   const [query, setQuery] = useState('');
@@ -93,6 +81,7 @@ export default function Recruitment() {
     try {
       const r = await api('/applicants/import', { method: 'POST', body: { csv, role: 'Sales Agent' } });
       setImportResult(r);
+      setTab('applicants');
       setStageFilter('cv_received');
       setPasting(false); setPasted('');
       load();
@@ -140,10 +129,9 @@ export default function Recruitment() {
 
   return (
     <div>
-      <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+      <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Recruitment</h1>
-          <p className="text-gray-500 mt-1">Applicants and interview pipeline</p>
         </div>
         <div className="flex items-center gap-2">
           {/* A label opens the picker itself. Scripting a click on a hidden
@@ -161,6 +149,15 @@ export default function Recruitment() {
             <Plus size={16} /> Add applicant
           </button>
         </div>
+      </div>
+
+      {/* Recruitment is a section now, not a single list: the dashboard is the
+          first screen, the call sheet is where the work happens. */}
+      <div className="mb-5 flex items-center gap-1 border-b border-gray-200">
+        {[['overview', 'Overview'], ['applicants', `Applicants${applicants.length ? ` (${applicants.length})` : ''}`]].map(([k, label]) => (
+          <button key={k} type="button" onClick={() => setTab(k)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === k ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>
+        ))}
       </div>
 
       {(importing || importResult || importError) && (
@@ -184,6 +181,12 @@ export default function Recruitment() {
         </div>
       )}
 
+      {tab === 'overview' && (
+        <Overview applicants={applicants} loading={loading}
+          onOpenStage={(k) => { setStageFilter(k); setStartOnly(false); setQuery(''); setTab('applicants'); }} />
+      )}
+
+      {tab === 'applicants' && (<>
       <div className="mb-4 flex items-center gap-2 flex-wrap">
         <button onClick={() => setStageFilter('all')} className={`${chip} ${stageFilter === 'all' ? chipOn : chipOff}`}>All {counts.all}</button>
         {STAGES.map(([k, label]) => (
@@ -272,6 +275,8 @@ export default function Recruitment() {
           })}
         </div>
       )}
+
+      </>)}
 
       {/* Paste route: open the file in Excel or Numbers, select all, paste here.
           Works when a file picker will not cooperate, and it is what he asked
