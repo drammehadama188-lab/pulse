@@ -177,11 +177,11 @@ function PriceList() {
               <tr key={p.use}>
                 <td className="py-3 pr-4 align-top text-[var(--color-ink-soft)]">{p.use}</td>
                 <td className="py-3 pr-4 align-top">
-                  <div className="font-extrabold text-[var(--color-ink)]">{dalasi(p.first)}</div>
+                  <div className="font-semibold text-[var(--color-ink)]">{dalasi(p.first)}</div>
                   <div className="mt-0.5 text-xs text-[var(--color-ink-faint)]">{perDay(p.first)}</div>
                 </td>
                 <td className="py-3 align-top">
-                  <div className="font-extrabold text-[var(--color-ink)]">{dalasi(p.renew)}</div>
+                  <div className="font-semibold text-[var(--color-ink)]">{dalasi(p.renew)}</div>
                   <div className="mt-0.5 text-xs text-[var(--color-ink-faint)]">{perDay(p.renew)}</div>
                 </td>
               </tr>
@@ -201,12 +201,12 @@ function Lesson({ n, l, learned, onToggle }) {
   return (
     <Card className="p-5 sm:p-6">
       <div className="flex items-start gap-4">
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold ${learned ? 'bg-emerald-100 text-emerald-700' : 'text-[var(--color-brand)]'}`} style={learned ? undefined : { background: 'var(--color-brand-50)' }}>
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold ${learned ? 'bg-emerald-100 text-emerald-700' : 'text-[var(--color-brand)]'}`} style={learned ? undefined : { background: 'var(--color-brand-50)' }}>
           {learned ? <CheckCircle2 size={18} /> : n}
         </span>
         <div className="min-w-0 flex-1">
           <span className="text-sm font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{l.name}</span>
-          <p className="mt-1 text-lg font-extrabold leading-snug tracking-tight text-[var(--color-ink)] sm:text-xl">{l.what}</p>
+          <p className="mt-1 text-lg font-semibold leading-snug tracking-tight text-[var(--color-ink)] sm:text-xl">{l.what}</p>
 
           <ul className="mt-3 space-y-1.5">
             {l.points.map((p, i) => (
@@ -243,19 +243,19 @@ export default function TrackerGuide() {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)] md:text-3xl">Tracker Guide</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)] md:text-[27px]">Tracker Guide</h1>
         <p className="mt-1 text-[var(--color-ink-faint)]">
           {tab === 'lessons'
             ? `${LESSONS.length} short lessons. Learn them and you can sell the tracker.`
             : 'What a customer pays for the first year, and every year after.'}
         </p>
 
-        <div className="mt-3 flex w-fit gap-1 rounded-full bg-gray-100 p-1">
+        <div className="mt-3 flex w-fit gap-1 rounded-full bg-[var(--color-fill)] p-1">
           {[{ id: 'lessons', label: 'Lessons' }, { id: 'price', label: 'Price list' }].map((tb) => (
             <button
               key={tb.id}
               onClick={() => setTab(tb.id)}
-              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${tab === tb.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${tab === tb.id ? 'bg-white text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)] hover:text-[var(--color-ink-soft)]'}`}
             >
               {tb.label}
             </button>

@@ -77,7 +77,7 @@ export default function MyWeek() {
     <div className="space-y-8">
       {/* header + always-visible month strip */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-[var(--color-ink)]">{greeting()}, {firstName(data.lead.name)} 👋</h1>
+        <h1 className="text-[27px] font-semibold tracking-tight text-[var(--color-ink)]">{greeting()}, {firstName(data.lead.name)} 👋</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{dateLabel}</p>
         {data.week.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
@@ -126,7 +126,7 @@ export default function MyWeek() {
       {/* the OTHER objective — unspecified, his to name */}
       <section>
         <div className="border-t border-[var(--color-line)] pt-3">
-          <div className="text-[11px] font-extrabold uppercase tracking-widest text-[var(--color-ink-faint)]">Other objective</div>
+          <div className="text-[11px] font-semibold uppercase tracking-widest text-[var(--color-ink-faint)]">Other objective</div>
           <h2 className="mt-0.5 text-lg font-bold text-[var(--color-ink)]">{otherTitle || <span className="font-semibold text-[var(--color-ink-faint)]">Adama hasn't named this objective yet</span>}</h2>
         </div>
         <div className="mt-3">
@@ -139,7 +139,7 @@ export default function MyWeek() {
       {/* from Adama */}
       {data.fromAdama.length > 0 && (
         <section>
-          <h2 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-[var(--color-brand)]">From Adama</h2>
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-brand)]">From Adama</h2>
           <div className="space-y-1 border-l-2 border-[var(--color-brand)] pl-3">
             {data.fromAdama.map((a) => (
               <button key={a.id} onClick={canAct ? () => toggleAssignment(a.id) : undefined} className={`flex w-full items-start gap-2 rounded-lg px-1 py-1 text-left ${canAct ? 'hover:bg-[var(--color-paper)]' : 'cursor-default'}`}>
@@ -164,7 +164,7 @@ export function DayStrip({ days, today, selDate, onSelect, planByDate }) {
         return (
           <button key={d} onClick={() => onSelect(d)} className={`rounded-xl px-3 py-1.5 text-center ${sel ? 'bg-[var(--color-ink)] text-white' : 'border border-[var(--color-line-soft)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-line)]'}`}>
             <span className="block text-[10px] font-bold uppercase tracking-wide opacity-75">{d === today ? 'Today' : dt.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })}</span>
-            <span className="block text-sm font-extrabold tabular-nums">{dt.getUTCDate()}{n ? <span className="ml-1 text-[10px] font-bold opacity-70">·{n}</span> : null}</span>
+            <span className="block text-sm font-semibold tabular-nums">{dt.getUTCDate()}{n ? <span className="ml-1 text-[10px] font-bold opacity-70">·{n}</span> : null}</span>
           </button>
         )
       })}
@@ -177,12 +177,12 @@ function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, pr
     <section>
       {primary ? (
         <div className="border-t-4 border-[var(--color-brand)] pt-3">
-          <div className="text-xs font-extrabold uppercase tracking-widest text-[var(--color-brand)]">{slot}</div>
-          <h2 className="mt-0.5 text-2xl font-extrabold text-[var(--color-ink)]">{title}</h2>
+          <div className="text-xs font-semibold uppercase tracking-widest text-[var(--color-brand)]">{slot}</div>
+          <h2 className="mt-0.5 text-2xl font-semibold text-[var(--color-ink)]">{title}</h2>
         </div>
       ) : (
         <div className="border-t border-[var(--color-line)] pt-3">
-          <div className="text-[11px] font-extrabold uppercase tracking-widest text-[var(--color-ink-faint)]">{slot}</div>
+          <div className="text-[11px] font-semibold uppercase tracking-widest text-[var(--color-ink-faint)]">{slot}</div>
           <h2 className="mt-0.5 text-lg font-bold text-[var(--color-ink)]">{title}</h2>
         </div>
       )}
@@ -190,7 +190,7 @@ function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, pr
         {metrics.map((m) => (
           <div key={m.label}>
             <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{m.label}</div>
-            <div className={`font-extrabold tabular-nums text-[var(--color-ink)] ${primary ? 'text-xl' : 'text-base'}`}>{m.value}</div>
+            <div className={`font-semibold tabular-nums text-[var(--color-ink)] ${primary ? 'text-xl' : 'text-base'}`}>{m.value}</div>
           </div>
         ))}
         {agents && (
@@ -205,7 +205,7 @@ function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, pr
           {weekPlan.map((d) => (
             <div key={d.date} className={`rounded-lg px-2.5 py-1.5 text-center ${d.today ? 'bg-[var(--color-brand)] text-white' : d.past ? 'bg-[var(--color-fill)] text-[var(--color-ink-faint)]' : 'bg-[var(--color-surface)] border border-[var(--color-line-soft)] text-[var(--color-ink)]'}`}>
               <div className="text-[10px] font-bold uppercase tracking-wide opacity-80">{d.label}</div>
-              <div className="text-sm font-extrabold tabular-nums">{d.past ? (d.did == null ? '—' : `✓${d.did}`) : d.need}</div>
+              <div className="text-sm font-semibold tabular-nums">{d.past ? (d.did == null ? '—' : `✓${d.did}`) : d.need}</div>
             </div>
           ))}
           <div className="self-center pl-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">per-day pace to hit the month</div>
@@ -217,7 +217,7 @@ function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, pr
       </div>
       {progress && (
         <p className="mt-3 text-sm text-[var(--color-ink-soft)]">
-          Progress today: <span className="font-extrabold tabular-nums text-[var(--color-ink)]">{progress.actual}/{progress.goal}</span> {progress.unit}
+          Progress today: <span className="font-semibold tabular-nums text-[var(--color-ink)]">{progress.actual}/{progress.goal}</span> {progress.unit}
         </p>
       )}
       <CommentBox label="Comments" value={note} saved={noteSaved} onChange={onNote} />
@@ -255,7 +255,7 @@ export function PlanArea({ items, canAct, canTick, focusKey, date, cap, placehol
     setEditing(null)
   }
   return (
-    <div className="rounded-2xl border border-[var(--color-line-soft)] bg-[var(--color-surface)] p-4">
+    <div className="rounded-xl border border-[var(--color-line-soft)] bg-[var(--color-surface)] p-4">
       <div className="space-y-0.5">
         {items.length === 0 && <p className="py-1 text-sm text-[var(--color-ink-faint)]">Nothing planned for this day yet — write below.</p>}
         {items.map((it) => (

@@ -24,7 +24,7 @@ function StatCard({ icon: Icon, label, value }) {
         <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">{label}</p>
         {Icon && <Icon size={15} className="text-[var(--color-ink-faint)]" />}
       </div>
-      <p className="mt-1 text-2xl font-extrabold text-[var(--color-ink)]">{value}</p>
+      <p className="mt-1 text-2xl font-semibold text-[var(--color-ink)]">{value}</p>
     </Card>
   )
 }
@@ -82,7 +82,7 @@ export default function Team() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Staff</h1>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Staff</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Roles, permissions and accounts.</p>
       </div>
 
@@ -425,7 +425,7 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
           {/* Master switch — pause their Pulse sign-in entirely (reversible). */}
           <button
             onClick={() => setCanSignIn((v) => !v)}
-            className={`mb-1 flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors ${
+            className={`mb-1 flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
               canSignIn ? 'border-[var(--color-good)] bg-[var(--color-good-bg)]' : 'border-[var(--color-bad)] bg-[var(--color-bad-bg)]'
             }`}
           >
@@ -447,7 +447,7 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
           </Field>
 
           {/* Reset password — email-first, matches the profile page dialog */}
-          <div className="rounded-2xl border border-[var(--color-line)] px-4 py-3">
+          <div className="rounded-xl border border-[var(--color-line)] px-4 py-3">
             <div className="text-sm font-semibold text-[var(--color-ink)]">Reset password</div>
             <p className="mb-2 text-xs text-[var(--color-ink-faint)]">Emails {target.name.split(' ')[0]} a link to choose a new password. Works for 60 minutes, one use.</p>
             <Button variant="outline" onClick={resetPassword} disabled={pwBusy}>{pwBusy ? <Spinner size={16} /> : 'Send reset email'}</Button>
@@ -466,7 +466,7 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
                 key={p.key}
                 onClick={() => !locked && toggle(p.key)}
                 disabled={locked}
-                className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
                   on ? 'border-[var(--color-brand)] bg-[var(--color-brand-50)]' : 'border-[var(--color-line)]'
                 } ${locked ? 'opacity-50' : ''}`}
               >

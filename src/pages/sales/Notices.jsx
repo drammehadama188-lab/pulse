@@ -48,7 +48,7 @@ export default function Notices() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Notices</h1>
+      <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Notices</h1>
 
       {/* pricing reference */}
       <Card className="overflow-hidden">
@@ -64,7 +64,7 @@ export default function Notices() {
                 <div className="text-sm text-[var(--color-ink-faint)]">{p.vehicles}</div>
               </div>
               {p.price != null ? (
-                <div className="text-lg font-extrabold text-[var(--color-ink)]">{dalasi(p.price)}</div>
+                <div className="text-lg font-semibold text-[var(--color-ink)]">{dalasi(p.price)}</div>
               ) : (
                 <Pill tone="warn">Needs approval</Pill>
               )}

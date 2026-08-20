@@ -155,12 +155,12 @@ const STAT_TONE = {
 function HeroStat({ label, value, tone }) {
   const c = STAT_TONE[tone] || STAT_TONE.ink
   return (
-    <div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+    <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
       <div className="flex items-center gap-1.5">
         <span className={`flex h-6 w-6 items-center justify-center rounded-full ${c.soft}`}><i className="h-2 w-2 rounded-full" style={{ background: c.dot }} /></span>
         <span className="text-[12px] font-semibold text-[var(--color-ink-soft)]">{label}</span>
       </div>
-      <p className={`mt-1.5 text-[34px] font-extrabold leading-none tabular-nums ${c.text}`}>{value}</p>
+      <p className={`mt-1.5 text-[34px] font-semibold leading-none tabular-nums ${c.text}`}>{value}</p>
     </div>
   )
 }
@@ -169,9 +169,9 @@ function HeroStat({ label, value, tone }) {
 function WeekStat({ label, value, tone }) {
   const c = STAT_TONE[tone] || STAT_TONE.ink
   return (
-    <div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
+    <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
-      <p className={`mt-0.5 text-2xl font-extrabold tabular-nums ${c.text}`}>{value}</p>
+      <p className={`mt-0.5 text-2xl font-semibold tabular-nums ${c.text}`}>{value}</p>
     </div>
   )
 }
@@ -390,7 +390,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
                         className={`block h-full w-full text-left ${clickable ? 'cursor-pointer' : 'cursor-default'}`}
                       >
                         {view ? (
-                          <div className={`rounded-md border border-[var(--color-line-soft)] border-l-[3px] px-2 py-1.5 ${TONE[view.tone]} ${clickable ? 'transition-shadow hover:shadow-sm' : ''}`}>
+                          <div className={`rounded-md border border-[var(--color-line-soft)] border-l-[3px] px-2 py-1.5 ${TONE[view.tone]} ${clickable ? 'transition-shadow' : ''}`}>
                             <div className="flex items-center justify-between gap-1">
                               <div className="text-[11px] font-bold leading-tight tabular-nums text-[var(--color-ink)]">{view.primary}</div>
                               {cell?.onOfficeNetwork === false && <span title="Checked in off the office network" className="shrink-0 text-[var(--color-bad)]"><AlertTriangle size={11} /></span>}
@@ -416,7 +416,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
               const isToday = days[i] === today
               return (
                 <div key={i} className={`border-l border-[var(--color-line-soft)] px-2 py-2.5 text-center ${isToday ? 'bg-[var(--color-good-bg)]/60' : ''}`}>
-                  <div className="text-[13px] font-extrabold tabular-nums text-[var(--color-ink)]">{Math.round(t.hours)}h</div>
+                  <div className="text-[13px] font-semibold tabular-nums text-[var(--color-ink)]">{Math.round(t.hours)}h</div>
                   <div className="text-[10px] font-medium text-[var(--color-ink-faint)]">{t.on} on</div>
                 </div>
               )
@@ -528,7 +528,7 @@ function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
           onChange={(e) => setNote(e.target.value)}
           rows={2}
           placeholder="Optional note (e.g. called in, fever)"
-          className="focus-ring mt-3 w-full resize-none rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-sm outline-none"
+          className="focus-ring mt-3 w-full resize-none rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-sm outline-none"
         />
       )}
     </Modal>
@@ -562,7 +562,7 @@ function MyHours() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">My hours</h1>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">My hours</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()}</p>
       </div>
 
@@ -572,23 +572,23 @@ function MyHours() {
           className="flex flex-col items-center gap-4 p-8 text-center"
           style={{ background: done || checkedIn ? 'linear-gradient(160deg, var(--color-good-bg), var(--color-surface) 70%)' : 'linear-gradient(160deg, var(--color-brand-50), var(--color-surface) 70%)' }}
         >
-          <span className={`flex h-16 w-16 items-center justify-center rounded-2xl text-white ${done || checkedIn ? 'bg-[var(--color-good)]' : 'bg-[var(--color-brand)]'}`}>
+          <span className={`flex h-16 w-16 items-center justify-center rounded-xl text-white ${done || checkedIn ? 'bg-[var(--color-good)]' : 'bg-[var(--color-brand)]'}`}>
             {done ? <CheckCircle2 size={30} /> : <Clock size={30} />}
           </span>
 
           {done ? (
             <div>
-              <div className="text-2xl font-extrabold">Day complete</div>
+              <div className="text-2xl font-semibold">Day complete</div>
               <div className="mt-1 text-[var(--color-ink-soft)]">{timeShort(today.checkIn)} – {timeShort(today.checkOut)}</div>
             </div>
           ) : checkedIn ? (
             <div>
-              <div className="flex items-center justify-center gap-2 text-2xl font-extrabold">Checked in {today.late && <Pill tone="warn">Late</Pill>}</div>
+              <div className="flex items-center justify-center gap-2 text-2xl font-semibold">Checked in {today.late && <Pill tone="warn">Late</Pill>}</div>
               <div className="mt-1 text-[var(--color-ink-soft)]">since {timeShort(today.checkIn)}</div>
             </div>
           ) : (
             <div>
-              <div className="text-2xl font-extrabold">Ready to start?</div>
+              <div className="text-2xl font-semibold">Ready to start?</div>
               <div className="mt-1 text-[var(--color-ink-soft)]">You haven't checked in today.</div>
             </div>
           )}
@@ -725,7 +725,7 @@ function ManagerHours() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Schedule</h1>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Schedule</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">Team shifts, attendance &amp; leave</p>
         </div>
         <Button icon={CalendarCog} onClick={() => setEditorOpen(true)} disabled={!people.length}>Edit schedules</Button>
@@ -796,7 +796,7 @@ function TeamHours() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Team Schedule</h1>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Team Schedule</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">Your team's shifts, attendance &amp; leave</p>
         </div>
         <div className="flex items-center gap-2">
@@ -1056,7 +1056,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
       }
     >
       {/* Working days & hours */}
-      <div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-paper)] p-4">
+      <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-paper)] p-4">
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Schedule starts</p>
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <input type="date" value={startDate} min={todayStr} onChange={(e) => setStartDate(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm" />

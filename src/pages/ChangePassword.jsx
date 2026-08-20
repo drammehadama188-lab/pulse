@@ -42,11 +42,11 @@ export default function ChangePassword() {
   return (
     <div className="mx-auto max-w-md">
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--color-brand-bg,#fdecef)]">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--color-brand-bg,#fdecef)]">
           <KeyRound size={20} className="text-[var(--color-brand,#d6294f)]" />
         </div>
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight text-[var(--color-ink)]">
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--color-ink)]">
             {forced ? 'Set your password' : 'Change password'}
           </h1>
           <p className="text-sm text-[var(--color-ink-soft)]">

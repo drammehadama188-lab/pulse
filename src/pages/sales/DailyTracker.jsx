@@ -59,7 +59,7 @@ export default function DailyTracker() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">My Day</h1>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">My Day</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()} · auto-summarised from what you log.</p>
       </div>
 
@@ -121,14 +121,14 @@ export default function DailyTracker() {
 
 function Metric({ icon: Icon, tone, label, value, sub }) {
   return (
-    <div className="rounded-2xl bg-[var(--color-fill)] p-4">
+    <div className="rounded-xl bg-[var(--color-fill)] p-4">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-[var(--color-ink-soft)]">{label}</span>
         <span className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ color: `var(--color-${tone})`, background: `var(--color-${tone}-bg)` }}>
           <Icon size={15} />
         </span>
       </div>
-      <div className="mt-1.5 text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">{value}</div>
+      <div className="mt-1.5 text-2xl font-semibold tracking-tight text-[var(--color-ink)]">{value}</div>
       {sub && <div className="text-xs text-[var(--color-good)]">{sub}</div>}
     </div>
   )

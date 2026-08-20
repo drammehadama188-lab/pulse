@@ -46,7 +46,7 @@ export default function Marketing() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Marketing</h1>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Marketing</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Department · social, leads, content, campaigns</p>
       </div>
 

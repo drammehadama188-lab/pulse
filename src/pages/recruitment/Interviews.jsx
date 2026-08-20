@@ -83,19 +83,19 @@ export default function Interviews() {
 
       <div className="mb-4 flex items-center gap-2 flex-wrap">
         {FILTERS.map(([k, label]) => (
-          <button key={k} onClick={() => setFilter(k)} className={`${chip} ${filter === k ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>{label}</button>
+          <button key={k} onClick={() => setFilter(k)} className={`${chip} ${filter === k ? 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:bg-[var(--color-fill)]'}`}>{label}</button>
         ))}
         <span className="flex-1" />
-        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search name…" className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white w-56" />
+        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search name…" className="text-sm border border-[var(--color-line)] rounded-lg px-3 py-2 bg-white w-56" />
       </div>
 
-      {loading ? <p className="text-sm text-gray-400">Loading…</p>
-        : rows.length === 0 ? <div className={`${CARD} p-12 text-center text-gray-400 text-sm`}>Nothing here. Book one from an applicant's page or with the button above.</div>
+      {loading ? <p className="text-sm text-[var(--color-ink-faint)]">Loading…</p>
+        : rows.length === 0 ? <div className={`${CARD} p-12 text-center text-[var(--color-ink-faint)] text-sm`}>Nothing here. Book one from an applicant's page or with the button above.</div>
           : (
             <div className={`${CARD} overflow-x-auto`}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wider text-gray-400 border-b border-gray-100">
+                  <tr className="text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
                     <th className="px-4 py-3 font-bold">Candidate</th>
                     <th className="px-4 py-3 font-bold">When</th>
                     <th className="px-4 py-3 font-bold">Interviewer</th>
@@ -106,29 +106,29 @@ export default function Interviews() {
                 </thead>
                 <tbody>
                   {rows.map(i => (
-                    <tr key={i.id} className="border-b border-gray-50 hover:bg-gray-50/60 cursor-pointer" onClick={() => navigate(`/recruitment/interviews/${i.id}`)}>
+                    <tr key={i.id} className="border-b border-[var(--color-line-soft)] hover:bg-[var(--color-fill)] cursor-pointer" onClick={() => navigate(`/recruitment/interviews/${i.id}`)}>
                       <td className="px-4 py-3">
-                        <span className="font-medium text-gray-900">{i.applicantName}</span>
-                        <span className="block text-xs text-gray-400">{i.templateName}</span>
+                        <span className="font-medium text-[var(--color-ink)]">{i.applicantName}</span>
+                        <span className="block text-xs text-[var(--color-ink-faint)]">{i.templateName}</span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={i.late ? 'text-rose-600' : 'text-gray-700'}>{dayTime(i.scheduledAt)}</span>
-                        {i.late && <span className="block text-[11px] text-rose-400">not scored yet</span>}
+                        <span className={i.late ? 'text-[var(--color-stage-out)]' : 'text-[var(--color-ink-soft)]'}>{dayTime(i.scheduledAt)}</span>
+                        {i.late && <span className="block text-[11px] text-[var(--color-stage-out)]">not scored yet</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{i.interviewer || '—'}</td>
+                      <td className="px-4 py-3 text-[var(--color-ink-soft)]">{i.interviewer || '—'}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${i.status === 'completed' ? 'bg-emerald-50 text-emerald-700' : i.status === 'in_progress' ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                        <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${i.status === 'completed' ? 'bg-[var(--color-stage-hired-bg)] text-[var(--color-stage-hired)]' : i.status === 'in_progress' ? 'bg-[var(--color-stage-interview-bg)] text-[var(--color-stage-interview)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
                           {i.status === 'completed' ? 'Completed' : i.status === 'in_progress' ? 'In progress' : 'Scheduled'}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         {i.recommendation
                           ? <span className={`px-2 py-0.5 rounded-md border text-xs font-medium ${RECOMMENDATION[i.recommendation][1]}`}>{RECOMMENDATION[i.recommendation][0]}</span>
-                          : <span className="text-gray-300">—</span>}
+                          : <span className="text-[var(--color-ink-faint)]">—</span>}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className={`text-base font-extrabold ${scoreTone(i.totalScore)}`}>{i.totalScore ?? '—'}</span>
-                        <span className="block text-[11px] text-gray-400">{i.totalScore != null ? scoreWord(i.totalScore) : `${i.answered}/${i.totalQuestions}`}</span>
+                        <span className={`text-base font-semibold ${scoreTone(i.totalScore)}`}>{i.totalScore ?? '—'}</span>
+                        <span className="block text-[11px] text-[var(--color-ink-faint)]">{i.totalScore != null ? scoreWord(i.totalScore) : `${i.answered}/${i.totalQuestions}`}</span>
                       </td>
                     </tr>
                   ))}
@@ -139,43 +139,43 @@ export default function Interviews() {
 
       {booking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setBooking(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Book interview</h3>
-              <button onClick={() => setBooking(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+              <h3 className="text-lg font-semibold text-[var(--color-ink)]">Book interview</h3>
+              <button onClick={() => setBooking(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
             <div className="space-y-3">
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Candidate</span>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Candidate</span>
                 <input value={pick.query || ''} onChange={e => setPick(p => ({ ...p, query: e.target.value }))} placeholder="Type a name to narrow the list"
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
                 <select value={pick.applicantId} onChange={e => setPick(p => ({ ...p, applicantId: e.target.value }))} size={6}
-                  className="mt-2 w-full border border-gray-200 rounded-lg px-2 py-2 text-sm bg-white">
+                  className="mt-2 w-full border border-[var(--color-line)] rounded-lg px-2 py-2 text-sm bg-white">
                   {candidates.map(a => <option key={a.id} value={a.id}>{a.name}{a.phone ? ` · ${a.phone}` : ''}</option>)}
                 </select>
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Questions</span>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Questions</span>
                 <select value={pick.templateId} onChange={e => setPick(p => ({ ...p, templateId: e.target.value }))}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white">
                   {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">When</span>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">When</span>
                 <input type="datetime-local" value={pick.scheduledAt} onChange={e => setPick(p => ({ ...p, scheduledAt: e.target.value }))}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Interviewer</span>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Interviewer</span>
                 <input value={pick.interviewer} onChange={e => setPick(p => ({ ...p, interviewer: e.target.value }))}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
               </label>
             </div>
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+            {error && <p className="mt-3 text-sm text-[var(--color-stage-out)]">{error}</p>}
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setBooking(false)} disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
-              <button onClick={book} disabled={saving || !pick.applicantId} className="px-3 py-2 rounded-lg text-sm bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">{saving ? 'Booking…' : 'Book'}</button>
+              <button onClick={() => setBooking(false)} disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
+              <button onClick={book} disabled={saving || !pick.applicantId} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-ink)] text-white hover:opacity-90 disabled:opacity-50">{saving ? 'Booking…' : 'Book'}</button>
             </div>
           </div>
         </div>

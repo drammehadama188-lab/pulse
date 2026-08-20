@@ -17,14 +17,14 @@ export default function Policies() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Policies</h1>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Policies</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Company</p>
       </div>
 
       <Card className="overflow-hidden p-0">
         <div className="flex flex-col gap-4 border-b border-[var(--color-line-soft)] p-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-mint-tile)] text-[var(--color-brand)]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--color-mint-tile)] text-[var(--color-brand)]">
               <BookOpen size={24} strokeWidth={2} />
             </div>
             <div>

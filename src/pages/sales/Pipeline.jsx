@@ -46,7 +46,7 @@ export default function Pipeline() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Pipeline</h1>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Pipeline</h1>
         <PeriodSelector period={period} onChange={setPeriod} />
       </div>
 
@@ -72,7 +72,7 @@ export default function Pipeline() {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm font-semibold text-[var(--color-ink-soft)]">Sales · {period.label}</div>
-            <div className="mt-1 text-3xl font-extrabold tracking-tight">
+            <div className="mt-1 text-[27px] font-semibold tracking-tight">
               {calc.wonInPeriod} {period.months && <span className="text-lg text-[var(--color-ink-faint)]">/ {target}</span>}
             </div>
           </div>
@@ -132,7 +132,7 @@ function countBy(rows, order) {
 function FunnelStep({ label, value, tone }) {
   return (
     <div className="flex-1">
-      <div className={`text-2xl font-extrabold tracking-tight ${tone === 'good' ? 'text-[var(--color-good)]' : 'text-[var(--color-ink)]'}`}>{value}</div>
+      <div className={`text-2xl font-semibold tracking-tight ${tone === 'good' ? 'text-[var(--color-good)]' : 'text-[var(--color-ink)]'}`}>{value}</div>
       <div className="text-xs text-[var(--color-ink-faint)]">{label}</div>
     </div>
   )
@@ -143,7 +143,7 @@ function Arrow() {
 function Activity({ label, v }) {
   return (
     <div>
-      <div className="text-xl font-extrabold tracking-tight text-[var(--color-ink)]">{v}</div>
+      <div className="text-xl font-semibold tracking-tight text-[var(--color-ink)]">{v}</div>
       <div className="text-xs text-[var(--color-ink-faint)]">{label}</div>
     </div>
   )

@@ -191,17 +191,17 @@ export default function MyProgress() {
     <div className="space-y-7">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)] md:text-3xl">My Progress</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)] md:text-[27px]">My Progress</h1>
         <p className="mt-1 text-[var(--color-ink-faint)]">{periodLabel(CUR_PERIOD)} · this month's goals, and your record before.</p>
       </div>
 
       {/* Now vs before — the page's two halves as tabs */}
-      <div className="flex w-fit gap-1 rounded-full bg-gray-100 p-1">
+      <div className="flex w-fit gap-1 rounded-full bg-[var(--color-fill)] p-1">
         {[{ id: 'now', label: 'This month' }, { id: 'record', label: 'My record' }].map((tb) => (
           <button
             key={tb.id}
             onClick={() => setTab(tb.id)}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${tab === tb.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${tab === tb.id ? 'bg-white text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)] hover:text-[var(--color-ink-soft)]'}`}
           >
             {tb.label}
           </button>
@@ -210,7 +210,7 @@ export default function MyProgress() {
 
       {tab === 'now' && (<>
       {/* Auto status sentence — the employee's headline for the month */}
-      <div className={`flex items-start gap-3 rounded-2xl border ${tone.ring} ${tone.bg} px-4 py-3.5`}>
+      <div className={`flex items-start gap-3 rounded-xl border ${tone.ring} ${tone.bg} px-4 py-3.5`}>
         <span className="text-lg leading-none">{tone.dot}</span>
         <p className={`text-sm font-semibold ${tone.text}`}>{line.text}</p>
       </div>
@@ -221,7 +221,7 @@ export default function MyProgress() {
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Overall progress</div>
             <div className="mt-1 flex items-end gap-3">
-              <span className={`text-5xl font-extrabold tracking-tight ${b.text}`}>{score == null ? '' : `${score}%`}</span>
+              <span className={`text-5xl font-semibold tracking-tight ${b.text}`}>{score == null ? '' : `${score}%`}</span>
               <div className="pb-1">
                 <Stars score={score} />
                 <div className="mt-1"><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusFor(score).tone}`}>{st}</span></div>
@@ -288,7 +288,7 @@ export default function MyProgress() {
                   ) : (
                     <>
                       <div className="mt-2 flex items-end justify-between">
-                        <span className={`text-2xl font-extrabold ${kb.text}`}>{k.kind === 'percent' ? `${k.actual}%` : k.target == null ? `${k.actual}` : `${k.actual}/${k.target}`}</span>
+                        <span className={`text-2xl font-semibold ${kb.text}`}>{k.kind === 'percent' ? `${k.actual}%` : k.target == null ? `${k.actual}` : `${k.actual}/${k.target}`}</span>
                         {met
                           ? <Pill tone="good">Done</Pill>
                           : <span className="text-xs text-[var(--color-ink-faint)]">{k.target == null ? 'no target yet' : `target ${k.kind === 'percent' ? `≥ ${k.target}%` : k.target}`}</span>}
@@ -364,7 +364,7 @@ export default function MyProgress() {
                       <span className="w-24 shrink-0 text-sm font-semibold text-[var(--color-ink)]">{periodLabel(h.month)}</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className={`text-sm font-extrabold ${h.sales == null ? 'text-[var(--color-ink-faint)]' : met ? 'text-emerald-600' : 'text-[var(--color-ink)]'}`}>
+                          <span className={`text-sm font-semibold ${h.sales == null ? 'text-[var(--color-ink-faint)]' : met ? 'text-emerald-600' : 'text-[var(--color-ink)]'}`}>
                             {h.sales == null ? (h.pending ? 'not entered yet' : '—') : `${h.sales} of ${h.target} sales`}
                           </span>
                           {met && <Pill tone="good">Goal met</Pill>}
@@ -409,7 +409,7 @@ export default function MyProgress() {
               return (
                 <Card key={k} className="p-4">
                   <div className="text-xs font-semibold text-[var(--color-ink-faint)]">{k}</div>
-                  <div className={`mt-1 text-2xl font-extrabold ${kb.text}`}>{v}%</div>
+                  <div className={`mt-1 text-2xl font-semibold ${kb.text}`}>{v}%</div>
                   <div className="mt-2"><Bar pct={v} tone={kb.bar} /></div>
                 </Card>
               )

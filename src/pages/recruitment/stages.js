@@ -5,21 +5,42 @@
 // 🔒 The keys are stored on the record and must stay in step with
 // APPLICANT_STAGES in server.js — the PUT silently ignores a stage the server
 // does not know, so the dropdown looks like it works and nothing saves.
+//
+// One colour per stage, everywhere in the product (Adama's design rules,
+// 20 Aug 2026). Red is reserved for rejection, so it keeps its meaning: the
+// other ways someone leaves are grey, not alarming.
 export const STAGES = [
-  ['cv_received', 'CV Received', 'bg-blue-50 text-blue-700', 'bg-blue-500'],
-  ['no_answer', 'Called, no answer', 'bg-orange-50 text-orange-700', 'bg-orange-400'],
-  ['unreachable', 'Unreachable', 'bg-gray-100 text-gray-500', 'bg-gray-400'],
-  ['not_interested', 'Not interested', 'bg-rose-50 text-rose-700', 'bg-rose-400'],
-  ['not_qualified', 'Not qualified', 'bg-gray-100 text-gray-500', 'bg-gray-400'],
-  ['interviewed', 'Interviewed', 'bg-amber-50 text-amber-700', 'bg-amber-500'],
-  ['hired', 'Hired', 'bg-emerald-50 text-emerald-700', 'bg-emerald-500'],
-  ['rejected', 'Rejected', 'bg-gray-100 text-gray-500', 'bg-gray-400'],
+  ['cv_received', 'CV Received', 'bg-[var(--color-stage-new-bg)] text-[var(--color-stage-new)]', 'bg-[var(--color-stage-new)]'],
+  ['no_answer', 'Called, no answer', 'bg-[var(--color-stage-screening-bg)] text-[var(--color-stage-screening)]', 'bg-[var(--color-stage-screening)]'],
+  ['unreachable', 'Unreachable', 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]', 'bg-[var(--color-ink-faint)]'],
+  ['not_interested', 'Not interested', 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]', 'bg-[var(--color-ink-faint)]'],
+  ['not_qualified', 'Not qualified', 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]', 'bg-[var(--color-ink-faint)]'],
+  ['interviewed', 'Interviewed', 'bg-[var(--color-stage-interview-bg)] text-[var(--color-stage-interview)]', 'bg-[var(--color-stage-interview)]'],
+  ['shortlisted', 'Shortlisted', 'bg-[var(--color-stage-short-bg)] text-[var(--color-stage-short)]', 'bg-[var(--color-stage-short)]'],
+  ['offer', 'Offer', 'bg-[var(--color-stage-offer-bg)] text-[var(--color-stage-offer)]', 'bg-[var(--color-stage-offer)]'],
+  ['hired', 'Hired', 'bg-[var(--color-stage-hired-bg)] text-[var(--color-stage-hired)]', 'bg-[var(--color-stage-hired)]'],
+  ['rejected', 'Rejected', 'bg-[var(--color-stage-out-bg)] text-[var(--color-stage-out)]', 'bg-[var(--color-stage-out)]'],
 ];
+
+// The pipeline is the six steps someone moves THROUGH. The ways out of it —
+// dead number, not interested, not qualified, rejected — are counted as
+// drop-off instead, or the bar would read as if a hire went backwards.
+export const PIPELINE = [
+  ['new', 'New', ['cv_received'], 'var(--color-stage-new)'],
+  ['screening', 'Screening', ['no_answer'], 'var(--color-stage-screening)'],
+  ['interview', 'Interview', ['interviewed'], 'var(--color-stage-interview)'],
+  ['shortlisted', 'Shortlisted', ['shortlisted'], 'var(--color-stage-short)'],
+  ['offer', 'Offer', ['offer'], 'var(--color-stage-offer)'],
+  ['hired', 'Hired', ['hired'], 'var(--color-stage-hired)'],
+];
+export const DROPPED = ['unreachable', 'not_interested', 'not_qualified', 'rejected'];
 
 // Which stages mean a given thing happened. A stage is a point on the way
 // through, so the counts are built from sets, not from one key.
-export const CALLED = ['no_answer', 'unreachable', 'not_interested', 'not_qualified', 'interviewed', 'hired', 'rejected'];
-export const REACHED = ['not_interested', 'not_qualified', 'interviewed', 'hired', 'rejected'];
-export const INTERVIEWED = ['interviewed', 'hired', 'rejected'];
+export const CALLED = ['no_answer', 'unreachable', 'not_interested', 'not_qualified', 'interviewed', 'shortlisted', 'offer', 'hired', 'rejected'];
+export const REACHED = ['not_interested', 'not_qualified', 'interviewed', 'shortlisted', 'offer', 'hired', 'rejected'];
+export const INTERVIEWED = ['interviewed', 'shortlisted', 'offer', 'hired', 'rejected'];
+export const SHORTLISTED = ['shortlisted', 'offer', 'hired'];
+export const OFFERED = ['offer', 'hired'];
 
 export const STAGE_LABEL = Object.fromEntries(STAGES.map(([k, l]) => [k, l]));

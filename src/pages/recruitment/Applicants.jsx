@@ -136,14 +136,14 @@ export default function Applicants() {
   }, [applicants, stageFilter, positionFilter, positions, startOnly, query, sort]);
 
   const chip = 'px-3 py-1.5 rounded-lg text-xs font-medium border';
-  const chipOn = 'bg-gray-900 text-white border-gray-900';
-  const chipOff = 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50';
+  const chipOn = 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]';
+  const chipOff = 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:bg-[var(--color-fill)]';
 
   return (
     <div>
       <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Applicants<span className="ml-2 text-lg font-semibold text-gray-400">{applicants.length || ''}</span></h1>
+          <h1 className="text-[27px] font-bold text-[var(--color-ink)]">Applicants<span className="ml-2 text-lg font-semibold text-[var(--color-ink-faint)]">{applicants.length || ''}</span></h1>
         </div>
         <div className="flex items-center gap-2">
           {/* A label opens the picker itself. Scripting a click on a hidden
@@ -164,21 +164,21 @@ export default function Applicants() {
       </div>
 
       {(importing || importResult || importError) && (
-        <div className="mb-5 rounded-2xl border border-gray-200 bg-white p-4">
-          {importing && <p className="text-sm text-gray-500">Reading {importing}…</p>}
-          {importError && <p className="text-sm text-red-600">{importError}</p>}
+        <div className="mb-5 rounded-xl border border-[var(--color-line)] bg-white p-4">
+          {importing && <p className="text-sm text-[var(--color-ink-soft)]">Reading {importing}…</p>}
+          {importError && <p className="text-sm text-[var(--color-stage-out)]">{importError}</p>}
           {importResult && (
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
-                <p className="text-sm text-gray-800">
+                <p className="text-sm text-[var(--color-ink)]">
                   <span className="font-semibold">{importResult.added} added</span>
-                  {importResult.rows > 0 && <span className="text-gray-500"> of {importResult.rows} rows</span>}
-                  {importResult.duplicates > 0 && <span className="text-gray-500"> · {importResult.duplicates} already on the list</span>}
-                  {importResult.noPhone > 0 && <span className="text-gray-500"> · {importResult.noPhone} without a usable phone</span>}
+                  {importResult.rows > 0 && <span className="text-[var(--color-ink-soft)]"> of {importResult.rows} rows</span>}
+                  {importResult.duplicates > 0 && <span className="text-[var(--color-ink-soft)]"> · {importResult.duplicates} already on the list</span>}
+                  {importResult.noPhone > 0 && <span className="text-[var(--color-ink-soft)]"> · {importResult.noPhone} without a usable phone</span>}
                 </p>
-                {importResult.reason && <p className="text-sm text-red-600 mt-1">{importResult.reason}</p>}
+                {importResult.reason && <p className="text-sm text-[var(--color-stage-out)] mt-1">{importResult.reason}</p>}
               </div>
-              <button onClick={() => setImportResult(null)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+              <button onClick={() => setImportResult(null)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={16} /></button>
             </div>
           )}
         </div>
@@ -191,31 +191,31 @@ export default function Applicants() {
         ))}
         {positionFilter && (
           <button onClick={() => setParams(prev => { const n = new URLSearchParams(prev); n.delete('position'); return n; }, { replace: true })}
-            className={`${chip} bg-gray-900 text-white border-gray-900 flex items-center gap-1.5`}>
+            className={`${chip} bg-[var(--color-ink)] text-white border-[var(--color-ink)] flex items-center gap-1.5`}>
             {positions.find(p => p.id === positionFilter)?.title || 'Position'} <X size={12} />
           </button>
         )}
         <span className="flex-1" />
         <button onClick={() => setStartOnly(v => !v)} className={`${chip} ${startOnly ? chipOn : chipOff}`}>Can start now</button>
-        <select value={sort} onChange={e => setSort(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white text-gray-700">
+        <select value={sort} onChange={e => setSort(e.target.value)} className="text-xs border border-[var(--color-line)] rounded-lg px-2 py-2 bg-white text-[var(--color-ink-soft)]">
           {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <select value={view} onChange={e => setView(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white text-gray-700">
+        <select value={view} onChange={e => setView(e.target.value)} className="text-xs border border-[var(--color-line)] rounded-lg px-2 py-2 bg-white text-[var(--color-ink-soft)]">
           <option value="list">List</option>
           <option value="board">Board</option>
         </select>
-        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search name, phone…" className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white w-56" />
+        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search name, phone…" className="text-sm border border-[var(--color-line)] rounded-lg px-3 py-2 bg-white w-56" />
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading…</p>
+        <p className="text-sm text-[var(--color-ink-faint)]">Loading…</p>
       ) : applicants.length === 0 ? (
-        <div className={`${CARD} p-12 text-center text-gray-400 text-sm`}>No applicants yet. Import a list or add the first CV you receive.</div>
+        <div className={`${CARD} p-12 text-center text-[var(--color-ink-faint)] text-sm`}>No applicants yet. Import a list or add the first CV you receive.</div>
       ) : view === 'list' ? (
         <div className={`${CARD} overflow-x-auto`}>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-gray-400 border-b border-gray-100">
+              <tr className="text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
                 <th className="px-4 py-3 font-bold">Name</th>
                 <th className="px-4 py-3 font-bold">Phone</th>
                 <th className="px-4 py-3 font-bold">Can start</th>
@@ -233,7 +233,7 @@ export default function Applicants() {
                   onStage={moveStage} onNotes={saveNotes} onRemove={remove} onPosition={assignPosition} />
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400 text-sm">Nobody matches those filters.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-10 text-center text-[var(--color-ink-faint)] text-sm">Nobody matches those filters.</td></tr>
               )}
             </tbody>
           </table>
@@ -243,35 +243,35 @@ export default function Applicants() {
           {STAGES.map(([key, label, chipCls, dot]) => {
             const inStage = applicants.filter(a => a.stage === key);
             return (
-              <div key={key} className="bg-gray-50/60 rounded-2xl border border-gray-200 p-3">
+              <div key={key} className="bg-[var(--color-fill)] rounded-xl border border-[var(--color-line)] p-3">
                 <div className="flex items-center justify-between px-2 py-1.5 mb-2">
-                  <span className="flex items-center gap-2 text-sm font-semibold text-gray-700"><span className={`w-2 h-2 rounded-full ${dot}`} />{label}</span>
-                  <span className="text-xs font-medium text-gray-400">{inStage.length}</span>
+                  <span className="flex items-center gap-2 text-sm font-semibold text-[var(--color-ink-soft)]"><span className={`w-2 h-2 rounded-full ${dot}`} />{label}</span>
+                  <span className="text-xs font-medium text-[var(--color-ink-faint)]">{inStage.length}</span>
                 </div>
                 <div className="space-y-2 max-h-[70vh] overflow-y-auto">
                   {inStage.map(a => (
-                    <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+                    <div key={a.id} className="bg-white rounded-xl border border-[var(--color-line)] p-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{a.name}</p>
-                          {a.role && <p className="text-xs text-gray-500 truncate">{a.role}</p>}
+                          <p className="text-sm font-medium text-[var(--color-ink)] truncate">{a.name}</p>
+                          {a.role && <p className="text-xs text-[var(--color-ink-soft)] truncate">{a.role}</p>}
                         </div>
-                        <button onClick={() => remove(a)} title="Remove" className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 shrink-0"><Trash2 size={14} /></button>
+                        <button onClick={() => remove(a)} title="Remove" className="p-1 rounded text-[var(--color-ink-faint)] hover:text-[var(--color-stage-out)] hover:bg-[var(--color-stage-out-bg)] shrink-0"><Trash2 size={14} /></button>
                       </div>
                       {(a.email || a.phone) && (
                         <div className="mt-2 space-y-0.5">
-                          {a.email && <p className="text-[11px] text-gray-500 flex items-center gap-1.5"><Mail size={11} /> {a.email}</p>}
-                          {a.phone && <p className="text-[11px] text-gray-500 flex items-center gap-1.5"><Phone size={11} /> {a.phone}</p>}
+                          {a.email && <p className="text-[11px] text-[var(--color-ink-soft)] flex items-center gap-1.5"><Mail size={11} /> {a.email}</p>}
+                          {a.phone && <p className="text-[11px] text-[var(--color-ink-soft)] flex items-center gap-1.5"><Phone size={11} /> {a.phone}</p>}
                         </div>
                       )}
-                      {a.source && <p className="text-[11px] text-gray-400 mt-1">Source: {a.source}</p>}
-                      {a.notes && <p className="text-[11px] text-gray-500 mt-1.5 line-clamp-2">{a.notes}</p>}
-                      <select value={a.stage} onChange={e => moveStage(a, e.target.value)} className="mt-2.5 w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white">
+                      {a.source && <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">Source: {a.source}</p>}
+                      {a.notes && <p className="text-[11px] text-[var(--color-ink-soft)] mt-1.5 line-clamp-2">{a.notes}</p>}
+                      <select value={a.stage} onChange={e => moveStage(a, e.target.value)} className="mt-2.5 w-full text-xs border border-[var(--color-line)] rounded-lg px-2 py-1.5 bg-white">
                         {STAGES.map(([sk, sl]) => <option key={sk} value={sk}>{sl}</option>)}
                       </select>
                     </div>
                   ))}
-                  {inStage.length === 0 && <p className="text-[11px] text-gray-300 text-center py-4">Empty</p>}
+                  {inStage.length === 0 && <p className="text-[11px] text-[var(--color-ink-faint)] text-center py-4">Empty</p>}
                 </div>
               </div>
             );
@@ -284,19 +284,19 @@ export default function Applicants() {
           for in the first place — put the list in, get it sorted. */}
       {pasting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !importing && setPasting(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Paste rows</h3>
-              <button onClick={() => setPasting(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+              <h3 className="text-lg font-semibold text-[var(--color-ink)]">Paste rows</h3>
+              <button onClick={() => setPasting(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
             <textarea value={pasted} onChange={e => setPasted(e.target.value)} rows={12} autoFocus
               placeholder={'full_name\tphone_number\tcan you start immediately\thave you sold anything before'}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono" />
-            <p className="text-xs text-gray-400 mt-2">First row must be the column headings.</p>
+              className="w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-xs font-mono" />
+            <p className="text-xs text-[var(--color-ink-faint)] mt-2">First row must be the column headings.</p>
             <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setPasting(false)} disabled={!!importing} className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+              <button onClick={() => setPasting(false)} disabled={!!importing} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
               <button onClick={() => importText(pasted, 'Pasted rows')} disabled={!!importing || pasted.trim().split('\n').length < 2}
-                className="px-3 py-2 rounded-lg text-sm bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">{importing ? 'Importing…' : 'Import'}</button>
+                className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-ink)] text-white hover:opacity-90 disabled:opacity-50">{importing ? 'Importing…' : 'Import'}</button>
             </div>
           </div>
         </div>
@@ -304,22 +304,22 @@ export default function Applicants() {
 
       {adding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setAdding(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Add applicant</h3>
-              <button onClick={() => setAdding(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+              <h3 className="text-lg font-semibold text-[var(--color-ink)]">Add applicant</h3>
+              <button onClick={() => setAdding(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
             <div className="space-y-3">
               {[['name', 'Name *'], ['role', 'Applying for'], ['email', 'Email'], ['phone', 'Phone']].map(([k, label]) => (
                 <label key={k} className="block">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">{label}</span>
-                  <input value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">{label}</span>
+                  <input value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
                 </label>
               ))}
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Position</span>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Position</span>
                 <select value={form.positionId} onChange={e => setForm(f => ({ ...f, positionId: e.target.value }))}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white">
                   <option value="">Not filed</option>
                   {positions.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                 </select>
@@ -327,31 +327,31 @@ export default function Applicants() {
               {/* Fixed list, so the channels stay countable — typed sources
                   split into "whatsapp", "WhatsApp", "wa" and stop adding up. */}
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Source</span>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Source</span>
                 <select value={otherSource ? '__other' : form.source}
                   onChange={e => {
                     const v = e.target.value;
                     setOtherSource(v === '__other');
                     setForm(f => ({ ...f, source: v === '__other' ? '' : v }));
                   }}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white">
                   <option value="">Source…</option>
                   {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
                   <option value="__other">Other</option>
                 </select>
                 {otherSource && (
                   <input autoFocus value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}
-                    className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    className="mt-2 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
                 )}
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Notes</span>
-                <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Notes</span>
+                <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
               </label>
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setAdding(false)} disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
-              <button onClick={addApplicant} disabled={saving || !form.name.trim()} className="px-3 py-2 rounded-lg text-sm bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">{saving ? 'Adding…' : 'Add'}</button>
+              <button onClick={() => setAdding(false)} disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
+              <button onClick={addApplicant} disabled={saving || !form.name.trim()} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-ink)] text-white hover:opacity-90 disabled:opacity-50">{saving ? 'Adding…' : 'Add'}</button>
             </div>
           </div>
         </div>
@@ -376,33 +376,33 @@ function RowGroup({ a, open, positions, onToggle, onStage, onNotes, onRemove, on
   const answers = Object.entries(a.answers || {});
   return (
     <>
-      <tr className="border-b border-gray-50 hover:bg-gray-50/60">
+      <tr className="border-b border-[var(--color-line-soft)] hover:bg-[var(--color-fill)]">
         <td className="px-4 py-3 align-top">
           <span className="flex items-center gap-1.5">
-            <button onClick={onToggle} className="text-gray-300 hover:text-gray-600">
-              {open ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} />}
+            <button onClick={onToggle} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]">
+              {open ? <ChevronDown size={14} className="text-[var(--color-ink-faint)]" /> : <ChevronRight size={14} />}
             </button>
-            <Link to={`/recruitment/applicants/${a.id}`} className="font-medium text-gray-900 hover:underline">{a.name}</Link>
-            {a.cv && <FileText size={13} className="text-gray-300" title="CV on file" />}
+            <Link to={`/recruitment/applicants/${a.id}`} className="font-medium text-[var(--color-ink)] hover:underline">{a.name}</Link>
+            {a.cv && <FileText size={13} className="text-[var(--color-ink-faint)]" title="CV on file" />}
           </span>
         </td>
         <td className="px-4 py-3 align-top">
           {a.phoneValid === false
-            ? <span className="text-red-500 text-xs">No usable number</span>
-            : <a href={`tel:${String(a.phone || '').replace(/\s/g, '')}`} className="text-gray-700 hover:text-gray-900">{a.phone || '—'}</a>}
+            ? <span className="text-[var(--color-stage-out)] text-xs">No usable number</span>
+            : <a href={`tel:${String(a.phone || '').replace(/\s/g, '')}`} className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">{a.phone || '—'}</a>}
         </td>
         <td className="px-4 py-3 align-top">
-          {a.startNow === true ? <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium">Yes</span>
-            : a.startNow === false ? <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-500 text-xs">No</span>
-              : <span className="text-gray-300 text-xs">—</span>}
+          {a.startNow === true ? <span className="px-2 py-0.5 rounded-md bg-[var(--color-stage-hired-bg)] text-[var(--color-stage-hired)] text-xs font-medium">Yes</span>
+            : a.startNow === false ? <span className="px-2 py-0.5 rounded-md bg-[var(--color-fill)] text-[var(--color-ink-soft)] text-xs">No</span>
+              : <span className="text-[var(--color-ink-faint)] text-xs">—</span>}
         </td>
         {/* Shown whole, not clipped: this answer is what the decision is made
             on, and clipping it meant opening every row to read one sentence. */}
         <td className="px-4 py-3 align-top max-w-lg">
-          <span className="text-gray-600 text-xs whitespace-pre-wrap break-words">{a.experience || '—'}</span>
+          <span className="text-[var(--color-ink-soft)] text-xs whitespace-pre-wrap break-words">{a.experience || '—'}</span>
         </td>
         <td className="px-4 py-3 align-top whitespace-nowrap">
-          <span className="text-gray-500 text-xs">{shortDate(a.createdAt)}</span>
+          <span className="text-[var(--color-ink-soft)] text-xs">{shortDate(a.createdAt)}</span>
         </td>
         {/* Note is written here, in the row, so a called applicant looks
             different from one nobody has touched. Saves when you click away. */}
@@ -410,46 +410,46 @@ function RowGroup({ a, open, positions, onToggle, onStage, onNotes, onRemove, on
           <textarea ref={noteBox} value={note} rows={2} placeholder="Add a note"
             onChange={e => setNote(e.target.value)}
             onBlur={() => note !== (a.notes || '') && onNotes(a, note)}
-            className="w-52 min-h-[2.75rem] overflow-hidden text-xs text-gray-700 rounded-lg px-2 py-1.5 bg-transparent border border-transparent hover:border-gray-200 focus:bg-white focus:border-gray-300 focus:outline-none resize-none placeholder:text-gray-300" />
+            className="w-52 min-h-[2.75rem] overflow-hidden text-xs text-[var(--color-ink-soft)] rounded-lg px-2 py-1.5 bg-transparent border border-transparent hover:border-[var(--color-line)] focus:bg-white focus:border-[var(--color-line)] focus:outline-none resize-none placeholder:text-[var(--color-ink-faint)]" />
         </td>
         <td className="px-4 py-3 align-top">
-          <select value={a.stage} onChange={e => onStage(a, e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white">
+          <select value={a.stage} onChange={e => onStage(a, e.target.value)} className="text-xs border border-[var(--color-line)] rounded-lg px-2 py-1.5 bg-white">
             {STAGES.map(([sk, sl]) => <option key={sk} value={sk}>{sl}</option>)}
           </select>
         </td>
         <td className="px-4 py-3 text-right align-top">
-          <button onClick={() => onRemove(a)} title="Remove" className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50"><Trash2 size={14} /></button>
+          <button onClick={() => onRemove(a)} title="Remove" className="p-1 rounded text-[var(--color-ink-faint)] hover:text-[var(--color-stage-out)] hover:bg-[var(--color-stage-out-bg)]"><Trash2 size={14} /></button>
         </td>
       </tr>
       {open && (
-        <tr className="bg-gray-50/60 border-b border-gray-100">
+        <tr className="bg-[var(--color-fill)] border-b border-[var(--color-line-soft)]">
           <td colSpan={8} className="px-10 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                {answers.length === 0 && <p className="text-xs text-gray-400">No answers on this record.</p>}
+                {answers.length === 0 && <p className="text-xs text-[var(--color-ink-faint)]">No answers on this record.</p>}
                 {answers.map(([q, v]) => (
                   <div key={q}>
-                    <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">{q}</p>
-                    <p className="text-sm text-gray-800">{v}</p>
+                    <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">{q}</p>
+                    <p className="text-sm text-[var(--color-ink)]">{v}</p>
                   </div>
                 ))}
-                <p className="text-[11px] text-gray-400 pt-1">
+                <p className="text-[11px] text-[var(--color-ink-faint)] pt-1">
                   {[a.email, a.dob, a.source, a.form,
                     a.appliedAt ? `Applied ${fullDate(a.appliedAt)}` : '',
                     `Added ${fullDate(a.createdAt)}`].filter(Boolean).join(' · ')}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Position</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Position</p>
                 <select value={a.positionId || ''} onChange={e => onPosition(a, e.target.value)}
-                  className="mt-1 mb-4 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  className="mt-1 mb-4 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white">
                   <option value="">Not filed</option>
                   {positions.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                 </select>
-                <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Notes</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Notes</p>
                 <textarea value={note} onChange={e => setNote(e.target.value)} onBlur={() => note !== (a.notes || '') && onNotes(a, note)} rows={4}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white" />
-                <Link to={`/recruitment/applicants/${a.id}`} className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:underline">
+                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white" />
+                <Link to={`/recruitment/applicants/${a.id}`} className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-[var(--color-ink)] hover:underline">
                   <ClipboardCheck size={15} /> Open profile and interview
                 </Link>
               </div>

@@ -340,8 +340,8 @@ export default function AgentProfile() {
 
   if (!agent) return (
     <div>
-      <button onClick={() => navigate('/sales')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6"><ArrowLeft size={14} /> Back to Sales</button>
-      <p className="text-gray-500">Agent not found.</p>
+      <button onClick={() => navigate('/sales')} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back to Sales</button>
+      <p className="text-[var(--color-ink-soft)]">Agent not found.</p>
     </div>
   );
 
@@ -470,7 +470,7 @@ export default function AgentProfile() {
       ? { text: 'Active', color: 'bg-emerald-100 text-emerald-700' }
       : agent.status === 'training'
         ? { text: 'In Training', color: 'bg-blue-100 text-blue-700' }
-        : { text: agent.status || 'Inactive', color: 'bg-gray-100 text-gray-700' };
+        : { text: agent.status || 'Inactive', color: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]' };
 
   const scoreColor = (s) => s >= 80 ? 'text-emerald-600' : s >= 60 ? 'text-blue-600' : s >= 40 ? 'text-amber-600' : 'text-red-600';
 
@@ -538,46 +538,46 @@ export default function AgentProfile() {
 
   return (
     <div>
-      <button onClick={() => navigate('/sales')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6">
+      <button onClick={() => navigate('/sales')} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6">
         <ArrowLeft size={14} /> Back to Sales
       </button>
 
       {/* BLOCK 1 — Identity + Score with comparison */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-4">
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-start justify-between flex-wrap gap-6">
           <div className="flex items-start gap-5 min-w-0">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xl font-semibold shrink-0">
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xl font-semibold shrink-0">
               {agent.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-3 mb-1 flex-wrap">
-                <h1 className="text-2xl font-semibold text-gray-900">{agent.name}</h1>
+                <h1 className="text-2xl font-semibold text-[var(--color-ink)]">{agent.name}</h1>
                 <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${statusBadge.color}`}>{statusBadge.text}</span>
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600">{agent.type || 'Sales'}</span>
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-[var(--color-fill)] text-[var(--color-ink-soft)]">{agent.type || 'Sales'}</span>
               </div>
-              <p className="text-gray-600">{agent.role}</p>
+              <p className="text-[var(--color-ink-soft)]">{agent.role}</p>
             </div>
           </div>
 
           <div className="flex items-stretch gap-6">
             <div className="text-right">
-              <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold">Score</p>
+              <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold">Score</p>
               <p className={`text-5xl font-bold mt-1 ${scoreColor(score.score)}`}>
-                {score.score}<span className="text-2xl text-gray-300 font-normal">/100</span>
+                {score.score}<span className="text-2xl text-[var(--color-ink-faint)] font-normal">/100</span>
               </p>
               <p className={`text-xs mt-1 font-medium ${scoreColor(score.score)}`}>{score.rating}</p>
             </div>
-            <div className="border-l border-gray-200 pl-6 space-y-2 text-sm">
+            <div className="border-l border-[var(--color-line)] pl-6 space-y-2 text-sm">
               <div className="flex items-center justify-between gap-6">
-                <span className="text-gray-500">Team avg</span>
-                <span className="text-gray-900 font-semibold">{teamAvg}</span>
+                <span className="text-[var(--color-ink-soft)]">Team avg</span>
+                <span className="text-[var(--color-ink)] font-semibold">{teamAvg}</span>
               </div>
               <div className="flex items-center justify-between gap-6">
-                <span className="text-gray-500">Rank</span>
+                <span className="text-[var(--color-ink-soft)]">Rank</span>
                 <span className="flex items-center gap-2">
                   {rank > 0 ? (
                     <>
-                      <span className="text-gray-900 font-semibold">{rank} / {totalRanked}</span>
+                      <span className="text-[var(--color-ink)] font-semibold">{rank} / {totalRanked}</span>
                       {(() => {
                         // Position is always directional. Color reflects absolute score severity.
                         const pillColor = score.score >= 80 ? 'bg-emerald-100 text-emerald-700'
@@ -595,12 +595,12 @@ export default function AgentProfile() {
                         return <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${pillColor}`}>{label}</span>;
                       })()}
                     </>
-                  ) : <span className="text-gray-400">—</span>}
+                  ) : <span className="text-[var(--color-ink-faint)]">—</span>}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-6">
-                <span className="text-gray-500">Last month</span>
-                <span className="text-gray-900 font-semibold flex items-center gap-1">
+                <span className="text-[var(--color-ink-soft)]">Last month</span>
+                <span className="text-[var(--color-ink)] font-semibold flex items-center gap-1">
                   {lastMonthScore.score}
                   {scoreDelta !== 0 && rangeKey === 'this_month' && (
                     scoreDelta > 0
@@ -614,8 +614,8 @@ export default function AgentProfile() {
         </div>
 
         {/* Slim HR info row */}
-        <div className="flex items-center gap-3 flex-wrap text-[11px] text-gray-500 mt-5 pt-5 border-t border-gray-100">
-          <span>Started <span className="text-gray-700 font-medium">{(() => {
+        <div className="flex items-center gap-3 flex-wrap text-[11px] text-[var(--color-ink-soft)] mt-5 pt-5 border-t border-[var(--color-line-soft)]">
+          <span>Started <span className="text-[var(--color-ink-soft)] font-medium">{(() => {
             const j = agent.joined;
             if (!j) return '—';
             // Try parsing ISO date first
@@ -625,28 +625,28 @@ export default function AgentProfile() {
             }
             return j;
           })()}</span></span>
-          <span className="text-gray-300">·</span>
+          <span className="text-[var(--color-ink-faint)]">·</span>
           <span>{agent.contract || 'No contract'}</span>
-          <span className="text-gray-300">·</span>
+          <span className="text-[var(--color-ink-faint)]">·</span>
           <span>
-            Ends <span className={`font-medium ${daysToEndContract !== null && daysToEndContract <= 30 ? 'text-red-600' : daysToEndContract !== null && daysToEndContract <= 90 ? 'text-amber-600' : 'text-gray-700'}`}>
+            Ends <span className={`font-medium ${daysToEndContract !== null && daysToEndContract <= 30 ? 'text-red-600' : daysToEndContract !== null && daysToEndContract <= 90 ? 'text-amber-600' : 'text-[var(--color-ink-soft)]'}`}>
               {contractEnd ? formatDate(contractEnd) : '—'}
             </span>
-            {daysToEndContract !== null && daysToEndContract > 0 && <span className="text-gray-400 ml-1">({daysToEndContract}d)</span>}
+            {daysToEndContract !== null && daysToEndContract > 0 && <span className="text-[var(--color-ink-faint)] ml-1">({daysToEndContract}d)</span>}
             {daysToEndContract !== null && daysToEndContract <= 0 && <span className="text-red-500 ml-1">(expired)</span>}
           </span>
-          <span className="text-gray-300">·</span>
-          <span>Warnings: <span className={`font-medium ${warningsCount > 0 ? 'text-red-600' : 'text-gray-700'}`}>{warningsCount}</span></span>
+          <span className="text-[var(--color-ink-faint)]">·</span>
+          <span>Warnings: <span className={`font-medium ${warningsCount > 0 ? 'text-red-600' : 'text-[var(--color-ink-soft)]'}`}>{warningsCount}</span></span>
         </div>
       </div>
 
       {/* BLOCK 3 — Performance summary + period selector (HERO) */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-4">
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
           <div className="flex items-center gap-2">
-            <TrendingUp size={18} className="text-gray-400" />
-            <h2 className="text-gray-900 font-semibold">Performance Summary</h2>
-            {loadingCrm && <span className="text-[11px] text-gray-400 ml-2">Loading CRM…</span>}
+            <TrendingUp size={18} className="text-[var(--color-ink-faint)]" />
+            <h2 className="text-[var(--color-ink)] font-semibold">Performance Summary</h2>
+            {loadingCrm && <span className="text-[11px] text-[var(--color-ink-faint)] ml-2">Loading CRM…</span>}
           </div>
           <TimePeriodSelector
             selected={rangeKey}
@@ -658,7 +658,7 @@ export default function AgentProfile() {
             }}
           />
         </div>
-        <p className="text-[11px] text-gray-400 mb-4">
+        <p className="text-[11px] text-[var(--color-ink-faint)] mb-4">
           {rangeStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           {' — '}
           {rangeEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -666,34 +666,34 @@ export default function AgentProfile() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-5">
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Sales</p>
-            <p className="text-3xl font-semibold text-gray-900">{salesCount}</p>
-            <p className="text-gray-400 text-xs mt-1">{proratedTarget !== null ? `of ${proratedTarget} target` : 'all-time'}</p>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Sales</p>
+            <p className="text-[27px] font-semibold text-[var(--color-ink)]">{salesCount}</p>
+            <p className="text-[var(--color-ink-faint)] text-xs mt-1">{proratedTarget !== null ? `of ${proratedTarget} target` : 'all-time'}</p>
           </div>
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Revenue</p>
-            <p className="text-3xl font-semibold text-gray-900">D{(revenue / 1000).toFixed(1)}k</p>
-            <p className="text-gray-400 text-xs mt-1">D{revenue.toLocaleString()}</p>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Revenue</p>
+            <p className="text-[27px] font-semibold text-[var(--color-ink)]">D{(revenue / 1000).toFixed(1)}k</p>
+            <p className="text-[var(--color-ink-faint)] text-xs mt-1">D{revenue.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">% to target</p>
-            <p className={`text-3xl font-semibold ${perf >= 80 ? 'text-emerald-600' : perf >= 50 ? 'text-amber-600' : perf > 0 ? 'text-red-600' : 'text-gray-400'}`}>{proratedTarget !== null ? `${perf}%` : '—'}</p>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">% to target</p>
+            <p className={`text-[27px] font-semibold ${perf >= 80 ? 'text-emerald-600' : perf >= 50 ? 'text-amber-600' : perf > 0 ? 'text-red-600' : 'text-[var(--color-ink-faint)]'}`}>{proratedTarget !== null ? `${perf}%` : '—'}</p>
             {proratedTarget !== null && (
-              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mt-2">
+              <div className="w-full h-1.5 bg-[var(--color-fill)] rounded-full overflow-hidden mt-2">
                 <div className={`h-full rounded-full ${perf >= 80 ? 'bg-emerald-500' : perf >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, perf)}%` }} />
               </div>
             )}
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-5 border-t border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-5 border-t border-[var(--color-line-soft)]">
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Last sale</p>
-            <p className="text-lg font-semibold text-gray-900 leading-tight">{lastSaleDate ? formatDate(lastSaleDate) : 'No recorded sales'}</p>
-            <p className="text-gray-400 text-xs mt-1">{lastSaleDate ? `${daysSinceLastSale} day${daysSinceLastSale === 1 ? '' : 's'} ago` : (agent.joined ? `since joining (${agent.joined})` : 'ever')}</p>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Last sale</p>
+            <p className="text-lg font-semibold text-[var(--color-ink)] leading-tight">{lastSaleDate ? formatDate(lastSaleDate) : 'No recorded sales'}</p>
+            <p className="text-[var(--color-ink-faint)] text-xs mt-1">{lastSaleDate ? `${daysSinceLastSale} day${daysSinceLastSale === 1 ? '' : 's'} ago` : (agent.joined ? `since joining (${agent.joined})` : 'ever')}</p>
           </div>
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Days silent</p>
-            <p className={`text-3xl font-semibold ${daysSinceLastSale === null ? 'text-red-600' : daysSinceLastSale > 30 ? 'text-red-600' : daysSinceLastSale > 14 ? 'text-amber-600' : 'text-emerald-600'}`}>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Days silent</p>
+            <p className={`text-[27px] font-semibold ${daysSinceLastSale === null ? 'text-red-600' : daysSinceLastSale > 30 ? 'text-red-600' : daysSinceLastSale > 14 ? 'text-amber-600' : 'text-emerald-600'}`}>
               {daysSinceLastSale !== null ? daysSinceLastSale : '∞'}
             </p>
             <p className={`text-xs mt-1 font-medium ${daysSinceLastSale === null ? 'text-red-600' : daysSinceLastSale > 30 ? 'text-red-600' : daysSinceLastSale > 14 ? 'text-amber-600' : 'text-emerald-600'}`}>
@@ -705,77 +705,77 @@ export default function AgentProfile() {
             </p>
           </div>
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Last check-in</p>
-            <p className="text-lg font-semibold text-gray-900 leading-tight">{formatDate(agent.lastCheckIn)}</p>
-            <p className="text-gray-400 text-xs mt-1">
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Last check-in</p>
+            <p className="text-lg font-semibold text-[var(--color-ink)] leading-tight">{formatDate(agent.lastCheckIn)}</p>
+            <p className="text-[var(--color-ink-faint)] text-xs mt-1">
               {agent.lastCheckIn ? `${Math.floor((now - new Date(agent.lastCheckIn)) / 86400000)} days ago` : 'never'}
             </p>
           </div>
         </div>
 
         {periodSales.length > 0 && (
-          <div className="mt-6 pt-5 border-t border-gray-100">
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-3">Sales in this period</p>
+          <div className="mt-6 pt-5 border-t border-[var(--color-line-soft)]">
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-3">Sales in this period</p>
             <div className="space-y-2">
               {periodSales.slice(0, 6).map((t, i) => (
-                <div key={i} className="flex items-center justify-between text-sm py-2 border-b border-gray-50 last:border-0">
+                <div key={i} className="flex items-center justify-between text-sm py-2 border-b border-[var(--color-line-soft)] last:border-0">
                   <div>
-                    <p className="text-gray-900 font-medium">{t.Account_Name?.name || t.User_Name || 'Customer'}</p>
-                    <p className="text-gray-400 text-[11px]">{t.Number_Plate || '—'} · {formatDate(t.Subscription_Start || t.Created_Time)}</p>
+                    <p className="text-[var(--color-ink)] font-medium">{t.Account_Name?.name || t.User_Name || 'Customer'}</p>
+                    <p className="text-[var(--color-ink-faint)] text-[11px]">{t.Number_Plate || '—'} · {formatDate(t.Subscription_Start || t.Created_Time)}</p>
                   </div>
-                  <p className="text-gray-900 font-semibold">D{(parseFloat(t.Amount_Paid) || 0).toLocaleString()}</p>
+                  <p className="text-[var(--color-ink)] font-semibold">D{(parseFloat(t.Amount_Paid) || 0).toLocaleString()}</p>
                 </div>
               ))}
-              {periodSales.length > 6 && <p className="text-[11px] text-gray-400 pt-2">+{periodSales.length - 6} more</p>}
+              {periodSales.length > 6 && <p className="text-[11px] text-[var(--color-ink-faint)] pt-2">+{periodSales.length - 6} more</p>}
             </div>
           </div>
         )}
       </div>
 
       {/* BLOCK 4 — Business Cost */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-4">
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-center gap-2 mb-5">
-          <DollarSign size={18} className="text-gray-400" />
-          <h2 className="text-gray-900 font-semibold">Business Cost</h2>
+          <DollarSign size={18} className="text-[var(--color-ink-faint)]" />
+          <h2 className="text-[var(--color-ink)] font-semibold">Business Cost</h2>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-5">
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Monthly cost</p>
-            <p className="text-2xl font-semibold text-gray-900">D{cost.toLocaleString()}</p>
-            <p className="text-gray-500 text-xs mt-1 font-medium">D{Math.round(cost / 30).toLocaleString()}/day</p>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Monthly cost</p>
+            <p className="text-2xl font-semibold text-[var(--color-ink)]">D{cost.toLocaleString()}</p>
+            <p className="text-[var(--color-ink-soft)] text-xs mt-1 font-medium">D{Math.round(cost / 30).toLocaleString()}/day</p>
           </div>
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Lifetime cost</p>
-            <p className="text-2xl font-semibold text-gray-900">{lifetimeCost !== null ? `D${lifetimeCost.toLocaleString()}` : '—'}</p>
-            <p className="text-gray-400 text-xs mt-1">{lifetimeLabel ? `over ${lifetimeLabel}` : 'no start date'}</p>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Lifetime cost</p>
+            <p className="text-2xl font-semibold text-[var(--color-ink)]">{lifetimeCost !== null ? `D${lifetimeCost.toLocaleString()}` : '—'}</p>
+            <p className="text-[var(--color-ink-faint)] text-xs mt-1">{lifetimeLabel ? `over ${lifetimeLabel}` : 'no start date'}</p>
           </div>
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Revenue</p>
-            <p className="text-2xl font-semibold text-gray-900">D{revenue.toLocaleString()}</p>
-            <p className="text-gray-400 text-xs mt-1">{rangeLabel.toLowerCase()}</p>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Revenue</p>
+            <p className="text-2xl font-semibold text-[var(--color-ink)]">D{revenue.toLocaleString()}</p>
+            <p className="text-[var(--color-ink-faint)] text-xs mt-1">{rangeLabel.toLowerCase()}</p>
           </div>
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Revenue − Cost</p>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Revenue − Cost</p>
             <p className={`text-2xl font-semibold ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
               {profit >= 0 ? '+' : '−'}D{Math.abs(profit).toLocaleString()}
             </p>
-            <p className="text-gray-400 text-xs mt-1">{profit >= 0 ? 'net contribution' : 'short of cost'}</p>
+            <p className="text-[var(--color-ink-faint)] text-xs mt-1">{profit >= 0 ? 'net contribution' : 'short of cost'}</p>
           </div>
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">ROI</p>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">ROI</p>
             <p className={`text-2xl font-semibold ${roi >= 100 ? 'text-emerald-600' : roi >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
               {cost > 0 ? `${roi}%` : '—'}
             </p>
-            <p className="text-gray-400 text-xs mt-1">revenue / cost</p>
+            <p className="text-[var(--color-ink-faint)] text-xs mt-1">revenue / cost</p>
           </div>
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Cost per sale</p>
-            <p className="text-2xl font-semibold text-gray-900">{costPerSale !== null ? `D${costPerSale.toLocaleString()}` : '—'}</p>
-            <p className="text-gray-400 text-xs mt-1">{costPerSale !== null ? 'effective cost' : 'no sales'}</p>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Cost per sale</p>
+            <p className="text-2xl font-semibold text-[var(--color-ink)]">{costPerSale !== null ? `D${costPerSale.toLocaleString()}` : '—'}</p>
+            <p className="text-[var(--color-ink-faint)] text-xs mt-1">{costPerSale !== null ? 'effective cost' : 'no sales'}</p>
           </div>
           <div>
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Break-even</p>
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Break-even</p>
             {profit >= 0 ? (
               <>
                 <p className="text-2xl font-semibold text-emerald-600">✓</p>
@@ -794,26 +794,26 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 5 — Trend (last 4 months) */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-4">
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-center gap-2 mb-5">
-          <Clock size={18} className="text-gray-400" />
-          <h2 className="text-gray-900 font-semibold">Trend — Last 4 Months</h2>
+          <Clock size={18} className="text-[var(--color-ink-faint)]" />
+          <h2 className="text-[var(--color-ink)] font-semibold">Trend — Last 4 Months</h2>
         </div>
         <div className="grid grid-cols-4 gap-3">
           {last4Months.map((m, i) => {
             const isZero = m.sales === 0;
             return (
-              <div key={i} className={`p-4 rounded-2xl ${m.isCurrent ? 'bg-blue-50 border-2 border-blue-300' : isZero ? 'bg-gray-100 border border-gray-200' : 'bg-gray-50 border border-gray-100'}`}>
-                <p className={`text-[11px] uppercase tracking-wider font-semibold mb-1 ${m.isCurrent ? 'text-blue-600' : isZero ? 'text-gray-400' : 'text-gray-500'}`}>
+              <div key={i} className={`p-4 rounded-xl ${m.isCurrent ? 'bg-blue-50 border-2 border-blue-300' : isZero ? 'bg-[var(--color-fill)] border border-[var(--color-line)]' : 'bg-[var(--color-fill)] border border-[var(--color-line-soft)]'}`}>
+                <p className={`text-[11px] uppercase tracking-wider font-semibold mb-1 ${m.isCurrent ? 'text-blue-600' : isZero ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>
                   {m.label}{m.isCurrent ? ' · now' : ''}
                 </p>
-                <p className={`text-2xl font-semibold ${isZero ? 'text-gray-400' : 'text-gray-900'}`}>
+                <p className={`text-2xl font-semibold ${isZero ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink)]'}`}>
                   {isZero ? '—' : m.sales}
                 </p>
                 <div className={`w-full h-1.5 rounded-full overflow-hidden mt-2 ${m.isCurrent ? 'bg-white' : 'bg-white'}`}>
-                  <div className={`h-full rounded-full ${m.isCurrent ? 'bg-blue-500' : isZero ? 'bg-gray-300' : 'bg-gray-400'}`} style={{ width: `${Math.max(isZero ? 0 : 4, (m.sales / maxTrendSales) * 100)}%` }} />
+                  <div className={`h-full rounded-full ${m.isCurrent ? 'bg-blue-500' : isZero ? 'bg-[var(--color-ink-faint)]' : 'bg-[var(--color-ink-faint)]'}`} style={{ width: `${Math.max(isZero ? 0 : 4, (m.sales / maxTrendSales) * 100)}%` }} />
                 </div>
-                <p className={`text-xs mt-2 ${isZero ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p className={`text-xs mt-2 ${isZero ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>
                   {isZero ? 'no activity' : `D${(m.revenue / 1000).toFixed(1)}k`}
                 </p>
               </div>
@@ -823,13 +823,13 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 6 — Scorecard breakdown (transparent math) */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-7 mb-6">
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-7 mb-6">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <Target size={18} className="text-gray-400" />
-            <h2 className="text-gray-900 font-semibold">Scorecard Breakdown</h2>
+            <Target size={18} className="text-[var(--color-ink-faint)]" />
+            <h2 className="text-[var(--color-ink)] font-semibold">Scorecard Breakdown</h2>
           </div>
-          <p className={`text-2xl font-bold ${scoreColor(score.score)}`}>{score.score}<span className="text-gray-300 text-base font-normal">/100</span></p>
+          <p className={`text-2xl font-bold ${scoreColor(score.score)}`}>{score.score}<span className="text-[var(--color-ink-faint)] text-base font-normal">/100</span></p>
         </div>
 
         <div className="space-y-3">
@@ -839,23 +839,23 @@ export default function AgentProfile() {
           <ScoreBar label="Warnings penalty" weight="−10% each" value={-score.warningPenalty} max={30} neg detail={warningNarrative(warningsCount)} />
         </div>
 
-        <div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-100">
-          <p className="text-gray-500 text-sm">Total</p>
+        <div className="flex items-center justify-between mt-5 pt-4 border-t border-[var(--color-line-soft)]">
+          <p className="text-[var(--color-ink-soft)] text-sm">Total</p>
           <p className={`text-xl font-bold ${scoreColor(score.score)}`}>{score.score}/100 · <span className="text-sm font-medium">{score.rating}</span></p>
         </div>
       </div>
 
       {/* BLOCK 7 — Role expectations (read-only — configure in HR → KPI Settings) */}
-      <div className="bg-white rounded-3xl border border-gray-100 mb-6 overflow-hidden">
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] mb-6 overflow-hidden">
         <div className="flex items-center justify-between p-5 flex-wrap gap-3">
           <button onClick={() => setRoleOpen(!roleOpen)} className="flex items-center gap-2 text-left">
-            <Briefcase size={16} className="text-gray-400" />
-            <p className="text-sm font-medium text-gray-700">KPI · Role expectations</p>
-            <span className="text-[11px] text-gray-400">{periodLabelForKpi}</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600">{sourceLabel}</span>
-            {roleOpen ? <ChevronUp size={14} className="text-gray-400 ml-1" /> : <ChevronDown size={14} className="text-gray-400 ml-1" />}
+            <Briefcase size={16} className="text-[var(--color-ink-faint)]" />
+            <p className="text-sm font-medium text-[var(--color-ink-soft)]">KPI · Role expectations</p>
+            <span className="text-[11px] text-[var(--color-ink-faint)]">{periodLabelForKpi}</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--color-fill)] text-[var(--color-ink-soft)]">{sourceLabel}</span>
+            {roleOpen ? <ChevronUp size={14} className="text-[var(--color-ink-faint)] ml-1" /> : <ChevronDown size={14} className="text-[var(--color-ink-faint)] ml-1" />}
           </button>
-          <RouterLink to="/dept/hr?tab=kpi" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 px-3 py-1.5 rounded-full hover:bg-gray-100">
+          <RouterLink to="/dept/hr?tab=kpi" className="flex items-center gap-1.5 text-xs text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] px-3 py-1.5 rounded-full hover:bg-[var(--color-fill)]">
             <Settings size={12} /> Configure in HR
           </RouterLink>
         </div>
@@ -863,48 +863,48 @@ export default function AgentProfile() {
         {roleOpen && (
           <div className="px-5 pb-5 space-y-3 text-sm">
             <div>
-              <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Core responsibility</p>
-              <p className="text-gray-700">{effectiveResp || <span className="text-gray-400 italic">Not set</span>}</p>
+              <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Core responsibility</p>
+              <p className="text-[var(--color-ink-soft)]">{effectiveResp || <span className="text-[var(--color-ink-faint)] italic">Not set</span>}</p>
             </div>
             <div>
-              <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">KPI for {periodLabelForKpi}</p>
-              <p className="text-gray-700">{effectiveKpi || <span className="text-gray-400 italic">Not set — configure in HR → KPI Settings</span>}</p>
+              <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">KPI for {periodLabelForKpi}</p>
+              <p className="text-[var(--color-ink-soft)]">{effectiveKpi || <span className="text-[var(--color-ink-faint)] italic">Not set — configure in HR → KPI Settings</span>}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               <div>
-                <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Monthly target</p>
-                <p className="text-gray-700 font-medium">{effectiveTarget ?? <span className="text-gray-400 italic font-normal">Not set</span>}</p>
+                <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Monthly target</p>
+                <p className="text-[var(--color-ink-soft)] font-medium">{effectiveTarget ?? <span className="text-[var(--color-ink-faint)] italic font-normal">Not set</span>}</p>
               </div>
               <div>
-                <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Weekly target</p>
-                <p className="text-gray-700 font-medium">{effectiveWeekly || <span className="text-gray-400 italic font-normal">Not set</span>}</p>
+                <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Weekly target</p>
+                <p className="text-[var(--color-ink-soft)] font-medium">{effectiveWeekly || <span className="text-[var(--color-ink-faint)] italic font-normal">Not set</span>}</p>
               </div>
               <div>
-                <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Team target</p>
-                <p className="text-gray-700 font-medium">{effectiveTeamTarget ?? <span className="text-gray-400 italic font-normal">Not set</span>}</p>
+                <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Team target</p>
+                <p className="text-[var(--color-ink-soft)] font-medium">{effectiveTeamTarget ?? <span className="text-[var(--color-ink-faint)] italic font-normal">Not set</span>}</p>
               </div>
             </div>
             {effectiveFocus && (
               <div className="pt-2">
-                <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-1">Focus</p>
-                <p className="text-gray-700">{effectiveFocus}</p>
+                <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Focus</p>
+                <p className="text-[var(--color-ink-soft)]">{effectiveFocus}</p>
               </div>
             )}
 
             {/* Rules chain — most specific to most general */}
             {ruleSources.length > 0 && (
-              <div className="pt-3 border-t border-gray-100">
-                <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-2">Resolution chain</p>
+              <div className="pt-3 border-t border-[var(--color-line-soft)]">
+                <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-2">Resolution chain</p>
                 <div className="space-y-1">
                   {[...ruleSources].reverse().map((s, i) => {
                     const label = /^\d{4}-\d{2}$/.test(s.period) ? new Date(s.period + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : s.period;
                     return (
                       <div key={s.id || i} className="flex items-center gap-2 text-xs">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${i === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${i === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
                           {i === 0 ? 'USING' : 'BEHIND'}
                         </span>
-                        <span className="text-gray-700">{s.scope === 'agent' ? `Agent: ${s.agent}` : `Role: ${s.role}`}</span>
-                        <span className="text-gray-400">· {label}</span>
+                        <span className="text-[var(--color-ink-soft)]">{s.scope === 'agent' ? `Agent: ${s.agent}` : `Role: ${s.role}`}</span>
+                        <span className="text-[var(--color-ink-faint)]">· {label}</span>
                       </div>
                     );
                   })}
@@ -916,11 +916,11 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 8 — Structured notes */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-7 mb-6">
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-7 mb-6">
         <div className="flex items-center gap-2 mb-5">
-          <MessageSquare size={18} className="text-gray-400" />
-          <h2 className="text-gray-900 font-semibold">Coaching Notes</h2>
-          <span className="text-gray-400 text-xs ml-auto">{feedback.length} entries</span>
+          <MessageSquare size={18} className="text-[var(--color-ink-faint)]" />
+          <h2 className="text-[var(--color-ink)] font-semibold">Coaching Notes</h2>
+          <span className="text-[var(--color-ink-faint)] text-xs ml-auto">{feedback.length} entries</span>
         </div>
 
         <div className="flex gap-2 flex-wrap mb-3">
@@ -928,7 +928,7 @@ export default function AgentProfile() {
             <button
               key={c.value}
               onClick={() => setNoteCategory(c.value)}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors ${noteCategory === c.value ? (c.color === 'blue' ? 'bg-blue-600 text-white' : c.color === 'red' ? 'bg-red-600 text-white' : 'bg-amber-600 text-white') : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors ${noteCategory === c.value ? (c.color === 'blue' ? 'bg-blue-600 text-white' : c.color === 'red' ? 'bg-red-600 text-white' : 'bg-amber-600 text-white') : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]'}`}
             >
               {c.label}
             </button>
@@ -939,29 +939,29 @@ export default function AgentProfile() {
           <input type="text" value={newNote} onChange={e => setNewNote(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addFeedback()}
             placeholder={noteCategory === 'followup' ? `e.g. Review pipeline ${formatDate(new Date(Date.now() + 7*86400000).toISOString())}` : `${NOTE_CATEGORIES.find(c => c.value === noteCategory)?.label} about ${agent.name.split(' ')[0]}…`}
-            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-gray-400" />
-          <button onClick={addFeedback} className="px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-full">Add</button>
+            className="flex-1 px-4 py-2.5 border border-[var(--color-line)] rounded-full text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
+          <button onClick={addFeedback} className="px-5 py-2.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-white text-sm font-medium rounded-full">Add</button>
         </div>
 
         {feedback.length === 0 ? (
-          <p className="text-gray-400 text-sm">No notes yet. Every note rolls into the monthly review below.</p>
+          <p className="text-[var(--color-ink-faint)] text-sm">No notes yet. Every note rolls into the monthly review below.</p>
         ) : (
           <div className="space-y-3">
             {feedback.map(n => {
               const parsed = parseNote(n);
               const catDef = NOTE_CATEGORIES.find(c => c.value === parsed.category);
               return (
-                <div key={n.id} className="flex items-start gap-3 p-4 bg-gray-50 rounded-2xl group">
+                <div key={n.id} className="flex items-start gap-3 p-4 bg-[var(--color-fill)] rounded-xl group">
                   {catDef && (
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 ${catDef.color === 'blue' ? 'bg-blue-100 text-blue-700' : catDef.color === 'red' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                       {catDef.label.split(' ')[0]}
                     </span>
                   )}
                   <div className="flex-1">
-                    <p className="text-gray-700 text-sm">{parsed.text}</p>
-                    <p className="text-gray-400 text-[11px] mt-1">{new Date(n.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · {n.createdBy || 'Damia'}</p>
+                    <p className="text-[var(--color-ink-soft)] text-sm">{parsed.text}</p>
+                    <p className="text-[var(--color-ink-faint)] text-[11px] mt-1">{new Date(n.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · {n.createdBy || 'Damia'}</p>
                   </div>
-                  <button onClick={() => removeFeedback(n.id)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => removeFeedback(n.id)} className="text-[var(--color-ink-faint)] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -972,12 +972,12 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 9 — Auto review */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-7 mb-6">
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-7 mb-6">
         <div className="flex items-center gap-2 mb-4">
-          <Calendar size={18} className="text-gray-400" />
-          <h2 className="text-gray-900 font-semibold">Auto-generated Review</h2>
+          <Calendar size={18} className="text-[var(--color-ink-faint)]" />
+          <h2 className="text-[var(--color-ink)] font-semibold">Auto-generated Review</h2>
         </div>
-        <pre className="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed font-sans">{review}</pre>
+        <pre className="whitespace-pre-wrap text-sm text-[var(--color-ink-soft)] leading-relaxed font-sans">{review}</pre>
       </div>
 
       {/* BLOCK 9b — Files & documents */}
@@ -992,12 +992,12 @@ export default function AgentProfile() {
       />
 
       {/* BLOCK 10 — Management Decision */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-7 mb-8">
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-7 mb-8">
         <div className="flex items-center gap-2 mb-5">
-          <Shield size={18} className="text-gray-400" />
-          <h2 className="text-gray-900 font-semibold">Management Decision</h2>
+          <Shield size={18} className="text-[var(--color-ink-faint)]" />
+          <h2 className="text-[var(--color-ink)] font-semibold">Management Decision</h2>
           {decision && (
-            <span className="text-[11px] text-gray-400 ml-auto">
+            <span className="text-[11px] text-[var(--color-ink-faint)] ml-auto">
               Last set: {new Date(decision.setAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
@@ -1005,7 +1005,7 @@ export default function AgentProfile() {
 
         {/* Current status — prominent */}
         {decision ? (
-          <div className="mb-4 p-4 rounded-2xl bg-gray-900 text-white flex items-center gap-3">
+          <div className="mb-4 p-4 rounded-xl bg-[var(--color-ink)] text-white flex items-center gap-3">
             <CheckCircle size={18} className="text-emerald-400 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-white/60 mb-0.5">Current status</p>
@@ -1017,7 +1017,7 @@ export default function AgentProfile() {
             </div>
           </div>
         ) : (
-          <div className="mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-100 flex items-center gap-3">
+          <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-100 flex items-center gap-3">
             <AlertTriangle size={16} className="text-amber-600 shrink-0" />
             <div>
               <p className="text-[10px] uppercase tracking-wider font-semibold text-amber-700">No decision on record</p>
@@ -1026,22 +1026,22 @@ export default function AgentProfile() {
           </div>
         )}
 
-        <p className="text-sm text-gray-500 mb-4">What are you doing with {agent.name.split(' ')[0]}?{pickedDecision && (!decision || pickedDecision !== decision.decision) && <span className="text-gray-900 font-medium"> · Ready to save: {DECISIONS.find(d => d.value === pickedDecision)?.label}</span>}</p>
+        <p className="text-sm text-[var(--color-ink-soft)] mb-4">What are you doing with {agent.name.split(' ')[0]}?{pickedDecision && (!decision || pickedDecision !== decision.decision) && <span className="text-[var(--color-ink)] font-medium"> · Ready to save: {DECISIONS.find(d => d.value === pickedDecision)?.label}</span>}</p>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
           {DECISIONS.map(d => {
             const Icon = d.icon;
             const active = pickedDecision === d.value;
             const colorMap = {
-              gray: active ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400',
-              blue: active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400',
-              red: active ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-200 hover:border-red-400',
-              amber: active ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-700 border-gray-200 hover:border-amber-400',
-              emerald: active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-400',
+              gray: active ? 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-[var(--color-ink-faint)]',
+              blue: active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-blue-400',
+              red: active ? 'bg-red-600 text-white border-red-600' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-red-400',
+              amber: active ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-amber-400',
+              emerald: active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-emerald-400',
             };
             return (
               <button key={d.value} onClick={() => setPickedDecision(d.value)}
-                className={`flex items-center justify-center gap-2 p-3 rounded-2xl border-2 text-xs font-medium transition-colors ${colorMap[d.color]}`}>
+                className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-xs font-medium transition-colors ${colorMap[d.color]}`}>
                 <Icon size={14} />
                 <span className="truncate">{d.label}</span>
               </button>
@@ -1051,22 +1051,22 @@ export default function AgentProfile() {
 
         <textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)}
           placeholder="Reason, next step, or context (optional)…"
-          className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-gray-400 resize-none" rows={2} />
+          className="w-full px-4 py-3 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)] resize-none" rows={2} />
 
         <div className="flex items-center justify-end mt-4">
           <button onClick={saveDecision} disabled={!pickedDecision}
-            className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${decisionSaved ? 'bg-emerald-600 text-white' : pickedDecision ? 'bg-gray-900 text-white hover:bg-gray-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+            className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${decisionSaved ? 'bg-emerald-600 text-white' : pickedDecision ? 'bg-[var(--color-ink)] text-white hover:bg-[var(--color-ink)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-faint)] cursor-not-allowed'}`}>
             {decisionSaved ? 'Saved ✓' : 'Save decision'}
           </button>
         </div>
 
         {/* Decision history */}
         {(decision || decisionHistory.length > 0) && (
-          <div className="mt-6 pt-5 border-t border-gray-100">
-            <p className="text-gray-400 text-[11px] uppercase tracking-wider font-semibold mb-3">Decision history</p>
+          <div className="mt-6 pt-5 border-t border-[var(--color-line-soft)]">
+            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-3">Decision history</p>
             <div className="space-y-2">
               {decision && (
-                <div className="flex items-start gap-3 p-3 rounded-2xl bg-gray-900 text-white">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--color-ink)] text-white">
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/20 uppercase tracking-wider shrink-0 mt-0.5">Current</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{DECISIONS.find(d => d.value === decision.decision)?.label || decision.decision}</p>
@@ -1076,18 +1076,18 @@ export default function AgentProfile() {
                 </div>
               )}
               {decisionHistory.map((h, i) => (
-                <div key={h.id || i} className="flex items-start gap-3 p-3 rounded-2xl bg-gray-50">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-200 text-gray-600 uppercase tracking-wider shrink-0 mt-0.5">Prev</span>
+                <div key={h.id || i} className="flex items-start gap-3 p-3 rounded-xl bg-[var(--color-fill)]">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--color-line)] text-[var(--color-ink-soft)] uppercase tracking-wider shrink-0 mt-0.5">Prev</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-700">{DECISIONS.find(d => d.value === h.decision)?.label || h.decision}</p>
-                    {h.reason && <p className="text-[11px] text-gray-500 mt-0.5">{h.reason}</p>}
+                    <p className="text-sm text-[var(--color-ink-soft)]">{DECISIONS.find(d => d.value === h.decision)?.label || h.decision}</p>
+                    {h.reason && <p className="text-[11px] text-[var(--color-ink-soft)] mt-0.5">{h.reason}</p>}
                   </div>
-                  <p className="text-[11px] text-gray-400 shrink-0">{new Date(h.setAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  <p className="text-[11px] text-[var(--color-ink-faint)] shrink-0">{new Date(h.setAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
               ))}
             </div>
             {decisionHistory.length >= 2 && (
-              <p className="text-[11px] text-gray-400 mt-3 italic">
+              <p className="text-[11px] text-[var(--color-ink-faint)] mt-3 italic">
                 {decisionHistory.filter(h => h.decision === decision?.decision).length >= 1
                   ? `Pattern: ${DECISIONS.find(d => d.value === decision?.decision)?.label || ''} repeated — is the intervention working?`
                   : 'Interventions tried — review what changed and what didn\'t.'}
@@ -1098,47 +1098,47 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 10b — Warnings (moved here from top per Adama's preference) */}
-      <div className={`rounded-3xl border p-6 mb-4 ${warningsCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'}`}>
+      <div className={`rounded-xl border p-6 mb-4 ${warningsCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-[var(--color-line-soft)]'}`}>
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
-            <Gavel size={18} className={warningsCount > 0 ? 'text-red-600' : 'text-gray-400'} />
-            <h2 className={`font-semibold ${warningsCount > 0 ? 'text-red-900' : 'text-gray-900'}`}>
+            <Gavel size={18} className={warningsCount > 0 ? 'text-red-600' : 'text-[var(--color-ink-faint)]'} />
+            <h2 className={`font-semibold ${warningsCount > 0 ? 'text-red-900' : 'text-[var(--color-ink)]'}`}>
               {warningsCount > 0 ? `${warningsCount} active warning${warningsCount === 1 ? '' : 's'}` : 'No warnings on file'}
             </h2>
           </div>
           <button onClick={() => setWarningOpen(o => !o)}
-            className={`px-4 py-2 rounded-full text-xs font-medium transition-colors ${warningOpen ? 'bg-gray-200 text-gray-700' : 'bg-gray-900 text-white hover:bg-gray-800'}`}>
+            className={`px-4 py-2 rounded-full text-xs font-medium transition-colors ${warningOpen ? 'bg-[var(--color-line)] text-[var(--color-ink-soft)]' : 'bg-[var(--color-ink)] text-white hover:bg-[var(--color-ink)]'}`}>
             {warningOpen ? 'Cancel' : '+ Issue warning'}
           </button>
         </div>
 
         {warningOpen && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4 space-y-3">
+          <div className="bg-white rounded-xl border border-[var(--color-line)] p-4 mb-4 space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold mb-1 block">Type</label>
+                <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Type</label>
                 <select value={newWarning.type} onChange={e => setNewWarning(w => ({ ...w, type: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400">
+                  className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]">
                   <option value="verbal">Verbal</option>
                   <option value="formal">Formal</option>
                   <option value="final">Final</option>
                 </select>
               </div>
               <div>
-                <label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold mb-1 block">Date</label>
+                <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Date</label>
                 <input type="date" value={newWarning.date} onChange={e => setNewWarning(w => ({ ...w, date: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400" />
+                  className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
               </div>
             </div>
             <div>
-              <label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold mb-1 block">Reason</label>
+              <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Reason</label>
               <textarea value={newWarning.reason} onChange={e => setNewWarning(w => ({ ...w, reason: e.target.value }))}
                 placeholder="What did they do? Be specific."
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400 resize-none" rows={2} />
+                className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)] resize-none" rows={2} />
             </div>
             <div className="flex justify-end">
               <button onClick={issueWarning} disabled={savingWarning || !newWarning.reason.trim()}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-full disabled:bg-gray-300 disabled:cursor-not-allowed">
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-full disabled:bg-[var(--color-ink-faint)] disabled:cursor-not-allowed">
                 {savingWarning ? 'Saving…' : 'Issue warning'}
               </button>
             </div>
@@ -1150,13 +1150,13 @@ export default function AgentProfile() {
             {warnings.map(w => {
               const typeColor = w.type === 'final' ? 'bg-red-200 text-red-900' : w.type === 'formal' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
               return (
-                <div key={w.id} className="bg-white rounded-2xl border border-gray-200 p-4 flex items-start gap-3">
+                <div key={w.id} className="bg-white rounded-xl border border-[var(--color-line)] p-4 flex items-start gap-3">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 ${typeColor}`}>{w.type}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">{w.reason}</p>
-                    <p className="text-[11px] text-gray-500 mt-1">{new Date(w.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · issued by {w.issuedBy}</p>
+                    <p className="text-sm text-[var(--color-ink)]">{w.reason}</p>
+                    <p className="text-[11px] text-[var(--color-ink-soft)] mt-1">{new Date(w.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · issued by {w.issuedBy}</p>
                   </div>
-                  <button onClick={() => deleteWarning(w.id)} className="text-gray-300 hover:text-red-600 p-1" title="Remove warning">
+                  <button onClick={() => deleteWarning(w.id)} className="text-[var(--color-ink-faint)] hover:text-red-600 p-1" title="Remove warning">
                     <X size={14} />
                   </button>
                 </div>
@@ -1168,22 +1168,22 @@ export default function AgentProfile() {
 
       {/* BLOCK 11 — Staff history (from team.js) */}
       {agent.history && agent.history.length > 0 && (
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-4">
-          <h2 className="text-gray-900 font-semibold mb-4">History</h2>
+        <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+          <h2 className="text-[var(--color-ink)] font-semibold mb-4">History</h2>
           <div>
             {[...agent.history].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((h, i, arr) => (
               <div key={i} className="flex gap-4 pb-4 last:pb-0">
                 <div className="flex flex-col items-center shrink-0">
-                  <div className={`w-2.5 h-2.5 rounded-full mt-1.5 ${i === 0 ? 'bg-blue-600' : 'bg-gray-300'}`} />
-                  {i < arr.length - 1 && <div className="w-px flex-1 bg-gray-200 mt-1" />}
+                  <div className={`w-2.5 h-2.5 rounded-full mt-1.5 ${i === 0 ? 'bg-blue-600' : 'bg-[var(--color-ink-faint)]'}`} />
+                  {i < arr.length - 1 && <div className="w-px flex-1 bg-[var(--color-line)] mt-1" />}
                 </div>
                 <div className="flex-1 pb-1">
-                  <p className="text-xs text-gray-400 font-medium">
+                  <p className="text-xs text-[var(--color-ink-faint)] font-medium">
                     {h.dateApproximate ? '~ ' : ''}
                     {h.date ? new Date(h.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
                   </p>
-                  <p className="text-sm text-gray-800 mt-0.5">{h.event}</p>
-                  {h.note && <p className="text-xs text-gray-400 mt-1">{h.note}</p>}
+                  <p className="text-sm text-[var(--color-ink)] mt-0.5">{h.event}</p>
+                  {h.note && <p className="text-xs text-[var(--color-ink-faint)] mt-1">{h.note}</p>}
                 </div>
               </div>
             ))}
@@ -1202,17 +1202,17 @@ function ScoreBar({ label, weight, value, max, detail, neg }) {
     <div>
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-baseline gap-2">
-          <p className="text-sm text-gray-700 font-medium">{label}</p>
-          {weight && <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{weight}</span>}
+          <p className="text-sm text-[var(--color-ink-soft)] font-medium">{label}</p>
+          {weight && <span className="text-[10px] text-[var(--color-ink-faint)] uppercase tracking-wider font-semibold">{weight}</span>}
         </div>
-        <p className={`text-sm font-semibold ${isNegative ? 'text-red-600' : isPositive ? 'text-emerald-600' : 'text-gray-400'}`}>
-          {value >= 0 ? '+' : ''}{value}<span className="text-gray-400 font-normal">/{neg ? `-${max}` : max}</span>
+        <p className={`text-sm font-semibold ${isNegative ? 'text-red-600' : isPositive ? 'text-emerald-600' : 'text-[var(--color-ink-faint)]'}`}>
+          {value >= 0 ? '+' : ''}{value}<span className="text-[var(--color-ink-faint)] font-normal">/{neg ? `-${max}` : max}</span>
         </p>
       </div>
-      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${isNegative ? 'bg-red-500' : isPositive ? 'bg-emerald-500' : 'bg-gray-300'}`} style={{ width: `${Math.min(100, pct)}%` }} />
+      <div className="w-full h-2 bg-[var(--color-fill)] rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${isNegative ? 'bg-red-500' : isPositive ? 'bg-emerald-500' : 'bg-[var(--color-ink-faint)]'}`} style={{ width: `${Math.min(100, pct)}%` }} />
       </div>
-      {detail && <p className="text-[11px] text-gray-400 mt-1">{detail}</p>}
+      {detail && <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">{detail}</p>}
     </div>
   );
 }

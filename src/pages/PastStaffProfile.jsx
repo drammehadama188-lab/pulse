@@ -19,15 +19,15 @@ function pastCategory(reason) {
   if (/terminat|let go|dismiss|fired/.test(r)) return { label: 'Terminated', cls: 'bg-red-100 text-red-700' };
   if (/contract end/.test(r)) return { label: 'Contract Ended', cls: 'bg-blue-100 text-blue-700' };
   if (/training|intern|trainee|not confirmed|not converted|probation/.test(r)) return { label: 'Training/Internship', cls: 'bg-orange-100 text-orange-700' };
-  if (/left|resign|voluntar/.test(r)) return { label: 'Resigned', cls: 'bg-gray-100 text-gray-700' };
-  return { label: 'Former staff', cls: 'bg-gray-100 text-gray-600' };
+  if (/left|resign|voluntar/.test(r)) return { label: 'Resigned', cls: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]' };
+  return { label: 'Former staff', cls: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]' };
 }
 
 function Field({ label, value, accent }) {
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">{label}</p>
-      <p className={`text-sm font-medium ${accent || 'text-gray-900'}`}>{value ?? <span className="text-gray-300 font-normal">—</span>}</p>
+      <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)] mb-1">{label}</p>
+      <p className={`text-sm font-medium ${accent || 'text-[var(--color-ink)]'}`}>{value ?? <span className="text-[var(--color-ink-faint)] font-normal">—</span>}</p>
     </div>
   );
 }
@@ -45,8 +45,8 @@ export default function PastStaffProfile() {
   if (!person) {
     return (
       <div>
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6"><ArrowLeft size={14} /> Back</button>
-        <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-gray-400">Former employee not found.</div>
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
+        <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-10 text-center text-[var(--color-ink-faint)]">Former employee not found.</div>
       </div>
     );
   }
@@ -69,26 +69,26 @@ export default function PastStaffProfile() {
 
   return (
     <div className="max-w-4xl">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6"><ArrowLeft size={14} /> Back</button>
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
 
       {/* Identity */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-4">
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-start gap-5">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white text-xl font-semibold shrink-0">{initials}</div>
+          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[var(--color-ink-faint)] to-[var(--color-ink-soft)] flex items-center justify-center text-white text-xl font-semibold shrink-0">{initials}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h1 className="text-2xl font-semibold text-gray-900">{person.name}</h1>
+              <h1 className="text-2xl font-semibold text-[var(--color-ink)]">{person.name}</h1>
               <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${cat.cls}`}>{cat.label}</span>
             </div>
-            <p className="text-gray-600">{person.role}</p>
-            <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1.5"><UserX size={12} /> Left {person.date || '—'}</p>
+            <p className="text-[var(--color-ink-soft)]">{person.role}</p>
+            <p className="text-[11px] text-[var(--color-ink-faint)] mt-1 flex items-center gap-1.5"><UserX size={12} /> Left {person.date || '—'}</p>
           </div>
         </div>
       </div>
 
       {/* Exit summary */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-4">
-        <h2 className="text-base font-semibold text-gray-900 mb-5">Exit record</h2>
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+        <h2 className="text-base font-semibold text-[var(--color-ink)] mb-5">Exit record</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
           <Field label="Left" value={person.date} />
           <Field label="Monthly pay" value={privPerson.pay > 0 ? money(privPerson.pay) : '—'} />
@@ -101,20 +101,20 @@ export default function PastStaffProfile() {
       </div>
 
       {/* Pay history (real ledger lines only) */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">Pay history</h2>
-        <p className="text-sm text-gray-500 mb-5">What was actually recorded as paid, month by month.</p>
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+        <h2 className="text-base font-semibold text-[var(--color-ink)] mb-1">Pay history</h2>
+        <p className="text-sm text-[var(--color-ink-soft)] mb-5">What was actually recorded as paid, month by month.</p>
         {payLines.length === 0 ? (
-          <p className="text-sm text-gray-400 py-6 text-center">No itemised monthly pay on record for this person. (Their pay may have been recorded only in combined team totals.)</p>
+          <p className="text-sm text-[var(--color-ink-faint)] py-6 text-center">No itemised monthly pay on record for this person. (Their pay may have been recorded only in combined team totals.)</p>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-[var(--color-line-soft)]">
             {payLines.map((l, i) => (
               <div key={i} className="flex items-start justify-between gap-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{l.month}</p>
-                  {l.note && <p className="text-xs text-gray-500 mt-0.5">{l.note}</p>}
+                  <p className="text-sm font-medium text-[var(--color-ink)]">{l.month}</p>
+                  {l.note && <p className="text-xs text-[var(--color-ink-soft)] mt-0.5">{l.note}</p>}
                 </div>
-                <p className={`text-sm font-semibold shrink-0 ${l.amount > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{money(l.amount)}</p>
+                <p className={`text-sm font-semibold shrink-0 ${l.amount > 0 ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)]'}`}>{money(l.amount)}</p>
               </div>
             ))}
           </div>

@@ -81,7 +81,7 @@ export function StatCard({ icon: Icon, label, value, sub, tone = 'brand' }) {
           </span>
         )}
       </div>
-      <div className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">{value}</div>
+      <div className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">{value}</div>
       {sub && <div className="text-sm text-[var(--color-ink-faint)]">{sub}</div>}
     </Card>
   )
@@ -135,7 +135,7 @@ export function SectionTitle({ children, action }) {
 }
 
 const FIELD_CLS =
-  'focus-ring w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]'
+  'focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]'
 
 export function Field({ label, children }) {
   return (
@@ -185,7 +185,7 @@ export function MenuSelect({ value, onChange, options = [], placeholder = 'Choos
         <ChevronDown size={16} className={`shrink-0 text-[var(--color-ink-faint)] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute left-0 right-0 z-40 mt-1.5 overflow-hidden rounded-2xl border border-[var(--color-line)] bg-white p-1.5 shadow-xl">
+        <div className="absolute left-0 right-0 z-40 mt-1.5 overflow-hidden rounded-xl border border-[var(--color-line)] bg-white p-1.5 shadow-xl">
           {opts.map((o) => {
             const active = String(o.value) === String(value)
             return (
@@ -193,7 +193,7 @@ export function MenuSelect({ value, onChange, options = [], placeholder = 'Choos
                 type="button"
                 key={o.value}
                 onClick={() => { onChange(o.value); setOpen(false) }}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${active ? 'bg-blue-50 font-semibold text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${active ? 'bg-blue-50 font-semibold text-blue-600' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}
               >
                 {o.label}
                 {active && <Check size={15} className="shrink-0 text-blue-500" />}
@@ -214,11 +214,11 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = 'max-
       onClick={onClose}
     >
       <div
-        className={`card w-full ${maxWidth} max-h-[92vh] overflow-y-auto rounded-b-none rounded-t-3xl sm:rounded-3xl rise`}
+        className={`card w-full ${maxWidth} max-h-[92vh] overflow-y-auto rounded-b-none rounded-t-3xl sm:rounded-xl rise`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-[var(--color-line-soft)] px-5 py-4">
-          <h3 className="text-lg font-extrabold tracking-tight text-[var(--color-ink)]">{title}</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-[var(--color-ink)]">{title}</h3>
           <button
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-line-soft)] hover:text-[var(--color-ink)]"

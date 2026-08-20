@@ -83,7 +83,7 @@ export default function Monthly() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Report</h1>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Report</h1>
         <PeriodSelector period={period} onChange={setPeriod} />
       </div>
 
@@ -93,11 +93,11 @@ export default function Monthly() {
         <div className="flex-1 text-center sm:text-left">
           <div className="text-sm font-semibold text-[var(--color-ink-soft)]">Sales closed · {period.label}</div>
           <div className="mt-1 flex items-end justify-center gap-2 sm:justify-start">
-            <span className="text-4xl font-extrabold tracking-tight text-[var(--color-ink)]">{r.closed}</span>
+            <span className="text-4xl font-semibold tracking-tight text-[var(--color-ink)]">{r.closed}</span>
             {r.target != null && <span className="pb-1 text-lg text-[var(--color-ink-faint)]">/ {r.target} target</span>}
             {r.target != null && <span className="pb-1.5"><Pill tone={tone} dot>{met ? 'KPI met' : period.key === 'this_month' ? 'In progress' : 'Below KPI'}</Pill></span>}
           </div>
-          <div className="mt-2 text-2xl font-extrabold text-[var(--color-good)]">{dalasi(r.revenue)}</div>
+          <div className="mt-2 text-2xl font-semibold text-[var(--color-good)]">{dalasi(r.revenue)}</div>
           <div className="text-sm text-[var(--color-ink-faint)]">revenue this period</div>
         </div>
       </Card>
@@ -130,7 +130,7 @@ export default function Monthly() {
               const hit = m.sales >= perMonthTarget
               return (
                 <div key={m.key} className="flex flex-1 flex-col items-center gap-2">
-                  <span className="text-sm font-extrabold text-[var(--color-ink)]">{m.sales}</span>
+                  <span className="text-sm font-semibold text-[var(--color-ink)]">{m.sales}</span>
                   <div
                     className="w-full max-w-[46px] rounded-t-lg transition-all"
                     style={{ height: Math.max(6, h), background: hit ? 'var(--color-good)' : 'var(--color-brand)' }}

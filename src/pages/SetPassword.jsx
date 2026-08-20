@@ -53,7 +53,7 @@ export default function SetPassword() {
     }
   }
 
-  const inputCls = 'focus-ring w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]'
+  const inputCls = 'focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]'
 
   return (
     <div className="flex min-h-screen items-center justify-center px-6 py-12">
@@ -68,7 +68,7 @@ export default function SetPassword() {
           </div>
         ) : linkError ? (
           <>
-            <h2 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">This link no longer works</h2>
+            <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">This link no longer works</h2>
             <p className="mt-2 text-[var(--color-ink-soft)]">{linkError}</p>
             <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
               Already have a password? <Link to="/login" className="font-semibold text-[var(--color-brand)]">Sign in</Link>
@@ -79,7 +79,7 @@ export default function SetPassword() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-good-bg)] text-[var(--color-good)]">
               <CheckCircle2 size={30} />
             </div>
-            <h2 className="mt-4 text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">Password saved</h2>
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-[var(--color-ink)]">Password saved</h2>
             <p className="mt-2 text-[var(--color-ink-soft)]">
               Sign in with your email <span className="font-bold text-[var(--color-ink)]">{who.email || who.username}</span> and your new password.
             </p>
@@ -89,7 +89,7 @@ export default function SetPassword() {
           </div>
         ) : (
           <>
-            <h2 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">
+            <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
               Hi {who.name.split(' ')[0]}, choose your password
             </h2>
             <p className="mt-1.5 text-[var(--color-ink-soft)]">

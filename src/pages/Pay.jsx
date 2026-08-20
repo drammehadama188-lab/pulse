@@ -92,7 +92,7 @@ export default function Pay() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Payslips</h1>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Payslips</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">
             {isManager ? 'Salary, benefits and monthly payslips.' : 'Your salary, benefits and payslips.'}
           </p>
@@ -112,9 +112,9 @@ export default function Pay() {
           <div className="flex items-center justify-between p-6" style={{ background: 'linear-gradient(150deg, var(--color-brand-50), var(--color-surface) 75%)' }}>
             <div>
               <div className="text-sm font-semibold text-[var(--color-ink-soft)]">Monthly total</div>
-              <div className="mt-1 text-4xl font-extrabold tracking-tight text-[var(--color-ink)]">{dalasi(roster.total)}</div>
+              <div className="mt-1 text-4xl font-semibold tracking-tight text-[var(--color-ink)]">{dalasi(roster.total)}</div>
             </div>
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-brand)] text-white"><Wallet size={26} /></span>
+            <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--color-brand)] text-white"><Wallet size={26} /></span>
           </div>
           <div className="divide-y divide-[var(--color-line-soft)]">
             <Row icon={Wallet} label="Base salary" value={dalasi(roster.base)} />
@@ -175,7 +175,7 @@ export default function Pay() {
           </div>
         ) : (
           <Card className="flex items-center gap-4 px-5 py-8">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--color-line-soft)] text-[var(--color-ink-faint)]"><FileText size={20} /></span>
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--color-line-soft)] text-[var(--color-ink-faint)]"><FileText size={20} /></span>
             <div className="text-sm text-[var(--color-ink-faint)]">No payslips yet.{canEdit && roster ? ' Add one with the button above.' : ''}</div>
           </Card>
         )}
@@ -226,7 +226,7 @@ function Payslip({ slip, canEdit, onDelete }) {
           <div className="font-semibold text-[var(--color-ink)]">{monthLabel(slip.period)}</div>
           <div className="truncate text-xs text-[var(--color-ink-faint)]">{breakdown || 'Net pay'}</div>
         </div>
-        <span className="text-lg font-extrabold text-[var(--color-ink)]">{dalasi(slip.net)}</span>
+        <span className="text-lg font-semibold text-[var(--color-ink)]">{dalasi(slip.net)}</span>
         <ChevronDown size={18} className={`text-[var(--color-ink-faint)] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
@@ -243,7 +243,7 @@ function Payslip({ slip, canEdit, onDelete }) {
           )}
           <div className="mt-3 flex items-center justify-between border-t border-[var(--color-line-soft)] pt-3">
             <span className="font-bold text-[var(--color-ink)]">Net pay</span>
-            <span className="font-extrabold text-[var(--color-ink)]">{dalasi(slip.net)}</span>
+            <span className="font-semibold text-[var(--color-ink)]">{dalasi(slip.net)}</span>
           </div>
           {slip.note && <p className="mt-2 text-xs text-[var(--color-ink-faint)]">{slip.note}</p>}
           {canEdit && (
@@ -377,9 +377,9 @@ function PayslipModal({ personName, username, onClose, onSaved }) {
         <>
           <LineEditor title="Earnings" lines={earnings} setLines={setEarnings} addLabel="Add earning" />
           <LineEditor title="Deductions" lines={deductions} setLines={setDeductions} addLabel="Add deduction" />
-          <div className="mt-4 flex items-center justify-between rounded-2xl bg-[var(--color-fill)] px-4 py-3">
+          <div className="mt-4 flex items-center justify-between rounded-xl bg-[var(--color-fill)] px-4 py-3">
             <span className="font-bold text-[var(--color-ink)]">Net pay</span>
-            <span className="text-lg font-extrabold text-[var(--color-ink)]">{dalasi(net)}</span>
+            <span className="text-lg font-semibold text-[var(--color-ink)]">{dalasi(net)}</span>
           </div>
         </>
       )}

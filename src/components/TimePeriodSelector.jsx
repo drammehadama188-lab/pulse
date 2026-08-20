@@ -23,34 +23,34 @@ export default function TimePeriodSelector({ selected, onChange, showExport = tr
       <div className="relative">
         <button
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-3 px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 hover:border-gray-400 transition-colors min-w-[180px]"
+          className="flex items-center gap-3 px-4 py-2.5 bg-white border border-[var(--color-line)] rounded-xl text-sm text-[var(--color-ink)] hover:border-[var(--color-ink-faint)] transition-colors min-w-[180px]"
         >
-          <Calendar size={16} className="text-gray-400" />
+          <Calendar size={16} className="text-[var(--color-ink-faint)]" />
           <span className="flex-1 text-left">{label}</span>
-          <ChevronDown size={16} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+          <ChevronDown size={16} className={`text-[var(--color-ink-faint)] transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
         {open && (
-          <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-30 w-72">
+          <div className="absolute top-full right-0 mt-1 bg-white border border-[var(--color-line)] rounded-xl shadow-lg z-30 w-72">
             {timePeriods.map((period) => (
               <button
                 key={period.value}
                 onClick={() => { onChange(period.value); setOpen(false); }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${selected === period.value ? 'bg-blue-50 text-blue-600' : 'text-gray-700'}`}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--color-fill)] transition-colors ${selected === period.value ? 'bg-blue-50 text-blue-600' : 'text-[var(--color-ink-soft)]'}`}
               >
-                <Calendar size={14} className="text-gray-400" />
+                <Calendar size={14} className="text-[var(--color-ink-faint)]" />
                 {period.label}
               </button>
             ))}
-            <div className="border-t border-gray-200 p-4">
-              <p className="text-sm font-medium text-gray-700 mb-3">Custom Range</p>
+            <div className="border-t border-[var(--color-line)] p-4">
+              <p className="text-sm font-medium text-[var(--color-ink-soft)] mb-3">Custom Range</p>
               <div className="space-y-2">
                 <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-sm" />
                 <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-sm" />
                 <button onClick={() => { onChange('custom', { from: customFrom, to: customTo }); setOpen(false); }}
                   disabled={!customFrom || !customTo}
-                  className="w-full py-2.5 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                  className="w-full py-2.5 bg-[var(--color-ink)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-ink)] disabled:bg-[var(--color-ink-faint)] disabled:cursor-not-allowed">
                   Apply
                 </button>
               </div>
@@ -61,10 +61,10 @@ export default function TimePeriodSelector({ selected, onChange, showExport = tr
 
       {/* Export */}
       {showExport && (
-        <div className="flex items-center gap-1 border border-gray-200 rounded-xl overflow-hidden">
+        <div className="flex items-center gap-1 border border-[var(--color-line)] rounded-xl overflow-hidden">
           {exportFormats.map((fmt) => (
             <button key={fmt}
-              className="px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors border-r border-gray-200 last:border-0 flex items-center gap-1">
+              className="px-3 py-2 text-xs font-medium text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)] hover:text-[var(--color-ink)] transition-colors border-r border-[var(--color-line)] last:border-0 flex items-center gap-1">
               <Download size={12} /> {fmt}
             </button>
           ))}

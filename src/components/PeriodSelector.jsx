@@ -78,7 +78,7 @@ export default function PeriodSelector({ period, onChange }) {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-lift)]">
+          <div className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-lift)]">
             <div className="py-1">
               {PRESETS.map(([k, label]) => (
                 <button

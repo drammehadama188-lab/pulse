@@ -4245,7 +4245,10 @@ app.put('/api/employee-checklist', auth, requireSub('hr', 'records'), notViewAs,
 // ---------- recruitment: applicants pipeline ----------
 // Call outcomes are stages of their own: at the end of a hiring round the
 // dead numbers must be countable apart from the people who said no.
-const APPLICANT_STAGES = ['cv_received', 'no_answer', 'unreachable', 'not_interested', 'not_qualified', 'interviewed', 'hired', 'rejected']
+// 🔒 Same list, same order, as STAGES in src/pages/recruitment/stages.js.
+// Shortlisted and Offer added 20 Aug 2026 — the pipeline had no way to say
+// "we want this one" between the interview and the hire.
+const APPLICANT_STAGES = ['cv_received', 'no_answer', 'unreachable', 'not_interested', 'not_qualified', 'interviewed', 'shortlisted', 'offer', 'hired', 'rejected']
 const APPLICANT_FIELDS = ['name', 'role', 'email', 'phone', 'source', 'notes', 'positionId']
 app.get('/api/applicants', auth, requireSub('hr', 'records'), (req, res) => {
   // Two repairs on the way out, so records imported before the fixes read
@@ -4438,7 +4441,7 @@ const positionCounts = (p, applicants) => {
   return {
     applicantCount: mine.length,
     hiredCount: mine.filter((a) => a.stage === 'hired').length,
-    interviewedCount: mine.filter((a) => ['interviewed', 'hired', 'rejected'].includes(a.stage)).length,
+    interviewedCount: mine.filter((a) => ['interviewed', 'shortlisted', 'offer', 'hired', 'rejected'].includes(a.stage)).length,
   }
 }
 app.get('/api/positions', auth, requireSub('hr', 'records'), (req, res) => {
@@ -4709,7 +4712,7 @@ app.put('/api/interviews/:id', auth, requireSub('hr', 'records'), notViewAs, (re
       // unless a decision has already been recorded past that point.
       const applicants = db.read('applicants', [])
       const a = applicants.find((x) => x.id === iv.applicantId)
-      if (a && !['interviewed', 'hired', 'rejected'].includes(a.stage)) {
+      if (a && !['interviewed', 'shortlisted', 'offer', 'hired', 'rejected'].includes(a.stage)) {
         a.stage = 'interviewed'
         a.updatedAt = new Date().toISOString()
         a.history = [...(a.history || []), { stage: 'interviewed', at: a.updatedAt, by: req.user.username }]

@@ -24,14 +24,14 @@
   --color-sidebar-edge: #0a5a53;
 
   /* Neutral surfaces — clean white + cool grey (founder-style, no green) */
-  --color-paper: #f5f6f8;
+  --color-paper: #f7f8fa;
   --color-surface: #ffffff;
   --color-ink: #111827;
   --color-ink-soft: #5b6472;
   --color-ink-faint: #98a0ad;
-  --color-line: #e7e9ee;
-  --color-line-soft: #eef0f4;
-  --color-fill: #f1f2f5;
+  --color-line: #e8eaf0;
+  --color-line-soft: #eff1f5;
+  --color-fill: #f4f5f8;
 
   /* Status (soft, friendly) */
   --color-good: #1aa179;
@@ -43,13 +43,31 @@
   --color-bad: #e0483a;
   --color-bad-bg: #fbe9e6;
 
-  /* Radii — refined, not bubbly */
-  --radius-card: 16px;
-  --radius-lg: 12px;
+  /* Pipeline status — ONE colour per stage across the whole product, soft not
+     saturated. Red is kept for rejection only, so it still means something. */
+  --color-stage-new: #2563eb;
+  --color-stage-new-bg: #eaf1fe;
+  --color-stage-screening: #7c3aed;
+  --color-stage-screening-bg: #f1ecfe;
+  --color-stage-interview: #d97706;
+  --color-stage-interview-bg: #fdf1e0;
+  --color-stage-short: #059669;
+  --color-stage-short-bg: #e6f6f0;
+  --color-stage-offer: #0891b2;
+  --color-stage-offer-bg: #e3f5f9;
+  --color-stage-hired: #047857;
+  --color-stage-hired-bg: #ddf3ea;
+  --color-stage-out: #dc2626;
+  --color-stage-out-bg: #fdeceb;
 
-  /* Layered premium shadows (founder-style depth) */
-  --shadow-soft: 0 1px 3px rgba(16, 24, 40, 0.06), 0 6px 16px rgba(16, 24, 40, 0.06), 0 12px 32px rgba(16, 24, 40, 0.03);
-  --shadow-lift: 0 2px 4px rgba(16, 24, 40, 0.06), 0 10px 24px rgba(16, 24, 40, 0.08), 0 20px 48px rgba(16, 24, 40, 0.04);
+  /* Radii — 12px on cards, 10px inside them (Adama's spec, 20 Aug 2026) */
+  --radius-card: 12px;
+  --radius-lg: 10px;
+
+  /* Depth is carried by the border and by space, not by shadow. Only things
+     that genuinely float (modals, menus) get --shadow-lift. */
+  --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-lift: 0 8px 24px rgba(16, 24, 40, 0.10);
 }
 
 * {
@@ -71,13 +89,48 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Premium card — subtle white gradient + layered soft shadow (founder-style) */
+/* A card is white, a 1px soft border, 12px radius and almost no shadow.
+   Cards do not nest: inside a card, use spacing and a hairline divider
+   instead of drawing another box. (Adama's design rules, 20 Aug 2026.) */
 .card {
-  background: linear-gradient(180deg, #ffffff 0%, #fbfbfd 100%);
+  background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-soft);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease;
+}
+
+/* Type scale. Bold marks hierarchy, never decoration — nothing above 700. */
+.t-page {
+  font-size: 27px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.t-card {
+  font-size: 15px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+.t-stat {
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.t-body {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.t-support {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-ink-faint);
+}
+.t-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-ink-soft);
 }
 
 /* Reusable focus ring */

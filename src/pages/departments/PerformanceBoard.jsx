@@ -14,10 +14,10 @@ import {
 // scores, locked reviews, sales from Ya Fatou's sheet). No sampled data.
 
 function Trend({ delta, size = 14 }) {
-  if (delta == null) return <Minus size={size} className="text-gray-300" />
+  if (delta == null) return <Minus size={size} className="text-[var(--color-ink-faint)]" />
   if (delta > 0) return <span className="inline-flex items-center font-semibold text-emerald-600"><TrendingUp size={size} />+{delta}</span>
   if (delta < 0) return <span className="inline-flex items-center font-semibold text-red-500"><TrendingDown size={size} />{delta}</span>
-  return <Minus size={size} className="text-gray-300" />
+  return <Minus size={size} className="text-[var(--color-ink-faint)]" />
 }
 
 const FILTERS = [
@@ -111,11 +111,11 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
       {/* Period switcher */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <CalendarClock size={16} className="text-gray-400" />
-          <span className="text-sm font-semibold text-gray-700">Period</span>
+          <CalendarClock size={16} className="text-[var(--color-ink-faint)]" />
+          <span className="text-sm font-semibold text-[var(--color-ink-soft)]">Period</span>
           <PeriodPicker value={period} onChange={setPeriod} />
         </div>
-        <p className="text-xs text-gray-400">{period.kind === 'current' ? 'Live scores — change until the month is reviewed and locked.' : period.kind === 'month' ? 'Locked monthly review scores.' : 'Average of locked reviews in this period.'}</p>
+        <p className="text-xs text-[var(--color-ink-faint)]">{period.kind === 'current' ? 'Live scores — change until the month is reviewed and locked.' : period.kind === 'month' ? 'Locked monthly review scores.' : 'Average of locked reviews in this period.'}</p>
       </div>
 
       {/* Summary tiles — performance only */}
@@ -127,16 +127,16 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
       </div>
 
       {/* Department performance */}
-      <div className="rounded-2xl border border-[var(--color-line)] bg-white p-5">
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">Department performance · {period.label}</h3>
+      <div className="rounded-xl border border-[var(--color-line)] bg-white p-5">
+        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">Department performance · {period.label}</h3>
         <div className="space-y-2.5">
           {depts.map((d) => {
             const b = band(d.avg)
-            const sb = d.status === 'Best performing' ? 'bg-emerald-100 text-emerald-700' : d.status === 'Needs improvement' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'
+            const sb = d.status === 'Best performing' ? 'bg-emerald-100 text-emerald-700' : d.status === 'Needs improvement' ? 'bg-red-100 text-red-700' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'
             return (
               <div key={d.name} className="flex items-center gap-3">
-                <span className="w-36 shrink-0 truncate text-sm font-medium text-gray-700">{d.name} <span className="text-gray-400">· {d.n}</span></span>
-                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-gray-100"><div className={`h-full rounded-full ${b.bar}`} style={{ width: `${d.avg ?? 0}%` }} /></div>
+                <span className="w-36 shrink-0 truncate text-sm font-medium text-[var(--color-ink-soft)]">{d.name} <span className="text-[var(--color-ink-faint)]">· {d.n}</span></span>
+                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[var(--color-fill)]"><div className={`h-full rounded-full ${b.bar}`} style={{ width: `${d.avg ?? 0}%` }} /></div>
                 <span className={`w-11 text-right text-sm font-bold ${b.text}`}>{d.avg == null ? '—' : `${d.avg}%`}</span>
                 <span className={`hidden w-32 shrink-0 rounded-full px-2 py-0.5 text-center text-[11px] font-medium sm:inline-block ${sb}`}>{d.status}</span>
               </div>
@@ -149,15 +149,15 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-1.5">
-            {FILTERS.map((f) => <button key={f.id} onClick={() => setFilter(f.id)} className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${filter === f.id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{f.label}</button>)}
+            {FILTERS.map((f) => <button key={f.id} onClick={() => setFilter(f.id)} className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${filter === f.id ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]'}`}>{f.label}</button>)}
           </div>
-          <div className="relative w-full sm:w-56"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="w-full rounded-full border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm focus:border-gray-400 focus:outline-none" /></div>
+          <div className="relative w-full sm:w-56"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)]" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="w-full rounded-full border border-[var(--color-line)] bg-white py-2 pl-9 pr-3 text-sm focus:border-[var(--color-ink-faint)] focus:outline-none" /></div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-[var(--color-line)] bg-white">
+        <div className="overflow-x-auto rounded-xl border border-[var(--color-line)] bg-white">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-[var(--color-line)] text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              <tr className="border-b border-[var(--color-line)] text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
                 <th className="w-10 px-4 py-3 text-center font-semibold">#</th>
                 <th className="px-3 py-3 font-semibold">Employee</th>
                 <th className="hidden px-3 py-3 font-semibold md:table-cell">Department</th>
@@ -169,7 +169,7 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-sm text-gray-400">No one matches this filter.</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-sm text-[var(--color-ink-faint)]">No one matches this filter.</td></tr>}
               {filtered.map(({ t, score }, i) => {
                 const b = band(score)
                 const w = warningsByAgent[t.name]?.length || 0
@@ -178,46 +178,46 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
                 const due = reviewDue(t.name)
                 const initials = t.name.split(' ').map((x) => x[0]).slice(0, 2).join('')
                 return (
-                  <tr key={t.name} onClick={() => open(t.name)} className="cursor-pointer border-b border-[var(--color-line-soft)] transition-colors last:border-0 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-center text-sm font-bold text-gray-300">{score == null ? '·' : i + 1}</td>
+                  <tr key={t.name} onClick={() => open(t.name)} className="cursor-pointer border-b border-[var(--color-line-soft)] transition-colors last:border-0 hover:bg-[var(--color-fill)]">
+                    <td className="px-4 py-3 text-center text-sm font-bold text-[var(--color-ink-faint)]">{score == null ? '·' : i + 1}</td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-3">
                         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-semibold text-white ${b.bar}`}>{initials}</span>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="truncate font-semibold text-gray-900">{t.name}</span>
+                            <span className="truncate font-semibold text-[var(--color-ink)]">{t.name}</span>
                             {w > 0 && <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 px-1.5 text-[10px] font-medium text-red-600"><AlertTriangle size={9} />{w}</span>}
                             {due && <span className="inline-flex items-center rounded-full bg-amber-50 px-1.5 text-[10px] font-medium text-amber-600">Review due</span>}
                           </div>
-                          <div className="truncate text-xs text-gray-500">{t.role}</div>
+                          <div className="truncate text-xs text-[var(--color-ink-soft)]">{t.role}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="hidden px-3 py-3 text-sm text-gray-500 md:table-cell">{t.type}</td>
-                    <td className="hidden px-3 py-3 sm:table-cell">{ls && ls.target != null ? <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${pctChip(lsPct)}`}>{ls.sales}/{ls.target}</span> : <span className="text-gray-300">—</span>}</td>
-                    <td className={`px-3 py-3 text-right text-lg font-extrabold ${b.text}`}>{score == null ? '—' : `${score}%`}</td>
+                    <td className="hidden px-3 py-3 text-sm text-[var(--color-ink-soft)] md:table-cell">{t.type}</td>
+                    <td className="hidden px-3 py-3 sm:table-cell">{ls && ls.target != null ? <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${pctChip(lsPct)}`}>{ls.sales}/{ls.target}</span> : <span className="text-[var(--color-ink-faint)]">—</span>}</td>
+                    <td className={`px-3 py-3 text-right text-lg font-semibold ${b.text}`}>{score == null ? '—' : `${score}%`}</td>
                     <td className="hidden px-3 py-3 text-center text-[12px] sm:table-cell"><Trend delta={trendOf(t.name)} /></td>
                     <td className="hidden px-3 py-3 lg:table-cell"><span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${b.chip}`}>{b.label}</span></td>
-                    <td className="px-2 py-3 text-right"><ChevronRight size={16} className="text-gray-300" /></td>
+                    <td className="px-2 py-3 text-right"><ChevronRight size={16} className="text-[var(--color-ink-faint)]" /></td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-[11px] text-gray-400">Click a row to open the full performance page. Trend = change vs the previous month's locked review.</p>
+        <p className="mt-2 text-[11px] text-[var(--color-ink-faint)]">Click a row to open the full performance page. Trend = change vs the previous month's locked review.</p>
       </div>
     </div>
   )
 }
 
-function Tile({ label, value, sub, accent = 'text-gray-900', icon: Icon, onClick }) {
+function Tile({ label, value, sub, accent = 'text-[var(--color-ink)]', icon: Icon, onClick }) {
   const Cmp = onClick ? 'button' : 'div'
   return (
-    <Cmp onClick={onClick || undefined} className={`rounded-2xl border border-[var(--color-line)] bg-white p-4 text-left ${onClick ? 'hover:border-gray-300' : ''}`}>
-      <div className="mb-1 flex items-center gap-1.5">{Icon && <Icon size={13} className="text-gray-400" />}<p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</p></div>
+    <Cmp onClick={onClick || undefined} className={`rounded-xl border border-[var(--color-line)] bg-white p-4 text-left ${onClick ? 'hover:border-[var(--color-line)]' : ''}`}>
+      <div className="mb-1 flex items-center gap-1.5">{Icon && <Icon size={13} className="text-[var(--color-ink-faint)]" />}<p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p></div>
       <p className={`truncate text-2xl font-bold ${accent}`}>{value}</p>
-      <p className="mt-0.5 text-xs text-gray-400">{sub}</p>
+      <p className="mt-0.5 text-xs text-[var(--color-ink-faint)]">{sub}</p>
     </Cmp>
   )
 }

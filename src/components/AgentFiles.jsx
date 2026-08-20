@@ -23,8 +23,8 @@ const CATEGORY_COLORS = {
   'warning': 'bg-red-100 text-red-700',
   'contract': 'bg-emerald-100 text-emerald-700',
   'cv': 'bg-purple-100 text-purple-700',
-  'id': 'bg-gray-100 text-gray-700',
-  'general': 'bg-gray-100 text-gray-600',
+  'id': 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]',
+  'general': 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]',
 };
 
 function formatDate(iso) {
@@ -129,19 +129,19 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-4">
+    <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <FileText size={18} className="text-gray-400" />
-          <h2 className="text-gray-900 font-semibold">Files & Documents</h2>
-          <span className="text-[11px] text-gray-400 ml-1">{files.length}</span>
+          <FileText size={18} className="text-[var(--color-ink-faint)]" />
+          <h2 className="text-[var(--color-ink)] font-semibold">Files & Documents</h2>
+          <span className="text-[11px] text-[var(--color-ink-faint)] ml-1">{files.length}</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {generateReviewFn && (
             <button
               onClick={generateReview}
               disabled={generating}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-gray-900 hover:bg-gray-800 text-white rounded-full disabled:bg-gray-300"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-white rounded-full disabled:bg-[var(--color-ink-faint)]"
             >
               <FileSignature size={12} /> {generating ? 'Generating…' : 'Generate review'}
             </button>
@@ -149,11 +149,11 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
           <select
             value={pickedCategory}
             onChange={e => setPickedCategory(e.target.value)}
-            className="text-xs border border-gray-200 rounded-full px-3 py-1.5 focus:outline-none focus:border-gray-400"
+            className="text-xs border border-[var(--color-line)] rounded-full px-3 py-1.5 focus:outline-none focus:border-[var(--color-ink-faint)]"
           >
             {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <label className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white border border-gray-300 hover:border-gray-500 text-gray-700 rounded-full cursor-pointer">
+          <label className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white border border-[var(--color-line)] hover:border-[var(--color-line-soft)]0 text-[var(--color-ink-soft)] rounded-full cursor-pointer">
             <Upload size={12} /> {uploading ? 'Uploading…' : 'Upload'}
             <input ref={fileInputRef} type="file" className="hidden" onChange={uploadFile} disabled={uploading} />
           </label>
@@ -161,68 +161,68 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
       </div>
 
       {files.length === 0 ? (
-        <p className="text-gray-400 text-sm">No files yet. Upload contracts, IDs, signed warnings, or click "Generate review" to save this period's review as a file.</p>
+        <p className="text-[var(--color-ink-faint)] text-sm">No files yet. Upload contracts, IDs, signed warnings, or click "Generate review" to save this period's review as a file.</p>
       ) : (
         <div className="space-y-2">
           {files.map(f => (
             editing?.id === f.id ? (
-              <div key={f.id} className="flex flex-wrap items-center gap-2 p-3 bg-gray-50 rounded-2xl">
+              <div key={f.id} className="flex flex-wrap items-center gap-2 p-3 bg-[var(--color-fill)] rounded-xl">
                 <input
                   value={editing.name}
                   onChange={e => setEditing(s => ({ ...s, name: e.target.value }))}
-                  className="flex-1 min-w-[180px] text-sm border border-gray-200 rounded-lg px-3 py-2"
+                  className="flex-1 min-w-[180px] text-sm border border-[var(--color-line)] rounded-lg px-3 py-2"
                 />
                 <select
                   value={editing.category}
                   onChange={e => setEditing(s => ({ ...s, category: e.target.value }))}
-                  className="text-xs border border-gray-200 rounded-full px-3 py-2"
+                  className="text-xs border border-[var(--color-line)] rounded-full px-3 py-2"
                 >
                   {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
                 <button onClick={saveEdit} disabled={savingEdit || !editing.name.trim()}
-                  className="px-3 py-2 text-xs font-medium bg-gray-900 hover:bg-gray-800 text-white rounded-full disabled:bg-gray-300">
+                  className="px-3 py-2 text-xs font-medium bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-white rounded-full disabled:bg-[var(--color-ink-faint)]">
                   {savingEdit ? 'Saving…' : 'Save'}
                 </button>
                 <button onClick={() => setEditing(null)} disabled={savingEdit}
-                  className="px-3 py-2 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full">
+                  className="px-3 py-2 text-xs font-medium bg-[var(--color-fill)] hover:bg-[var(--color-line)] text-[var(--color-ink-soft)] rounded-full">
                   Cancel
                 </button>
               </div>
             ) : (
-            <div key={f.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl group">
+            <div key={f.id} className="flex items-center gap-3 p-3 bg-[var(--color-fill)] rounded-xl group">
               <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0">
-                <FileText size={14} className="text-gray-500" />
+                <FileText size={14} className="text-[var(--color-ink-soft)]" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm text-gray-900 font-medium truncate">{f.name}</p>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${CATEGORY_COLORS[f.category] || 'bg-gray-100 text-gray-600'}`}>
+                  <p className="text-sm text-[var(--color-ink)] font-medium truncate">{f.name}</p>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${CATEGORY_COLORS[f.category] || 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
                     {CATEGORY_LABELS[f.category] || f.category}
                   </span>
                 </div>
-                <p className="text-[11px] text-gray-400 mt-0.5">
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">
                   {formatDate(f.uploadedAt)} · {formatSize(f.sizeBytes)} · by {f.uploadedBy || 'Damia'}{f.editedBy ? ` · edited by ${f.editedBy}` : ''}
                 </p>
               </div>
               <a href={`/api/agent-files/${f.id}/download?t=${getToken()}`} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1 p-2 text-gray-400 hover:text-gray-900 rounded-full hover:bg-white">
+                className="flex items-center gap-1 p-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] rounded-full hover:bg-white">
                 <Download size={14} />
               </a>
               <button onClick={() => emailFile(f)}
-                className="flex items-center gap-1 p-2 text-gray-400 hover:text-gray-900 rounded-full hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity"
+                className="flex items-center gap-1 p-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] rounded-full hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity"
                 title="Email this to the agent">
                 <Mail size={14} />
               </button>
               {canEdit && (
                 <button onClick={() => setEditing({ id: f.id, name: f.name, category: f.category || 'general' })}
                   title="Edit name or type"
-                  className="flex items-center gap-1 p-2 text-gray-400 hover:text-gray-900 rounded-full hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity">
+                  className="flex items-center gap-1 p-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] rounded-full hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity">
                   <Pencil size={14} />
                 </button>
               )}
               {canDelete && (
                 <button onClick={() => deleteFile(f.id)}
-                  className="flex items-center gap-1 p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                  className="flex items-center gap-1 p-2 text-[var(--color-ink-faint)] hover:text-red-600 rounded-full hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Trash2 size={14} />
                 </button>
               )}

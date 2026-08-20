@@ -29,16 +29,16 @@ export default function Performance() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Performance</h1>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Performance</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Who is performing and who isn’t — click anyone to open their full performance page</p>
       </div>
 
-      <div className="flex gap-1 rounded-full bg-gray-100 p-1 w-fit">
+      <div className="flex gap-1 rounded-full bg-[var(--color-fill)] p-1 w-fit">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${tab === t.id ? 'bg-white text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)] hover:text-[var(--color-ink-soft)]'}`}
           >
             {t.label}
           </button>

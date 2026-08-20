@@ -12,20 +12,20 @@ const pct = (n, of) => (of > 0 ? `${Math.round((n / of) * 100)}%` : '—');
 function Table({ title, question, head, rows, empty }) {
   return (
     <div className={`${CARD} p-5`}>
-      <h3 className="text-sm font-bold text-gray-900">{title}</h3>
-      <p className="text-xs text-gray-400 mt-0.5">{question}</p>
-      {rows.length === 0 ? <p className="mt-4 text-sm text-gray-400">{empty}</p> : (
+      <h3 className="text-sm font-bold text-[var(--color-ink)]">{title}</h3>
+      <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">{question}</p>
+      {rows.length === 0 ? <p className="mt-4 text-sm text-[var(--color-ink-faint)]">{empty}</p> : (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-gray-400 border-b border-gray-100">
+              <tr className="text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
                 {head.map((h, i) => <th key={h} className={`py-2 font-bold ${i ? 'text-right px-3' : 'pr-3'}`}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={i} className="border-b border-gray-50 last:border-0">
-                  {r.map((c, j) => <td key={j} className={`py-2.5 ${j ? 'text-right px-3 text-gray-700' : 'pr-3 font-medium text-gray-900'}`}>{c}</td>)}
+                <tr key={i} className="border-b border-[var(--color-line-soft)] last:border-0">
+                  {r.map((c, j) => <td key={j} className={`py-2.5 ${j ? 'text-right px-3 text-[var(--color-ink-soft)]' : 'pr-3 font-medium text-[var(--color-ink)]'}`}>{c}</td>)}
                 </tr>
               ))}
             </tbody>
@@ -95,7 +95,7 @@ export default function Reports() {
     return nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null;
   }, [timeToHire]);
 
-  if (loading) return <p className="text-sm text-gray-400">Loading…</p>;
+  if (loading) return <p className="text-sm text-[var(--color-ink-faint)]">Loading…</p>;
 
   return (
     <div>
@@ -125,7 +125,7 @@ export default function Reports() {
           head={['Person', 'Added', 'Hired', 'Took']}
           rows={timeToHire}
           empty="Nobody hired yet." />
-        {avgDays != null && <p className="text-xs text-gray-400">Average across recorded hires: {avgDays} days.</p>}
+        {avgDays != null && <p className="text-xs text-[var(--color-ink-faint)]">Average across recorded hires: {avgDays} days.</p>}
       </div>
     </div>
   );

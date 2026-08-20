@@ -26,10 +26,10 @@ const COACHING_SHOWN = 15;
 
 function Stat({ label, value, sub, accent }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4">
-      <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">{label}</p>
-      <p className={`text-2xl font-bold mt-1 ${accent || 'text-gray-900'}`}>{value}</p>
-      {sub && <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>}
+    <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-4">
+      <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">{label}</p>
+      <p className={`text-2xl font-bold mt-1 ${accent || 'text-[var(--color-ink)]'}`}>{value}</p>
+      {sub && <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -135,33 +135,33 @@ export default function ReviewsWarnings({ scope }) {
     <div className="max-w-5xl">
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">{scoped ? 'Team Reviews' : 'Reviews & Warnings'}</h1>
-          <p className="text-gray-500 mt-1">{scoped ? "Your team's reviews and warnings on record." : 'Who needs a review this month, and who has warnings on record.'}</p>
+          <h1 className="text-[27px] font-semibold text-[var(--color-ink)]">{scoped ? 'Team Reviews' : 'Reviews & Warnings'}</h1>
+          <p className="text-[var(--color-ink-soft)] mt-1">{scoped ? "Your team's reviews and warnings on record." : 'Who needs a review this month, and who has warnings on record.'}</p>
         </div>
-        {!scoped && <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-full"><Plus size={14} /> Log a warning</button>}
+        {!scoped && <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-white text-sm font-medium rounded-full"><Plus size={14} /> Log a warning</button>}
       </div>
 
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <Stat label="Team" value={roster.length} />
         <Stat label={`Reviewed — ${periodLabel}`} value={reviewed.length} sub={`of ${roster.length}`} accent="text-emerald-600" />
-        <Stat label="Pending reviews" value={needsReview.length} accent={needsReview.length > 0 ? 'text-amber-600' : 'text-gray-900'} />
-        <Stat label="Warnings on record" value={warnings.length} accent={warnings.length > 0 ? 'text-red-600' : 'text-gray-900'} />
+        <Stat label="Pending reviews" value={needsReview.length} accent={needsReview.length > 0 ? 'text-amber-600' : 'text-[var(--color-ink)]'} />
+        <Stat label="Warnings on record" value={warnings.length} accent={warnings.length > 0 ? 'text-red-600' : 'text-[var(--color-ink)]'} />
       </div>
 
       {/* Needs a review */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-4">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">Needs a review — {periodLabel}</h2>
-        <p className="text-sm text-gray-500 mb-4">{needsReview.length === 0 ? 'Everyone has a locked review for this month.' : `${needsReview.length} ${needsReview.length === 1 ? 'person has' : 'people have'} no review yet.`}</p>
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+        <h2 className="text-base font-semibold text-[var(--color-ink)] mb-1">Needs a review — {periodLabel}</h2>
+        <p className="text-sm text-[var(--color-ink-soft)] mb-4">{needsReview.length === 0 ? 'Everyone has a locked review for this month.' : `${needsReview.length} ${needsReview.length === 1 ? 'person has' : 'people have'} no review yet.`}</p>
         {needsReview.length > 0 && (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-[var(--color-line-soft)]">
             {needsReview.map((p) => (
               <div key={p.name} className="flex items-center justify-between gap-4 py-3">
                 <button onClick={() => openProfile(p.name)} className="flex items-center gap-3 min-w-0 text-left group">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white text-xs font-semibold shrink-0">{p.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</div>
-                  <div className="min-w-0"><p className="text-sm font-medium text-gray-900 group-hover:underline truncate">{p.name}</p><p className="text-xs text-gray-500 truncate">{p.role}</p></div>
+                  <div className="min-w-0"><p className="text-sm font-medium text-[var(--color-ink)] group-hover:underline truncate">{p.name}</p><p className="text-xs text-[var(--color-ink-soft)] truncate">{p.role}</p></div>
                 </button>
-                <button onClick={() => openReview(p.name)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 shrink-0">{scoped ? 'Coach' : 'Review'} <ChevronRight size={14} /></button>
+                <button onClick={() => openReview(p.name)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--color-line)] text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)] shrink-0">{scoped ? 'Coach' : 'Review'} <ChevronRight size={14} /></button>
               </div>
             ))}
           </div>
@@ -176,38 +176,38 @@ export default function ReviewsWarnings({ scope }) {
       </div>
 
       {/* Coaching & check-ins — logged by team leads on the Team Member pages */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-4">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">Coaching &amp; check-ins</h2>
-        <p className="text-sm text-gray-500 mb-4">
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+        <h2 className="text-base font-semibold text-[var(--color-ink)] mb-1">Coaching &amp; check-ins</h2>
+        <p className="text-sm text-[var(--color-ink-soft)] mb-4">
           {coaching.length === 0
             ? 'No coaching sessions logged yet.'
             : `${coachedThisMonth} logged in ${periodLabel} · ${coaching.length} total on record.`}
         </p>
         {coaching.length === 0 ? (
-          <div className="p-10 text-center text-gray-400 text-sm">Sessions appear here the moment a team lead logs them on a Team Member page.</div>
+          <div className="p-10 text-center text-[var(--color-ink-faint)] text-sm">Sessions appear here the moment a team lead logs them on a Team Member page.</div>
         ) : (
           <div className="space-y-2">
             {coachingShown.map((c) => {
               const m = COACH_META[c.type] || COACH_META.coaching;
               return (
-                <div key={c.id} className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg">
+                <div key={c.id} className="flex items-start gap-3 p-4 border border-[var(--color-line)] rounded-lg">
                   <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 mt-0.5 ${m.cls}`}>
                     <m.icon size={11} /> {m.label}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{c.targetName || c.targetUsername}{c.title ? ` — ${c.title}` : ''}</p>
-                    {c.note && <p className="text-sm text-gray-700 mt-0.5">{c.note}</p>}
-                    <p className="text-[11px] text-gray-500 mt-1">{fmtDate(c.datetime || c.createdAt)} · by {c.createdBy}{c.editedBy ? ` · edited by ${c.editedBy}` : ''}</p>
+                    <p className="text-sm font-medium text-[var(--color-ink)]">{c.targetName || c.targetUsername}{c.title ? ` — ${c.title}` : ''}</p>
+                    {c.note && <p className="text-sm text-[var(--color-ink-soft)] mt-0.5">{c.note}</p>}
+                    <p className="text-[11px] text-[var(--color-ink-soft)] mt-1">{fmtDate(c.datetime || c.createdAt)} · by {c.createdBy}{c.editedBy ? ` · edited by ${c.editedBy}` : ''}</p>
                   </div>
                   {(canEditCoaching || canDeleteCoaching) && (
                     <div className="flex shrink-0 items-start gap-1">
                       {canEditCoaching && (
-                        <button onClick={() => { setCoachErr(''); setConfirmDelC(null); setEditCoach({ id: c.id, type: c.type || 'coaching', title: c.title || '', note: c.note || '', datetime: c.datetime || '' }); }} title="Edit" className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700"><Pencil size={14} /></button>
+                        <button onClick={() => { setCoachErr(''); setConfirmDelC(null); setEditCoach({ id: c.id, type: c.type || 'coaching', title: c.title || '', note: c.note || '', datetime: c.datetime || '' }); }} title="Edit" className="rounded-lg p-1.5 text-[var(--color-ink-faint)] hover:bg-[var(--color-fill)] hover:text-[var(--color-ink-soft)]"><Pencil size={14} /></button>
                       )}
                       {canDeleteCoaching && (confirmDelC === c.id ? (
                         <button onClick={() => deleteCoach(c.id)} disabled={delCBusy} className="rounded-lg bg-red-600 px-2 py-1 text-xs font-bold text-white disabled:opacity-60">{delCBusy ? 'Deleting…' : 'Delete?'}</button>
                       ) : (
-                        <button onClick={() => setConfirmDelC(c.id)} title="Delete" className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-red-600"><Trash2 size={14} /></button>
+                        <button onClick={() => setConfirmDelC(c.id)} title="Delete" className="rounded-lg p-1.5 text-[var(--color-ink-faint)] hover:bg-[var(--color-fill)] hover:text-red-600"><Trash2 size={14} /></button>
                       ))}
                     </div>
                   )}
@@ -215,29 +215,29 @@ export default function ReviewsWarnings({ scope }) {
               );
             })}
             {coaching.length > COACHING_SHOWN && (
-              <p className="text-[11px] text-gray-400 pt-1">Showing the latest {COACHING_SHOWN} of {coaching.length}. The full month-by-month record lives in Reports.</p>
+              <p className="text-[11px] text-[var(--color-ink-faint)] pt-1">Showing the latest {COACHING_SHOWN} of {coaching.length}. The full month-by-month record lives in Reports.</p>
             )}
           </div>
         )}
       </div>
 
       {/* Warnings */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">Warnings &amp; disciplinary</h2>
-        <p className="text-sm text-gray-500 mb-4">{warnings.length === 0 ? 'No warnings on file across the team.' : `${warnings.length} on record.`}</p>
+      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+        <h2 className="text-base font-semibold text-[var(--color-ink)] mb-1">Warnings &amp; disciplinary</h2>
+        <p className="text-sm text-[var(--color-ink-soft)] mb-4">{warnings.length === 0 ? 'No warnings on file across the team.' : `${warnings.length} on record.`}</p>
         {warnings.length === 0 ? (
-          <div className="p-10 text-center text-gray-400 text-sm">No warnings recorded.</div>
+          <div className="p-10 text-center text-[var(--color-ink-faint)] text-sm">No warnings recorded.</div>
         ) : (
           <div className="space-y-2">
             {sortedWarnings.map((w) => (
-              <button key={w.id} onClick={() => openProfile(w.agent)} className="w-full flex items-start gap-3 p-4 border border-gray-200 rounded-lg text-left hover:border-gray-300 hover:shadow-sm transition-all">
+              <button key={w.id} onClick={() => openProfile(w.agent)} className="w-full flex items-start gap-3 p-4 border border-[var(--color-line)] rounded-lg text-left hover:border-[var(--color-line)] transition-all">
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 mt-0.5 ${typeCls(w.type)}`}>{w.type}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{w.agent}</p>
-                  {w.reason && <p className="text-sm text-gray-700 mt-0.5">{w.reason}</p>}
-                  <p className="text-[11px] text-gray-500 mt-1">{fmtDate(w.date)}{w.issuedBy ? ` · issued by ${w.issuedBy}` : ''}</p>
+                  <p className="text-sm font-medium text-[var(--color-ink)]">{w.agent}</p>
+                  {w.reason && <p className="text-sm text-[var(--color-ink-soft)] mt-0.5">{w.reason}</p>}
+                  <p className="text-[11px] text-[var(--color-ink-soft)] mt-1">{fmtDate(w.date)}{w.issuedBy ? ` · issued by ${w.issuedBy}` : ''}</p>
                 </div>
-                <ChevronRight size={16} className="text-gray-300 shrink-0 mt-1" />
+                <ChevronRight size={16} className="text-[var(--color-ink-faint)] shrink-0 mt-1" />
               </button>
             ))}
           </div>
@@ -247,39 +247,39 @@ export default function ReviewsWarnings({ scope }) {
       {/* Edit a coaching entry modal */}
       {editCoach && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !coachBusy && setEditCoach(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><GraduationCap size={18} className="text-emerald-600" /> Edit entry</h3>
-              <button onClick={() => setEditCoach(null)} disabled={coachBusy} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
+              <h3 className="text-lg font-semibold text-[var(--color-ink)] flex items-center gap-2"><GraduationCap size={18} className="text-emerald-600" /> Edit entry</h3>
+              <button onClick={() => setEditCoach(null)} disabled={coachBusy} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Type</span>
-                <select value={editCoach.type} onChange={(e) => setEditCoach((s) => ({ ...s, type: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Type</span>
+                <select value={editCoach.type} onChange={(e) => setEditCoach((s) => ({ ...s, type: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm">
                   <option value="coaching">Coaching</option>
                   <option value="meeting">Meeting</option>
                   <option value="flag">Flag</option>
                 </select>
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Title</span>
-                <input value={editCoach.title} onChange={(e) => setEditCoach((s) => ({ ...s, title: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Title</span>
+                <input value={editCoach.title} onChange={(e) => setEditCoach((s) => ({ ...s, title: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Note</span>
-                <textarea value={editCoach.note} onChange={(e) => setEditCoach((s) => ({ ...s, note: e.target.value }))} rows={3} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Note</span>
+                <textarea value={editCoach.note} onChange={(e) => setEditCoach((s) => ({ ...s, note: e.target.value }))} rows={3} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
               </label>
               {editCoach.type === 'meeting' && (
                 <label className="block">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">When</span>
-                  <input type="datetime-local" value={editCoach.datetime} onChange={(e) => setEditCoach((s) => ({ ...s, datetime: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">When</span>
+                  <input type="datetime-local" value={editCoach.datetime} onChange={(e) => setEditCoach((s) => ({ ...s, datetime: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
                 </label>
               )}
             </div>
             {coachErr && <p className="text-sm text-red-600 mt-3">{coachErr}</p>}
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setEditCoach(null)} disabled={coachBusy} className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
-              <button onClick={saveCoach} disabled={coachBusy} className="px-4 py-2 rounded-lg text-sm text-white bg-gray-900 hover:bg-gray-800 disabled:opacity-60">{coachBusy ? 'Saving…' : 'Save changes'}</button>
+              <button onClick={() => setEditCoach(null)} disabled={coachBusy} className="px-4 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
+              <button onClick={saveCoach} disabled={coachBusy} className="px-4 py-2 rounded-lg text-sm text-white bg-[var(--color-ink)] hover:bg-[var(--color-ink)] disabled:opacity-60">{coachBusy ? 'Saving…' : 'Save changes'}</button>
             </div>
           </div>
         </div>
@@ -288,38 +288,38 @@ export default function ReviewsWarnings({ scope }) {
       {/* Log a warning modal */}
       {adding && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !busy && setAdding(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><ShieldAlert size={18} className="text-red-500" /> Log a warning</h3>
-              <button onClick={() => setAdding(null)} disabled={busy} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
+              <h3 className="text-lg font-semibold text-[var(--color-ink)] flex items-center gap-2"><ShieldAlert size={18} className="text-red-500" /> Log a warning</h3>
+              <button onClick={() => setAdding(null)} disabled={busy} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Person</span>
-                <select value={adding.agent} onChange={(e) => setAdding((s) => ({ ...s, agent: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Person</span>
+                <select value={adding.agent} onChange={(e) => setAdding((s) => ({ ...s, agent: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm">
                   {roster.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
                 </select>
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Type</span>
-                <select value={adding.type} onChange={(e) => setAdding((s) => ({ ...s, type: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Type</span>
+                <select value={adding.type} onChange={(e) => setAdding((s) => ({ ...s, type: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm">
                   <option value="verbal">Verbal</option>
                   <option value="formal">Formal</option>
                   <option value="final">Final</option>
                 </select>
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Reason</span>
-                <textarea value={adding.reason} onChange={(e) => setAdding((s) => ({ ...s, reason: e.target.value }))} rows={3} placeholder="What happened?" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Reason</span>
+                <textarea value={adding.reason} onChange={(e) => setAdding((s) => ({ ...s, reason: e.target.value }))} rows={3} placeholder="What happened?" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Date</span>
-                <input type="date" value={adding.date} onChange={(e) => setAdding((s) => ({ ...s, date: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Date</span>
+                <input type="date" value={adding.date} onChange={(e) => setAdding((s) => ({ ...s, date: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
               </label>
             </div>
             {err && <p className="text-sm text-red-600 mt-3">{err}</p>}
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setAdding(null)} disabled={busy} className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+              <button onClick={() => setAdding(null)} disabled={busy} className="px-4 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
               <button onClick={submitWarning} disabled={busy} className="px-4 py-2 rounded-lg text-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-60">{busy ? 'Saving…' : 'Log warning'}</button>
             </div>
           </div>

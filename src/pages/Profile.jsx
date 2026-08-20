@@ -55,13 +55,13 @@ export default function Profile() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">My profile</h1>
+      <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">My profile</h1>
 
       <Card className="overflow-hidden">
         <div className="flex flex-col items-center gap-3 p-8 text-center" style={{ background: 'linear-gradient(160deg, var(--color-brand-50), var(--color-surface) 70%)' }}>
           <Avatar name={user.name} size={84} />
           <div>
-            <div className="text-xl font-extrabold tracking-tight">{user.name}</div>
+            <div className="text-xl font-semibold tracking-tight">{user.name}</div>
             <div className="text-[var(--color-ink-soft)]">{rec?.role || user.title}</div>
           </div>
           <div className="flex flex-wrap justify-center gap-2">

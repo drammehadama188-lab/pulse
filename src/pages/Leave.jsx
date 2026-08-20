@@ -67,7 +67,7 @@ export default function Leave() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Requests</h1>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Requests</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">Request time off and track approvals.</p>
         </div>
         {!isViewAs && (
@@ -103,7 +103,7 @@ export default function Leave() {
               <select
                 value={effectiveType}
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="focus-ring w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none"
+                className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none"
               >
                 {availableTypes.map((t) => <option key={t}>{t}</option>)}
               </select>
@@ -111,15 +111,15 @@ export default function Leave() {
             <div className="hidden sm:block" />
             <div>
               <label className="mb-1.5 block text-sm font-semibold">From</label>
-              <input type="date" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} className="focus-ring w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" />
+              <input type="date" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-semibold">To</label>
-              <input type="date" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} className="focus-ring w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" />
+              <input type="date" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" />
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-sm font-semibold">Reason (optional)</label>
-              <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} className="focus-ring w-full resize-none rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" placeholder="A short note for your manager" />
+              <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} className="focus-ring w-full resize-none rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" placeholder="A short note for your manager" />
             </div>
             {form.type === 'Sick' && (
               <div className="sm:col-span-2 rounded-xl bg-[var(--color-rest-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-rest)]">

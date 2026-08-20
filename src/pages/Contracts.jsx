@@ -51,9 +51,9 @@ function StatCard({ label, value, tone }) {
     blue: 'text-[#1d4ed8]', rest: 'text-[var(--color-rest)]', ink: 'text-[var(--color-ink)]',
   }[tone || 'ink']
   return (
-    <div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+    <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
-      <p className={`mt-0.5 text-3xl font-extrabold tabular-nums ${c}`}>{value}</p>
+      <p className={`mt-0.5 text-[27px] font-semibold tabular-nums ${c}`}>{value}</p>
     </div>
   )
 }
@@ -114,7 +114,7 @@ export default function Contracts() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Contracts</h1>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Contracts</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Which contracts need your attention — renew, extend or let expire</p>
       </div>
 
@@ -128,8 +128,8 @@ export default function Contracts() {
       </div>
 
       <div className="relative w-full sm:w-72">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="w-full rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] py-2 pl-9 pr-3 text-sm focus:border-gray-400 focus:outline-none" />
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)]" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="w-full rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] py-2 pl-9 pr-3 text-sm focus:border-[var(--color-ink-faint)] focus:outline-none" />
       </div>
 
       {/* Contract cards */}
@@ -142,12 +142,12 @@ export default function Contracts() {
           const recTone = { good: 'text-[var(--color-good)]', bad: 'text-[var(--color-bad)]', ink: 'text-[var(--color-ink-soft)]' }[rec?.tone || 'ink']
           const urgent = d != null && d <= 30
           return (
-            <div key={t.name} className={`rounded-2xl border bg-[var(--color-surface)] p-4 ${urgent ? 'border-[var(--color-warn)]/50' : 'border-[var(--color-line)]'}`}>
+            <div key={t.name} className={`rounded-xl border bg-[var(--color-surface)] p-4 ${urgent ? 'border-[var(--color-warn)]/50' : 'border-[var(--color-line)]'}`}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex items-start gap-4">
                   {/* days-left badge */}
                   <div className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl text-center ${d == null ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]' : d < 0 ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : d <= 30 ? 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
-                    {d == null ? <CheckCircle2 size={22} /> : <><span className="text-lg font-extrabold leading-none tabular-nums">{Math.abs(d)}</span><span className="text-[9px] font-bold uppercase">{d < 0 ? 'days ago' : 'days'}</span></>}
+                    {d == null ? <CheckCircle2 size={22} /> : <><span className="text-lg font-semibold leading-none tabular-nums">{Math.abs(d)}</span><span className="text-[9px] font-bold uppercase">{d < 0 ? 'days ago' : 'days'}</span></>}
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -163,7 +163,7 @@ export default function Contracts() {
                     </div>
                   </div>
                 </div>
-                <button onClick={() => navigate(`/agents/${slugify(t.name)}`)} className="inline-flex items-center gap-1.5 self-center rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2 text-sm font-semibold text-[var(--color-ink)] hover:border-gray-300">
+                <button onClick={() => navigate(`/agents/${slugify(t.name)}`)} className="inline-flex items-center gap-1.5 self-center rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2 text-sm font-semibold text-[var(--color-ink)] hover:border-[var(--color-line)]">
                   Review contract <ChevronRight size={15} />
                 </button>
               </div>

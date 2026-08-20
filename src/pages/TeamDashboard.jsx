@@ -60,7 +60,7 @@ export default function TeamDashboard() {
   return (
     <div className="space-y-7">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">My Team</h1>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">My Team</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()} · {stats.total} {stats.total === 1 ? 'person' : 'people'}</p>
       </div>
 
@@ -158,7 +158,7 @@ function Metric({ label, value, hint, tone }) {
   return (
     <div className="text-right">
       <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</div>
-      <div className={`text-base font-extrabold tabular-nums ${tone === 'bad' ? 'text-[var(--color-bad)]' : tone === 'good' ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink)]'}`}>{value}</div>
+      <div className={`text-base font-semibold tabular-nums ${tone === 'bad' ? 'text-[var(--color-bad)]' : tone === 'good' ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink)]'}`}>{value}</div>
       {hint && <div className="text-[10px] text-[var(--color-ink-faint)]">{hint}</div>}
     </div>
   )

@@ -116,7 +116,7 @@ export default function Home() {
       {/* greeting */}
       <div className="flex items-center justify-between gap-4 rise">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)] md:text-3xl">
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)] md:text-[27px]">
             {greeting()}, {firstName(user.name)} <span className="inline-block">👋</span>
           </h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()}</p>
@@ -146,21 +146,21 @@ export default function Home() {
           <div>
             {done ? (
               <>
-                <div className="text-2xl font-extrabold tracking-tight">Day complete</div>
+                <div className="text-2xl font-semibold tracking-tight">Day complete</div>
                 <div className="text-sm text-[var(--color-ink-faint)]">
                   {timeShort(att.checkIn)} – {timeShort(att.checkOut)}
                 </div>
               </>
             ) : checkedIn ? (
               <>
-                <div className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+                <div className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
                   Checked in {att.late && <Pill tone="warn">Late</Pill>}
                 </div>
                 <div className="text-sm text-[var(--color-ink-faint)]">since {timeShort(att.checkIn)}</div>
               </>
             ) : (
               <>
-                <div className="text-2xl font-extrabold tracking-tight">Not checked in</div>
+                <div className="text-2xl font-semibold tracking-tight">Not checked in</div>
                 <div className="text-sm text-[var(--color-ink-faint)]">Tap below to start your day</div>
               </>
             )}
@@ -236,7 +236,7 @@ export default function Home() {
               <ClipboardCheck size={20} />
             </span>
             <div>
-              <div className="text-xl font-extrabold leading-none">{mgr.pending}</div>
+              <div className="text-xl font-semibold leading-none">{mgr.pending}</div>
               <div className="text-sm text-[var(--color-ink-faint)]">pending approvals</div>
             </div>
           </div>
@@ -245,7 +245,7 @@ export default function Home() {
               <Clock size={20} />
             </span>
             <div>
-              <div className="text-xl font-extrabold leading-none">
+              <div className="text-xl font-semibold leading-none">
                 {mgr.present}/{mgr.total}
               </div>
               <div className="text-sm text-[var(--color-ink-faint)]">checked in today</div>
@@ -316,7 +316,7 @@ export default function Home() {
                   </div>
                 </div>
                 {me.kpi && (
-                  <div className="rounded-2xl bg-[var(--color-fill)] px-4 py-3 text-sm">
+                  <div className="rounded-xl bg-[var(--color-fill)] px-4 py-3 text-sm">
                     <span className="font-semibold text-[var(--color-ink-soft)]">Goal · </span>
                     <span className="text-[var(--color-ink)]">{me.kpi}</span>
                   </div>
@@ -368,7 +368,7 @@ function TodayStat({ icon: Icon, label, value }) {
       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand-50)] text-[var(--color-brand)]">
         <Icon size={18} strokeWidth={2.2} />
       </span>
-      <div className="text-2xl font-extrabold leading-none text-[var(--color-ink)]">{value}</div>
+      <div className="text-2xl font-semibold leading-none text-[var(--color-ink)]">{value}</div>
       <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
         {label} today
       </div>

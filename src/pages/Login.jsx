@@ -54,7 +54,7 @@ export default function Login() {
               />
             </svg>
             <div className="text-left leading-none">
-              <div className="text-5xl font-extrabold tracking-tight text-[var(--color-ink)]">
+              <div className="text-5xl font-semibold tracking-tight text-[var(--color-ink)]">
                 Pulse
               </div>
               <div className="mt-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--color-ink-soft)]">
@@ -77,7 +77,7 @@ export default function Login() {
           <div className="mb-8 md:hidden">
             <Brand />
           </div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">
+          <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
             Welcome back
           </h2>
           <p className="mt-1.5 text-[var(--color-ink-soft)]">Sign in with your email and password.</p>
@@ -93,7 +93,7 @@ export default function Login() {
                 autoCapitalize="none"
                 autoCorrect="off"
                 placeholder="name@gmail.com"
-                className="focus-ring w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]"
+                className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]"
               />
             </div>
 
@@ -106,7 +106,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Your password"
-                className="focus-ring w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]"
+                className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]"
               />
             </div>
 

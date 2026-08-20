@@ -114,11 +114,11 @@ export default function CustomerDetail() {
           </div>
         </div>
         <div className="relative flex items-center gap-4 px-5 pb-6 pt-2 sm:px-7 sm:pb-8">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-white/15 text-2xl font-extrabold text-white ring-4 ring-white/30 backdrop-blur-sm sm:h-24 sm:w-24">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-white/15 text-2xl font-semibold text-white ring-4 ring-white/30 backdrop-blur-sm sm:h-24 sm:w-24">
             {initials(customer.company)}
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-extrabold tracking-tight sm:text-3xl">{customer.company}</h1>
+            <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-[27px]">{customer.company}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/85">
               {customer.contact && <span>{customer.contact}{customer.role ? ` · ${customer.role}` : ''}</span>}
               {customer.phone && <span>{customer.phone}</span>}
@@ -150,7 +150,7 @@ export default function CustomerDetail() {
       {/* ---- Details ---- */}
       <Card className="p-5 sm:p-6">
         <div className="mb-5 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-extrabold tracking-tight text-[var(--color-ink)]">Customer information</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-[var(--color-ink)]">Customer information</h2>
           {!isViewAs && (
             <Button variant="outline" size="sm" icon={Pencil} onClick={() => setEditing(true)}>
               Edit
@@ -261,9 +261,9 @@ function Composer({ onSave, busy }) {
 
   return (
     <Card className="p-5 sm:p-6">
-      <h2 className="mb-4 text-lg font-extrabold tracking-tight text-[var(--color-ink)]">Add note</h2>
+      <h2 className="mb-4 text-lg font-semibold tracking-tight text-[var(--color-ink)]">Add note</h2>
       <TypeTabs value={v.type} onChange={(type) => set({ type })} />
-      <div className="rounded-2xl border-2 border-[var(--color-line)] p-3 transition-colors focus-within:border-[var(--color-brand)]">
+      <div className="rounded-xl border-2 border-[var(--color-line)] p-3 transition-colors focus-within:border-[var(--color-brand)]">
         <ActivityBody v={v} set={set} bare />
         <div className="mt-2 flex justify-end">
           <Button icon={Send} onClick={submit} disabled={busy}>

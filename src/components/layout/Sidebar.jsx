@@ -24,9 +24,9 @@ function NavRow({ item, soon = false }) {
       to={item.to}
       end={item.end || item.to === '/'}
       className={({ isActive }) =>
-        `group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
+        `group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
           isActive
-            ? 'bg-white text-[var(--color-sidebar)] shadow-sm'
+            ? 'bg-white text-[var(--color-sidebar)]'
             : 'text-white/75 hover:bg-white/10 hover:text-white'
         }`
       }
@@ -99,7 +99,7 @@ export function Sidebar() {
 
       {/* Open Admin SSO button removed 12 Jun 2026 at Adama's request — Pulse is HR-only now. */}
 
-      <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-3">
+      <div className="mt-4 flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-3">
         <Avatar name={user?.name} size={38} />
         <div className="min-w-0 flex-1 leading-tight">
           <div className="truncate text-sm font-bold text-white">{user?.name}</div>
