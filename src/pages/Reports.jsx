@@ -47,7 +47,7 @@ export default function Reports() {
           <h1 className="text-2xl font-semibold tracking-tight md:text-[27px]">Reports</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">The month's story — attendance, coaching, performance, leave and pay.</p>
         </div>
-        <div className="flex items-center gap-1 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-1 py-1">
+        <div className="flex items-center gap-1 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-1 py-1">
           <button onClick={() => setMonth((m) => shiftMonth(m, -1))} className="rounded-lg p-1.5 hover:bg-[var(--color-paper)]" aria-label="Previous month"><ChevronLeft size={16} /></button>
           <span className="min-w-[9rem] text-center text-sm font-bold">{monthTitle(month)}</span>
           <button onClick={() => setMonth((m) => shiftMonth(m, 1))} disabled={month >= thisMonth()} className="rounded-lg p-1.5 hover:bg-[var(--color-paper)] disabled:opacity-30" aria-label="Next month"><ChevronRight size={16} /></button>

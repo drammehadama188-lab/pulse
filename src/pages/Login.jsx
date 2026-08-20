@@ -93,7 +93,7 @@ export default function Login() {
                 autoCapitalize="none"
                 autoCorrect="off"
                 placeholder="name@gmail.com"
-                className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]"
+                className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]"
               />
             </div>
 
@@ -106,12 +106,12 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Your password"
-                className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]"
+                className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]"
               />
             </div>
 
             {error && (
-              <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">
+              <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">
                 {error}
               </div>
             )}

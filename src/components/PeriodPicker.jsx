@@ -32,14 +32,14 @@ export default function PeriodPicker({ value, onChange }) {
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen((o) => !o)} className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-line)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-ink)] hover:border-[var(--color-line)] focus:outline-none">
+      <button onClick={() => setOpen((o) => !o)} className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-line)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-ink)] hover:border-[var(--color-line)] focus:outline-none">
         <Calendar size={15} className="text-[var(--color-ink-faint)]" />
         {value?.label || 'This Month'}
         <ChevronDown size={15} className="text-[var(--color-ink-faint)]" />
       </button>
 
       {open && (
-        <div className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-xl border border-[var(--color-line)] bg-white p-1.5 shadow-xl">
+        <div className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-lg border border-[var(--color-line)] bg-white p-1.5 shadow-xl">
           {presets.map((p) => {
             const active = value?.id === p.id
             return (
@@ -54,9 +54,9 @@ export default function PeriodPicker({ value, onChange }) {
 
           <div className="px-2 pb-1.5 pt-1">
             <p className="mb-2 px-1 text-sm font-bold text-[var(--color-ink)]">Custom Range</p>
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="mb-2 w-full rounded-xl border border-[var(--color-line)] px-3 py-2 text-sm text-[var(--color-ink-soft)] focus:border-[var(--color-ink-faint)] focus:outline-none" />
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="mb-2 w-full rounded-xl border border-[var(--color-line)] px-3 py-2 text-sm text-[var(--color-ink-soft)] focus:border-[var(--color-ink-faint)] focus:outline-none" />
-            <button onClick={applyCustom} disabled={!from || !to} className={`w-full rounded-xl py-2.5 text-sm font-bold transition-colors ${from && to ? 'bg-[var(--color-brand)] text-white hover:brightness-95' : 'bg-[var(--color-line)] text-white'}`}>Apply</button>
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="mb-2 w-full rounded-lg border border-[var(--color-line)] px-3 py-2 text-sm text-[var(--color-ink-soft)] focus:border-[var(--color-ink-faint)] focus:outline-none" />
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="mb-2 w-full rounded-lg border border-[var(--color-line)] px-3 py-2 text-sm text-[var(--color-ink-soft)] focus:border-[var(--color-ink-faint)] focus:outline-none" />
+            <button onClick={applyCustom} disabled={!from || !to} className={`w-full rounded-lg py-2.5 text-sm font-bold transition-colors ${from && to ? 'bg-[var(--color-brand)] text-white hover:brightness-95' : 'bg-[var(--color-line)] text-white'}`}>Apply</button>
           </div>
         </div>
       )}

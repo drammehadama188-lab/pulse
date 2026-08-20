@@ -55,7 +55,7 @@ export default function CustomerForm({ initial = EMPTY_CUSTOMER, title = 'Add cu
           <Field label="Follow-up date"><Input type="date" value={v.followUpDate} onChange={set('followUpDate')} /></Field>
         </div>
         {error && (
-          <div className="sm:col-span-2 rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
+          <div className="sm:col-span-2 rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
         )}
       </div>
     </Modal>

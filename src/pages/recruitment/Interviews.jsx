@@ -139,7 +139,7 @@ export default function Interviews() {
 
       {booking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setBooking(false)}>
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="t-card text-[var(--color-ink)]">Book interview</h3>
               <button onClick={() => setBooking(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
@@ -175,7 +175,7 @@ export default function Interviews() {
             {error && <p className="mt-3 text-sm text-[var(--color-stage-out)]">{error}</p>}
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => setBooking(false)} disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-              <button onClick={book} disabled={saving || !pick.applicantId} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Booking…' : 'Book'}</button>
+              <button onClick={book} disabled={saving || !pick.applicantId} className="px-3.5 py-2.5 rounded-[8px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Booking…' : 'Book'}</button>
             </div>
           </div>
         </div>

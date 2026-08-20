@@ -105,7 +105,7 @@ export default function Templates() {
                     </div>
 
                     {draft.sections.map((s, si) => (
-                      <div key={s.id || si} className="rounded-xl border border-[var(--color-line)] p-4">
+                      <div key={s.id || si} className="rounded-lg border border-[var(--color-line)] p-4">
                         <div className="flex items-center gap-2">
                           <input value={s.title} onChange={e => upd(d => { d.sections[si].title = e.target.value; })}
                             className="flex-1 border-0 border-b border-transparent hover:border-[var(--color-line)] focus:border-[var(--color-ink-faint)] focus:outline-none t-card text-[var(--color-ink)] px-0 py-1" />
@@ -129,7 +129,7 @@ export default function Templates() {
                       <button onClick={() => upd(d => { d.sections.push({ title: 'New section', questions: [{ text: '' }] }); })} className={BTN_LIGHT}>+ Section</button>
                       <div className="flex items-center gap-2">
                         <button onClick={() => { setDraft(null); setOpenId(null); }} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-                        <button onClick={save} disabled={saving} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Saving…' : 'Save set'}</button>
+                        <button onClick={save} disabled={saving} className="px-3.5 py-2.5 rounded-[8px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Saving…' : 'Save set'}</button>
                       </div>
                     </div>
                   </div>

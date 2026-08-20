@@ -23,14 +23,14 @@ export default function TimePeriodSelector({ selected, onChange, showExport = tr
       <div className="relative">
         <button
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-3 px-4 py-2.5 bg-white border border-[var(--color-line)] rounded-xl text-sm text-[var(--color-ink)] hover:border-[var(--color-ink-faint)] transition-colors min-w-[180px]"
+          className="flex items-center gap-3 px-4 py-2.5 bg-white border border-[var(--color-line)] rounded-lg text-sm text-[var(--color-ink)] hover:border-[var(--color-ink-faint)] transition-colors min-w-[180px]"
         >
           <Calendar size={16} className="text-[var(--color-ink-faint)]" />
           <span className="flex-1 text-left">{label}</span>
           <ChevronDown size={16} className={`text-[var(--color-ink-faint)] transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
         {open && (
-          <div className="absolute top-full right-0 mt-1 bg-white border border-[var(--color-line)] rounded-xl shadow-lg z-30 w-72">
+          <div className="absolute top-full right-0 mt-1 bg-white border border-[var(--color-line)] rounded-lg shadow-lg z-30 w-72">
             {timePeriods.map((period) => (
               <button
                 key={period.value}
@@ -61,7 +61,7 @@ export default function TimePeriodSelector({ selected, onChange, showExport = tr
 
       {/* Export */}
       {showExport && (
-        <div className="flex items-center gap-1 border border-[var(--color-line)] rounded-xl overflow-hidden">
+        <div className="flex items-center gap-1 border border-[var(--color-line)] rounded-lg overflow-hidden">
           {exportFormats.map((fmt) => (
             <button key={fmt}
               className="px-3 py-2 text-xs font-medium text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)] hover:text-[var(--color-ink)] transition-colors border-r border-[var(--color-line)] last:border-0 flex items-center gap-1">

@@ -543,10 +543,10 @@ export default function AgentProfile() {
       </button>
 
       {/* BLOCK 1 — Identity + Score with comparison */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-start justify-between flex-wrap gap-6">
           <div className="flex items-start gap-5 min-w-0">
-            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xl font-semibold shrink-0">
+            <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xl font-semibold shrink-0">
               {agent.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
             </div>
             <div className="min-w-0">
@@ -641,7 +641,7 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 3 — Performance summary + period selector (HERO) */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
           <div className="flex items-center gap-2">
             <TrendingUp size={18} className="text-[var(--color-ink-faint)]" />
@@ -733,7 +733,7 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 4 — Business Cost */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-center gap-2 mb-5">
           <DollarSign size={18} className="text-[var(--color-ink-faint)]" />
           <h2 className="text-[var(--color-ink)] font-semibold">Business Cost</h2>
@@ -794,7 +794,7 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 5 — Trend (last 4 months) */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-center gap-2 mb-5">
           <Clock size={18} className="text-[var(--color-ink-faint)]" />
           <h2 className="text-[var(--color-ink)] font-semibold">Trend — Last 4 Months</h2>
@@ -803,7 +803,7 @@ export default function AgentProfile() {
           {last4Months.map((m, i) => {
             const isZero = m.sales === 0;
             return (
-              <div key={i} className={`p-4 rounded-xl ${m.isCurrent ? 'bg-blue-50 border-2 border-blue-300' : isZero ? 'bg-[var(--color-fill)] border border-[var(--color-line)]' : 'bg-[var(--color-fill)] border border-[var(--color-line-soft)]'}`}>
+              <div key={i} className={`p-4 rounded-lg ${m.isCurrent ? 'bg-blue-50 border-2 border-blue-300' : isZero ? 'bg-[var(--color-fill)] border border-[var(--color-line)]' : 'bg-[var(--color-fill)] border border-[var(--color-line-soft)]'}`}>
                 <p className={`text-[11px] uppercase tracking-wider font-semibold mb-1 ${m.isCurrent ? 'text-blue-600' : isZero ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>
                   {m.label}{m.isCurrent ? ' · now' : ''}
                 </p>
@@ -823,7 +823,7 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 6 — Scorecard breakdown (transparent math) */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-7 mb-6">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-7 mb-6">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <Target size={18} className="text-[var(--color-ink-faint)]" />
@@ -846,7 +846,7 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 7 — Role expectations (read-only — configure in HR → KPI Settings) */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] mb-6 overflow-hidden">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] mb-6 overflow-hidden">
         <div className="flex items-center justify-between p-5 flex-wrap gap-3">
           <button onClick={() => setRoleOpen(!roleOpen)} className="flex items-center gap-2 text-left">
             <Briefcase size={16} className="text-[var(--color-ink-faint)]" />
@@ -916,7 +916,7 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 8 — Structured notes */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-7 mb-6">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-7 mb-6">
         <div className="flex items-center gap-2 mb-5">
           <MessageSquare size={18} className="text-[var(--color-ink-faint)]" />
           <h2 className="text-[var(--color-ink)] font-semibold">Coaching Notes</h2>
@@ -951,7 +951,7 @@ export default function AgentProfile() {
               const parsed = parseNote(n);
               const catDef = NOTE_CATEGORIES.find(c => c.value === parsed.category);
               return (
-                <div key={n.id} className="flex items-start gap-3 p-4 bg-[var(--color-fill)] rounded-xl group">
+                <div key={n.id} className="flex items-start gap-3 p-4 bg-[var(--color-fill)] rounded-lg group">
                   {catDef && (
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 ${catDef.color === 'blue' ? 'bg-blue-100 text-blue-700' : catDef.color === 'red' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                       {catDef.label.split(' ')[0]}
@@ -972,7 +972,7 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 9 — Auto review */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-7 mb-6">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-7 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Calendar size={18} className="text-[var(--color-ink-faint)]" />
           <h2 className="text-[var(--color-ink)] font-semibold">Auto-generated Review</h2>
@@ -992,7 +992,7 @@ export default function AgentProfile() {
       />
 
       {/* BLOCK 10 — Management Decision */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-7 mb-8">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-7 mb-8">
         <div className="flex items-center gap-2 mb-5">
           <Shield size={18} className="text-[var(--color-ink-faint)]" />
           <h2 className="text-[var(--color-ink)] font-semibold">Management Decision</h2>
@@ -1005,7 +1005,7 @@ export default function AgentProfile() {
 
         {/* Current status — prominent */}
         {decision ? (
-          <div className="mb-4 p-4 rounded-xl bg-[var(--color-ink)] text-white flex items-center gap-3">
+          <div className="mb-4 p-4 rounded-lg bg-[var(--color-ink)] text-white flex items-center gap-3">
             <CheckCircle size={18} className="text-emerald-400 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-white/60 mb-0.5">Current status</p>
@@ -1017,7 +1017,7 @@ export default function AgentProfile() {
             </div>
           </div>
         ) : (
-          <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-100 flex items-center gap-3">
+          <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-100 flex items-center gap-3">
             <AlertTriangle size={16} className="text-amber-600 shrink-0" />
             <div>
               <p className="text-[10px] uppercase tracking-wider font-semibold text-amber-700">No decision on record</p>
@@ -1041,7 +1041,7 @@ export default function AgentProfile() {
             };
             return (
               <button key={d.value} onClick={() => setPickedDecision(d.value)}
-                className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-xs font-medium transition-colors ${colorMap[d.color]}`}>
+                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 text-xs font-medium transition-colors ${colorMap[d.color]}`}>
                 <Icon size={14} />
                 <span className="truncate">{d.label}</span>
               </button>
@@ -1051,7 +1051,7 @@ export default function AgentProfile() {
 
         <textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)}
           placeholder="Reason, next step, or context (optional)…"
-          className="w-full px-4 py-3 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)] resize-none" rows={2} />
+          className="w-full px-4 py-3 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)] resize-none" rows={2} />
 
         <div className="flex items-center justify-end mt-4">
           <button onClick={saveDecision} disabled={!pickedDecision}
@@ -1066,7 +1066,7 @@ export default function AgentProfile() {
             <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-3">Decision history</p>
             <div className="space-y-2">
               {decision && (
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--color-ink)] text-white">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--color-ink)] text-white">
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/20 uppercase tracking-wider shrink-0 mt-0.5">Current</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{DECISIONS.find(d => d.value === decision.decision)?.label || decision.decision}</p>
@@ -1076,7 +1076,7 @@ export default function AgentProfile() {
                 </div>
               )}
               {decisionHistory.map((h, i) => (
-                <div key={h.id || i} className="flex items-start gap-3 p-3 rounded-xl bg-[var(--color-fill)]">
+                <div key={h.id || i} className="flex items-start gap-3 p-3 rounded-lg bg-[var(--color-fill)]">
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--color-line)] text-[var(--color-ink-soft)] uppercase tracking-wider shrink-0 mt-0.5">Prev</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-[var(--color-ink-soft)]">{DECISIONS.find(d => d.value === h.decision)?.label || h.decision}</p>
@@ -1098,7 +1098,7 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 10b — Warnings (moved here from top per Adama's preference) */}
-      <div className={`rounded-xl border p-6 mb-4 ${warningsCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-[var(--color-line-soft)]'}`}>
+      <div className={`rounded-lg border p-6 mb-4 ${warningsCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-[var(--color-line-soft)]'}`}>
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Gavel size={18} className={warningsCount > 0 ? 'text-red-600' : 'text-[var(--color-ink-faint)]'} />
@@ -1113,7 +1113,7 @@ export default function AgentProfile() {
         </div>
 
         {warningOpen && (
-          <div className="bg-white rounded-xl border border-[var(--color-line)] p-4 mb-4 space-y-3">
+          <div className="bg-white rounded-lg border border-[var(--color-line)] p-4 mb-4 space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Type</label>
@@ -1150,7 +1150,7 @@ export default function AgentProfile() {
             {warnings.map(w => {
               const typeColor = w.type === 'final' ? 'bg-red-200 text-red-900' : w.type === 'formal' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
               return (
-                <div key={w.id} className="bg-white rounded-xl border border-[var(--color-line)] p-4 flex items-start gap-3">
+                <div key={w.id} className="bg-white rounded-lg border border-[var(--color-line)] p-4 flex items-start gap-3">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 ${typeColor}`}>{w.type}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-[var(--color-ink)]">{w.reason}</p>
@@ -1168,7 +1168,7 @@ export default function AgentProfile() {
 
       {/* BLOCK 11 — Staff history (from team.js) */}
       {agent.history && agent.history.length > 0 && (
-        <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
           <h2 className="text-[var(--color-ink)] font-semibold mb-4">History</h2>
           <div>
             {[...agent.history].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((h, i, arr) => (

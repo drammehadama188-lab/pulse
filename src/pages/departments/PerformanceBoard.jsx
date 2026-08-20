@@ -127,7 +127,7 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
       </div>
 
       {/* Department performance */}
-      <div className="rounded-xl border border-[var(--color-line)] bg-white p-5">
+      <div className="rounded-lg border border-[var(--color-line)] bg-white p-5">
         <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">Department performance · {period.label}</h3>
         <div className="space-y-2.5">
           {depts.map((d) => {
@@ -154,7 +154,7 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
           <div className="relative w-full sm:w-56"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)]" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="w-full rounded-full border border-[var(--color-line)] bg-white py-2 pl-9 pr-3 text-sm focus:border-[var(--color-ink-faint)] focus:outline-none" /></div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-[var(--color-line)] bg-white">
+        <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-white">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-[var(--color-line)] text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
@@ -214,7 +214,7 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
 function Tile({ label, value, sub, accent = 'text-[var(--color-ink)]', icon: Icon, onClick }) {
   const Cmp = onClick ? 'button' : 'div'
   return (
-    <Cmp onClick={onClick || undefined} className={`rounded-xl border border-[var(--color-line)] bg-white p-4 text-left ${onClick ? 'hover:border-[var(--color-line)]' : ''}`}>
+    <Cmp onClick={onClick || undefined} className={`rounded-lg border border-[var(--color-line)] bg-white p-4 text-left ${onClick ? 'hover:border-[var(--color-line)]' : ''}`}>
       <div className="mb-1 flex items-center gap-1.5">{Icon && <Icon size={13} className="text-[var(--color-ink-faint)]" />}<p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p></div>
       <p className={`truncate text-2xl font-bold ${accent}`}>{value}</p>
       <p className="mt-0.5 text-xs text-[var(--color-ink-faint)]">{sub}</p>

@@ -189,7 +189,7 @@ export default function CustomerDetail() {
               const meta = ACT_META[a.type] || ACT_META.note
               return (
                 <Card key={a.id} className="flex items-start gap-3 p-4">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ color: `var(--color-${meta.tone})`, background: `var(--color-${meta.tone}-bg)` }}>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ color: `var(--color-${meta.tone})`, background: `var(--color-${meta.tone}-bg)` }}>
                     <meta.icon size={18} />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -263,7 +263,7 @@ function Composer({ onSave, busy }) {
     <Card className="p-5 sm:p-6">
       <h2 className="mb-4 text-lg font-semibold tracking-tight text-[var(--color-ink)]">Add note</h2>
       <TypeTabs value={v.type} onChange={(type) => set({ type })} />
-      <div className="rounded-xl border-2 border-[var(--color-line)] p-3 transition-colors focus-within:border-[var(--color-brand)]">
+      <div className="rounded-lg border-2 border-[var(--color-line)] p-3 transition-colors focus-within:border-[var(--color-brand)]">
         <ActivityBody v={v} set={set} bare />
         <div className="mt-2 flex justify-end">
           <Button icon={Send} onClick={submit} disabled={busy}>

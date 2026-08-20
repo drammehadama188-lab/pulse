@@ -44,7 +44,7 @@ function MiniToggle({ on, disabled, onClick }) {
 
 function Stat({ icon: Icon, label, value, accent }) {
   return (
-    <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-5">
+    <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
       <div className="flex items-center gap-2 mb-3"><Icon size={15} className="text-[var(--color-ink-faint)]" /><p className="text-sm font-semibold text-[var(--color-ink)]">{label}</p></div>
       <p className={`text-sm ${accent || 'text-[var(--color-ink-soft)]'}`}>{value}</p>
     </div>
@@ -87,7 +87,7 @@ export default function StaffMember() {
     return (
       <div className="max-w-4xl">
         <button onClick={() => navigate('/team')} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back to Staff</button>
-        <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-10 text-center text-[var(--color-ink-faint)]">Staff member not found.</div>
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-10 text-center text-[var(--color-ink-faint)]">Staff member not found.</div>
       </div>
     )
   }
@@ -222,7 +222,7 @@ export default function StaffMember() {
       </div>
 
       {/* Login + reset */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <h2 className="text-base font-semibold text-[var(--color-ink)] mb-4">Login</h2>
         <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div className="flex-1">
@@ -238,7 +238,7 @@ export default function StaffMember() {
         </div>
         {emailMsg && <p className={`text-xs mt-2 ${emailMsg === 'Saved' ? 'text-emerald-600' : 'text-red-600'}`}>{emailMsg}</p>}
         <LoginState user={user} />
-        <div className="mt-4 flex items-center justify-between rounded-xl border border-[var(--color-line-soft)] px-4 py-3">
+        <div className="mt-4 flex items-center justify-between rounded-lg border border-[var(--color-line-soft)] px-4 py-3">
           <div>
             <p className="text-sm font-semibold text-[var(--color-ink)]">{canSignIn ? 'Can sign in to Pulse' : 'Sign-in paused'}</p>
             <p className="text-xs text-[var(--color-ink-faint)]">{canSignIn ? 'Switch off to pause their access instantly (reversible).' : 'They cannot log in until you switch this back on.'}</p>
@@ -246,7 +246,7 @@ export default function StaffMember() {
           <Toggle on={canSignIn} disabled={savingKey === '__signin'} onClick={toggleSignIn} />
         </div>
         {hasRealPower('staffadmin') && (
-          <div className="mt-3 flex items-center justify-between rounded-xl border border-[var(--color-line-soft)] px-4 py-3">
+          <div className="mt-3 flex items-center justify-between rounded-lg border border-[var(--color-line-soft)] px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-[var(--color-ink)]">Contractor</p>
               <p className="text-xs text-[var(--color-ink-faint)]">Contractors are paid through Payroll but do not check in or out and hold no schedule — they stay off every attendance view.</p>
@@ -259,7 +259,7 @@ export default function StaffMember() {
       {/* Access — permission toggles, save instantly. CEO-only: Grant access
           was removed 3 Jul — nobody else manages who can do what. */}
       {isCeo && (
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
         <h2 className="text-base font-semibold text-[var(--color-ink)]">Access</h2>
         <p className="text-sm text-[var(--color-ink-soft)] mt-1 mb-5">What {user.name.split(' ')[0]} can open in Pulse — all yours to grant. Changes save instantly and are logged.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -269,7 +269,7 @@ export default function StaffMember() {
             const scoped = on && PEOPLE_SCOPED.includes(p.key)
             const cov = scoped ? coverage(p.key) : null
             return (
-              <div key={p.key} className={`self-start rounded-xl border p-4 ${on ? 'border-emerald-200 bg-emerald-50/40' : 'border-[var(--color-line)]'}`}>
+              <div key={p.key} className={`self-start rounded-lg border p-4 ${on ? 'border-emerald-200 bg-emerald-50/40' : 'border-[var(--color-line)]'}`}>
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-semibold text-[var(--color-ink)]">{p.label}{locked && <span className="ml-1.5 text-[10px] font-medium text-[var(--color-ink-faint)]">CEO only</span>}</p>
                   <Toggle on={on} disabled={locked || savingKey === p.key} onClick={() => !locked && togglePower(p.key)} />
@@ -347,7 +347,7 @@ function LoginState({ user }) {
     tone = 'text-amber-800 bg-amber-50'
     text = `${first} has never chosen a password. Any link sent has expired or was not opened. Set a temporary password below and send it to ${first} directly.`
   }
-  return <p className={`mt-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold ${tone}`}>{text}</p>
+  return <p className={`mt-3 rounded-lg px-3.5 py-2.5 text-xs font-semibold ${tone}`}>{text}</p>
 }
 
 function ResetDialog({ username, name, email, onClose }) {
@@ -391,12 +391,12 @@ function ResetDialog({ username, name, email, onClose }) {
   return (
     <Modal open onClose={onClose} title={`Reset password — ${name}`} footer={<Button variant="ghost" onClick={onClose}>Close</Button>}>
       <div className="space-y-4">
-        <div className="rounded-xl border border-[var(--color-line)] p-4">
+        <div className="rounded-lg border border-[var(--color-line)] p-4">
           <div className="font-semibold text-[var(--color-ink)]">Email {first} a link</div>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Goes to <span className="font-bold text-[var(--color-ink)]">{email || 'no email on file'}</span>. They click it and choose their own password. Works for 60 minutes, once.</p>
           <Button className="mt-3" onClick={sendLink} disabled={!!busy}>{busy === 'email' ? <Spinner size={16} /> : 'Send the link'}</Button>
         </div>
-        <div className="rounded-xl border border-[var(--color-line)] p-4">
+        <div className="rounded-lg border border-[var(--color-line)] p-4">
           <div className="font-semibold text-[var(--color-ink)]">Or set a temporary password yourself</div>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Min 8 characters. You share it with them; they'll be signed out and asked to change it at next login.</p>
           <div className="mt-3 flex gap-2">
@@ -404,8 +404,8 @@ function ResetDialog({ username, name, email, onClose }) {
             <Button variant="outline" onClick={reset} disabled={!!busy}>{busy === 'manual' ? <Spinner size={16} /> : 'Set it'}</Button>
           </div>
         </div>
-        {done && <div className="rounded-xl bg-[var(--color-good-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-good)]">{done}</div>}
-        {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {done && <div className="rounded-lg bg-[var(--color-good-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-good)]">{done}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )
@@ -431,7 +431,7 @@ function ArchiveDialog({ username, name, onClose, onDone }) {
       <div className="space-y-4">
         <p className="text-sm text-[var(--color-ink-soft)]">They’ll move to <span className="font-semibold text-[var(--color-ink)]">Past Staff</span>, can no longer log in, and drop out of the active team. Their record is kept — restore them from Past Staff anytime.</p>
         <Field label="Reason (optional)"><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Resigned, contract ended, let go" /></Field>
-        {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )

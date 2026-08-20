@@ -114,7 +114,7 @@ export default function Pay() {
               <div className="text-sm font-semibold text-[var(--color-ink-soft)]">Monthly total</div>
               <div className="mt-1 text-4xl font-semibold tracking-tight text-[var(--color-ink)]">{dalasi(roster.total)}</div>
             </div>
-            <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--color-brand)] text-white"><Wallet size={26} /></span>
+            <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-[var(--color-brand)] text-white"><Wallet size={26} /></span>
           </div>
           <div className="divide-y divide-[var(--color-line-soft)]">
             <Row icon={Wallet} label="Base salary" value={dalasi(roster.base)} />
@@ -135,7 +135,7 @@ export default function Pay() {
           <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden">
             {sortedBenefits.map((b) => (
               <div key={b.id} className="flex items-start gap-3 px-5 py-4">
-                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-brand-50)] text-[var(--color-brand)]">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-brand-50)] text-[var(--color-brand)]">
                   {/maternity/i.test(b.title) ? <Baby size={17} /> : <Gift size={17} />}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -175,7 +175,7 @@ export default function Pay() {
           </div>
         ) : (
           <Card className="flex items-center gap-4 px-5 py-8">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--color-line-soft)] text-[var(--color-ink-faint)]"><FileText size={20} /></span>
+            <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--color-line-soft)] text-[var(--color-ink-faint)]"><FileText size={20} /></span>
             <div className="text-sm text-[var(--color-ink-faint)]">No payslips yet.{canEdit && roster ? ' Add one with the button above.' : ''}</div>
           </Card>
         )}
@@ -221,7 +221,7 @@ function Payslip({ slip, canEdit, onDelete }) {
   return (
     <Card className="overflow-hidden">
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-[var(--color-line-soft)]">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-brand-50)] text-[var(--color-brand)]"><FileText size={18} /></span>
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-brand-50)] text-[var(--color-brand)]"><FileText size={18} /></span>
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-[var(--color-ink)]">{monthLabel(slip.period)}</div>
           <div className="truncate text-xs text-[var(--color-ink-faint)]">{breakdown || 'Net pay'}</div>
@@ -269,7 +269,7 @@ function Line({ label, amount }) {
 function Row({ icon: Icon, label, value }) {
   return (
     <div className="flex items-center gap-3 px-6 py-4">
-      {Icon && <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-line-soft)] text-[var(--color-ink-soft)]"><Icon size={17} /></span>}
+      {Icon && <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-line-soft)] text-[var(--color-ink-soft)]"><Icon size={17} /></span>}
       <span className="text-[var(--color-ink-soft)]">{label}</span>
       <span className="ml-auto font-bold text-[var(--color-ink)]">{value}</span>
     </div>
@@ -377,7 +377,7 @@ function PayslipModal({ personName, username, onClose, onSaved }) {
         <>
           <LineEditor title="Earnings" lines={earnings} setLines={setEarnings} addLabel="Add earning" />
           <LineEditor title="Deductions" lines={deductions} setLines={setDeductions} addLabel="Add deduction" />
-          <div className="mt-4 flex items-center justify-between rounded-xl bg-[var(--color-fill)] px-4 py-3">
+          <div className="mt-4 flex items-center justify-between rounded-lg bg-[var(--color-fill)] px-4 py-3">
             <span className="font-bold text-[var(--color-ink)]">Net pay</span>
             <span className="text-lg font-semibold text-[var(--color-ink)]">{dalasi(net)}</span>
           </div>

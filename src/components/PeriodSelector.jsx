@@ -78,7 +78,7 @@ export default function PeriodSelector({ period, onChange }) {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-lift)]">
+          <div className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-lift)]">
             <div className="py-1">
               {PRESETS.map(([k, label]) => (
                 <button
@@ -94,8 +94,8 @@ export default function PeriodSelector({ period, onChange }) {
             <div className="border-t border-[var(--color-line-soft)] p-3">
               <div className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">Custom range</div>
               <div className="space-y-2">
-                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none" />
-                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none" />
+                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none" />
+                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none" />
                 <Button size="sm" className="w-full" onClick={applyCustom} disabled={!from || !to}>
                   Apply
                 </Button>

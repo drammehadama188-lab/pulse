@@ -201,7 +201,7 @@ function Lesson({ n, l, learned, onToggle }) {
   return (
     <Card className="p-5 sm:p-6">
       <div className="flex items-start gap-4">
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold ${learned ? 'bg-emerald-100 text-emerald-700' : 'text-[var(--color-brand)]'}`} style={learned ? undefined : { background: 'var(--color-brand-50)' }}>
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${learned ? 'bg-emerald-100 text-emerald-700' : 'text-[var(--color-brand)]'}`} style={learned ? undefined : { background: 'var(--color-brand-50)' }}>
           {learned ? <CheckCircle2 size={18} /> : n}
         </span>
         <div className="min-w-0 flex-1">

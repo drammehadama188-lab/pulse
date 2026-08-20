@@ -226,7 +226,7 @@ export default function KpiTargets() {
       {/* Add-KPI dialog — a new KPI for the role; weights rebalance around it. */}
       {addFor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => !saving && setAddFor(null)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center gap-2">
               <Plus size={18} className="text-emerald-600" />
               <h2 className="text-lg font-bold text-[var(--color-ink)]">Add a KPI · {addFor.roleLabel}</h2>
@@ -269,7 +269,7 @@ export default function KpiTargets() {
       {/* Change drawer — schedule one KPI's new number. */}
       {draft && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => !saving && setDraft(null)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center gap-2">
               <Target size={18} className="text-brand-600 text-emerald-600" />
               <h2 className="text-lg font-bold text-[var(--color-ink)]">Change: {draft.label}</h2>

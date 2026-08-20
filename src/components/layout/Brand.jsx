@@ -2,7 +2,7 @@ export function Brand({ compact = false, onDark = false }) {
   return (
     <div className="flex items-center gap-2.5">
       <div
-        className="flex h-9 w-9 items-center justify-center rounded-xl"
+        className="flex h-9 w-9 items-center justify-center rounded-lg"
         style={{ background: onDark ? '#ffffff' : 'var(--color-mint-tile)' }}
       >
         {/* Pulse flame */}

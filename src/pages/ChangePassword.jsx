@@ -42,7 +42,7 @@ export default function ChangePassword() {
   return (
     <div className="mx-auto max-w-md">
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--color-brand-bg,#fdecef)]">
+        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--color-brand-bg,#fdecef)]">
           <KeyRound size={20} className="text-[var(--color-brand,#d6294f)]" />
         </div>
         <div>
@@ -85,7 +85,7 @@ export default function ChangePassword() {
           </Field>
 
           {error && (
-            <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">
+            <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">
               {error}
             </div>
           )}

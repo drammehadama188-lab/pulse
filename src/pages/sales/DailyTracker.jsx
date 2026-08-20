@@ -121,7 +121,7 @@ export default function DailyTracker() {
 
 function Metric({ icon: Icon, tone, label, value, sub }) {
   return (
-    <div className="rounded-xl bg-[var(--color-fill)] p-4">
+    <div className="rounded-lg bg-[var(--color-fill)] p-4">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-[var(--color-ink-soft)]">{label}</span>
         <span className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ color: `var(--color-${tone})`, background: `var(--color-${tone}-bg)` }}>

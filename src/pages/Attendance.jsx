@@ -155,7 +155,7 @@ const STAT_TONE = {
 function HeroStat({ label, value, tone }) {
   const c = STAT_TONE[tone] || STAT_TONE.ink
   return (
-    <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
       <div className="flex items-center gap-1.5">
         <span className={`flex h-6 w-6 items-center justify-center rounded-full ${c.soft}`}><i className="h-2 w-2 rounded-full" style={{ background: c.dot }} /></span>
         <span className="text-[12px] font-semibold text-[var(--color-ink-soft)]">{label}</span>
@@ -169,7 +169,7 @@ function HeroStat({ label, value, tone }) {
 function WeekStat({ label, value, tone }) {
   const c = STAT_TONE[tone] || STAT_TONE.ink
   return (
-    <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
+    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
       <p className={`mt-0.5 text-2xl font-semibold tabular-nums ${c.text}`}>{value}</p>
     </div>
@@ -498,7 +498,7 @@ function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
       )}
       <div className="mt-3 space-y-2">
         {STATUS_OPTIONS.map((o) => (
-          <label key={o.key} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 ${status === o.key ? 'border-[var(--color-brand)] bg-[var(--color-brand-50)]' : 'border-[var(--color-line)]'}`}>
+          <label key={o.key} className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 ${status === o.key ? 'border-[var(--color-brand)] bg-[var(--color-brand-50)]' : 'border-[var(--color-line)]'}`}>
             <input type="radio" name="day-status" checked={status === o.key} onChange={() => setStatus(o.key)} className="accent-[var(--color-brand)]" />
             <span className="font-semibold text-[var(--color-ink)]">{o.label}</span>
           </label>
@@ -508,17 +508,17 @@ function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
         <div className="mt-3 flex items-center gap-2">
           <div className="flex-1">
             <label className="mb-1 block text-xs font-semibold text-[var(--color-ink-soft)]">Checked in</label>
-            <input type="time" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
+            <input type="time" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
           </div>
           <span className="mt-5 text-[var(--color-ink-faint)]">–</span>
           <div className="flex-1">
             <label className="mb-1 block text-xs font-semibold text-[var(--color-ink-soft)]">Checked out</label>
-            <input type="time" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
+            <input type="time" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
           </div>
         </div>
       )}
       {status === 'clear' && (
-        <p className="mt-3 rounded-xl bg-[var(--color-fill)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+        <p className="mt-3 rounded-lg bg-[var(--color-fill)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
           Removes any check-in, worked, sick or leave record for this day — back to a blank scheduled day.
         </p>
       )}
@@ -528,7 +528,7 @@ function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
           onChange={(e) => setNote(e.target.value)}
           rows={2}
           placeholder="Optional note (e.g. called in, fever)"
-          className="focus-ring mt-3 w-full resize-none rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-sm outline-none"
+          className="focus-ring mt-3 w-full resize-none rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-sm outline-none"
         />
       )}
     </Modal>
@@ -572,7 +572,7 @@ function MyHours() {
           className="flex flex-col items-center gap-4 p-8 text-center"
           style={{ background: done || checkedIn ? 'linear-gradient(160deg, var(--color-good-bg), var(--color-surface) 70%)' : 'linear-gradient(160deg, var(--color-brand-50), var(--color-surface) 70%)' }}
         >
-          <span className={`flex h-16 w-16 items-center justify-center rounded-xl text-white ${done || checkedIn ? 'bg-[var(--color-good)]' : 'bg-[var(--color-brand)]'}`}>
+          <span className={`flex h-16 w-16 items-center justify-center rounded-lg text-white ${done || checkedIn ? 'bg-[var(--color-good)]' : 'bg-[var(--color-brand)]'}`}>
             {done ? <CheckCircle2 size={30} /> : <Clock size={30} />}
           </span>
 
@@ -859,7 +859,7 @@ function FixCheckInDialog({ people, onClose, onSaved }) {
     }
   }
 
-  const inputCls = 'focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)] outline-none'
+  const inputCls = 'focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)] outline-none'
   return (
     <Modal open onClose={onClose} title="Fix a check-in" footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={save} disabled={busy}>{busy ? <Spinner size={16} /> : 'Save fix'}</Button></>}>
       <div className="space-y-4">
@@ -879,7 +879,7 @@ function FixCheckInDialog({ people, onClose, onSaved }) {
         <Field label={`Why couldn't ${first || 'they'} check in?`}>
           <Input value={v.reason} onChange={set('reason')} placeholder="e.g. office network was down, phone broken" />
         </Field>
-        {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )
@@ -892,7 +892,7 @@ function SelfCheckInCompact({ today, loading, busy, act, undo }) {
   const done = !!today?.checkOut
   return (
     <Card className="flex items-center gap-4 p-4">
-      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white ${done || checkedIn ? 'bg-[var(--color-good)]' : 'bg-[var(--color-brand)]'}`}>
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-white ${done || checkedIn ? 'bg-[var(--color-good)]' : 'bg-[var(--color-brand)]'}`}>
         {done ? <CheckCircle2 size={22} /> : <Clock size={22} />}
       </span>
       <div className="min-w-0 flex-1">
@@ -1056,7 +1056,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
       }
     >
       {/* Working days & hours */}
-      <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-paper)] p-4">
+      <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-paper)] p-4">
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Schedule starts</p>
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <input type="date" value={startDate} min={todayStr} onChange={(e) => setStartDate(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm" />
@@ -1117,7 +1117,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
             const isOpen = !collapsed.has(dept)
             const picked = members.filter((p) => selected.has(p.username)).length
             return (
-              <div key={dept} className="rounded-xl border border-[var(--color-line-soft)] p-2.5">
+              <div key={dept} className="rounded-lg border border-[var(--color-line-soft)] p-2.5">
                 <div className="flex items-center gap-2">
                   <input type="checkbox" checked={deptAll} onChange={(e) => setDeptAll(dept, e.target.checked)} className="accent-[var(--color-brand)]" onClick={(e) => e.stopPropagation()} />
                   <button onClick={() => toggleDept(dept)} className="flex flex-1 items-center gap-1.5 text-left text-[12px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
@@ -1129,7 +1129,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
                   {members.map((p) => {
                     const on = selected.has(p.username)
                     return (
-                      <label key={p.username} className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 ${on ? 'border-[var(--color-brand)] bg-[var(--color-brand-50)]' : 'border-[var(--color-line)]'}`}>
+                      <label key={p.username} className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 ${on ? 'border-[var(--color-brand)] bg-[var(--color-brand-50)]' : 'border-[var(--color-line)]'}`}>
                         <input type="checkbox" checked={on} onChange={() => togglePerson(p.username)} className="accent-[var(--color-brand)]" />
                         <Avatar name={p.name} size={26} />
                         <div className="min-w-0 flex-1">

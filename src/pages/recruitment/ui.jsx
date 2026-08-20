@@ -64,16 +64,16 @@ export const scoreWord = (n) =>
   n == null ? '' : n >= 90 ? 'Excellent' : n >= 80 ? 'Very good' : n >= 65 ? 'Good' : n >= 50 ? 'Average' : 'Weak';
 
 export const CARD = 'card';
-export const BTN = 'inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-[13.5px] font-semibold transition-colors';
+export const BTN = 'inline-flex items-center gap-2 rounded-[8px] px-3.5 py-2 text-[13px] font-semibold transition-colors';
 export const BTN_LIGHT = `${BTN} bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] hover:bg-[var(--color-fill)]`;
 export const BTN_PRIMARY = `${BTN} bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)]`;
-export const INPUT = 'w-full rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-[13.5px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-faint)] focus:border-[var(--color-ink-faint)] focus:outline-none';
+export const INPUT = 'w-full rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-faint)] focus:border-[var(--color-ink-faint)] focus:outline-none';
 
 export function PageHead({ title, count, children }) {
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
       <h1 className="t-page text-[var(--color-ink)]">
-        {title}{count != null && <span className="ml-2 text-[18px] font-semibold text-[var(--color-ink-faint)]">{count}</span>}
+        {title}{count != null && <span className="ml-2 text-[16px] font-semibold text-[var(--color-ink-faint)]">{count}</span>}
       </h1>
       <div className="flex flex-wrap items-center gap-2">{children}</div>
     </div>
@@ -91,32 +91,31 @@ export function CardHead({ title, action }) {
   );
 }
 
-// KPI card: the NUMBER is the card. The label and the change sit under it in
-// a lighter weight, and the icon is small and calm — it labels the card, it
-// does not compete with the figure. Height is deliberately tight: whitespace
-// belongs between cards, not underneath their contents.
-export function Kpi({ icon: Icon, label, value, delta, deltaLabel = 'in the last 7 days', tint = 'var(--color-fill)', ink = 'var(--color-ink-soft)', onClick }) {
+// KPI card: the NUMBER is the card at 26px, the icon sits in a larger pale
+// tile so the stage colour is visible from across the page, and the change
+// line is deliberately tiny — it is context, not news.
+export function Kpi({ icon: Icon, label, value, delta, deltaLabel = 'from last 7 days', tint = 'var(--color-fill)', ink = 'var(--color-ink-soft)', onClick }) {
   const Tag = onClick ? 'button' : 'div';
   const props = onClick ? { onClick, type: 'button' } : {};
   return (
-    <Tag {...props} className={`card card-quiet w-full p-4 text-left ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''}`}>
-      <span className="flex items-center gap-2">
-        {Icon && (
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px]" style={{ background: tint, color: ink }}>
-            <Icon size={13} strokeWidth={2.2} />
-          </span>
-        )}
-        <span className="truncate text-[12.5px] font-medium text-[var(--color-ink-soft)]">{label}</span>
-      </span>
-      <span className="mt-2 block text-[30px] font-semibold leading-none tracking-[-0.025em] text-[var(--color-ink)]">{value}</span>
-      {delta !== undefined && (
-        <span className="mt-1.5 block text-[12px] text-[var(--color-ink-faint)]">
-          {delta > 0 ? <span className="font-semibold text-[var(--color-good)]">+{delta} </span>
-            : delta < 0 ? <span className="font-semibold text-[var(--color-bad)]">−{Math.abs(delta)} </span>
-              : <span>No change </span>}
-          {deltaLabel}
+    <Tag {...props} className={`card card-quiet flex w-full items-start gap-3 p-4 text-left ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''}`}>
+      {Icon && (
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px]" style={{ background: tint, color: ink }}>
+          <Icon size={17} strokeWidth={2} />
         </span>
       )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[12.5px] font-medium text-[var(--color-ink-soft)]">{label}</span>
+        <span className="mt-1 block text-[26px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
+        {delta !== undefined && (
+          <span className="mt-1 block text-[11px] leading-tight text-[var(--color-ink-faint)]">
+            {delta > 0 ? <span className="font-semibold text-[var(--color-good)]">↑ {delta} </span>
+              : delta < 0 ? <span className="font-semibold text-[var(--color-bad)]">↓ {Math.abs(delta)} </span>
+                : <span>No change </span>}
+            {deltaLabel}
+          </span>
+        )}
+      </span>
     </Tag>
   );
 }
@@ -124,7 +123,7 @@ export function Kpi({ icon: Icon, label, value, delta, deltaLabel = 'in the last
 // Eight weekly points is enough to say "going up" without pretending to be a
 // chart: a line, a soft fill under it, and a dot on where things stand now.
 // No axes, no grid, no tooltip — Reports is where analysis happens.
-export function Sparkline({ points = [], color = 'var(--color-ink-faint)', width = 132, height = 40 }) {
+export function Sparkline({ points = [], color = 'var(--color-ink-faint)', width = 116, height = 34 }) {
   if (points.length < 2) return <div style={{ width, height }} />;
   const max = Math.max(...points, 1);
   const step = width / (points.length - 1);
@@ -143,7 +142,7 @@ export function Sparkline({ points = [], color = 'var(--color-ink-faint)', width
 // Donut with the total in the middle. Segments carry the colour, the legend
 // carries the numbers — a legend nobody can read is decoration. A hairline gap
 // keeps two segments from reading as one.
-export function Donut({ slices = [], total = 0, size = 150, thickness = 18 }) {
+export function Donut({ slices = [], total = 0, size = 132, thickness = 16 }) {
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
   const gap = slices.length > 1 ? 3 : 0;
@@ -162,8 +161,8 @@ export function Donut({ slices = [], total = 0, size = 150, thickness = 18 }) {
           return el;
         })}
       </g>
-      <text x="50%" y="48%" textAnchor="middle" className="fill-[var(--color-ink)]" style={{ fontSize: 24, fontWeight: 600 }}>{total}</text>
-      <text x="50%" y="63%" textAnchor="middle" className="fill-[var(--color-ink-faint)]" style={{ fontSize: 11.5 }}>Total</text>
+      <text x="50%" y="48%" textAnchor="middle" className="fill-[var(--color-ink)]" style={{ fontSize: 21, fontWeight: 600 }}>{total}</text>
+      <text x="50%" y="63%" textAnchor="middle" className="fill-[var(--color-ink-faint)]" style={{ fontSize: 10.5 }}>Total</text>
     </svg>
   );
 }
@@ -184,13 +183,13 @@ export function RangePicker({ value, onChange }) {
   return (
     <div className="relative">
       <button type="button" onClick={() => setOpen(o => !o)} onBlur={() => setTimeout(() => setOpen(false), 120)}
-        className="inline-flex items-center gap-2 rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-fill)]">
+        className="inline-flex items-center gap-2 rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-fill)]">
         <Calendar size={15} className="text-[var(--color-ink-faint)]" />
         {fmt(from)} – {fmt(to)}, {to.getFullYear()}
         <ChevronDown size={15} className="text-[var(--color-ink-faint)]" />
       </button>
       {open && (
-        <div className="absolute right-0 z-40 mt-2 w-48 overflow-hidden rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-lift)]">
+        <div className="absolute right-0 z-40 mt-2 w-48 overflow-hidden rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-lift)]">
           {RANGES.map(([k, label]) => (
             <button key={k} type="button" onMouseDown={() => { onChange(k); setOpen(false); }}
               className={`block w-full rounded-[8px] px-3 py-2.5 text-left text-[13px] font-semibold ${value === k ? 'bg-[var(--color-brand-50)] text-[var(--color-brand)]' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
@@ -214,10 +213,10 @@ export function FeedRow({ icon: Icon, tint, ink, title, line, meta, to, as: Tag 
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="t-body block truncate font-semibold text-[var(--color-ink)] group-hover:underline">{title}</span>
+        <span className="block truncate text-[12.5px] font-semibold text-[var(--color-ink)] group-hover:underline">{title}</span>
         {line && <span className="t-support mt-0.5 block truncate">{line}</span>}
       </span>
-      {meta && <span className="t-support shrink-0 whitespace-nowrap text-[12px]">{meta}</span>}
+      {meta && <span className="shrink-0 whitespace-nowrap text-[11px] text-[var(--color-ink-faint)]">{meta}</span>}
     </Tag>
   );
 }
@@ -225,5 +224,5 @@ export function FeedRow({ icon: Icon, tint, ink, title, line, meta, to, as: Tag 
 // Empty state that keeps a card the same height as its neighbours instead of
 // collapsing into a tall white nothing.
 export function Empty({ children }) {
-  return <p className="py-6 text-[13px] leading-relaxed text-[var(--color-ink-soft)]">{children}</p>;
+  return <p className="py-5 text-[12.5px] leading-relaxed text-[var(--color-ink-soft)]">{children}</p>;
 }

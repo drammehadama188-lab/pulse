@@ -53,7 +53,7 @@ export default function SetPassword() {
     }
   }
 
-  const inputCls = 'focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]'
+  const inputCls = 'focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]'
 
   return (
     <div className="flex min-h-screen items-center justify-center px-6 py-12">
@@ -106,7 +106,7 @@ export default function SetPassword() {
                 <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Same password" className={inputCls} />
               </div>
               {error && (
-                <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
+                <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
               )}
               <Button type="submit" className="w-full" disabled={busy} icon={busy ? undefined : KeyRound}>
                 {busy ? <Spinner size={16} /> : 'Save password'}

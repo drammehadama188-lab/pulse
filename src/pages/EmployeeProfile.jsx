@@ -97,7 +97,7 @@ export default function EmployeeProfile() {
     return (
       <div>
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
-        <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-10 text-center text-[var(--color-ink-faint)]">Employee not found.</div>
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-10 text-center text-[var(--color-ink-faint)]">Employee not found.</div>
       </div>
     );
   }
@@ -233,9 +233,9 @@ export default function EmployeeProfile() {
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
 
       {/* Identity */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-start gap-5">
-          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white text-xl font-semibold shrink-0">{initials}</div>
+          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white text-xl font-semibold shrink-0">{initials}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
               <h1 className="text-2xl font-semibold text-[var(--color-ink)]">{agent.name}</h1>
@@ -249,7 +249,7 @@ export default function EmployeeProfile() {
 
       {/* Termination banner */}
       {terminated && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 flex items-start gap-3">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 flex items-start gap-3">
           <UserX size={18} className="text-red-600 mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-red-800">Contract terminated{termEvent?.toEnd ? ` — ${formatDate(termEvent.toEnd)}` : ''}</p>
@@ -260,7 +260,7 @@ export default function EmployeeProfile() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 bg-white rounded-xl border border-[var(--color-line)] p-1.5 w-fit mb-4">
+      <div className="flex items-center gap-1 bg-white rounded-lg border border-[var(--color-line)] p-1.5 w-fit mb-4">
         {tabs.map(([k, label]) => (
           <button key={k} type="button" onClick={() => setTab(k)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === k ? 'bg-[var(--color-ink)] text-white' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>{label}</button>
         ))}
@@ -269,7 +269,7 @@ export default function EmployeeProfile() {
       {tab === 'overview' && (
         <div className="space-y-4">
           {/* Contract — the management layer: status + recommendation + actions */}
-          <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-[var(--color-ink)]">Contract</h2>
               <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${contractBadge.cls}`}>{contractBadge.label}</span>
@@ -296,7 +296,7 @@ export default function EmployeeProfile() {
             )}
           </div>
 
-          <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
             <h2 className="text-base font-semibold text-[var(--color-ink)] mb-5">Employment</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
               <Field label="Role" value={agent.role} />
@@ -308,7 +308,7 @@ export default function EmployeeProfile() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-[var(--color-ink)]">Personal &amp; contact</h2>
               {!editing
@@ -337,7 +337,7 @@ export default function EmployeeProfile() {
       )}
 
       {tab === 'documents' && (
-        <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-semibold text-[var(--color-ink)]">Documents</h2>
             <label className="flex items-center gap-1.5 text-sm text-emerald-700 hover:text-emerald-800 cursor-pointer">
@@ -365,11 +365,11 @@ export default function EmployeeProfile() {
 
       {tab === 'performance' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
             <h2 className="text-base font-semibold text-[var(--color-ink)] mb-3">Latest review</h2>
             {review ? <p className="text-sm text-[var(--color-ink-soft)]">{review.decision} {review.reason && <span className="text-[var(--color-ink-soft)]">— {review.reason}</span>} <span className="text-xs text-[var(--color-ink-faint)] ml-1">{review.setAt ? formatDate(review.setAt) : ''}</span></p> : <p className="text-sm text-[var(--color-ink-faint)]">No review on file.</p>}
           </div>
-          <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
             <h2 className="text-base font-semibold text-[var(--color-ink)] mb-3">Warnings</h2>
             {warnings.length === 0 ? <p className="text-sm text-[var(--color-ink-faint)]">No warnings on file.</p> : (
               <div className="space-y-2">{warnings.map((w) => (
@@ -377,7 +377,7 @@ export default function EmployeeProfile() {
               ))}</div>
             )}
           </div>
-          <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
             <h2 className="text-base font-semibold text-[var(--color-ink)] mb-3">Review documents</h2>
             {reviews.length === 0 ? <p className="text-sm text-[var(--color-ink-faint)]">No review documents.</p> : (
               <div className="divide-y divide-[var(--color-line-soft)]">{reviews.map((f) => (
@@ -395,7 +395,7 @@ export default function EmployeeProfile() {
             const done = items.filter(i => i.done).length;
             const pct = items.length ? Math.round((done / items.length) * 100) : 0;
             return (
-              <div key={type} className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+              <div key={type} className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
                 <div className="flex items-center justify-between mb-1">
                   <h2 className="text-base font-semibold text-[var(--color-ink)]">{title}</h2>
                   <span className="text-xs font-medium text-[var(--color-ink-soft)]">{done}/{items.length} done</span>
@@ -419,7 +419,7 @@ export default function EmployeeProfile() {
       )}
 
       {tab === 'activity' && (
-        <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
           <h2 className="text-base font-semibold text-[var(--color-ink)] mb-5">Employment history</h2>
           {activity.length === 0 ? <p className="text-sm text-[var(--color-ink-faint)]">No recorded history yet.</p> : (
             <div className="space-y-0">
@@ -443,7 +443,7 @@ export default function EmployeeProfile() {
       {/* Contract action modal */}
       {action && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !actionBusy && setAction(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[var(--color-ink)]">{ACTION_TITLES[action]}</h3>
               <button onClick={() => setAction(null)} disabled={actionBusy} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>

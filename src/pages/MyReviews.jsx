@@ -28,7 +28,7 @@ function whenLabel(iso) {
 function DownloadLink({ id }) {
   return (
     <a href={`/api/agent-files/${id}/download?t=${getToken()}`} target="_blank" rel="noopener noreferrer"
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-line-soft)] hover:text-[var(--color-ink)]"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-line-soft)] hover:text-[var(--color-ink)]"
       title="Download">
       <Download size={18} />
     </a>
@@ -73,7 +73,7 @@ export default function MyReviews() {
           <div className="space-y-3">
             {reviews.map((r) => (
               <Card key={r.id} className="flex items-center gap-3 p-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-brand)]" style={{ background: 'var(--color-brand-50)' }}>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--color-brand)]" style={{ background: 'var(--color-brand-50)' }}>
                   <FileText size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -101,7 +101,7 @@ export default function MyReviews() {
               const upcoming = c.type === 'meeting' && c.datetime && new Date(c.datetime) > new Date()
               return (
                 <Card key={c.id} className="flex items-start gap-3 p-4">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ color: `var(--color-${m.tone})`, background: `var(--color-${m.tone}-bg)` }}>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ color: `var(--color-${m.tone})`, background: `var(--color-${m.tone}-bg)` }}>
                     <m.icon size={18} />
                   </span>
                   <div className="min-w-0 flex-1">

@@ -33,7 +33,7 @@ export default function CoachingFeed({ title = 'Coaching & meetings' }) {
           const upcoming = c.type === 'meeting' && c.datetime && new Date(c.datetime) > new Date()
           return (
             <Card key={c.id} className="flex items-start gap-3 p-4">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ color: `var(--color-${m.tone})`, background: `var(--color-${m.tone}-bg)` }}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ color: `var(--color-${m.tone})`, background: `var(--color-${m.tone}-bg)` }}>
                 <m.icon size={18} />
               </span>
               <div className="min-w-0 flex-1">

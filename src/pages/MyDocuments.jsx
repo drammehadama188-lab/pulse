@@ -37,7 +37,7 @@ export default function MyDocuments() {
         <div className="space-y-3">
           {docs.map((d) => (
             <Card key={d.id} className="flex items-center gap-3 p-4">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-ink-soft)]" style={{ background: 'var(--color-line-soft)' }}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-soft)]" style={{ background: 'var(--color-line-soft)' }}>
                 <FolderOpen size={18} />
               </span>
               <div className="min-w-0 flex-1">
@@ -48,7 +48,7 @@ export default function MyDocuments() {
                 </div>
               </div>
               <a href={`/api/agent-files/${d.id}/download?t=${getToken()}`} target="_blank" rel="noopener noreferrer"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-line-soft)] hover:text-[var(--color-ink)]" title="Download">
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-line-soft)] hover:text-[var(--color-ink)]" title="Download">
                 <Download size={18} />
               </a>
             </Card>

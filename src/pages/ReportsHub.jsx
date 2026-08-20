@@ -52,7 +52,7 @@ export default function ReportsHub() {
       {/* selector 1: which question */}
       <div className="flex flex-wrap gap-1.5">
         {reports.map(([k, label]) => (
-          <button key={k} onClick={() => setReport(k)} className={`rounded-xl px-3.5 py-2 text-sm font-bold ${report === k ? 'bg-[var(--color-ink)] text-white' : 'border border-[var(--color-line-soft)] bg-[var(--color-surface)] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>{label}</button>
+          <button key={k} onClick={() => setReport(k)} className={`rounded-lg px-3.5 py-2 text-sm font-bold ${report === k ? 'bg-[var(--color-ink)] text-white' : 'border border-[var(--color-line-soft)] bg-[var(--color-surface)] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>{label}</button>
         ))}
       </div>
       {/* selector 2: which period */}

@@ -165,7 +165,7 @@ export default function Applicants() {
       </PageHead>
 
       {(importing || importResult || importError) && (
-        <div className="mb-5 rounded-xl border border-[var(--color-line)] bg-white p-4">
+        <div className="mb-5 rounded-lg border border-[var(--color-line)] bg-white p-4">
           {importing && <p className="text-sm text-[var(--color-ink-soft)]">Reading {importing}…</p>}
           {importError && <p className="text-sm text-[var(--color-stage-out)]">{importError}</p>}
           {importResult && (
@@ -245,14 +245,14 @@ export default function Applicants() {
           {STAGES.map(([key, label, chipCls, dot]) => {
             const inStage = applicants.filter(a => a.stage === key);
             return (
-              <div key={key} className="bg-[var(--color-fill)] rounded-xl border border-[var(--color-line)] p-3">
+              <div key={key} className="bg-[var(--color-fill)] rounded-lg border border-[var(--color-line)] p-3">
                 <div className="flex items-center justify-between px-2 py-1.5 mb-2">
                   <span className="flex items-center gap-2 text-sm font-semibold text-[var(--color-ink-soft)]"><span className={`w-2 h-2 rounded-full ${dot}`} />{label}</span>
                   <span className="text-xs font-medium text-[var(--color-ink-faint)]">{inStage.length}</span>
                 </div>
                 <div className="space-y-2 max-h-[70vh] overflow-y-auto">
                   {inStage.map(a => (
-                    <div key={a.id} className="bg-white rounded-xl border border-[var(--color-line)] p-3">
+                    <div key={a.id} className="bg-white rounded-lg border border-[var(--color-line)] p-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-[var(--color-ink)] truncate">{a.name}</p>
@@ -286,7 +286,7 @@ export default function Applicants() {
           for in the first place — put the list in, get it sorted. */}
       {pasting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !importing && setPasting(false)}>
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="t-card text-[var(--color-ink)]">Paste rows</h3>
               <button onClick={() => setPasting(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
@@ -298,7 +298,7 @@ export default function Applicants() {
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setPasting(false)} disabled={!!importing} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
               <button onClick={() => importText(pasted, 'Pasted rows')} disabled={!!importing || pasted.trim().split('\n').length < 2}
-                className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{importing ? 'Importing…' : 'Import'}</button>
+                className="px-3.5 py-2.5 rounded-[8px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{importing ? 'Importing…' : 'Import'}</button>
             </div>
           </div>
         </div>
@@ -306,7 +306,7 @@ export default function Applicants() {
 
       {adding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setAdding(false)}>
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="t-card text-[var(--color-ink)]">Add applicant</h3>
               <button onClick={() => setAdding(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
@@ -353,7 +353,7 @@ export default function Applicants() {
             </div>
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => setAdding(false)} disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-              <button onClick={addApplicant} disabled={saving || !form.name.trim()} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Adding…' : 'Add'}</button>
+              <button onClick={addApplicant} disabled={saving || !form.name.trim()} className="px-3.5 py-2.5 rounded-[8px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Adding…' : 'Add'}</button>
             </div>
           </div>
         </div>

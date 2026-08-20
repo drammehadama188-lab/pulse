@@ -126,7 +126,7 @@ export default function WorkdayMonitor() {
 
       {/* management items he did NOT do on their day */}
       {(data.adamaOverdue || []).length > 0 && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="text-sm font-bold text-red-700">Your items he hasn't done:</p>
           <div className="mt-1 space-y-0.5">
             {data.adamaOverdue.map((o, i) => (
@@ -139,7 +139,7 @@ export default function WorkdayMonitor() {
       <DayStrip days={data.days} today={data.today} selDate={selDate} onSelect={setSelDate} planByDate={data.planByDate} />
 
       {/* objectives rotate daily; Adama can pin them here — only he can */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--color-line)] bg-white px-4 py-3 text-sm">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--color-line)] bg-white px-4 py-3 text-sm">
         <span className="font-semibold text-[var(--color-ink-soft)]">Objectives:</span>
         {['primary', 'supporting'].map((field) => (
           <label key={field} className="flex items-center gap-1.5">
@@ -157,7 +157,7 @@ export default function WorkdayMonitor() {
       </div>
 
       {sections.map((sec) => (
-        <div key={sec.key} className="rounded-xl border border-[var(--color-line)] bg-white p-5">
+        <div key={sec.key} className="rounded-lg border border-[var(--color-line)] bg-white p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             {sec.key === 'other' ? (
               <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -201,7 +201,7 @@ export default function WorkdayMonitor() {
       {/* the timeline — nothing disappears quietly */}
       <div>
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Timeline — every change, who and when</h2>
-        <div className="rounded-xl border border-[var(--color-line)] bg-white">
+        <div className="rounded-lg border border-[var(--color-line)] bg-white">
           {(audit || []).length === 0 && <p className="p-6 text-center text-sm text-[var(--color-ink-faint)]">No activity logged yet.</p>}
           <div className="max-h-[28rem] divide-y divide-[var(--color-line-soft)] overflow-y-auto">
             {(audit || []).map((e) => (

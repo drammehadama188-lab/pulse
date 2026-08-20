@@ -109,7 +109,7 @@ export default function Applicant() {
       <div className={`${CARD} p-5 mb-5`}>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-4 min-w-0">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[var(--color-ink)] text-lg font-bold text-white">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[var(--color-ink)] text-lg font-bold text-white">
               {(a.name || '?').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
             </span>
             <div className="min-w-0">
@@ -126,7 +126,7 @@ export default function Applicant() {
           </div>
           <div className="flex items-center gap-2">
             <select value={a.stage} onChange={e => save({ stage: e.target.value })}
-              className="text-sm border border-[var(--color-line)] rounded-xl px-3 py-2.5 bg-white">
+              className="text-sm border border-[var(--color-line)] rounded-lg px-3 py-2.5 bg-white">
               {STAGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
             <button onClick={() => startInterview(templates.find(t => t.isDefault)?.id)} disabled={starting || !templates.length} className={`${BTN_PRIMARY} disabled:opacity-50`}>
@@ -197,8 +197,8 @@ export default function Applicant() {
           </div>
           {a.cv ? (
             String(a.cv.mimeType).startsWith('image/')
-              ? <img src={cvUrl} alt={a.cv.name} className="max-h-[70vh] rounded-xl border border-[var(--color-line-soft)]" />
-              : <iframe title="CV" src={cvUrl} className="w-full h-[70vh] rounded-xl border border-[var(--color-line-soft)]" />
+              ? <img src={cvUrl} alt={a.cv.name} className="max-h-[70vh] rounded-lg border border-[var(--color-line-soft)]" />
+              : <iframe title="CV" src={cvUrl} className="w-full h-[70vh] rounded-lg border border-[var(--color-line-soft)]" />
           ) : (
             <p className="text-sm text-[var(--color-ink-faint)] py-10 text-center">Upload the CV and it opens here beside the interview questions.</p>
           )}
@@ -243,7 +243,7 @@ export default function Applicant() {
         <div className={`${CARD} p-5`}>
           <textarea value={note} onChange={e => setNote(e.target.value)} onBlur={() => note !== (a.notes || '') && save({ notes: note })}
             rows={12} placeholder="What was said on the call, who referred them, anything you want to remember."
-            className="w-full border border-[var(--color-line)] rounded-xl px-3 py-2.5 text-sm" />
+            className="w-full border border-[var(--color-line)] rounded-lg px-3 py-2.5 text-sm" />
         </div>
       )}
 

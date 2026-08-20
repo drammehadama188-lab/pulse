@@ -46,7 +46,7 @@ export default function PastStaffProfile() {
     return (
       <div>
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
-        <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-10 text-center text-[var(--color-ink-faint)]">Former employee not found.</div>
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-10 text-center text-[var(--color-ink-faint)]">Former employee not found.</div>
       </div>
     );
   }
@@ -72,9 +72,9 @@ export default function PastStaffProfile() {
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back</button>
 
       {/* Identity */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-start gap-5">
-          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[var(--color-ink-faint)] to-[var(--color-ink-soft)] flex items-center justify-center text-white text-xl font-semibold shrink-0">{initials}</div>
+          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--color-ink-faint)] to-[var(--color-ink-soft)] flex items-center justify-center text-white text-xl font-semibold shrink-0">{initials}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
               <h1 className="text-2xl font-semibold text-[var(--color-ink)]">{person.name}</h1>
@@ -87,7 +87,7 @@ export default function PastStaffProfile() {
       </div>
 
       {/* Exit summary */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <h2 className="text-base font-semibold text-[var(--color-ink)] mb-5">Exit record</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
           <Field label="Left" value={person.date} />
@@ -101,7 +101,7 @@ export default function PastStaffProfile() {
       </div>
 
       {/* Pay history (real ledger lines only) */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
         <h2 className="text-base font-semibold text-[var(--color-ink)] mb-1">Pay history</h2>
         <p className="text-sm text-[var(--color-ink-soft)] mb-5">What was actually recorded as paid, month by month.</p>
         {payLines.length === 0 ? (

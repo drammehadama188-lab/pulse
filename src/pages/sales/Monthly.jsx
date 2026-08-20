@@ -153,7 +153,7 @@ export default function Monthly() {
           <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden">
             {r.closedCustomers.map((c) => (
               <div key={c.id} className="flex items-center gap-3 px-5 py-3.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-good-bg)] text-[var(--color-good)]"><Trophy size={16} /></span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-good-bg)] text-[var(--color-good)]"><Trophy size={16} /></span>
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold text-[var(--color-ink)]">{c.company}</div>
                   <div className="text-xs text-[var(--color-ink-faint)]">{c.wonAt ? dateShort(c.wonAt) : ''}</div>

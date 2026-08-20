@@ -149,7 +149,7 @@ function NoticeForm({ onClose, onSave, busy }) {
         <Field label="Type"><Select value={v.type} onChange={set('type')} options={TYPES} /></Field>
         <Field label="Title"><Input value={v.title} onChange={set('title')} placeholder="e.g. New fleet pricing" /></Field>
         <Field label="Message"><Textarea rows={3} value={v.body} onChange={set('body')} /></Field>
-        {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )

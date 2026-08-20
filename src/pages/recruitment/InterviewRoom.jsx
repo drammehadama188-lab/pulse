@@ -119,7 +119,7 @@ export default function InterviewRoom() {
             const isOn = i === sectionIdx;
             return (
               <button key={s.id} onClick={() => setSectionIdx(i)}
-                className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left ${isOn ? 'bg-[var(--color-ink)] text-white' : 'hover:bg-[var(--color-fill)]'}`}>
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left ${isOn ? 'bg-[var(--color-ink)] text-white' : 'hover:bg-[var(--color-fill)]'}`}>
                 <span className="flex-1 min-w-0">
                   <span className={`block text-sm font-medium truncate ${isOn ? 'text-white' : 'text-[var(--color-ink)]'}`}>{i + 1}. {s.title}</span>
                   <span className={`block text-[11px] ${isOn ? 'text-white/70' : 'text-[var(--color-ink-faint)]'}`}>{sc?.answered || 0}/{sc?.of || s.questions.length}</span>
@@ -158,12 +158,12 @@ export default function InterviewRoom() {
                   onBlur={() => (notes[q.id] ?? '') !== (ans.notes || '') && patch({ answer: { questionId: q.id, notes: notes[q.id] ?? '' } })}
                   disabled={done}
                   rows={3} placeholder="What they actually said"
-                  className="mt-3 w-full border border-[var(--color-line)] rounded-xl px-3 py-2.5 text-sm disabled:bg-[var(--color-fill)]" />
+                  className="mt-3 w-full border border-[var(--color-line)] rounded-lg px-3 py-2.5 text-sm disabled:bg-[var(--color-fill)]" />
                 <div className="mt-3 grid grid-cols-5 gap-2">
                   {SCORES.map(([n, label]) => (
                     <button key={n} disabled={done}
                       onClick={() => patch({ answer: { questionId: q.id, score: ans.score === n ? null : n } })}
-                      className={`rounded-xl border py-2 text-center ${ans.score === n ? 'bg-[var(--color-ink)] border-[var(--color-ink)] text-white' : 'bg-white border-[var(--color-line)] text-[var(--color-ink-soft)] hover:border-[var(--color-ink-faint)]'} disabled:opacity-60`}>
+                      className={`rounded-lg border py-2 text-center ${ans.score === n ? 'bg-[var(--color-ink)] border-[var(--color-ink)] text-white' : 'bg-white border-[var(--color-line)] text-[var(--color-ink-soft)] hover:border-[var(--color-ink-faint)]'} disabled:opacity-60`}>
                       <span className="block text-base font-bold">{n}</span>
                       <span className="block text-[10px]">{label}</span>
                     </button>
@@ -209,7 +209,7 @@ export default function InterviewRoom() {
             <div className="grid grid-cols-2 gap-2">
               {RECS.map(([k, label, Icon]) => (
                 <button key={k} disabled={done} onClick={() => patch({ recommendation: k })}
-                  className={`rounded-xl border py-2.5 text-xs font-semibold ${iv.recommendation === k ? RECOMMENDATION[k][1] : 'bg-white border-[var(--color-line)] text-[var(--color-ink-soft)] hover:border-[var(--color-ink-faint)]'} disabled:opacity-60`}>
+                  className={`rounded-lg border py-2.5 text-xs font-semibold ${iv.recommendation === k ? RECOMMENDATION[k][1] : 'bg-white border-[var(--color-line)] text-[var(--color-ink-soft)] hover:border-[var(--color-ink-faint)]'} disabled:opacity-60`}>
                   <Icon size={15} className="mx-auto mb-1" />
                   {label}
                 </button>
@@ -218,7 +218,7 @@ export default function InterviewRoom() {
             <textarea value={summary} onChange={e => setSummary(e.target.value)} disabled={done}
               onBlur={() => summary !== (iv.summary || '') && patch({ summary })}
               rows={5} placeholder="What stood out, good or bad"
-              className="mt-3 w-full border border-[var(--color-line)] rounded-xl px-3 py-2.5 text-sm disabled:bg-[var(--color-fill)]" />
+              className="mt-3 w-full border border-[var(--color-line)] rounded-lg px-3 py-2.5 text-sm disabled:bg-[var(--color-fill)]" />
             <p className="mt-2 text-[11px] text-[var(--color-ink-faint)]">
               {done ? `Completed ${dayTime(iv.completedAt)}` : `Booked ${dayTime(iv.scheduledAt)}`}
             </p>

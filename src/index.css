@@ -36,8 +36,8 @@
   --color-ink: #111827;
   --color-ink-soft: #525b6b;
   --color-ink-faint: #7c8494;
-  --color-line: #e8eaf0;
-  --color-line-soft: #eff1f5;
+  --color-line: #eaecf1;
+  --color-line-soft: #f1f3f7;
   --color-fill: #f4f5f8;
 
   /* Status (soft, friendly) */
@@ -68,8 +68,8 @@
   --color-stage-out-bg: #fdeceb;
 
   /* Radii — 12px on cards, 10px inside them (Adama's spec, 20 Aug 2026) */
-  --radius-card: 12px;
-  --radius-lg: 10px;
+  --radius-card: 8px;
+  --radius-lg: 8px;
 
   /* Depth is carried by the border and by space, not by shadow. Only things
      that genuinely float (modals, menus) get --shadow-lift. */
@@ -115,9 +115,9 @@ body {
 
 /* Type scale. Bold marks hierarchy, never decoration — nothing above 700. */
 .t-page {
-  font-size: 27px;
+  font-size: 26px;
   line-height: 1.2;
-  font-weight: 700;
+  font-weight: 650;
   letter-spacing: -0.02em;
 }
 .t-card {
@@ -126,22 +126,22 @@ body {
   font-weight: 600;
 }
 .t-stat {
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1.15;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
 .t-body {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
 }
 .t-support {
-  font-size: 12.5px;
+  font-size: 11.5px;
   line-height: 1.45;
   color: var(--color-ink-soft);
 }
 .t-label {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--color-ink-soft);
 }

@@ -91,9 +91,9 @@ export default function PerformancePerson() {
       <button onClick={() => navigate('/performance')} className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><ArrowLeft size={16} /> Back to Performance</button>
 
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-[var(--color-line)] bg-white p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-[var(--color-line)] bg-white p-6">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-xl font-bold text-white">{initials}</div>
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-xl font-bold text-white">{initials}</div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">{person.name}</h1>
             <p className="text-sm text-[var(--color-ink-soft)]">{person.role} · {person.type}</p>
@@ -164,13 +164,13 @@ export default function PerformancePerson() {
             <Card title="Manager notes">
               {editable ? (
                 <>
-                  <textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} rows={3} placeholder="e.g. Strong month — candidate for promotion." className="w-full rounded-xl border border-[var(--color-line)] p-3 text-sm focus:border-[var(--color-ink-faint)] focus:outline-none" />
+                  <textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} rows={3} placeholder="e.g. Strong month — candidate for promotion." className="w-full rounded-lg border border-[var(--color-line)] p-3 text-sm focus:border-[var(--color-ink-faint)] focus:outline-none" />
                   <div className="mt-3 flex items-center gap-3">
                     <button onClick={saveScore} disabled={saving} className="rounded-full bg-[var(--color-brand)] px-5 py-2.5 text-sm font-bold text-white hover:brightness-95 disabled:opacity-50">{saving ? 'Saving…' : 'Save score & notes'}</button>
                     {savedFlash && <span className="inline-flex items-center gap-1 text-sm text-emerald-600"><Check size={15} /> Saved</span>}
                   </div>
                 </>
-              ) : <p className="rounded-xl bg-[var(--color-fill)] p-3 text-sm text-[var(--color-ink-soft)]">{periodReview?.notes || 'No notes recorded for this period.'}</p>}
+              ) : <p className="rounded-lg bg-[var(--color-fill)] p-3 text-sm text-[var(--color-ink-soft)]">{periodReview?.notes || 'No notes recorded for this period.'}</p>}
             </Card>
           </div>
 
@@ -179,7 +179,7 @@ export default function PerformancePerson() {
             <RecommendedActions score={effScore} warnings={warnings} />
             <Card title="Warnings">
               {warnings.length === 0 ? <p className="text-sm text-[var(--color-ink-soft)]">No active warnings.</p>
-                : <div className="space-y-2">{warnings.map((w, i) => <div key={i} className="flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-700"><AlertTriangle size={14} className="mt-0.5 shrink-0" /><span>{w.reason || w.note || 'Warning'}</span></div>)}</div>}
+                : <div className="space-y-2">{warnings.map((w, i) => <div key={i} className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700"><AlertTriangle size={14} className="mt-0.5 shrink-0" /><span>{w.reason || w.note || 'Warning'}</span></div>)}</div>}
             </Card>
           </div>
         </div>
@@ -188,7 +188,7 @@ export default function PerformancePerson() {
       {tab === 'kpis' && (
         <div className="max-w-2xl space-y-4">
           {periodSales && periodSales.target != null && (
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-5">
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-5">
               <div className="mb-3 flex items-center justify-between"><span className="flex items-center gap-1.5 text-sm font-bold text-emerald-700"><Trophy size={15} /> Sales</span><span className="text-lg font-semibold text-[var(--color-ink)]">{periodSales.sales}/{periodSales.target}</span></div>
               <div className="h-3 overflow-hidden rounded-full bg-emerald-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(periodSales.target ? (periodSales.sales / periodSales.target) * 100 : 0, 100)}%` }} /></div>
               <p className="mt-2 text-xs text-[var(--color-ink-soft)]">D{periodSales.revenue.toLocaleString()} revenue{periodSales.pending ? ' · not entered yet' : ''}</p>
@@ -200,7 +200,7 @@ export default function PerformancePerson() {
               <div className="space-y-2">{periodReview.kpis.map((k, i) => <div key={i} className="flex items-center gap-2.5 text-sm">{k.done ? <Check size={16} className="text-emerald-500" /> : <X size={16} className="text-red-400" />}<span className={k.done ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)]'}>{k.label}</span></div>)}</div>
             ) : (
               <div>
-                <p className="rounded-xl bg-[var(--color-fill)] p-3 text-sm text-[var(--color-ink-soft)]">{person.kpi || person.coreResponsibility || 'No KPI set.'}</p>
+                <p className="rounded-lg bg-[var(--color-fill)] p-3 text-sm text-[var(--color-ink-soft)]">{person.kpi || person.coreResponsibility || 'No KPI set.'}</p>
                 {period.kind === 'current' && <p className="mt-2 text-xs text-[var(--color-ink-faint)]">Tick off KPIs as done when you complete this month's review (Reviews tab).</p>}
               </div>
             )}
@@ -235,7 +235,7 @@ function SalesBreakdown({ sales, period }) {
   let months = period.kind === 'current' || period.kind === 'month' ? [period.period]
     : period.kind === 'all' ? all : (period.months || [])
   months = months.filter((m) => sales.months[m]).sort()
-  if (!months.length) return <p className="rounded-xl bg-[var(--color-fill)] p-3 text-sm text-[var(--color-ink-soft)]">No sales recorded for this period.</p>
+  if (!months.length) return <p className="rounded-lg bg-[var(--color-fill)] p-3 text-sm text-[var(--color-ink-soft)]">No sales recorded for this period.</p>
   const live = months.filter((m) => !sales.months[m].pending)
   const totSales = live.reduce((s, m) => s + (sales.months[m].sales || 0), 0)
   const totRev = live.reduce((s, m) => s + (sales.months[m].revenue || 0), 0)
@@ -251,7 +251,7 @@ function SalesBreakdown({ sales, period }) {
           const pct = target ? Math.min((r.sales / target) * 100, 100) : 0
           const custs = r.customers || []
           return (
-            <div key={m} className="rounded-xl border border-[var(--color-line)] p-3">
+            <div key={m} className="rounded-lg border border-[var(--color-line)] p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-semibold text-[var(--color-ink)]">{periodLabel(m)}</span>
                 <span className="text-sm font-bold text-[var(--color-ink-soft)]">{r.pending ? <span className="text-[11px] font-medium text-amber-500">not entered yet</span> : `${r.sales}/${target}`}</span>
@@ -274,7 +274,7 @@ function SalesBreakdown({ sales, period }) {
 
 function SummaryCard({ label, value, sub, accent = 'text-[var(--color-ink)]', big, small }) {
   return (
-    <div className="rounded-xl border border-[var(--color-line)] bg-white p-4">
+    <div className="rounded-lg border border-[var(--color-line)] bg-white p-4">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
       <p className={`mt-1 truncate font-semibold ${big ? 'text-[27px]' : small ? 'text-base' : 'text-2xl'} ${accent}`}>{value}</p>
       {sub ? <p className="mt-1 text-xs text-[var(--color-ink-soft)]">{sub}</p> : <p className="mt-1 text-xs">&nbsp;</p>}
@@ -284,7 +284,7 @@ function SummaryCard({ label, value, sub, accent = 'text-[var(--color-ink)]', bi
 
 function Card({ title, icon: Icon, children }) {
   return (
-    <div className="rounded-xl border border-[var(--color-line)] bg-white p-5">
+    <div className="rounded-lg border border-[var(--color-line)] bg-white p-5">
       <div className="mb-3 flex items-center gap-2">{Icon && <Icon size={15} className="text-[var(--color-ink-faint)]" />}<h3 className="text-sm font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">{title}</h3></div>
       {children}
     </div>
@@ -349,14 +349,14 @@ function ReviewsTab({ reviews, hasCurrent, onComplete, onOpen }) {
       </Card>
 
       {!hasCurrent
-        ? <button onClick={onComplete} className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--color-line)] py-4 text-sm font-semibold text-[var(--color-ink-soft)] hover:border-[var(--color-ink-faint)] hover:bg-[var(--color-fill)]"><Plus size={16} /> Complete {periodLabel(CUR_PERIOD)} review</button>
-        : <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700"><Check size={16} />{periodLabel(CUR_PERIOD)} review is locked.</div>}
+        ? <button onClick={onComplete} className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[var(--color-line)] py-4 text-sm font-semibold text-[var(--color-ink-soft)] hover:border-[var(--color-ink-faint)] hover:bg-[var(--color-fill)]"><Plus size={16} /> Complete {periodLabel(CUR_PERIOD)} review</button>
+        : <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700"><Check size={16} />{periodLabel(CUR_PERIOD)} review is locked.</div>}
 
       <div>
         <p className="mb-2.5 text-xs font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">Review history</p>
-        {reviews.length === 0 ? <p className="rounded-xl bg-[var(--color-fill)] p-4 text-sm text-[var(--color-ink-soft)]">No reviews yet. Completing a monthly review creates a permanent, locked record here — your audit trail.</p>
+        {reviews.length === 0 ? <p className="rounded-lg bg-[var(--color-fill)] p-4 text-sm text-[var(--color-ink-soft)]">No reviews yet. Completing a monthly review creates a permanent, locked record here — your audit trail.</p>
           : <div className="space-y-2">{reviews.slice().sort((a, b) => (b.period || '').localeCompare(a.period || '')).map((r) => { const st = statusFor(r.score); const bb = band(r.score); return (
-            <button key={r.id} onClick={() => onOpen(r)} className="flex w-full items-center gap-3 rounded-xl border border-[var(--color-line)] bg-white px-4 py-3 text-left hover:border-[var(--color-line)]">
+            <button key={r.id} onClick={() => onOpen(r)} className="flex w-full items-center gap-3 rounded-lg border border-[var(--color-line)] bg-white px-4 py-3 text-left hover:border-[var(--color-line)]">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2"><span className="text-sm font-bold text-[var(--color-ink)]">{periodLabel(r.period)}</span><Lock size={11} className="text-[var(--color-ink-faint)]" /></div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-ink-faint)]"><span className={`rounded-full px-2 py-0.5 font-medium ${st.tone}`}>{r.status || st.label}</span><span>· {r.manager}</span><span>· {fmtDateY(r.completedAt)}</span></div>
@@ -385,7 +385,7 @@ function ReviewDetail({ review: r, onClose }) {
           {Object.keys(r.ratings || {}).length > 0 && <Section title="Ratings"><div className="space-y-2">{Object.entries(r.ratings).map(([k, v]) => <div key={k}><div className="mb-0.5 flex justify-between text-xs"><span className="text-[var(--color-ink-soft)]">{k}</span><span className="font-semibold text-[var(--color-ink-soft)]">{v}%</span></div><div className="h-2 overflow-hidden rounded-full bg-[var(--color-fill)]"><div className="h-full rounded-full bg-indigo-400" style={{ width: `${Number(v) || 0}%` }} /></div></div>)}</div></Section>}
           {r.achievements?.length > 0 && <Section title="Achievements"><div className="flex flex-wrap gap-1.5">{r.achievements.map((a, i) => <span key={i} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"><Trophy size={11} />{a}</span>)}</div></Section>}
           <Section title="Warnings"><p className="text-sm text-[var(--color-ink-soft)]">{r.warningsCount ? `${r.warningsCount} active at review time` : 'None'}</p></Section>
-          {r.notes && <Section title="Manager notes"><p className="whitespace-pre-wrap rounded-xl bg-[var(--color-fill)] p-3 text-sm text-[var(--color-ink-soft)]">{r.notes}</p></Section>}
+          {r.notes && <Section title="Manager notes"><p className="whitespace-pre-wrap rounded-lg bg-[var(--color-fill)] p-3 text-sm text-[var(--color-ink-soft)]">{r.notes}</p></Section>}
           {r.actions?.length > 0 && <Section title="Actions taken"><div className="space-y-1.5">{r.actions.map((a, i) => <div key={i} className="flex items-center gap-2 text-sm text-[var(--color-ink-soft)]"><Check size={15} className="text-emerald-500" />{a}</div>)}</div></Section>}
         </div>
       </div>
@@ -425,7 +425,7 @@ function ReviewForm({ person, defaultScore, defaultNotes, warningsCount, onClose
       <div className="relative h-full w-full max-w-md overflow-y-auto bg-white shadow-2xl">
         <div className="sticky top-0 flex items-center gap-2 border-b border-[var(--color-line-soft)] bg-white px-5 py-4"><button onClick={onClose} className="rounded-full p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]"><ArrowLeft size={18} /></button><h3 className="font-semibold text-[var(--color-ink)]">Complete {periodLabel(CUR_PERIOD)} review</h3></div>
         <div className="space-y-5 p-5">
-          <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] text-amber-700">Once saved, this review is <b>locked permanently</b> as part of {person.name.split(' ')[0]}'s record. It cannot be edited.</p>
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-700">Once saved, this review is <b>locked permanently</b> as part of {person.name.split(' ')[0]}'s record. It cannot be edited.</p>
           <Field label="Overall score"><div className="flex items-center gap-3"><input type="number" min="0" max="100" value={score} onChange={(e) => setScore(e.target.value)} className="w-24 rounded-lg border border-[var(--color-line)] px-3 py-2 text-lg font-bold" placeholder="0–100" /><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusFor(score === '' ? null : Number(score)).tone}`}>{effectiveStatus}</span></div></Field>
           <Field label="Status (override)"><select value={statusLabel} onChange={(e) => setStatusLabel(e.target.value)} className="w-full rounded-lg border border-[var(--color-line)] px-3 py-2 text-sm"><option value="">Auto from score ({statusFor(score === '' ? null : Number(score)).label})</option>{['Outstanding', 'Exceeded expectations', 'Met expectations', 'Needs improvement', 'Below expectations'].map((o) => <option key={o} value={o}>{o}</option>)}</select></Field>
           <Field label="Ratings (manager-entered)"><div className="space-y-2">{RATING_AXES.map((a) => <div key={a} className="flex items-center gap-3"><span className="w-32 shrink-0 text-sm text-[var(--color-ink-soft)]">{a}</span><input type="number" min="0" max="100" value={ratings[a]} onChange={(e) => setRatings((r) => ({ ...r, [a]: e.target.value }))} placeholder="—" className="w-20 rounded-lg border border-[var(--color-line)] px-2 py-1 text-sm" /><span className="text-xs text-[var(--color-ink-faint)]">%</span></div>)}</div></Field>
@@ -433,7 +433,7 @@ function ReviewForm({ person, defaultScore, defaultNotes, warningsCount, onClose
           <Field label="Achievements"><div className="mb-1.5 flex flex-wrap gap-1.5">{achievements.map((a, i) => <span key={i} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">{a}<button onClick={() => setAchievements((xs) => xs.filter((_, j) => j !== i))}><X size={11} /></button></span>)}</div><div className="flex gap-2"><input value={achInput} onChange={(e) => setAchInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && achInput.trim()) { setAchievements((xs) => [...xs, achInput.trim()]); setAchInput('') } }} placeholder="e.g. Employee of the month" className="flex-1 rounded-lg border border-[var(--color-line)] px-2 py-1 text-sm" /><button onClick={() => { if (achInput.trim()) { setAchievements((xs) => [...xs, achInput.trim()]); setAchInput('') } }} className="rounded-lg bg-[var(--color-fill)] px-3 text-sm">Add</button></div></Field>
           <Field label="Actions taken"><div className="flex flex-wrap gap-1.5">{ACTION_OPTIONS.map((o) => { const on = actions.includes(o); return <button key={o} onClick={() => setActions((xs) => on ? xs.filter((x) => x !== o) : [...xs, o])} className={`rounded-full px-3 py-1 text-xs font-medium ${on ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>{o}</button> })}</div></Field>
           <Field label="Warnings at review time"><p className="text-sm text-[var(--color-ink-soft)]">{warningsCount ? `${warningsCount} active` : 'None'} <span className="text-[11px] text-[var(--color-ink-faint)]">(from live record)</span></p></Field>
-          <Field label="Manager notes"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full rounded-xl border border-[var(--color-line)] p-3 text-sm" placeholder="Summary of the month…" /></Field>
+          <Field label="Manager notes"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full rounded-lg border border-[var(--color-line)] p-3 text-sm" placeholder="Summary of the month…" /></Field>
           {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
         </div>
         <div className="sticky bottom-0 flex gap-2 border-t border-[var(--color-line-soft)] bg-white px-5 py-4">

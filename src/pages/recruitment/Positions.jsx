@@ -71,7 +71,7 @@ export default function Positions() {
         {p.summary && <p className="mt-3 text-sm text-[var(--color-ink-soft)] whitespace-pre-wrap">{p.summary}</p>}
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
           {[[p.applicantCount, 'applied'], [p.interviewedCount, 'interviewed'], [`${p.hiredCount}/${p.openings}`, 'hired']].map(([v, l]) => (
-            <div key={l} className="rounded-xl bg-[var(--color-fill)] py-2.5">
+            <div key={l} className="rounded-lg bg-[var(--color-fill)] py-2.5">
               <p className="t-card text-[var(--color-ink)]">{v}</p>
               <p className="text-[11px] text-[var(--color-ink-faint)]">{l}</p>
             </div>
@@ -116,7 +116,7 @@ export default function Positions() {
 
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setEditing(null)}>
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="t-card text-[var(--color-ink)]">{editing === 'new' ? 'New position' : 'Edit position'}</h3>
               <button onClick={() => setEditing(null)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
@@ -147,7 +147,7 @@ export default function Positions() {
             </div>
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => setEditing(null)} disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-              <button onClick={save} disabled={saving || !form.title.trim()} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
+              <button onClick={save} disabled={saving || !form.title.trim()} className="px-3.5 py-2.5 rounded-[8px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
             </div>
           </div>
         </div>

@@ -179,7 +179,7 @@ function ArchiveDialog({ target, onClose, onDone }) {
         <Field label="Reason (optional)">
           <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Resigned, contract ended, let go" />
         </Field>
-        {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )
@@ -250,7 +250,7 @@ function AddStaffForm({ onClose, onCreated }) {
               They sign in with: <span className="font-bold text-[var(--color-ink)]">{created.email}</span>
             </div>
           </div>
-          <p className="rounded-xl bg-[var(--color-fill)] px-4 py-3 text-left text-sm text-[var(--color-ink-soft)]">
+          <p className="rounded-lg bg-[var(--color-fill)] px-4 py-3 text-left text-sm text-[var(--color-ink-soft)]">
             {created.invited
               ? `We emailed ${created.email} a link to choose their password. The link works for 60 minutes — if it expires, open their profile and press Reset password to send a new one.`
               : `The invite email could not be sent right now. Open their profile and press Reset password to email them a link, or set a temporary password there.`}
@@ -341,7 +341,7 @@ function AddStaffForm({ onClose, onCreated }) {
             ? 'Role is Manager — they clock in and get the management view (team schedule, approvals, attendance override). Cross-department goals are set separately.'
             : 'Salary is visible to managers only. Role is Sales — they get an empty pipeline of their own.'}
         </p>
-        {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )
@@ -425,7 +425,7 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
           {/* Master switch — pause their Pulse sign-in entirely (reversible). */}
           <button
             onClick={() => setCanSignIn((v) => !v)}
-            className={`mb-1 flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+            className={`mb-1 flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors ${
               canSignIn ? 'border-[var(--color-good)] bg-[var(--color-good-bg)]' : 'border-[var(--color-bad)] bg-[var(--color-bad-bg)]'
             }`}
           >
@@ -447,12 +447,12 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
           </Field>
 
           {/* Reset password — email-first, matches the profile page dialog */}
-          <div className="rounded-xl border border-[var(--color-line)] px-4 py-3">
+          <div className="rounded-lg border border-[var(--color-line)] px-4 py-3">
             <div className="text-sm font-semibold text-[var(--color-ink)]">Reset password</div>
             <p className="mb-2 text-xs text-[var(--color-ink-faint)]">Emails {target.name.split(' ')[0]} a link to choose a new password. Works for 60 minutes, one use.</p>
             <Button variant="outline" onClick={resetPassword} disabled={pwBusy}>{pwBusy ? <Spinner size={16} /> : 'Send reset email'}</Button>
-            {pwDone && <div className="mt-2 rounded-xl bg-[var(--color-good-bg)] px-3 py-2 text-xs font-medium text-[var(--color-good)]">{pwDone}</div>}
-            {pwError && <div className="mt-2 rounded-xl bg-[var(--color-bad-bg)] px-3 py-2 text-xs font-medium text-[var(--color-bad)]">{pwError}</div>}
+            {pwDone && <div className="mt-2 rounded-lg bg-[var(--color-good-bg)] px-3 py-2 text-xs font-medium text-[var(--color-good)]">{pwDone}</div>}
+            {pwError && <div className="mt-2 rounded-lg bg-[var(--color-bad-bg)] px-3 py-2 text-xs font-medium text-[var(--color-bad)]">{pwError}</div>}
           </div>
 
           <p className="text-sm text-[var(--color-ink-soft)]">
@@ -466,7 +466,7 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
                 key={p.key}
                 onClick={() => !locked && toggle(p.key)}
                 disabled={locked}
-                className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors ${
                   on ? 'border-[var(--color-brand)] bg-[var(--color-brand-50)]' : 'border-[var(--color-line)]'
                 } ${locked ? 'opacity-50' : ''}`}
               >
@@ -487,11 +487,11 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
               </button>
             )
           })}
-          {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+          {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
         </div>
       )}
       {!catalogue && error && (
-        <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
+        <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
       )}
     </Modal>
   )
@@ -545,7 +545,7 @@ function CoachingForm({ target, onClose }) {
           <Field label="When"><Input type="datetime-local" value={v.datetime} onChange={set('datetime')} /></Field>
         )}
         <Field label="Note"><Textarea rows={3} value={v.note} onChange={set('note')} /></Field>
-        {error && <div className="rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>}
       </div>
     </Modal>
   )

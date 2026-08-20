@@ -129,7 +129,7 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
   }
 
   return (
-    <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+    <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <FileText size={18} className="text-[var(--color-ink-faint)]" />
@@ -166,7 +166,7 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
         <div className="space-y-2">
           {files.map(f => (
             editing?.id === f.id ? (
-              <div key={f.id} className="flex flex-wrap items-center gap-2 p-3 bg-[var(--color-fill)] rounded-xl">
+              <div key={f.id} className="flex flex-wrap items-center gap-2 p-3 bg-[var(--color-fill)] rounded-lg">
                 <input
                   value={editing.name}
                   onChange={e => setEditing(s => ({ ...s, name: e.target.value }))}
@@ -189,8 +189,8 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
                 </button>
               </div>
             ) : (
-            <div key={f.id} className="flex items-center gap-3 p-3 bg-[var(--color-fill)] rounded-xl group">
-              <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0">
+            <div key={f.id} className="flex items-center gap-3 p-3 bg-[var(--color-fill)] rounded-lg group">
+              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0">
                 <FileText size={14} className="text-[var(--color-ink-soft)]" />
               </div>
               <div className="flex-1 min-w-0">

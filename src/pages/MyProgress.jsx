@@ -210,7 +210,7 @@ export default function MyProgress() {
 
       {tab === 'now' && (<>
       {/* Auto status sentence — the employee's headline for the month */}
-      <div className={`flex items-start gap-3 rounded-xl border ${tone.ring} ${tone.bg} px-4 py-3.5`}>
+      <div className={`flex items-start gap-3 rounded-lg border ${tone.ring} ${tone.bg} px-4 py-3.5`}>
         <span className="text-lg leading-none">{tone.dot}</span>
         <p className={`text-sm font-semibold ${tone.text}`}>{line.text}</p>
       </div>
@@ -441,7 +441,7 @@ export default function MyProgress() {
         <SectionTitle>Manager feedback</SectionTitle>
         {feedback ? (
           <Card className="flex items-start gap-3 p-5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-brand)]" style={{ background: 'var(--color-brand-50)' }}><MessageSquare size={18} /></span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--color-brand)]" style={{ background: 'var(--color-brand-50)' }}><MessageSquare size={18} /></span>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-ink-soft)]">{feedback}</p>
           </Card>
         ) : (

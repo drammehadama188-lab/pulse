@@ -505,7 +505,7 @@ export default function HRTeam({
           {weekOverview.map((w) => {
             const d = assignDraft[w.lead.username] || { title: '', due: '' };
             return (
-            <div key={w.lead.username} className="bg-white rounded-xl border border-[var(--color-line)] p-4">
+            <div key={w.lead.username} className="bg-white rounded-lg border border-[var(--color-line)] p-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold text-[var(--color-ink)]">{w.lead.name}'s workday</p>
                 <span className="text-[11px] font-semibold text-[var(--color-ink-faint)]">{w.doneCount}/{w.totalItems} ticked</span>
@@ -563,22 +563,22 @@ export default function HRTeam({
 
       {showOverview && (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-[var(--color-line)] p-4">
+        <div className="bg-white rounded-lg border border-[var(--color-line)] p-4">
           <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-blue-50"><Users size={16} className="text-blue-600" /></div><p className="text-[var(--color-ink-soft)] text-xs">Headcount</p></div>
           <h3 className="text-2xl font-bold text-[var(--color-ink)]">{team.length}</h3>
           <p className="text-[10px] text-[var(--color-ink-soft)] mt-1">{activeTeam.length} active, {probationTeam.length} probation, {trainingTeam.length} training</p>
         </div>
-        <div className="bg-white rounded-xl border border-[var(--color-line)] p-4">
+        <div className="bg-white rounded-lg border border-[var(--color-line)] p-4">
           <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-purple-50"><DollarSign size={16} className="text-purple-600" /></div><p className="text-[var(--color-ink-soft)] text-xs">Payroll</p></div>
           <h3 className="text-2xl font-bold text-[var(--color-ink)]">D{totalBase.toLocaleString()}</h3>
           <p className="text-[10px] text-[var(--color-ink-soft)] mt-1">Base only</p>
         </div>
-        <div className="bg-white rounded-xl border border-[var(--color-line)] p-4">
+        <div className="bg-white rounded-lg border border-[var(--color-line)] p-4">
           <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-amber-50"><Target size={16} className="text-amber-600" /></div><p className="text-[var(--color-ink-soft)] text-xs">In Evaluation</p></div>
           <h3 className="text-2xl font-bold text-amber-600">{probationTeam.length + trainingTeam.length}</h3>
           <p className="text-[10px] text-[var(--color-ink-soft)] mt-1">{probationTeam.length} probation, {trainingTeam.length} training</p>
         </div>
-        <div className="bg-white rounded-xl border border-[var(--color-line)] p-4">
+        <div className="bg-white rounded-lg border border-[var(--color-line)] p-4">
           <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-red-50"><Shield size={16} className="text-red-600" /></div><p className="text-[var(--color-ink-soft)] text-xs">Expiring</p></div>
           <h3 className="text-2xl font-bold text-red-600">{contractDeadlines.filter(c => c.daysLeft <= 90).length}</h3>
           <p className="text-[10px] text-[var(--color-ink-soft)] mt-1">Within 90 days</p>
@@ -600,7 +600,7 @@ export default function HRTeam({
               revenue − salary profit, sales/finance data) was replaced with the
               HR-native "Headcount by department" breakdown below, as part of
               narrowing Pulse to HR-only and removing sales-dependent metrics. */}
-          <div className="bg-white rounded-xl border border-[var(--color-line)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line)] p-6">
             <h3 className="text-lg font-semibold text-[var(--color-ink)] mb-1">Headcount by department</h3>
             <p className="text-sm text-[var(--color-ink-soft)] mb-4">How the team is distributed today</p>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -616,7 +616,7 @@ export default function HRTeam({
               })()}
             </div>
           </div>
-          <div className="bg-white rounded-xl border border-[var(--color-line)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line)] p-6">
             <h3 className="text-lg font-semibold text-[var(--color-ink)] mb-1">Probation &amp; Training</h3>
             <p className="text-sm text-[var(--color-ink-soft)] mb-4">Countdown to decision day</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -658,9 +658,9 @@ export default function HRTeam({
             {team.filter(t => t.status !== 'maternity' && !archivedNames.has(t.name)).map((t, i) => {
               const initials = t.name.split(' ').map(w => w[0]).slice(0, 2).join('');
               return (
-                <div key={i} onClick={() => openProfile(t.name)} className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 cursor-pointer hover:border-[var(--color-line)] transition-all">
+                <div key={i} onClick={() => openProfile(t.name)} className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 cursor-pointer hover:border-[var(--color-line)] transition-all">
                   <div className="flex items-start gap-4 mb-5">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-semibold shrink-0">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-semibold shrink-0">
                       {initials}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -717,7 +717,7 @@ export default function HRTeam({
 
       {tab === 'kpi' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -739,7 +739,7 @@ export default function HRTeam({
           </div>
 
           {kpiEditing && (
-            <div className="bg-white rounded-xl border-2 border-[var(--color-ink)] p-6">
+            <div className="bg-white rounded-lg border-2 border-[var(--color-ink)] p-6">
               <div className="flex items-center justify-between mb-5">
                 <h4 className="font-semibold text-[var(--color-ink)]">{kpiForm.id ? 'Edit KPI rule' : 'New KPI rule'}</h4>
                 <button onClick={() => { setKpiEditing(false); setKpiForm(blankRule); }} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]">
@@ -767,7 +767,7 @@ export default function HRTeam({
                     <div>
                       <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Role</label>
                       <select value={kpiForm.role} onChange={e => setKpiForm({ ...kpiForm, role: e.target.value })}
-                        className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)]">
+                        className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]">
                         <option value="">Select role…</option>
                         {allRoles.map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
@@ -777,7 +777,7 @@ export default function HRTeam({
                     <div>
                       <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Agent</label>
                       <select value={kpiForm.agent} onChange={e => setKpiForm({ ...kpiForm, agent: e.target.value })}
-                        className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)]">
+                        className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]">
                         <option value="">Select person…</option>
                         {allAgents.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
@@ -790,7 +790,7 @@ export default function HRTeam({
                     <input type="text" value={kpiForm.period} onChange={e => setKpiForm({ ...kpiForm, period: e.target.value })}
                       placeholder="default · or 2026-04"
                       list="periods-list"
-                      className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
+                      className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
                     <datalist id="periods-list">
                       <option value="default" />
                       <option value={`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`} />
@@ -804,7 +804,7 @@ export default function HRTeam({
                   <input type="text" value={kpiForm.unit} onChange={e => setKpiForm({ ...kpiForm, unit: e.target.value })}
                     placeholder="e.g. sales, installs, tickets, posts, renewals"
                     list="kpi-units"
-                    className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
+                    className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
                   <datalist id="kpi-units">
                     <option value="sales" /><option value="installs" /><option value="tickets" />
                     <option value="renewals" /><option value="posts" /><option value="calls" /><option value="visits" />
@@ -816,19 +816,19 @@ export default function HRTeam({
                     <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Personal target / month</label>
                     <input type="number" value={kpiForm.personalTarget} onChange={e => setKpiForm({ ...kpiForm, personalTarget: e.target.value })}
                       placeholder={kpiForm.unit ? `5 ${kpiForm.unit}` : '5'}
-                      className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
+                      className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
                   </div>
                   <div>
                     <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Team target / month</label>
                     <input type="number" value={kpiForm.teamTarget} onChange={e => setKpiForm({ ...kpiForm, teamTarget: e.target.value })}
                       placeholder="optional"
-                      className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
+                      className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
                   </div>
                   <div>
                     <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Weekly target (text)</label>
                     <input type="text" value={kpiForm.weeklyTarget} onChange={e => setKpiForm({ ...kpiForm, weeklyTarget: e.target.value })}
                       placeholder={kpiForm.unit ? `4 ${kpiForm.unit}/week` : 'e.g. 4 per week'}
-                      className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
+                      className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
                   </div>
                 </div>
 
@@ -836,19 +836,19 @@ export default function HRTeam({
                   <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Monthly KPI (human-readable)</label>
                   <input type="text" value={kpiForm.kpi} onChange={e => setKpiForm({ ...kpiForm, kpi: e.target.value })}
                     placeholder="e.g. Complete 8 installs this month"
-                    className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
+                    className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
                 </div>
                 <div>
                   <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Core responsibility</label>
                   <input type="text" value={kpiForm.coreResponsibility} onChange={e => setKpiForm({ ...kpiForm, coreResponsibility: e.target.value })}
                     placeholder="e.g. Own renewals and keep customers retained"
-                    className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
+                    className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
                 </div>
                 <div>
                   <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Focus (optional theme)</label>
                   <input type="text" value={kpiForm.focus} onChange={e => setKpiForm({ ...kpiForm, focus: e.target.value })}
                     placeholder="e.g. Close high-value renewals"
-                    className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
+                    className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)]" />
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -869,7 +869,7 @@ export default function HRTeam({
             </div>
           )}
 
-          <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-5 flex flex-wrap items-center gap-3">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 flex flex-wrap items-center gap-3">
             <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Filter</p>
             <select value={kpiFilter.scope} onChange={e => setKpiFilter({ ...kpiFilter, scope: e.target.value })}
               className="px-3 py-1.5 border border-[var(--color-line)] rounded-full text-xs">
@@ -895,7 +895,7 @@ export default function HRTeam({
             <span className="text-[11px] text-[var(--color-ink-faint)] ml-auto">{filteredRules.length} of {kpiRules.length} rules</span>
           </div>
 
-          <div className="bg-white rounded-xl border border-[var(--color-line-soft)] overflow-hidden">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] overflow-hidden">
             {kpiLoading ? (
               <p className="p-6 text-sm text-[var(--color-ink-faint)]">Loading…</p>
             ) : filteredRules.length === 0 ? (
@@ -964,7 +964,7 @@ export default function HRTeam({
             const ends = p.contractEnd ? new Date(p.contractEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
             const daysLeft = p.contractEnd ? Math.ceil((new Date(p.contractEnd) - today) / 86400000) : null;
             return (
-              <div key={i} onClick={() => openProfile(p.name)} className="bg-white rounded-xl border border-[var(--color-line)] p-5 hover:border-[var(--color-line)] transition-all cursor-pointer">
+              <div key={i} onClick={() => openProfile(p.name)} className="bg-white rounded-lg border border-[var(--color-line)] p-5 hover:border-[var(--color-line)] transition-all cursor-pointer">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white text-sm font-semibold shrink-0">{p.name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}</div>
@@ -994,13 +994,13 @@ export default function HRTeam({
 
       {tab === 'payroll' && (
         <div className="space-y-6">
-          <div className="flex items-center gap-1 bg-white rounded-xl border border-[var(--color-line)] p-1.5 w-fit">
+          <div className="flex items-center gap-1 bg-white rounded-lg border border-[var(--color-line)] p-1.5 w-fit">
             {payTabs.map(([k, label]) => (
               <button key={k} type="button" onClick={() => setPaySection(k)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${paySec === k ? 'bg-[var(--color-ink)] text-white' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>{label}</button>
             ))}
           </div>
           {paySec === 'run' && canSeePayDetail && payRun && !payRun.error && (
-            <div className="bg-white rounded-xl border border-[var(--color-line)] p-6">
+            <div className="bg-white rounded-lg border border-[var(--color-line)] p-6">
               <div className="flex items-start justify-between mb-1 flex-wrap gap-2">
                 <div className="flex items-center gap-3 flex-wrap">
                   <h3 className="text-lg font-semibold text-[var(--color-ink)]">Run Payroll — {payRun.period && new Date(Number(payRun.period.slice(0, 4)), Number(payRun.period.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
@@ -1118,7 +1118,7 @@ export default function HRTeam({
             </div>
           )}
           {paySec === 'team' && (
-          <div className="bg-white rounded-xl border border-[var(--color-line)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line)] p-6">
             <h3 className="text-lg font-semibold text-[var(--color-ink)] mb-4">Team Salaries</h3>
             <table className="w-full"><thead><tr className="border-b border-[var(--color-line)]">
               <th className="text-left px-4 py-3 text-xs uppercase text-[var(--color-ink-soft)]">Name</th><th className="text-left px-4 py-3 text-xs uppercase text-[var(--color-ink-soft)]">Role</th>
@@ -1130,7 +1130,7 @@ export default function HRTeam({
           </div>
           )}
           {paySec === 'history' && (
-          <div className="bg-white rounded-xl border border-[var(--color-line)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line)] p-6">
             <div className="flex items-start justify-between mb-1">
               <h3 className="text-lg font-semibold text-[var(--color-ink)]">Payroll History</h3>
               {canSeePayDetail && payLive && (
@@ -1279,7 +1279,7 @@ export default function HRTeam({
           {/* Confirm modal — shows the exact Books payload before any real post */}
           {payConfirm && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !payPosting && setPayConfirm(null)}>
-              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
                 <h3 className="text-lg font-semibold text-[var(--color-ink)] mb-1">Record payment in Zoho Books</h3>
                 <p className="text-sm text-[var(--color-ink-soft)] mb-4">{payConfirm.person.name} — {payRun?.period}</p>
                 {payConfirm.loading ? (
@@ -1324,7 +1324,7 @@ export default function HRTeam({
           {/* Record a one-off payment — everything up front, one Save */}
           {oneOff && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !oneOff.busy && setOneOff(null)}>
-              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
                 <h3 className="text-lg font-semibold text-[var(--color-ink)] mb-1">Record a payment</h3>
                 <p className="text-sm text-[var(--color-ink-soft)] mb-4">A one-off — training pay, an allowance, an advance. Posts to Zoho Books and shows on their payslip under the month you pick.</p>
                 <div className="space-y-3 text-sm">
@@ -1363,7 +1363,7 @@ export default function HRTeam({
           {/* Pay all — one confirmation for the whole run */}
           {bulk && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !bulk.busy && setBulk(null)}>
-              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
                 <h3 className="text-lg font-semibold text-[var(--color-ink)] mb-1">{bulk.done ? 'Pay all — done' : `Pay ${bulk.people.length} people — ${payRun?.period}`}</h3>
                 {!bulk.done ? (
                   <>
@@ -1397,7 +1397,7 @@ export default function HRTeam({
           {/* Edit a recorded payment */}
           {payEdit && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !payPosting && setPayEdit(null)}>
-              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
                 <h3 className="text-lg font-semibold text-[var(--color-ink)] mb-1">Edit payment — {payEdit.rec.name}</h3>
                 <p className="text-sm text-[var(--color-ink-soft)] mb-4">Updates the record in Zoho Books.</p>
                 <div className="space-y-3 text-sm">
@@ -1424,7 +1424,7 @@ export default function HRTeam({
           {/* Undo a recorded payment */}
           {payUndo && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !payPosting && setPayUndo(null)}>
-              <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
+              <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
                 <h3 className="text-lg font-semibold text-[var(--color-ink)] mb-1">Undo payment?</h3>
                 <p className="text-sm text-[var(--color-ink-soft)] mb-4">This deletes {payUndo.rec.name}'s D{payUndo.rec.total.toLocaleString()} payment ({payUndo.rec.paySource}, {payUndo.rec.date}) from Zoho Books. {payUndo.rec.name} will show as unpaid again.</p>
                 {payUndo.error && <div className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-3">{payUndo.error}</div>}
@@ -1456,7 +1456,7 @@ export default function HRTeam({
           {/* HR archive dashboard — real counts only */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {cards.map((c, i) => (
-              <div key={i} className="bg-white rounded-xl border border-[var(--color-line)] p-4">
+              <div key={i} className="bg-white rounded-lg border border-[var(--color-line)] p-4">
                 <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">{c.label}</p>
                 <p className={`text-2xl font-bold mt-1 ${c.accent || 'text-[var(--color-ink)]'}`}>{c.value}</p>
                 {c.sub && <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">{c.sub}</p>}
@@ -1464,7 +1464,7 @@ export default function HRTeam({
             ))}
           </div>
 
-          <div className="bg-white rounded-xl border border-[var(--color-line)] p-6">
+          <div className="bg-white rounded-lg border border-[var(--color-line)] p-6">
             <h3 className="text-lg font-semibold text-[var(--color-ink)] mb-1">Warnings &amp; disciplinary</h3>
             <p className="text-sm text-[var(--color-ink-soft)] mb-4">{allWarnings.length === 0 ? 'No warnings on file across the team.' : `${allWarnings.length} warning${allWarnings.length === 1 ? '' : 's'} on record.`}</p>
             {allWarnings.length === 0 ? (
@@ -1500,7 +1500,7 @@ export default function HRTeam({
         const counts = withCat.reduce((m, p) => { m[p.cat] = (m[p.cat] || 0) + 1; return m; }, {});
         const shown = pastFilter === 'all' ? withCat : withCat.filter(p => p.cat === pastFilter);
         return (
-        <div className="bg-white rounded-xl border border-[var(--color-line)] p-6">
+        <div className="bg-white rounded-lg border border-[var(--color-line)] p-6">
           <h3 className="text-lg font-semibold text-[var(--color-ink)] mb-1">Past Employees</h3>
           <p className="text-sm text-[var(--color-ink-soft)] mb-4">Company history — {withCat.length} former team member{withCat.length === 1 ? '' : 's'}.</p>
           <div className="flex flex-wrap items-center gap-2 mb-5">

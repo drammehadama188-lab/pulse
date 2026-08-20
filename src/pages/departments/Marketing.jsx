@@ -136,7 +136,7 @@ function EditableSection({ section, rows, onSaved }) {
             <button
               onClick={() => removeRow(i)}
               title="Remove row"
-              className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-xl text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-bad-bg)] hover:text-[var(--color-bad)] sm:self-center"
+              className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-lg text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-bad-bg)] hover:text-[var(--color-bad)] sm:self-center"
             >
               <Trash2 size={16} />
             </button>

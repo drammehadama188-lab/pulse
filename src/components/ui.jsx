@@ -76,7 +76,7 @@ export function StatCard({ icon: Icon, label, value, sub, tone = 'brand' }) {
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-[var(--color-ink-soft)]">{label}</span>
         {Icon && (
-          <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${TONES[tone]}`}>
+          <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${TONES[tone]}`}>
             <Icon size={18} strokeWidth={2.2} />
           </span>
         )}
@@ -135,7 +135,7 @@ export function SectionTitle({ children, action }) {
 }
 
 const FIELD_CLS =
-  'focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]'
+  'focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]'
 
 export function Field({ label, children }) {
   return (
@@ -185,7 +185,7 @@ export function MenuSelect({ value, onChange, options = [], placeholder = 'Choos
         <ChevronDown size={16} className={`shrink-0 text-[var(--color-ink-faint)] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute left-0 right-0 z-40 mt-1.5 overflow-hidden rounded-xl border border-[var(--color-line)] bg-white p-1.5 shadow-xl">
+        <div className="absolute left-0 right-0 z-40 mt-1.5 overflow-hidden rounded-lg border border-[var(--color-line)] bg-white p-1.5 shadow-xl">
           {opts.map((o) => {
             const active = String(o.value) === String(value)
             return (
@@ -214,7 +214,7 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = 'max-
       onClick={onClose}
     >
       <div
-        className={`card w-full ${maxWidth} max-h-[92vh] overflow-y-auto rounded-b-none rounded-t-3xl sm:rounded-xl rise`}
+        className={`card w-full ${maxWidth} max-h-[92vh] overflow-y-auto rounded-b-none rounded-t-3xl sm:rounded-lg rise`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-[var(--color-line-soft)] px-5 py-4">

@@ -74,7 +74,7 @@ export default function Visits() {
         <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden">
           {rows.map((r) => (
             <div key={r.id} className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
-              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-rest-bg)] text-[var(--color-rest)]">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-rest-bg)] text-[var(--color-rest)]">
                 <MapPin size={18} />
               </span>
               <div className="min-w-0 flex-1">

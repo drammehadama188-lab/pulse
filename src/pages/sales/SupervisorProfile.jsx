@@ -245,10 +245,10 @@ export default function SupervisorProfile({ supervisor }) {
       </button>
 
       {/* IDENTITY — minimal with status pills + contract row */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-start justify-between gap-5 flex-wrap">
           <div className="flex items-start gap-5">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white text-lg font-semibold shrink-0">
+            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white text-lg font-semibold shrink-0">
               {initials}
             </div>
             <div className="flex-1">
@@ -304,7 +304,7 @@ export default function SupervisorProfile({ supervisor }) {
       </div>
 
       {/* COMMAND PANEL — team metrics, big and clean */}
-      <div className="bg-[var(--color-ink)] rounded-xl p-6 mb-4 text-white">
+      <div className="bg-[var(--color-ink)] rounded-lg p-6 mb-4 text-white">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
             <p className="text-[10px] uppercase tracking-wider font-bold text-white/50">Team Command · {rangeLabel}</p>
@@ -314,7 +314,7 @@ export default function SupervisorProfile({ supervisor }) {
               {rangeEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           </div>
-          <div className="bg-white/5 rounded-xl">
+          <div className="bg-white/5 rounded-lg">
             <TimePeriodSelector
               selected={rangeKey}
               periods={AGENT_PERIODS}
@@ -350,7 +350,7 @@ export default function SupervisorProfile({ supervisor }) {
       </div>
 
       {/* SUPERVISOR EFFECTIVENESS — judges her management, not just team data */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Shield size={18} className="text-[var(--color-ink-faint)]" />
@@ -420,7 +420,7 @@ export default function SupervisorProfile({ supervisor }) {
         const roi = cost > 0 ? Math.round((totalRevenue / cost) * 100) : 0;
         const costPerSale = totalSales > 0 ? Math.round(cost / totalSales) : null;
         return (
-          <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+          <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
             <div className="flex items-center gap-2 mb-5">
               <DollarSign size={18} className="text-[var(--color-ink-faint)]" />
               <h2 className="text-[var(--color-ink)] font-semibold">Business Cost</h2>
@@ -479,7 +479,7 @@ export default function SupervisorProfile({ supervisor }) {
 
       {/* CRITICAL — only when there are issues, plain list */}
       {(zeroSalesReports.length > 0 || goingSilent.length > 0) && (
-        <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
           <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)] mb-3">Team Priorities</p>
           <div className="space-y-2">
             {zeroSalesReports.length > 0 && (
@@ -518,7 +518,7 @@ export default function SupervisorProfile({ supervisor }) {
       )}
 
       {/* TEAM GRID — clickable people */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <Users size={18} className="text-[var(--color-ink-faint)]" />
@@ -532,14 +532,14 @@ export default function SupervisorProfile({ supervisor }) {
             const repInitials = r.name.split(' ').map(w => w[0]).slice(0, 2).join('');
             return (
               <div key={r.name} onClick={() => navigate(`/agents/${slug}`)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all hover:border-[var(--color-line)] ${
+                className={`p-4 rounded-lg border cursor-pointer transition-all hover:border-[var(--color-line)] ${
                   r.salesCount === 0 ? 'bg-red-50/40 border-red-100' :
                   r.perf >= 80 ? 'bg-emerald-50/40 border-emerald-100' :
                   'bg-white border-[var(--color-line-soft)]'
                 }`}
               >
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xs font-semibold shrink-0">
                     {repInitials}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -576,7 +576,7 @@ export default function SupervisorProfile({ supervisor }) {
 
 
       {/* NOTES */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <div className="flex items-center gap-2 mb-4">
           <MessageSquare size={16} className="text-[var(--color-ink-faint)]" />
           <h2 className="text-[var(--color-ink)] font-semibold text-sm">Coaching Notes</h2>
@@ -594,7 +594,7 @@ export default function SupervisorProfile({ supervisor }) {
         ) : (
           <div className="space-y-2">
             {feedback.slice(0, 5).map(n => (
-              <div key={n.id} className="flex items-start gap-3 p-3 bg-[var(--color-fill)] rounded-xl group">
+              <div key={n.id} className="flex items-start gap-3 p-3 bg-[var(--color-fill)] rounded-lg group">
                 <div className="flex-1">
                   <p className="text-[var(--color-ink-soft)] text-sm">{n.text}</p>
                   <p className="text-[var(--color-ink-faint)] text-[11px] mt-0.5">{new Date(n.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {n.createdBy || 'Damia'}</p>
@@ -607,13 +607,13 @@ export default function SupervisorProfile({ supervisor }) {
       </div>
 
       {/* CEO DECISION */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-8">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-8">
         <div className="flex items-center gap-2 mb-4">
           <Shield size={16} className="text-[var(--color-ink-faint)]" />
           <h2 className="text-[var(--color-ink)] font-semibold text-sm">CEO Decision · Supervisor Review</h2>
         </div>
         {decision && (
-          <div className="mb-4 p-3 rounded-xl bg-[var(--color-ink)] text-white flex items-center gap-3">
+          <div className="mb-4 p-3 rounded-lg bg-[var(--color-ink)] text-white flex items-center gap-3">
             <div className="flex-1">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-white/60">Current</p>
               <p className="text-sm font-medium">
@@ -636,7 +636,7 @@ export default function SupervisorProfile({ supervisor }) {
             };
             return (
               <button key={d.value} onClick={() => setPickedDecision(d.value)}
-                className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border-2 text-[11px] font-medium transition-colors ${colorMap[d.color]}`}>
+                className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border-2 text-[11px] font-medium transition-colors ${colorMap[d.color]}`}>
                 <Icon size={12} />
                 <span className="truncate">{d.label}</span>
               </button>
@@ -645,7 +645,7 @@ export default function SupervisorProfile({ supervisor }) {
         </div>
         <textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)}
           placeholder="Reason or next step (optional)…"
-          className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-ink-faint)] resize-none" rows={2} />
+          className="w-full px-4 py-2.5 border border-[var(--color-line)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-ink-faint)] resize-none" rows={2} />
         <div className="flex justify-end mt-3">
           <button onClick={saveDecision} disabled={!pickedDecision}
             className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${decisionSaved ? 'bg-emerald-600 text-white' : pickedDecision ? 'bg-[var(--color-ink)] text-white hover:bg-[var(--color-ink)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-faint)] cursor-not-allowed'}`}>

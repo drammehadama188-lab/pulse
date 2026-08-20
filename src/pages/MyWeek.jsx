@@ -162,7 +162,7 @@ export function DayStrip({ days, today, selDate, onSelect, planByDate }) {
         const n = (planByDate?.[d] || []).length
         const sel = d === selDate
         return (
-          <button key={d} onClick={() => onSelect(d)} className={`rounded-xl px-3 py-1.5 text-center ${sel ? 'bg-[var(--color-ink)] text-white' : 'border border-[var(--color-line-soft)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-line)]'}`}>
+          <button key={d} onClick={() => onSelect(d)} className={`rounded-lg px-3 py-1.5 text-center ${sel ? 'bg-[var(--color-ink)] text-white' : 'border border-[var(--color-line-soft)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-line)]'}`}>
             <span className="block text-[10px] font-bold uppercase tracking-wide opacity-75">{d === today ? 'Today' : dt.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })}</span>
             <span className="block text-sm font-semibold tabular-nums">{dt.getUTCDate()}{n ? <span className="ml-1 text-[10px] font-bold opacity-70">·{n}</span> : null}</span>
           </button>
@@ -232,7 +232,7 @@ function CommentBox({ label, value, saved, onChange }) {
       <textarea
         value={value} onChange={(e) => onChange(e.target.value)} rows={2}
         placeholder="Why wasn't the goal met, or anything the business should know — saves by itself."
-        className="w-full rounded-xl border border-[var(--color-line-soft)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+        className="w-full rounded-lg border border-[var(--color-line-soft)] bg-[var(--color-surface)] px-3 py-2 text-sm"
       />
     </div>
   )
@@ -255,7 +255,7 @@ export function PlanArea({ items, canAct, canTick, focusKey, date, cap, placehol
     setEditing(null)
   }
   return (
-    <div className="rounded-xl border border-[var(--color-line-soft)] bg-[var(--color-surface)] p-4">
+    <div className="rounded-lg border border-[var(--color-line-soft)] bg-[var(--color-surface)] p-4">
       <div className="space-y-0.5">
         {items.length === 0 && <p className="py-1 text-sm text-[var(--color-ink-faint)]">Nothing planned for this day yet — write below.</p>}
         {items.map((it) => (

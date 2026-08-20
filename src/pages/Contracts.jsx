@@ -51,7 +51,7 @@ function StatCard({ label, value, tone }) {
     blue: 'text-[#1d4ed8]', rest: 'text-[var(--color-rest)]', ink: 'text-[var(--color-ink)]',
   }[tone || 'ink']
   return (
-    <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
       <p className={`mt-0.5 text-[27px] font-semibold tabular-nums ${c}`}>{value}</p>
     </div>
@@ -142,11 +142,11 @@ export default function Contracts() {
           const recTone = { good: 'text-[var(--color-good)]', bad: 'text-[var(--color-bad)]', ink: 'text-[var(--color-ink-soft)]' }[rec?.tone || 'ink']
           const urgent = d != null && d <= 30
           return (
-            <div key={t.name} className={`rounded-xl border bg-[var(--color-surface)] p-4 ${urgent ? 'border-[var(--color-warn)]/50' : 'border-[var(--color-line)]'}`}>
+            <div key={t.name} className={`rounded-lg border bg-[var(--color-surface)] p-4 ${urgent ? 'border-[var(--color-warn)]/50' : 'border-[var(--color-line)]'}`}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex items-start gap-4">
                   {/* days-left badge */}
-                  <div className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl text-center ${d == null ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]' : d < 0 ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : d <= 30 ? 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
+                  <div className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg text-center ${d == null ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]' : d < 0 ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : d <= 30 ? 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
                     {d == null ? <CheckCircle2 size={22} /> : <><span className="text-lg font-semibold leading-none tabular-nums">{Math.abs(d)}</span><span className="text-[9px] font-bold uppercase">{d < 0 ? 'days ago' : 'days'}</span></>}
                   </div>
                   <div className="min-w-0">

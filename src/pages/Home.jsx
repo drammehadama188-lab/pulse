@@ -134,7 +134,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-[var(--color-ink-soft)]">Attendance</span>
             <span
-              className={`flex h-9 w-9 items-center justify-center rounded-xl ${
+              className={`flex h-9 w-9 items-center justify-center rounded-lg ${
                 checkedIn
                   ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]'
                   : 'bg-[var(--color-brand-50)] text-[var(--color-brand)]'
@@ -232,7 +232,7 @@ export default function Home() {
       {(hasPower('approvals') || hasPower('team')) && (
         <Card className="flex flex-wrap items-center gap-x-8 gap-y-4 p-5 rise" style={{ animationDelay: '120ms' }}>
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-warn-bg)] text-[var(--color-warn)]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-warn-bg)] text-[var(--color-warn)]">
               <ClipboardCheck size={20} />
             </span>
             <div>
@@ -241,7 +241,7 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-good-bg)] text-[var(--color-good)]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-good-bg)] text-[var(--color-good)]">
               <Clock size={20} />
             </span>
             <div>
@@ -282,7 +282,7 @@ export default function Home() {
                 to={`/sales/c/${c.id}`}
                 className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--color-line-soft)]"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-brand-50)] text-[var(--color-brand)]">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-brand-50)] text-[var(--color-brand)]">
                   <Contact size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -316,7 +316,7 @@ export default function Home() {
                   </div>
                 </div>
                 {me.kpi && (
-                  <div className="rounded-xl bg-[var(--color-fill)] px-4 py-3 text-sm">
+                  <div className="rounded-lg bg-[var(--color-fill)] px-4 py-3 text-sm">
                     <span className="font-semibold text-[var(--color-ink-soft)]">Goal · </span>
                     <span className="text-[var(--color-ink)]">{me.kpi}</span>
                   </div>
@@ -365,7 +365,7 @@ function ContractChip({ contract, end }) {
 function TodayStat({ icon: Icon, label, value }) {
   return (
     <div className="flex flex-col items-center gap-1 px-3 py-4">
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand-50)] text-[var(--color-brand)]">
+      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-brand-50)] text-[var(--color-brand)]">
         <Icon size={18} strokeWidth={2.2} />
       </span>
       <div className="text-2xl font-semibold leading-none text-[var(--color-ink)]">{value}</div>
@@ -382,7 +382,7 @@ function QuickLink({ to, icon: Icon, label }) {
       to={to}
       className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--color-line-soft)]"
     >
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand-50)] text-[var(--color-brand)]">
+      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-brand-50)] text-[var(--color-brand)]">
         <Icon size={18} />
       </span>
       <span className="font-semibold text-[var(--color-ink)]">{label}</span>

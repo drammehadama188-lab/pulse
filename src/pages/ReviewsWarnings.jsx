@@ -26,7 +26,7 @@ const COACHING_SHOWN = 15;
 
 function Stat({ label, value, sub, accent }) {
   return (
-    <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-4">
+    <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-4">
       <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">{label}</p>
       <p className={`text-2xl font-bold mt-1 ${accent || 'text-[var(--color-ink)]'}`}>{value}</p>
       {sub && <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">{sub}</p>}
@@ -150,7 +150,7 @@ export default function ReviewsWarnings({ scope }) {
       </div>
 
       {/* Needs a review */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <h2 className="text-base font-semibold text-[var(--color-ink)] mb-1">Needs a review — {periodLabel}</h2>
         <p className="text-sm text-[var(--color-ink-soft)] mb-4">{needsReview.length === 0 ? 'Everyone has a locked review for this month.' : `${needsReview.length} ${needsReview.length === 1 ? 'person has' : 'people have'} no review yet.`}</p>
         {needsReview.length > 0 && (
@@ -176,7 +176,7 @@ export default function ReviewsWarnings({ scope }) {
       </div>
 
       {/* Coaching & check-ins — logged by team leads on the Team Member pages */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6 mb-4">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6 mb-4">
         <h2 className="text-base font-semibold text-[var(--color-ink)] mb-1">Coaching &amp; check-ins</h2>
         <p className="text-sm text-[var(--color-ink-soft)] mb-4">
           {coaching.length === 0
@@ -222,7 +222,7 @@ export default function ReviewsWarnings({ scope }) {
       </div>
 
       {/* Warnings */}
-      <div className="bg-white rounded-xl border border-[var(--color-line-soft)] p-6">
+      <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-6">
         <h2 className="text-base font-semibold text-[var(--color-ink)] mb-1">Warnings &amp; disciplinary</h2>
         <p className="text-sm text-[var(--color-ink-soft)] mb-4">{warnings.length === 0 ? 'No warnings on file across the team.' : `${warnings.length} on record.`}</p>
         {warnings.length === 0 ? (
@@ -247,7 +247,7 @@ export default function ReviewsWarnings({ scope }) {
       {/* Edit a coaching entry modal */}
       {editCoach && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !coachBusy && setEditCoach(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[var(--color-ink)] flex items-center gap-2"><GraduationCap size={18} className="text-emerald-600" /> Edit entry</h3>
               <button onClick={() => setEditCoach(null)} disabled={coachBusy} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
@@ -288,7 +288,7 @@ export default function ReviewsWarnings({ scope }) {
       {/* Log a warning modal */}
       {adding && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !busy && setAdding(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[var(--color-ink)] flex items-center gap-2"><ShieldAlert size={18} className="text-red-500" /> Log a warning</h3>
               <button onClick={() => setAdding(null)} disabled={busy} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>

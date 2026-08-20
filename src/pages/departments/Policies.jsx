@@ -24,7 +24,7 @@ export default function Policies() {
       <Card className="overflow-hidden p-0">
         <div className="flex flex-col gap-4 border-b border-[var(--color-line-soft)] p-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--color-mint-tile)] text-[var(--color-brand)]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--color-mint-tile)] text-[var(--color-brand)]">
               <BookOpen size={24} strokeWidth={2} />
             </div>
             <div>

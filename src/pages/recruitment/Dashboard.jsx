@@ -215,25 +215,25 @@ export default function Dashboard() {
           tint="var(--color-stage-out-bg)" ink="var(--color-stage-out)" onClick={() => navigate('/recruitment/applicants?stage=rejected')} />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,65fr)_minmax(0,35fr)]">
         <div className={`${CARD} p-5`}>
           <CardHead title="Hiring pipeline" action={
-            <Link to="/recruitment/applicants?stage=all" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+            <Link to="/recruitment/applicants?stage=all" className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
               View full pipeline <ArrowRight size={14} />
             </Link>} />
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] bg-[var(--color-line-soft)] sm:grid-cols-4 lg:grid-cols-7">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[8px] bg-[var(--color-line-soft)] sm:grid-cols-4 lg:grid-cols-7">
             {m.stages.map(s => {
               const Icon = STAGE_ICON[s.key];
               return (
-                <button key={s.key} onClick={() => navigate(s.to)} className="group bg-[var(--color-surface)] px-3.5 py-3 text-left">
+                <button key={s.key} onClick={() => navigate(s.to)} className="group bg-[var(--color-surface)] px-3 py-2.5 text-left">
                   <span className="flex items-center gap-1.5">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-[6px]" style={{ background: STAGE_TINT[s.key], color: s.color }}>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-[5px]" style={{ background: STAGE_TINT[s.key], color: s.color }}>
                       <Icon size={11} strokeWidth={2.4} />
                     </span>
-                    <span className="text-[12px] font-medium text-[var(--color-ink-soft)] group-hover:text-[var(--color-ink)]">{s.label}</span>
+                    <span className="text-[11.5px] font-medium text-[var(--color-ink-soft)] group-hover:text-[var(--color-ink)]">{s.label}</span>
                   </span>
                   <span className="mt-1.5 flex items-baseline gap-1.5">
-                    <span className="text-[22px] font-semibold leading-none text-[var(--color-ink)]">{s.count}</span>
+                    <span className="text-[20px] font-semibold leading-none text-[var(--color-ink)]">{s.count}</span>
                     {s.delta > 0 && <span className="text-[11.5px] font-semibold text-[var(--color-good)]">+{s.delta}</span>}
                   </span>
                   <span className="mt-2 block h-[3px] rounded-full" style={{ background: s.color, opacity: s.count ? 1 : 0.25 }} />
@@ -243,22 +243,22 @@ export default function Dashboard() {
             {/* The pipeline is only the people still in it. Without this the
                 stages would not add up to the total and the dashboard would
                 look wrong even though every count was right. */}
-            <button onClick={() => navigate('/recruitment/applicants?stage=dropped')} className="group bg-[var(--color-surface)] px-3.5 py-3 text-left">
+            <button onClick={() => navigate('/recruitment/applicants?stage=dropped')} className="group bg-[var(--color-surface)] px-3 py-2.5 text-left">
               <span className="flex items-center gap-1.5">
                 <span className="flex h-5 w-5 items-center justify-center rounded-[6px] bg-[var(--color-fill)] text-[var(--color-ink-faint)]">
                   <XCircle size={11} strokeWidth={2.4} />
                 </span>
-                <span className="text-[12px] font-medium text-[var(--color-ink-soft)] group-hover:text-[var(--color-ink)]">Exited</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-soft)] group-hover:text-[var(--color-ink)]">Exited</span>
               </span>
-              <span className="mt-1.5 block text-[22px] font-semibold leading-none text-[var(--color-ink-faint)]">{m.dropped}</span>
+              <span className="mt-1.5 block text-[20px] font-semibold leading-none text-[var(--color-ink-faint)]">{m.dropped}</span>
               <span className="mt-2 block h-[3px] rounded-full bg-[var(--color-line)]" />
             </button>
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-x-7 gap-y-3 border-t border-[var(--color-line-soft)] pt-4">
             <div>
-              <div className="text-[12px] font-medium text-[var(--color-ink-soft)]">Drop-off rate</div>
-              <div className="mt-1 text-[22px] font-semibold leading-none text-[var(--color-ink)]">{m.dropRate}%</div>
+              <div className="text-[11.5px] font-medium text-[var(--color-ink-soft)]">Drop-off rate</div>
+              <div className="mt-1 text-[20px] font-semibold leading-none text-[var(--color-ink)]">{m.dropRate}%</div>
             </div>
             <div className="min-w-[160px] flex-1">
               <div className="h-1.5 rounded-full bg-[var(--color-line)]">
@@ -287,34 +287,34 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-          <Link to="/recruitment/reports" className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+          <Link to="/recruitment/reports" className="mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
             View full report <ArrowRight size={14} />
           </Link>
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,31fr)_minmax(0,31fr)_minmax(0,38fr)]">
         <div className={`${CARD} p-5`}>
           <CardHead title="Open positions" action={
-            <Link to="/recruitment/positions" className="text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">View all</Link>} />
+            <Link to="/recruitment/positions" className="text-[12.5px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">View all</Link>} />
           {m.openPositions.length === 0
             ? <Empty>No open position yet. Add the job you are hiring for and applicants file under it.</Empty>
             : (
               <div className="divide-y divide-[var(--color-line-soft)]">
                 {m.openPositions.slice(0, 4).map(p => (
-                  <Link key={p.id} to={`/recruitment/applicants?position=${p.id}&stage=all`} className="group flex items-center gap-3 py-3 first:pt-0">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--color-fill)] text-[var(--color-ink-soft)]">
+                  <Link key={p.id} to={`/recruitment/applicants?position=${p.id}&stage=all`} className="group flex items-center gap-2.5 py-2.5 first:pt-0">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-[var(--color-fill)] text-[var(--color-ink-soft)]">
                       <Briefcase size={16} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="t-body block truncate font-semibold text-[var(--color-ink)] group-hover:underline">{p.title}</span>
+                      <span className="block truncate text-[12.5px] font-semibold text-[var(--color-ink)] group-hover:underline">{p.title}</span>
                       <span className="t-support block truncate">{[p.employment, p.location].filter(Boolean).join(' · ')}</span>
                     </span>
                     <span className="flex shrink-0 gap-4 text-center">
                       {[[p.applicantCount, 'Applicants'], [p.interviewedCount, 'Interviewing'], [`${p.hiredCount}/${p.openings}`, 'Hired']].map(([v, l]) => (
                         <span key={l} className="block">
-                          <span className="block text-[15px] font-semibold text-[var(--color-ink)]">{v}</span>
-                          <span className="block text-[11px] text-[var(--color-ink-faint)]">{l}</span>
+                          <span className="block text-[14px] font-semibold text-[var(--color-ink)]">{v}</span>
+                          <span className="block text-[10.5px] text-[var(--color-ink-faint)]">{l}</span>
                         </span>
                       ))}
                     </span>
@@ -322,14 +322,14 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
-          <Link to="/recruitment/positions" className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+          <Link to="/recruitment/positions" className="mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
             <Plus size={14} /> Create new position
           </Link>
         </div>
 
         <div className={`${CARD} p-5`}>
           <CardHead title="Upcoming interviews" action={
-            <Link to="/recruitment/calendar" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+            <Link to="/recruitment/calendar" className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
               View calendar <ArrowRight size={14} />
             </Link>} />
           {m.upcoming.length === 0
@@ -337,23 +337,23 @@ export default function Dashboard() {
             : (
               <div className="divide-y divide-[var(--color-line-soft)]">
                 {m.upcoming.slice(0, 4).map(i => (
-                  <div key={i.id} className="flex items-center gap-3 py-3 first:pt-0">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[12px] font-semibold text-[var(--color-ink-soft)]">
+                  <div key={i.id} className="flex items-center gap-2.5 py-2.5 first:pt-0">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[11px] font-semibold text-[var(--color-ink-soft)]">
                       {(i.applicantName || '?').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="t-body block truncate font-semibold text-[var(--color-ink)]">{i.applicantName}</span>
+                      <span className="block truncate text-[12.5px] font-semibold text-[var(--color-ink)]">{i.applicantName}</span>
                       <span className="t-support flex items-center gap-1.5 truncate"><CalendarDays size={12} /> {dayTime(i.scheduledAt)}{i.interviewer ? ` · ${i.interviewer}` : ''}</span>
                     </span>
                     <Link to={`/recruitment/interviews/${i.id}`}
-                      className="shrink-0 rounded-[9px] border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-fill)]">
+                      className="shrink-0 rounded-[8px] border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-fill)]">
                       Interview
                     </Link>
                   </div>
                 ))}
               </div>
             )}
-          <Link to="/recruitment/interviews" className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+          <Link to="/recruitment/interviews" className="mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
             View all interviews <ArrowRight size={14} />
           </Link>
         </div>
@@ -367,16 +367,16 @@ export default function Dashboard() {
             })}
             {m.events.length === 0 && <Empty>Nothing has happened yet.</Empty>}
           </div>
-          <Link to="/recruitment/applicants?stage=all" className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+          <Link to="/recruitment/applicants?stage=all" className="mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
             View all activity <ArrowRight size={14} />
           </Link>
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,69fr)_minmax(0,31fr)]">
         <div className={`${CARD} card-quiet p-5`}>
           <CardHead title="Recruitment performance" action={
-            <Link to="/recruitment/reports" className="text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">Reports</Link>} />
+            <Link to="/recruitment/reports" className="text-[12.5px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">Reports</Link>} />
           <div className="grid grid-cols-2 gap-x-6 gap-y-7 md:grid-cols-3 lg:grid-cols-5">
             {[
               ['Applications', m.rates.applications, m.newDelta, m.trends.applications, 'var(--color-stage-new)'],
@@ -388,7 +388,7 @@ export default function Dashboard() {
               <div key={label}>
                 <div className="t-label">{label}</div>
                 <div className="mt-1.5 flex items-baseline gap-2">
-                  <span className="text-[24px] font-semibold leading-none text-[var(--color-ink)]">{value}</span>
+                  <span className="text-[22px] font-semibold leading-none text-[var(--color-ink)]">{value}</span>
                   {delta > 0 && <span className="text-[12.5px] font-medium text-[var(--color-good)]">↑ {delta}</span>}
                 </div>
                 <div className="mt-2.5"><Sparkline points={points} color={color} /></div>
@@ -399,7 +399,7 @@ export default function Dashboard() {
         </div>
 
         <div className={`${CARD} card-quiet flex flex-col justify-center p-5`}>
-          <span className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-[var(--color-brand-50)] text-[var(--color-brand)]">
+          <span className="flex h-12 w-12 items-center justify-center rounded-[8px] bg-[var(--color-brand-50)] text-[var(--color-brand)]">
             <Rocket size={22} strokeWidth={2} />
           </span>
           <h2 className="t-card mt-4 text-[var(--color-ink)]">Improve your hiring</h2>

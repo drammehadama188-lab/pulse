@@ -83,7 +83,7 @@ export default function Approvals({ scope }) {
               .reverse()
               .map((r) => (
                 <div key={r.id} className="flex items-start gap-4 px-5 py-4">
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-rest-bg)] text-[var(--color-rest)]">
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-rest-bg)] text-[var(--color-rest)]">
                     <Palmtree size={16} />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -164,7 +164,7 @@ function DecisionModal({ request, action, endpoint, showWhy = true, onClose, onD
       }
     >
       <div className="space-y-4">
-        <div className="rounded-xl bg-[var(--color-fill)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+        <div className="rounded-lg bg-[var(--color-fill)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
           {request.type} · {request.days} day{request.days > 1 ? 's' : ''} · {dateShort(request.from)}–{dateShort(request.to)}
           {request.reason && <div className="mt-1 italic">“{request.reason}”</div>}
         </div>

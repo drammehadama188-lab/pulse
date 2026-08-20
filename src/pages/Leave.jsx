@@ -103,7 +103,7 @@ export default function Leave() {
               <select
                 value={effectiveType}
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none"
+                className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none"
               >
                 {availableTypes.map((t) => <option key={t}>{t}</option>)}
               </select>
@@ -111,23 +111,23 @@ export default function Leave() {
             <div className="hidden sm:block" />
             <div>
               <label className="mb-1.5 block text-sm font-semibold">From</label>
-              <input type="date" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" />
+              <input type="date" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-semibold">To</label>
-              <input type="date" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" />
+              <input type="date" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" />
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-sm font-semibold">Reason (optional)</label>
-              <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} className="focus-ring w-full resize-none rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" placeholder="A short note for your manager" />
+              <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} className="focus-ring w-full resize-none rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 outline-none" placeholder="A short note for your manager" />
             </div>
             {form.type === 'Sick' && (
-              <div className="sm:col-span-2 rounded-xl bg-[var(--color-rest-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-rest)]">
+              <div className="sm:col-span-2 rounded-lg bg-[var(--color-rest-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-rest)]">
                 Valid medical certificate required.{data.sickAllowance != null ? ` ${data.sickRemaining} of ${data.sickAllowance} paid sick days left this year — beyond that is unpaid unless approved.` : ''}
               </div>
             )}
             {error && (
-              <div className="sm:col-span-2 rounded-xl bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
+              <div className="sm:col-span-2 rounded-lg bg-[var(--color-bad-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-bad)]">{error}</div>
             )}
             <div className="flex gap-2 sm:col-span-2">
               <Button type="submit" disabled={busy}>{busy ? <Spinner size={16} /> : 'Submit request'}</Button>
@@ -151,7 +151,7 @@ export default function Leave() {
             .reverse()
             .map((r) => (
               <div key={r.id} className="flex items-start gap-4 px-5 py-4">
-                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-rest-bg)] text-[var(--color-rest)]"><Palmtree size={18} /></span>
+                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-rest-bg)] text-[var(--color-rest)]"><Palmtree size={18} /></span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-[var(--color-ink)]">{r.type} · {r.days} day{r.days > 1 ? 's' : ''}</span>

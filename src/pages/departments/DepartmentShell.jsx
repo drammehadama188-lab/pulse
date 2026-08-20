@@ -11,7 +11,7 @@ export default function DepartmentShell({ icon: Icon, title, blurb, subtitle = '
       </div>
 
       <Card className="flex flex-col items-center gap-4 px-6 py-16 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--color-mint-tile)] text-[var(--color-brand)]">
+        <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[var(--color-mint-tile)] text-[var(--color-brand)]">
           {Icon && <Icon size={30} strokeWidth={2} />}
         </div>
         <div>

@@ -61,7 +61,7 @@ export function MobileNav() {
                     to={item.to}
                     end={item.to === '/'}
                     onClick={() => setMoreOpen(false)}
-                    className={`flex flex-col items-center gap-1.5 rounded-xl py-3 text-[11px] font-semibold ${active ? 'bg-[var(--color-brand-50)] text-[var(--color-brand)]' : 'text-[var(--color-ink-soft)]'}`}
+                    className={`flex flex-col items-center gap-1.5 rounded-lg py-3 text-[11px] font-semibold ${active ? 'bg-[var(--color-brand-50)] text-[var(--color-brand)]' : 'text-[var(--color-ink-soft)]'}`}
                   >
                     <item.icon size={22} strokeWidth={2} />
                     {item.label}

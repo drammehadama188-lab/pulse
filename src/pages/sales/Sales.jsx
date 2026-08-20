@@ -94,7 +94,7 @@ export default function Sales() {
       </div>
 
       {/* hard split: pipeline customers vs paid (Won) customers */}
-      <div className="inline-flex rounded-xl bg-[var(--color-fill)] p-1">
+      <div className="inline-flex rounded-lg bg-[var(--color-fill)] p-1">
         {[
           { key: 'customers', label: 'Customers', count: stats.customers },
           { key: 'paid', label: 'Paid', count: stats.paid },
@@ -102,7 +102,7 @@ export default function Sales() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${tab === t.key ? 'bg-[var(--color-surface)] text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)]'}`}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${tab === t.key ? 'bg-[var(--color-surface)] text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)]'}`}
           >
             {t.label} <span className="ml-1 text-[var(--color-ink-faint)]">{t.count}</span>
           </button>
@@ -120,7 +120,7 @@ export default function Sales() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search customers…"
-                className="focus-ring w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] py-2.5 pl-10 pr-4 outline-none placeholder:text-[var(--color-ink-faint)]"
+                className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] py-2.5 pl-10 pr-4 outline-none placeholder:text-[var(--color-ink-faint)]"
               />
             </div>
             {!isViewAs && tab === 'customers' && (
