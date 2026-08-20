@@ -4243,7 +4243,10 @@ app.put('/api/employee-checklist', auth, requireSub('hr', 'records'), notViewAs,
 const APPLICANT_STAGES = ['cv_received', 'interviewed', 'hired', 'rejected']
 const APPLICANT_FIELDS = ['name', 'role', 'email', 'phone', 'source', 'notes']
 app.get('/api/applicants', auth, requireSub('hr', 'records'), (req, res) => {
+  // Records imported before the "p:" strip keep their prefix on disk; clean it
+  // on the way out so the 259 already in there dial correctly too.
   const list = db.read('applicants', []).slice().sort((a, b) => ((a.updatedAt || a.createdAt) < (b.updatedAt || b.createdAt) ? 1 : -1))
+    .map((a) => (a.phone ? { ...a, phone: cleanPhone(a.phone) } : a))
   res.json({ applicants: list })
 })
 app.post('/api/applicants', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
@@ -4315,6 +4318,9 @@ const EMAIL_KEYS = ['email', 'emailaddress']
 const DOB_KEYS = ['dateofbirth', 'dob', 'birthday']
 // Digits only, so +220 7xx xx xx, 00220…, and a bare local number all compare
 // equal. The last 7 digits are the number itself in The Gambia.
+// Meta writes phone answers as "p:+2207956636". The prefix is theirs, not part
+// of the number — left in it shows on screen and breaks the tap-to-call link.
+function cleanPhone(v) { return String(v || '').replace(/^\s*p\s*:\s*/i, '').trim() }
 function phoneDigits(v) { return String(v || '').replace(/\D/g, '') }
 function phoneKey(v) { const d = phoneDigits(v); return d.length >= 7 ? d.slice(-7) : '' }
 app.post('/api/applicants/import', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
@@ -4363,7 +4369,7 @@ app.post('/api/applicants/import', auth, requireSub('hr', 'records'), notViewAs,
     const cell = (i) => (i >= 0 ? String(r[i] || '').trim() : '')
     const name = cell(iName) || [cell(iFirst), cell(iLast)].filter(Boolean).join(' ')
     if (!name) continue
-    const phone = cell(iPhone)
+    const phone = cleanPhone(cell(iPhone))
     // Same person, applied twice — one record, not two calls to the same number.
     const key = phoneKey(phone)
     if (key ? seen.has(key) : seenNames.has(name.toLowerCase())) { duplicates++; continue }
