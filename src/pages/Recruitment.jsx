@@ -350,6 +350,15 @@ export default function Recruitment() {
 function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
   const [note, setNote] = useState(a.notes || '');
   useEffect(() => { setNote(a.notes || ''); }, [a.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The note box grows with what is written. A fixed height hid the end of
+  // longer notes behind an inner scrollbar, which reads as the note being cut.
+  const noteBox = useRef(null);
+  useEffect(() => {
+    const el = noteBox.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [note]);
   const answers = Object.entries(a.answers || {});
   return (
     <>
@@ -381,10 +390,10 @@ function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
         {/* Note is written here, in the row, so a called applicant looks
             different from one nobody has touched. Saves when you click away. */}
         <td className="px-4 py-3 align-top">
-          <textarea value={note} rows={2} placeholder="Add a note"
+          <textarea ref={noteBox} value={note} rows={2} placeholder="Add a note"
             onChange={e => setNote(e.target.value)}
             onBlur={() => note !== (a.notes || '') && onNotes(a, note)}
-            className="w-52 text-xs text-gray-700 rounded-lg px-2 py-1.5 bg-transparent border border-transparent hover:border-gray-200 focus:bg-white focus:border-gray-300 focus:outline-none resize-y placeholder:text-gray-300" />
+            className="w-52 min-h-[2.75rem] overflow-hidden text-xs text-gray-700 rounded-lg px-2 py-1.5 bg-transparent border border-transparent hover:border-gray-200 focus:bg-white focus:border-gray-300 focus:outline-none resize-none placeholder:text-gray-300" />
         </td>
         <td className="px-4 py-3 align-top">
           <select value={a.stage} onChange={e => onStage(a, e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white">
