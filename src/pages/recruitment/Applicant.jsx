@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Phone, Mail, Upload, Download, ClipboardCheck } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
 import { STAGES } from './stages.js';
-import { setCurrentApplicant } from './currentApplicant.js';
 import { CARD, BTN_LIGHT, BTN_PRIMARY, fullDate, dayTime, StageChip, scoreTone, scoreWord } from './ui.jsx';
 
 // One applicant, everything about them in one place: what they answered, their
@@ -105,14 +104,6 @@ export default function Applicant() {
     if (!tabParam) navigate(`/recruitment/applicants/${id}/overview`, { replace: true });
   }, [tabParam, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The sidebar shows this person's pages while you are inside them. It sits
-  // after openInterviewId on purpose — a dependency array is read during
-  // render, so referencing a const declared below would be a TDZ crash.
-  useEffect(() => {
-    setCurrentApplicant(a ? { id: a.id, name: a.name, interviewId: openInterviewId } : null);
-    return () => setCurrentApplicant(null);
-  }, [a?.id, a?.name, openInterviewId]); // eslint-disable-line react-hooks/exhaustive-deps
-
   if (loading) return <p className="text-[13px] text-[var(--color-ink-soft)]">Loading…</p>;
   if (!a) return (
     <div className={`${CARD} p-12 text-center text-sm text-[var(--color-ink-faint)]`}>
@@ -162,7 +153,7 @@ export default function Applicant() {
         </div>
       </div>
 
-      <div className="mb-5 flex items-center gap-1 border-b border-[var(--color-line)] md:hidden">
+      <div className="mb-5 flex items-center gap-1 border-b border-[var(--color-line)]">
         {TABS.map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px ${tab === k ? 'border-[var(--color-ink)] text-[var(--color-ink)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>

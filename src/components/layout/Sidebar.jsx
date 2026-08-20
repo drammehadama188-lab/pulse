@@ -3,22 +3,12 @@ import { LogOut, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { groupedNavFor, departmentsFor } from './nav.js'
 import { RECRUITMENT_NAV } from '../../pages/recruitment/nav.js'
-import { useCurrentApplicant, APPLICANT_PAGES } from '../../pages/recruitment/currentApplicant.js'
-import { LayoutGrid, FileText, ClipboardCheck, StickyNote, History } from 'lucide-react'
 import { Brand } from './Brand.jsx'
 import { Avatar } from '../ui.jsx'
 
 // "Open Admin" SSO button removed 12 Jun 2026 at Adama's request — Pulse is
 // now HR-only, with no sign-in bridge into the customer/admin system. The old
 // OpenAdminButton component (api('/open-admin'), ExternalLink icon) lived here.
-
-const APPLICANT_ICONS = {
-  overview: LayoutGrid,
-  cv: FileText,
-  interview: ClipboardCheck,
-  notes: StickyNote,
-  activity: History,
-}
 
 function SectionLabel({ children }) {
   return (
@@ -64,9 +54,6 @@ export function Sidebar() {
   // Inside Recruitment the sidebar becomes Recruitment's own pages — it is a
   // department you go into, not one link among twenty. One row back out.
   const inRecruitment = pathname.startsWith('/recruitment')
-  // And inside a person, it becomes THEIR pages (Adama, 20 Aug). The page on
-  // screen publishes who that is; see pages/recruitment/currentApplicant.js.
-  const applicant = useCurrentApplicant()
 
   return (
     <aside className="hidden w-[216px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-sidebar-edge)] bg-[var(--color-sidebar)] px-4 py-5 md:flex">
@@ -74,33 +61,7 @@ export function Sidebar() {
         <Brand />
       </div>
 
-      {applicant ? (
-        <nav className="mt-8 flex flex-1 flex-col gap-1">
-          <NavLink to="/recruitment/applicants" className="mb-3 flex items-center gap-2 px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-ink)]">
-            <ArrowLeft size={14} /> Applicants
-          </NavLink>
-          <div className="mb-1.5 flex items-center gap-2.5 px-3.5">
-            <Avatar name={applicant.name} size={28} />
-            <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--color-ink)]">{applicant.name}</span>
-          </div>
-          {APPLICANT_PAGES.map(([key, label]) => (
-            <NavRow
-              key={key}
-              item={{
-                id: key,
-                label,
-                icon: APPLICANT_ICONS[key],
-                // Interview goes to the room itself when one exists — that is
-                // the page, not a tab of the profile.
-                to: key === 'interview' && applicant.interviewId
-                  ? `/recruitment/interviews/${applicant.interviewId}`
-                  : `/recruitment/applicants/${applicant.id}/${key}`,
-                end: false,
-              }}
-            />
-          ))}
-        </nav>
-      ) : inRecruitment ? (
+      {inRecruitment ? (
         <nav className="mt-8 flex flex-1 flex-col gap-1">
           <NavLink to="/" className="mb-3 flex items-center gap-2 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-ink)]">
             <ArrowLeft size={14} /> Pulse

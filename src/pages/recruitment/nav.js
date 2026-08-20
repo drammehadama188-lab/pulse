@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, ClipboardCheck, CalendarDays, Briefcase, FileQuestion, BarChart3, Settings } from 'lucide-react'
+import { LayoutDashboard, Users, IdCard, ClipboardCheck, CalendarDays, Briefcase, FileQuestion, BarChart3, Settings } from 'lucide-react'
 
 // Recruitment is its own department inside Pulse (Adama, 20 Aug 2026): you go
 // into it and the sidebar becomes hiring's own pages, the way admin's sections
@@ -6,6 +6,9 @@ import { LayoutDashboard, Users, ClipboardCheck, CalendarDays, Briefcase, FileQu
 export const RECRUITMENT_NAV = [
   { id: 'r-dashboard', to: '/recruitment', end: true, label: 'Dashboard', icon: LayoutDashboard },
   { id: 'r-applicants', to: '/recruitment/applicants', label: 'Applicants', icon: Users },
+  // The list is for working through by phone; Profiles is for finding one
+  // person and opening their record (Adama, 20 Aug).
+  { id: 'r-profiles', to: '/recruitment/profiles', label: 'Profiles', icon: IdCard },
   { id: 'r-interviews', to: '/recruitment/interviews', label: 'Interviews', icon: ClipboardCheck },
   { id: 'r-calendar', to: '/recruitment/calendar', label: 'Calendar', icon: CalendarDays },
   { id: 'r-positions', to: '/recruitment/positions', label: 'Positions', icon: Briefcase },

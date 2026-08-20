@@ -31,6 +31,7 @@ import EmployeeProfile from './pages/EmployeeProfile.jsx'
 import RecruitmentLayout from './pages/recruitment/RecruitmentLayout.jsx'
 import RecruitmentDashboard from './pages/recruitment/Dashboard.jsx'
 import RecruitmentApplicants from './pages/recruitment/Applicants.jsx'
+import RecruitmentProfiles from './pages/recruitment/Profiles.jsx'
 import RecruitmentApplicant from './pages/recruitment/Applicant.jsx'
 import RecruitmentInterviews from './pages/recruitment/Interviews.jsx'
 import InterviewRoom from './pages/recruitment/InterviewRoom.jsx'
@@ -125,6 +126,7 @@ export default function App() {
         <Route path="/recruitment" element={<RequireAuth power="hr"><RecruitmentLayout /></RequireAuth>}>
           <Route index element={<RecruitmentDashboard />} />
           <Route path="applicants" element={<RecruitmentApplicants />} />
+          <Route path="profiles" element={<RecruitmentProfiles />} />
           <Route path="applicants/:id" element={<RecruitmentApplicant />} />
           {/* Each part of a person's record is a page, so the sidebar can
               carry them the way Recruitment carries its own. */}

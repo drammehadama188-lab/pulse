@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
 import { CARD, BTN_PRIMARY, BTN_LIGHT, fullDate, dayTime, toLocalInput, scoreWord, RECOMMENDATION } from './ui.jsx';
-import { setCurrentApplicant } from './currentApplicant.js';
 
 // The interview room: questions on the left, the CV beside them, one score per
 // answer, one recommendation at the end. Built to Adama's reference screen.
@@ -68,11 +67,6 @@ export default function InterviewRoom() {
       setBusy(false);
     }
   }
-
-  useEffect(() => {
-    setCurrentApplicant(applicant ? { id: applicant.id, name: applicant.name, interviewId: id } : null);
-    return () => setCurrentApplicant(null);
-  }, [applicant?.id, applicant?.name, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const done = iv?.status === 'completed';
   const profileUrl = applicant ? `/recruitment/applicants/${applicant.id}` : '/recruitment/applicants';
@@ -186,7 +180,7 @@ export default function InterviewRoom() {
       </div>
 
       {/* the record's own tabs; only Interview lives here */}
-      <div className="mb-4 flex items-center gap-1 border-b border-[var(--color-line)] md:hidden">
+      <div className="mb-4 flex items-center gap-1 border-b border-[var(--color-line)]">
         {TABS.map(([k, label]) => (
           <Link key={k} to={k === 'interview' ? '#' : `/recruitment/applicants/${applicant?.id || ''}/${k}`}
             className={`-mb-px border-b-2 px-3.5 py-2.5 text-[13px] font-semibold ${k === 'interview' ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>
