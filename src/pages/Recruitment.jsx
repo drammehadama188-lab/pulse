@@ -145,12 +145,16 @@ export default function Recruitment() {
           {importing && <p className="text-sm text-gray-500">Reading {importing}…</p>}
           {importError && <p className="text-sm text-red-600">{importError}</p>}
           {importResult && (
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <p className="text-sm text-gray-800">
-                <span className="font-semibold">{importResult.added} added</span>
-                {importResult.duplicates > 0 && <span className="text-gray-500"> · {importResult.duplicates} already on the list</span>}
-                {importResult.noPhone > 0 && <span className="text-gray-500"> · {importResult.noPhone} without a usable phone</span>}
-              </p>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-sm text-gray-800">
+                  <span className="font-semibold">{importResult.added} added</span>
+                  {importResult.rows > 0 && <span className="text-gray-500"> of {importResult.rows} rows</span>}
+                  {importResult.duplicates > 0 && <span className="text-gray-500"> · {importResult.duplicates} already on the list</span>}
+                  {importResult.noPhone > 0 && <span className="text-gray-500"> · {importResult.noPhone} without a usable phone</span>}
+                </p>
+                {importResult.reason && <p className="text-sm text-red-600 mt-1">{importResult.reason}</p>}
+              </div>
               <button onClick={() => setImportResult(null)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
             </div>
           )}

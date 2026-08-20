@@ -4318,15 +4318,31 @@ const DOB_KEYS = ['dateofbirth', 'dob', 'birthday']
 function phoneDigits(v) { return String(v || '').replace(/\D/g, '') }
 function phoneKey(v) { const d = phoneDigits(v); return d.length >= 7 ? d.slice(-7) : '' }
 app.post('/api/applicants/import', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
-  const rows = parseDelimited((req.body || {}).csv)
+  const raw = String((req.body || {}).csv || '')
+  // An Excel file is a zip (xlsx, "PK") or an OLE container (xls) — reading it
+  // as text yields rows of nothing and a silent zero. Say so instead.
+  if (/^PK\x03\x04/.test(raw) || /^\xD0\xCF\x11\xE0/.test(raw) || /^\s*<(!doctype|html)/i.test(raw)) {
+    return res.status(400).json({ error: 'That is an Excel or web file, not a CSV. On Meta’s download, use the CSV link.' })
+  }
+  const rows = parseDelimited(raw)
   if (rows.length < 2) return res.status(400).json({ error: 'That file has no rows to read.' })
   const role = String((req.body || {}).role || '').trim()
   const headers = rows[0].map((h) => String(h || '').trim())
   const keys = headers.map(normKey)
   const findCol = (cands) => keys.findIndex((k) => cands.includes(k))
-  const iName = findCol(NAME_KEYS)
+  // Exact names first, then anything that simply CONTAINS the word. A form
+  // asking "What is your name?" names its column after the question, and that
+  // is the normal case, not the exception (19 Aug: every row was skipped
+  // because the column was not called full_name).
+  const taken = []
+  const loose = (re) => keys.findIndex((k, i) => !META_COLUMNS.has(k) && re.test(k) && !taken.includes(i))
+  let iName = findCol(NAME_KEYS)
+  if (iName === -1) iName = loose(/name/)
+  taken.push(iName)
   const iFirst = findCol(['firstname']), iLast = findCol(['lastname'])
-  const iPhone = findCol(PHONE_KEYS)
+  let iPhone = findCol(PHONE_KEYS)
+  if (iPhone === -1) iPhone = loose(/phone|mobile|whatsapp|tel|number/)
+  taken.push(iPhone)
   const iEmail = findCol(EMAIL_KEYS)
   const iDob = findCol(DOB_KEYS)
   const iCreated = findCol(['createdtime', 'created'])
@@ -4381,7 +4397,13 @@ app.post('/api/applicants/import', auth, requireSub('hr', 'records'), notViewAs,
     })
   }
   if (added.length) db.write('applicants', all.concat(added))
-  res.json({ added: added.length, duplicates, noPhone, rows: rows.length - 1 })
+  // Nothing imported and nothing rejected means the file was read but no
+  // column held a name. Hand back what the columns actually were — a bare
+  // "0 added" is unfixable for whoever is standing in front of it.
+  const reason = (!added.length && !duplicates && iName === -1 && iFirst === -1)
+    ? `No name column found. Columns read: ${headers.filter(Boolean).join(', ') || '(none)'}`
+    : null
+  res.json({ added: added.length, duplicates, noPhone, rows: rows.length - 1, headers: headers.filter(Boolean), reason })
 })
 
 seedUsers()
