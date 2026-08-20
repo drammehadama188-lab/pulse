@@ -1,12 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import {
-  Plus, Trash2, X, Upload, ClipboardPaste, MoreVertical, Phone, Mail, Download,
-  ChevronLeft, ChevronRight, Search, FileText, Star,
-} from 'lucide-react';
-import { api, getToken } from '../../lib/api.js';
-import { STAGES, STAGE_TABS, DROPPED, CONTACT, CONTACT_LABEL, SCREENING, SCREENING_META, NEXT_STAGE } from './stages.js';
-import { CARD, BTN_LIGHT, BTN_PRIMARY, PageHead, StageChip, ago, fullDate, shortDate, dayTime } from './ui.jsx';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Plus, X, Upload, ClipboardPaste, MoreVertical, ChevronLeft, ChevronRight, Search, FileText, Star } from 'lucide-react';
+import { api } from '../../lib/api.js';
+import { STAGES, STAGE_TABS, CONTACT, CONTACT_LABEL, SCREENING, SCREENING_META } from './stages.js';
+import { CARD, BTN_LIGHT, BTN_PRIMARY, PageHead, StageChip, ago, fullDate } from './ui.jsx';
 
 // Applicants — the whole pile, and one person at a time in the panel beside
 // it. This is both the call sheet and the profile list: they were the same
@@ -23,13 +20,12 @@ const initials = (n) => (n || '?').split(/\s+/).slice(0, 2).map(w => w[0]).join(
 export default function Applicants() {
   const [applicants, setApplicants] = useState([]);
   const [positions, setPositions] = useState([]);
-  const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState(() => new Set());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [openId, setOpenId] = useState(null);
   const [menuId, setMenuId] = useState(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(BLANK);
@@ -65,7 +61,6 @@ export default function Applicants() {
   useEffect(load, []);
   useEffect(() => {
     api('/positions').then(d => setPositions(d.positions || [])).catch(() => setPositions([]));
-    api('/interviews').then(d => setInterviews(d.interviews || [])).catch(() => setInterviews([]));
   }, []);
   useEffect(() => { setPage(1); }, [tab, positionFilter, contactFilter, availFilter, sourceFilter, query, pageSize]);
 
@@ -95,7 +90,6 @@ export default function Applicants() {
   async function remove(a) {
     if (!window.confirm(`Remove ${a.name} from recruitment?`)) return;
     setApplicants(list => list.filter(x => x.id !== a.id));
-    if (openId === a.id) setOpenId(null);
     try { await api(`/applicants/${a.id}`, { method: 'DELETE' }); } catch { load(); }
   }
   // The file goes in exactly as downloaded from Meta — no spreadsheet step.
@@ -150,7 +144,6 @@ export default function Applicants() {
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const rows = filtered.slice((page - 1) * pageSize, page * pageSize);
   const allOnPageSelected = rows.length > 0 && rows.every(a => selected.has(a.id));
-  const open = applicants.find(a => a.id === openId) || null;
   const sources = useMemo(() => [...new Set(applicants.map(a => a.source).filter(Boolean))], [applicants]);
 
   const toggle = (id) => setSelected(s => {
@@ -161,7 +154,7 @@ export default function Applicants() {
   const field = 'rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-2 text-[12.5px] text-[var(--color-ink-soft)]';
 
   return (
-    <div className={open ? 'xl:pr-[420px]' : ''}>
+    <div>
       <PageHead title="Applicants" count={applicants.length || null} subtitle="Manage and move applicants through your recruitment pipeline.">
         {/* A label opens the picker itself. Scripting a click on a hidden
             input looked like a working button and did nothing (19 Aug).
@@ -273,8 +266,8 @@ export default function Applicants() {
                     const mark = SCREENING_META[a.screening];
                     return (
                       <tr key={a.id}
-                        onClick={() => setOpenId(a.id)}
-                        className={`cursor-pointer border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-fill)] ${openId === a.id ? 'bg-[var(--color-brand-50)]' : ''}`}>
+                        onClick={() => navigate(`/recruitment/applicants/${a.id}`)}
+                        className="cursor-pointer border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-fill)]">
                         <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
                           <input type="checkbox" checked={selected.has(a.id)} onChange={() => toggle(a.id)} className="accent-[var(--color-brand)]" />
                         </td>
@@ -392,16 +385,6 @@ export default function Applicants() {
         </div>
       )}
 
-      {open && (
-        <Drawer
-          a={open}
-          position={positionOf(open)}
-          interviews={interviews.filter(i => i.applicantId === open.id)}
-          onClose={() => setOpenId(null)}
-          onPatch={(body) => patch(open, body)}
-        />
-      )}
-
       {/* Paste route: open the file in Excel or Numbers, select all, paste
           here. Works when a file picker will not cooperate. */}
       {pasting && (
@@ -494,165 +477,5 @@ export default function Applicants() {
         </div>
       )}
     </div>
-  );
-}
-
-// One applicant beside the list: what they answered, their CV, notes, what has
-// happened, and the three decisions you make from here.
-function Drawer({ a, position, interviews, onClose, onPatch }) {
-  const [tab, setTab] = useState('application');
-  const [note, setNote] = useState(a.notes || '');
-  useEffect(() => { setNote(a.notes || ''); setTab('application'); }, [a.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  const cvUrl = a.cv ? `/api/applicants/${a.id}/cv?t=${encodeURIComponent(getToken() || '')}` : null;
-  const answers = Object.entries(a.answers || {});
-  const [nextStage, nextLabel] = NEXT_STAGE[a.stage] || [];
-  const tel = String(a.phone || '').replace(/\s/g, '');
-
-  return (
-    <aside className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-lift)] sm:w-[420px]">
-      <div className="flex items-start justify-between gap-3 border-b border-[var(--color-line-soft)] p-5">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[13px] font-semibold text-[var(--color-ink-soft)]">{initials(a.name)}</span>
-          <div className="min-w-0">
-            <Link to={`/recruitment/applicants/${a.id}`} className="block truncate text-[17px] font-semibold text-[var(--color-ink)] hover:underline">{a.name}</Link>
-            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[12px] text-[var(--color-ink-soft)]">
-              <span>{position?.title || a.role || 'No position filed'}</span>
-              <StageChip stage={a.stage} />
-            </div>
-          </div>
-        </div>
-        <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"><X size={18} /></button>
-      </div>
-
-      <div className="space-y-1.5 border-b border-[var(--color-line-soft)] px-5 py-3 text-[12.5px] text-[var(--color-ink-soft)]">
-        {a.phoneValid === false
-          ? <p className="text-[var(--color-stage-out)]">No usable number</p>
-          : a.phone && <a href={`tel:${tel}`} className="flex items-center gap-2 hover:text-[var(--color-ink)]"><Phone size={13} /> {a.phone}</a>}
-        {a.email && <p className="flex items-center gap-2 truncate"><Mail size={13} /> {a.email}</p>}
-        <p className="text-[11.5px] text-[var(--color-ink-faint)]">
-          Applied {fullDate(a.appliedAt || a.createdAt)}{a.source ? ` · ${a.source}` : ''}
-        </p>
-      </div>
-
-      <div className="flex items-center gap-1 border-b border-[var(--color-line-soft)] px-3">
-        {[['application', 'Application'], ['cv', 'CV'], ['notes', 'Notes'], ['activity', 'Activity']].map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)}
-            className={`-mb-px border-b-2 px-2.5 py-2.5 text-[12.5px] font-semibold ${tab === k ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>
-            {l}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-5">
-        {tab === 'application' && (
-          <div className="space-y-4">
-            {answers.length === 0 && <p className="text-[12.5px] text-[var(--color-ink-soft)]">Nothing on this record — added by hand, not from a form.</p>}
-            {answers.map(([q, v]) => (
-              <div key={q}>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{q}</p>
-                <p className="mt-1 rounded-[8px] bg-[var(--color-fill)] px-3 py-2 text-[12.5px] text-[var(--color-ink)]">{v}</p>
-              </div>
-            ))}
-            <div className="border-t border-[var(--color-line-soft)] pt-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Screening</p>
-              <div className="mt-2 flex gap-2">
-                {SCREENING.map(([k, l]) => (
-                  <button key={k} onClick={() => onPatch({ screening: a.screening === k ? '' : k })}
-                    className={`rounded-[8px] border px-2.5 py-1.5 text-[12px] font-semibold ${a.screening === k ? 'border-[var(--color-brand)] bg-[var(--color-brand-50)] text-[var(--color-brand)]' : 'border-[var(--color-line)] text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {tab === 'cv' && (
-          cvUrl ? (
-            <div>
-              <div className="mb-3 flex items-center justify-between gap-2 rounded-[8px] border border-[var(--color-line)] px-3 py-2.5">
-                <span className="flex min-w-0 items-center gap-2">
-                  <FileText size={15} className="shrink-0 text-[var(--color-stage-out)]" />
-                  <span className="min-w-0">
-                    <span className="block truncate text-[12.5px] font-semibold text-[var(--color-ink)]">{a.cv.name}</span>
-                    <span className="block text-[11px] text-[var(--color-ink-faint)]">{Math.round(a.cv.sizeBytes / 1024)} KB</span>
-                  </span>
-                </span>
-                <a href={`${cvUrl}&download=1`} className="shrink-0 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"><Download size={15} /></a>
-              </div>
-              {String(a.cv.mimeType).startsWith('image/')
-                ? <img src={cvUrl} alt="CV" className="w-full rounded-[8px] border border-[var(--color-line)]" />
-                : <iframe title="CV" src={cvUrl} className="h-96 w-full rounded-[8px] border border-[var(--color-line)]" />}
-            </div>
-          ) : (
-            <p className="text-[12.5px] text-[var(--color-ink-soft)]">
-              No CV on file. <Link to={`/recruitment/applicants/${a.id}/cv`} className="font-semibold text-[var(--color-brand)]">Upload one</Link>
-            </p>
-          )
-        )}
-
-        {tab === 'notes' && (
-          <textarea value={note} onChange={e => setNote(e.target.value)} onBlur={() => note !== (a.notes || '') && onPatch({ notes: note })}
-            rows={12} placeholder="What was said on the call, who referred them, anything worth remembering."
-            className="w-full rounded-[8px] border border-[var(--color-line)] px-3 py-2.5 text-[12.5px]" />
-        )}
-
-        {tab === 'activity' && (
-          <div className="space-y-4">
-            {interviews.length > 0 && (
-              <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Interviews</p>
-                {interviews.map(i => (
-                  <Link key={i.id} to={`/recruitment/interviews/${i.id}`} className="mb-2 flex items-center justify-between gap-2 rounded-[8px] border border-[var(--color-line)] px-3 py-2 hover:border-[var(--color-ink-faint)]">
-                    <span className="min-w-0">
-                      <span className="block truncate text-[12.5px] font-semibold text-[var(--color-ink)]">{i.templateName}</span>
-                      <span className="block text-[11px] text-[var(--color-ink-faint)]">{dayTime(i.scheduledAt)}</span>
-                    </span>
-                    <span className="text-[13px] font-semibold text-[var(--color-ink)]">{i.totalScore ?? '—'}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-            <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Stage history</p>
-              <ol className="space-y-3">
-                {[...(a.history || [])].reverse().map((h, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-line)]" />
-                    <span>
-                      <StageChip stage={h.stage} />
-                      <span className="mt-1 block text-[11px] text-[var(--color-ink-faint)]">{dayTime(h.at)} · {h.by}</span>
-                    </span>
-                  </li>
-                ))}
-                {(a.history || []).length === 0 && <p className="text-[12.5px] text-[var(--color-ink-soft)]">Nothing recorded yet.</p>}
-              </ol>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="border-t border-[var(--color-line-soft)] p-4">
-        <div className="mb-2 flex gap-2">
-          {CONTACT.map(([k, l]) => (
-            <button key={k} onClick={() => onPatch({ contactStatus: k })}
-              className={`flex-1 rounded-[8px] border px-2 py-1.5 text-[11.5px] font-semibold ${(a.contactStatus || 'not_contacted') === k ? 'border-[var(--color-brand)] bg-[var(--color-brand-50)] text-[var(--color-brand)]' : 'border-[var(--color-line)] text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
-              {l.replace('Called, no answer', 'No answer')}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => onPatch({ stage: 'not_qualified' })}
-            className="rounded-[8px] border border-[var(--color-line)] px-3 py-2 text-[12.5px] font-semibold text-[var(--color-stage-out)] hover:bg-[var(--color-stage-out-bg)]">Not qualified</button>
-          {a.phoneValid !== false && a.phone && (
-            <a href={`tel:${tel}`} className="rounded-[8px] border border-[var(--color-brand-100)] px-3 py-2 text-[12.5px] font-semibold text-[var(--color-brand)] hover:bg-[var(--color-brand-50)]">Call</a>
-          )}
-          {nextStage && (
-            <button onClick={() => onPatch({ stage: nextStage })}
-              className="flex-1 rounded-[8px] bg-[var(--color-brand)] px-3 py-2 text-[12.5px] font-semibold text-white hover:bg-[var(--color-brand-600)]">Move to {nextLabel}</button>
-          )}
-        </div>
-      </div>
-    </aside>
   );
 }
