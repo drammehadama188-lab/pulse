@@ -4272,6 +4272,114 @@ app.delete('/api/applicants/:id', auth, requireSub('hr', 'records'), notViewAs, 
   res.json({ ok: true })
 })
 
+// ---------- bulk import (Adama 19 Aug) ----------
+// A hiring ad returns hundreds of applicants as one CSV (259 from the Sales
+// Agent form). Typing those in one at a time is not work anyone will do, so
+// the file goes in whole and comes out as a call list. Meta names the columns
+// after the questions the form asked, so nothing here assumes fixed headers —
+// the shape is read from the file.
+function parseDelimited(text) {
+  const s = String(text || '').replace(/^﻿/, '')
+  const head = s.slice(0, s.indexOf('\n') === -1 ? s.length : s.indexOf('\n'))
+  // Meta exports commas; some locales hand back semicolons or tabs.
+  const delim = [',', ';', '\t'].reduce((best, d) => (head.split(d).length > head.split(best).length ? d : best), ',')
+  const rows = []
+  let row = [], field = '', inQuotes = false
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (inQuotes) {
+      if (c === '"') { if (s[i + 1] === '"') { field += '"'; i++ } else inQuotes = false }
+      else field += c
+      continue
+    }
+    if (c === '"') { inQuotes = true; continue }
+    if (c === delim) { row.push(field); field = ''; continue }
+    if (c === '\r') continue
+    if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; continue }
+    field += c
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row) }
+  return rows.filter((r) => r.some((v) => String(v).trim() !== ''))
+}
+const normKey = (h) => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+// Meta's own bookkeeping columns — kept off the answer list, which is meant to
+// hold only what the applicant actually told us.
+const META_COLUMNS = new Set(['id', 'createdtime', 'adid', 'adname', 'adsetid', 'adsetname', 'campaignid', 'campaignname', 'formid', 'formname', 'isorganic', 'platform', 'leadstatus', 'partnername', 'retaileritemid', 'customdisclaimerresponses', 'vehicle'])
+const NAME_KEYS = ['fullname', 'name', 'yourname']
+const PHONE_KEYS = ['phonenumber', 'phone', 'mobile', 'mobilenumber', 'whatsapp', 'whatsappnumber']
+const EMAIL_KEYS = ['email', 'emailaddress']
+const DOB_KEYS = ['dateofbirth', 'dob', 'birthday']
+// Digits only, so +220 7xx xx xx, 00220…, and a bare local number all compare
+// equal. The last 7 digits are the number itself in The Gambia.
+function phoneDigits(v) { return String(v || '').replace(/\D/g, '') }
+function phoneKey(v) { const d = phoneDigits(v); return d.length >= 7 ? d.slice(-7) : '' }
+app.post('/api/applicants/import', auth, requireSub('hr', 'records'), notViewAs, express.json({ limit: '10mb' }), (req, res) => {
+  const rows = parseDelimited((req.body || {}).csv)
+  if (rows.length < 2) return res.status(400).json({ error: 'That file has no rows to read.' })
+  const role = String((req.body || {}).role || '').trim()
+  const headers = rows[0].map((h) => String(h || '').trim())
+  const keys = headers.map(normKey)
+  const findCol = (cands) => keys.findIndex((k) => cands.includes(k))
+  const iName = findCol(NAME_KEYS)
+  const iFirst = findCol(['firstname']), iLast = findCol(['lastname'])
+  const iPhone = findCol(PHONE_KEYS)
+  const iEmail = findCol(EMAIL_KEYS)
+  const iDob = findCol(DOB_KEYS)
+  const iCreated = findCol(['createdtime', 'created'])
+  const iForm = findCol(['formname'])
+  // Anything left that isn't Meta plumbing is a question the applicant answered.
+  const questionCols = keys.map((k, i) => ({ k, i })).filter(({ k, i }) =>
+    !META_COLUMNS.has(k) && ![iName, iFirst, iLast, iPhone, iEmail, iDob].includes(i))
+  const label = (h) => String(h || '').replace(/_/g, ' ').replace(/\?+$/, '').trim()
+  const yesNo = (v) => { const s = String(v || '').trim().toLowerCase(); if (/^(yes|y|true|1)\b/.test(s)) return true; if (/^(no|n|false|0)\b/.test(s)) return false; return null }
+
+  const all = db.read('applicants', [])
+  const seen = new Set(all.map((a) => phoneKey(a.phone)).filter(Boolean))
+  const seenNames = new Set(all.map((a) => String(a.name || '').trim().toLowerCase()).filter(Boolean))
+  const now = new Date().toISOString()
+  const added = []
+  let duplicates = 0, noPhone = 0
+  for (const r of rows.slice(1)) {
+    const cell = (i) => (i >= 0 ? String(r[i] || '').trim() : '')
+    const name = cell(iName) || [cell(iFirst), cell(iLast)].filter(Boolean).join(' ')
+    if (!name) continue
+    const phone = cell(iPhone)
+    // Same person, applied twice — one record, not two calls to the same number.
+    const key = phoneKey(phone)
+    if (key ? seen.has(key) : seenNames.has(name.toLowerCase())) { duplicates++; continue }
+    if (key) seen.add(key); else seenNames.add(name.toLowerCase())
+    const answers = {}
+    for (const { i } of questionCols) { const v = cell(i); if (v) answers[label(headers[i])] = v }
+    // Two screening signals: can they start, and what have they actually sold.
+    // The second is written in their own words, so it is carried through for
+    // reading — grading a sentence by machine would just be a guess.
+    let startNow = null, experience = ''
+    for (const [q, a] of Object.entries(answers)) {
+      if (startNow === null && /start/i.test(q) && /(immediate|now|right away|straight)/i.test(q)) startNow = yesNo(a)
+      if (!experience && /(sold|sell|sales|experience)/i.test(q)) experience = a
+    }
+    const digits = phoneDigits(phone)
+    if (digits.length < 7) noPhone++
+    added.push({
+      id: crypto.randomUUID(),
+      name, role, email: cell(iEmail), phone,
+      source: cell(iForm) || 'Lead form',
+      notes: '',
+      stage: 'cv_received',
+      answers,
+      startNow,
+      experience,
+      dob: cell(iDob),
+      phoneValid: digits.length >= 7,
+      appliedAt: cell(iCreated) || null,
+      createdAt: now, updatedAt: now, createdBy: req.user.username,
+      history: [{ stage: 'cv_received', at: now, by: req.user.username }],
+    })
+  }
+  if (added.length) db.write('applicants', all.concat(added))
+  res.json({ added: added.length, duplicates, noPhone, rows: rows.length - 1 })
+})
+
 seedUsers()
 seedSales()
 // ---------- performance reviews (immutable monthly records) ----------
