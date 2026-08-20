@@ -26,13 +26,13 @@
   /* Sidebar is white now, separated by the same hairline as every card. The
      active row is a soft blue pill, not a block of colour. */
   --color-sidebar: #ffffff;
-  --color-sidebar-edge: #e8eaf0;
+  --color-sidebar-edge: #e1e5ee;
   --color-sidebar-ink: #5b6472;
   --color-sidebar-ink-active: #2563eb;
   --color-sidebar-active: #eff5ff;
 
   /* Neutral surfaces — clean white + cool grey (founder-style, no green) */
-  --color-paper: #f7f8fa;
+  --color-paper: #f2f4f8;
   --color-surface: #ffffff;
   --color-ink: #111827;
   --color-ink-soft: #525b6b;
