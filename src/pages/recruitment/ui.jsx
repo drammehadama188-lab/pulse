@@ -69,12 +69,15 @@ export const BTN_LIGHT = `${BTN} bg-[var(--color-surface)] border border-[var(--
 export const BTN_PRIMARY = `${BTN} bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)]`;
 export const INPUT = 'w-full rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-faint)] focus:border-[var(--color-ink-faint)] focus:outline-none';
 
-export function PageHead({ title, count, children }) {
+export function PageHead({ title, count, subtitle, children }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 className="t-page text-[var(--color-ink)]">
-        {title}{count != null && <span className="ml-2 text-[16px] font-semibold text-[var(--color-ink-faint)]">{count}</span>}
-      </h1>
+    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 className="t-page text-[var(--color-ink)]">
+          {title}{count != null && <span className="ml-2 text-[16px] font-semibold text-[var(--color-ink-faint)]">{count}</span>}
+        </h1>
+        {subtitle && <p className="t-support mt-1">{subtitle}</p>}
+      </div>
       <div className="flex flex-wrap items-center gap-2">{children}</div>
     </div>
   );

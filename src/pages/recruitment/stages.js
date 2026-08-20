@@ -44,3 +44,45 @@ export const SHORTLISTED = ['shortlisted', 'offer', 'hired'];
 export const OFFERED = ['offer', 'hired'];
 
 export const STAGE_LABEL = Object.fromEntries(STAGES.map(([k, l]) => [k, l]));
+
+// Contact is a separate axis from stage — someone can still be New and have
+// been rung twice — so the list can answer "who have I not called yet".
+export const CONTACT = [
+  ['not_contacted', 'Not contacted', 'bg-[var(--color-ink-faint)]'],
+  ['called_no_answer', 'Called, no answer', 'bg-[var(--color-stage-interview)]'],
+  ['contacted', 'Contacted', 'bg-[var(--color-good)]'],
+];
+export const CONTACT_LABEL = Object.fromEntries(CONTACT.map(([k, l]) => [k, l]));
+
+// 🔒 A HUMAN mark, never computed. Nothing in Pulse reads an applicant's
+// answers and grades them (19 Aug decision) — this is what the person who
+// read them thought.
+export const SCREENING = [
+  ['strong', 'Strong', 'bg-[var(--color-stage-short-bg)] text-[var(--color-stage-short)]'],
+  ['review', 'Review', 'bg-[var(--color-stage-interview-bg)] text-[var(--color-stage-interview)]'],
+  ['weak', 'Weak', 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'],
+];
+export const SCREENING_META = Object.fromEntries(SCREENING.map(([k, l, c]) => [k, { label: l, chip: c }]));
+
+// The stage tabs across the top of the list, in pipeline order, with the ways
+// out folded into one "Exited".
+export const STAGE_TABS = [
+  ['new', 'New', ['cv_received']],
+  ['screening', 'Screening', ['no_answer']],
+  ['interview', 'Interview', ['interviewed']],
+  ['shortlisted', 'Shortlisted', ['shortlisted']],
+  ['offer', 'Offer', ['offer']],
+  ['hired', 'Hired', ['hired']],
+  ['exited', 'Exited', DROPPED],
+];
+// What "move them on" means from where they are now.
+export const NEXT_STAGE = {
+  cv_received: ['no_answer', 'Screening'],
+  no_answer: ['interviewed', 'Interview'],
+  unreachable: ['interviewed', 'Interview'],
+  not_interested: ['interviewed', 'Interview'],
+  not_qualified: ['interviewed', 'Interview'],
+  interviewed: ['shortlisted', 'Shortlisted'],
+  shortlisted: ['offer', 'Offer'],
+  offer: ['hired', 'Hired'],
+};

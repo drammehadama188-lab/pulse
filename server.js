@@ -4252,6 +4252,11 @@ app.put('/api/employee-checklist', auth, requireSub('hr', 'records'), notViewAs,
 // "we want this one" between the interview and the hire.
 const APPLICANT_STAGES = ['cv_received', 'no_answer', 'unreachable', 'not_interested', 'not_qualified', 'interviewed', 'shortlisted', 'offer', 'hired', 'rejected']
 const APPLICANT_FIELDS = ['name', 'role', 'email', 'phone', 'source', 'notes', 'positionId']
+// Contact is a separate axis from stage: someone can still be New and already
+// have been rung twice. Screening is a HUMAN mark — 🔒 nothing here reads an
+// applicant's answers and grades them.
+const CONTACT_STATUS = ['not_contacted', 'called_no_answer', 'contacted']
+const SCREENING = ['', 'strong', 'review', 'weak']
 app.get('/api/applicants', auth, requireSub('hr', 'records'), (req, res) => {
   // Two repairs on the way out, so records imported before the fixes read
   // correctly without rewriting anyone's file. The "p:" prefix Meta puts on
@@ -4282,6 +4287,11 @@ app.put('/api/applicants/:id', auth, requireSub('hr', 'records'), notViewAs, (re
   if (!rec) return res.status(404).json({ error: 'not found' })
   const b = req.body || {}
   for (const k of APPLICANT_FIELDS) if (b[k] !== undefined) rec[k] = String(b[k] || '').trim()
+  if (b.contactStatus !== undefined && CONTACT_STATUS.includes(b.contactStatus)) {
+    rec.contactStatus = b.contactStatus
+    rec.contactedAt = b.contactStatus === 'not_contacted' ? null : new Date().toISOString()
+  }
+  if (b.screening !== undefined && SCREENING.includes(b.screening)) rec.screening = b.screening
   if (b.stage && APPLICANT_STAGES.includes(b.stage) && b.stage !== rec.stage) {
     rec.stage = b.stage
     rec.history = [...(rec.history || []), { stage: b.stage, at: new Date().toISOString(), by: req.user.username }]
@@ -4289,6 +4299,47 @@ app.put('/api/applicants/:id', auth, requireSub('hr', 'records'), notViewAs, (re
   rec.updatedAt = new Date().toISOString()
   db.write('applicants', all)
   res.json({ applicant: rec })
+})
+app.patch('/api/applicants/bulk', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const b = req.body || {}
+  const ids = new Set(Array.isArray(b.ids) ? b.ids : [])
+  if (!ids.size) return res.status(400).json({ error: 'ids required' })
+  const all = db.read('applicants', [])
+  const now = new Date().toISOString()
+  let changed = 0
+  for (const rec of all) {
+    if (!ids.has(rec.id)) continue
+    let touched = false
+    if (b.stage && APPLICANT_STAGES.includes(b.stage) && b.stage !== rec.stage) {
+      rec.stage = b.stage
+      rec.history = [...(rec.history || []), { stage: b.stage, at: now, by: req.user.username }]
+      touched = true
+    }
+    if (b.contactStatus !== undefined && CONTACT_STATUS.includes(b.contactStatus)) {
+      rec.contactStatus = b.contactStatus
+      rec.contactedAt = b.contactStatus === 'not_contacted' ? null : now
+      touched = true
+    }
+    if (b.screening !== undefined && SCREENING.includes(b.screening)) { rec.screening = b.screening; touched = true }
+    // A bulk note is ADDED to what is already there. Overwriting a hundred
+    // notes with one sentence is not something a button should be able to do.
+    if (b.appendNote) {
+      const line = String(b.appendNote).trim()
+      if (line) { rec.notes = [rec.notes, line].filter(Boolean).join('\n'); touched = true }
+    }
+    if (touched) { rec.updatedAt = now; changed++ }
+  }
+  if (changed) db.write('applicants', all)
+  res.json({ changed })
+})
+// Deleting many at once is its own route, not DELETE /:id with a magic id.
+app.post('/api/applicants/bulk-delete', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const ids = new Set(Array.isArray(req.body?.ids) ? req.body.ids : [])
+  if (!ids.size) return res.status(400).json({ error: 'ids required' })
+  const all = db.read('applicants', [])
+  const kept = all.filter((a) => !ids.has(a.id))
+  db.write('applicants', kept)
+  res.json({ deleted: all.length - kept.length })
 })
 app.delete('/api/applicants/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
   db.write('applicants', db.read('applicants', []).filter((a) => a.id !== req.params.id))
