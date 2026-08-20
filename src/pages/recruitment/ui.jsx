@@ -89,70 +89,122 @@ export function CardHead({ title, action }) {
   );
 }
 
-// KPI card: icon in a soft tinted square, label, number, and what moved in the
-// last 7 days underneath. Same height whatever the content.
-export function Kpi({ icon: Icon, label, value, delta, tint = 'var(--color-fill)', ink = 'var(--color-ink-soft)', to, onClick }) {
-  const Tag = to ? 'a' : onClick ? 'button' : 'div';
-  const props = to ? { href: to } : onClick ? { onClick, type: 'button' } : {};
+// KPI card: tinted icon square on the left, label, number, and what moved in
+// the window underneath. Fixed height so the row reads as one band.
+export function Kpi({ icon: Icon, label, value, delta, deltaLabel = 'from last 7 days', tint = 'var(--color-fill)', ink = 'var(--color-ink-soft)', onClick }) {
+  const Tag = onClick ? 'button' : 'div';
+  const props = onClick ? { onClick, type: 'button' } : {};
   return (
-    <Tag {...props} className={`card flex min-h-[116px] w-full flex-col justify-between p-5 text-left ${to || onClick ? 'hover:border-[var(--color-ink-faint)]' : ''}`}>
-      <div className="flex items-start justify-between gap-3">
-        <span className="t-label">{label}</span>
-        {Icon && (
-          <span className="flex h-9 w-9 items-center justify-center rounded-[10px]" style={{ background: tint, color: ink }}>
-            <Icon size={17} strokeWidth={2} />
+    <Tag {...props} className={`card flex min-h-[104px] w-full items-center gap-4 p-5 text-left ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''}`}>
+      {Icon && (
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px]" style={{ background: tint, color: ink }}>
+          <Icon size={20} strokeWidth={2} />
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="t-label block truncate">{label}</span>
+        <span className="mt-1 block text-[26px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
+        {delta !== undefined && (
+          <span className="mt-1.5 block text-[12.5px] text-[var(--color-ink-faint)]">
+            {delta > 0 ? <span className="font-medium text-[var(--color-good)]">↑ {delta} </span>
+              : delta < 0 ? <span className="font-medium text-[var(--color-bad)]">↓ {Math.abs(delta)} </span>
+                : <span>No change </span>}
+            {deltaLabel}
           </span>
         )}
-      </div>
-      <div>
-        <div className="t-stat text-[var(--color-ink)]">{value}</div>
-        {delta !== undefined && (
-          <div className="mt-1 text-[12.5px] text-[var(--color-ink-faint)]">
-            {delta > 0 ? <span className="text-[var(--color-good)]">↑ {delta}</span> : delta < 0 ? <span className="text-[var(--color-bad)]">↓ {Math.abs(delta)}</span> : <span>No change</span>}
-            <span> from last 7 days</span>
-          </div>
-        )}
-      </div>
+      </span>
     </Tag>
   );
 }
 
 // Eight weekly points is enough to say "going up" without pretending to be a
-// chart. No axes, no grid, no tooltip — Reports is where analysis happens.
-export function Sparkline({ points = [], color = 'var(--color-ink-faint)', width = 92, height = 26 }) {
+// chart: a line, a soft fill under it, and a dot on where things stand now.
+// No axes, no grid, no tooltip — Reports is where analysis happens.
+export function Sparkline({ points = [], color = 'var(--color-ink-faint)', width = 132, height = 40 }) {
   if (points.length < 2) return <div style={{ width, height }} />;
   const max = Math.max(...points, 1);
   const step = width / (points.length - 1);
-  const d = points.map((p, i) => `${i * step},${height - (p / max) * (height - 4) - 2}`).join(' ');
+  const y = (p) => height - (p / max) * (height - 8) - 4;
+  const path = points.map((p, i) => `${i * step},${y(p)}`).join(' ');
+  const last = { x: (points.length - 1) * step, y: y(points[points.length - 1]) };
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} fill="none" aria-hidden>
-      <polyline points={d} stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      <polygon points={`0,${height} ${path} ${width},${height}`} fill={color} opacity="0.08" />
+      <polyline points={path} stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={last.x} cy={last.y} r="2.75" fill={color} />
     </svg>
   );
 }
 
-// Donut with the total in the middle. Segments carry the colour; the legend
-// carries the numbers, because a legend nobody can read is decoration.
-export function Donut({ slices = [], total = 0, size = 148, thickness = 16 }) {
+// Donut with the total in the middle. Segments carry the colour, the legend
+// carries the numbers — a legend nobody can read is decoration. A hairline gap
+// keeps two segments from reading as one.
+export function Donut({ slices = [], total = 0, size = 150, thickness = 18 }) {
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
+  const gap = slices.length > 1 ? 3 : 0;
   let offset = 0;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0" aria-hidden>
       <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-line-soft)" strokeWidth={thickness} />
         {slices.map((s, i) => {
-          const len = total > 0 ? (s.value / total) * c : 0;
+          const len = total > 0 ? Math.max(0, (s.value / total) * c - gap) : 0;
           const el = (
             <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={s.color} strokeWidth={thickness}
               strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-offset} strokeLinecap="butt" />
           );
-          offset += len;
+          offset += total > 0 ? (s.value / total) * c : 0;
           return el;
         })}
       </g>
-      <text x="50%" y="47%" textAnchor="middle" className="fill-[var(--color-ink)]" style={{ fontSize: 24, fontWeight: 600 }}>{total}</text>
-      <text x="50%" y="62%" textAnchor="middle" className="fill-[var(--color-ink-faint)]" style={{ fontSize: 11.5 }}>Total</text>
+      <text x="50%" y="48%" textAnchor="middle" className="fill-[var(--color-ink)]" style={{ fontSize: 24, fontWeight: 600 }}>{total}</text>
+      <text x="50%" y="63%" textAnchor="middle" className="fill-[var(--color-ink-faint)]" style={{ fontSize: 11.5 }}>Total</text>
     </svg>
   );
+}
+
+// A window over the numbers: the KPI changes, the pipeline deltas and the
+// activity all follow whatever is chosen here.
+export const RANGES = [
+  ['7d', 'Last 7 days', 7],
+  ['30d', 'Last 30 days', 30],
+  ['90d', 'Last 90 days', 90],
+];
+export function RangePicker({ value, onChange }) {
+  return (
+    <div className="inline-flex rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] p-0.5">
+      {RANGES.map(([k, label]) => (
+        <button key={k} type="button" onClick={() => onChange(k)}
+          className={`rounded-[8px] px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${value === k ? 'bg-[var(--color-fill)] text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]'}`}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// One row of a list card: tinted icon, what happened, when. Used by activity
+// and by anything else that is a feed, so feeds all look the same.
+export function FeedRow({ icon: Icon, tint, ink, title, line, meta, to, as: Tag = 'div', ...rest }) {
+  return (
+    <Tag {...rest} className="group flex items-start gap-3 py-3.5 first:pt-0 last:pb-0">
+      {Icon && (
+        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px]" style={{ background: tint, color: ink }}>
+          <Icon size={15} strokeWidth={2} />
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="t-body block truncate font-semibold text-[var(--color-ink)] group-hover:underline">{title}</span>
+        {line && <span className="t-support mt-0.5 block truncate">{line}</span>}
+      </span>
+      {meta && <span className="t-support shrink-0 whitespace-nowrap text-[12px]">{meta}</span>}
+    </Tag>
+  );
+}
+
+// Empty state that keeps a card the same height as its neighbours instead of
+// collapsing into a tall white nothing.
+export function Empty({ children }) {
+  return <div className="flex min-h-[180px] items-center justify-center px-4 text-center"><p className="t-support">{children}</p></div>;
 }

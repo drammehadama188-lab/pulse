@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, CalendarCheck, Star, BadgeCheck, XCircle, ArrowRight } from 'lucide-react';
+import {
+  Users, CalendarCheck, Star, BadgeCheck, XCircle, ArrowRight, Plus, Briefcase,
+  Inbox, PhoneCall, ClipboardCheck, Handshake, UserCheck, UserPlus, CalendarPlus, FileText,
+} from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { PIPELINE, DROPPED, STAGES, INTERVIEWED, SHORTLISTED, OFFERED } from './stages.js';
-import { CARD, CardHead, PageHead, Kpi, Sparkline, Donut, StageChip, ago, dayTime, scoreWord } from './ui.jsx';
+import { CARD, CardHead, PageHead, BTN_DARK, BTN_LIGHT, Kpi, Sparkline, Donut, RangePicker, RANGES, FeedRow, Empty, ago, dayTime, scoreWord } from './ui.jsx';
 
 // Recruitment Dashboard — see. Not understand, not evaluate, not analyse:
 // those are the applicant profile, the interview room and Reports.
@@ -11,21 +14,40 @@ import { CARD, CardHead, PageHead, Kpi, Sparkline, Donut, StageChip, ago, dayTim
 // Every number is counted from the same records the other pages work from, and
 // every number is a link — if Interview says 8, clicking it shows those eight.
 
-const WEEK = 7 * 24 * 3600 * 1000;
+const DAY = 24 * 3600 * 1000;
 const pct = (n, of) => (of > 0 ? Math.round((n / of) * 100) : 0);
-const since = (n = 1) => Date.now() - n * WEEK;
 // Someone "entered" a stage when it was written into their history. Records
 // from before the history existed simply do not count towards a change.
 const enteredSince = (list, stage, t) =>
   list.filter(a => (a.history || []).some(h => h.stage === stage && Date.parse(h.at || '') >= t)).length;
 
-const SOURCE_COLORS = ['var(--color-stage-new)', 'var(--color-stage-screening)', 'var(--color-stage-interview)', 'var(--color-stage-short)', 'var(--color-stage-offer)', 'var(--color-ink-faint)'];
+const STAGE_ICON = { new: Inbox, screening: PhoneCall, interview: ClipboardCheck, shortlisted: Star, offer: Handshake, hired: UserCheck };
+const STAGE_TINT = {
+  new: 'var(--color-stage-new-bg)', screening: 'var(--color-stage-screening-bg)', interview: 'var(--color-stage-interview-bg)',
+  shortlisted: 'var(--color-stage-short-bg)', offer: 'var(--color-stage-offer-bg)', hired: 'var(--color-stage-hired-bg)',
+};
+const SOURCE_COLORS = ['var(--color-stage-new)', 'var(--color-stage-screening)', 'var(--color-stage-short)', 'var(--color-stage-interview)', 'var(--color-stage-offer)', 'var(--color-ink-faint)'];
+// What each kind of activity looks like in the feed.
+const ACT = {
+  added: [UserPlus, 'var(--color-stage-new-bg)', 'var(--color-stage-new)'],
+  booked: [CalendarPlus, 'var(--color-stage-interview-bg)', 'var(--color-stage-interview)'],
+  scored: [FileText, 'var(--color-stage-screening-bg)', 'var(--color-stage-screening)'],
+  short: [Star, 'var(--color-stage-short-bg)', 'var(--color-stage-short)'],
+  offer: [Handshake, 'var(--color-stage-offer-bg)', 'var(--color-stage-offer)'],
+  hired: [UserCheck, 'var(--color-stage-hired-bg)', 'var(--color-stage-hired)'],
+  out: [XCircle, 'var(--color-stage-out-bg)', 'var(--color-stage-out)'],
+  moved: [ClipboardCheck, 'var(--color-fill)', 'var(--color-ink-soft)'],
+};
+const actKind = (stage) =>
+  stage === 'shortlisted' ? 'short' : stage === 'offer' ? 'offer' : stage === 'hired' ? 'hired'
+    : DROPPED.includes(stage) ? 'out' : 'moved';
 
 export default function Dashboard() {
   const [applicants, setApplicants] = useState([]);
   const [positions, setPositions] = useState([]);
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState('7d');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,15 +58,18 @@ export default function Dashboard() {
     ]).then(([a, p, i]) => { setApplicants(a); setPositions(p); setInterviews(i); }).finally(() => setLoading(false));
   }, []);
 
+  const days = RANGES.find(r => r[0] === range)?.[2] || 7;
+  const rangeLabel = `from last ${days} days`;
+
   const m = useMemo(() => {
     const total = applicants.length;
     const inSet = (keys) => applicants.filter(a => keys.includes(a.stage)).length;
-    const week = since(1);
+    const from = Date.now() - days * DAY;
 
     const stages = PIPELINE.map(([key, label, keys, color]) => ({
       key, label, color,
       count: applicants.filter(a => keys.includes(a.stage)).length,
-      delta: keys.reduce((n, s) => n + enteredSince(applicants, s, week), 0),
+      delta: keys.reduce((n, s) => n + enteredSince(applicants, s, from), 0),
       to: `/recruitment/applicants?stage=${keys[0]}`,
     }));
 
@@ -67,55 +92,51 @@ export default function Dashboard() {
       .filter(i => i.status !== 'completed' && Date.parse(i.scheduledAt || '') >= now - 3600 * 1000)
       .sort((a, b) => (a.scheduledAt || '').localeCompare(b.scheduledAt || ''));
 
-    // Activity: what actually happened, newest first, from the records
-    // themselves — there is no separate event log to fall out of step.
+    // Activity comes out of the records themselves — there is no separate
+    // event log that could fall out of step with them.
     const events = [];
     for (const a of applicants) {
-      events.push({ at: a.createdAt, title: 'New applicant added', line: `${a.name} applied for ${a.role || 'a position'}`, to: `/recruitment/applicants/${a.id}` });
+      events.push({ at: a.createdAt, kind: 'added', title: 'New applicant added', line: `${a.name} applied for ${a.role || 'a position'}`, to: `/recruitment/applicants/${a.id}` });
       for (const h of a.history || []) {
         if (h.stage === 'cv_received') continue;
-        events.push({ at: h.at, title: `Applicant ${(STAGES.find(s => s[0] === h.stage)?.[1] || h.stage).toLowerCase()}`, line: a.name, to: `/recruitment/applicants/${a.id}`, stage: h.stage });
+        const label = STAGES.find(s => s[0] === h.stage)?.[1] || h.stage;
+        events.push({ at: h.at, kind: actKind(h.stage), title: label, line: a.name, to: `/recruitment/applicants/${a.id}` });
       }
     }
     for (const i of interviews) {
-      events.push({ at: i.createdAt, title: 'Interview scheduled', line: `${i.applicantName}${i.interviewer ? ` with ${i.interviewer}` : ''}`, to: `/recruitment/interviews/${i.id}` });
-      if (i.completedAt) events.push({ at: i.completedAt, title: 'Interview scored', line: `${i.applicantName} · ${i.totalScore}/100 ${scoreWord(i.totalScore)}`, to: `/recruitment/interviews/${i.id}` });
+      events.push({ at: i.createdAt, kind: 'booked', title: 'Interview scheduled', line: `${i.applicantName}${i.interviewer ? ` with ${i.interviewer}` : ''}`, to: `/recruitment/interviews/${i.id}` });
+      if (i.completedAt) events.push({ at: i.completedAt, kind: 'scored', title: 'Interview scored', line: `${i.applicantName} · ${i.totalScore}/100 ${scoreWord(i.totalScore)}`, to: `/recruitment/interviews/${i.id}` });
     }
 
-    // Eight weekly buckets, oldest first.
-    const weekly = (stamps) => {
-      const buckets = Array(8).fill(0);
+    // Eight buckets the width of the chosen window, oldest first.
+    const bucket = Math.max(1, Math.round(days / 8));
+    const series = (stamps) => {
+      const out = Array(8).fill(0);
       for (const s of stamps) {
         const t = Date.parse(s || '');
         if (isNaN(t)) continue;
-        const weeksAgo = Math.floor((Date.now() - t) / WEEK);
-        if (weeksAgo >= 0 && weeksAgo < 8) buckets[7 - weeksAgo]++;
+        const back = Math.floor((Date.now() - t) / (bucket * DAY));
+        if (back >= 0 && back < 8) out[7 - back]++;
       }
-      return buckets;
+      return out;
     };
     const stageStamps = (stage) => applicants.flatMap(a => (a.history || []).filter(h => h.stage === stage).map(h => h.at));
 
     return {
-      total,
-      stages,
-      worked,
-      dropped,
+      total, stages, worked, dropped,
       dropRate: pct(dropped, worked),
       dropWhere: WHERE[dropCounts[0]?.[0]] || '',
-      dropTop: dropCounts[0] || ['', 0],
       scheduled: interviews.filter(i => i.status !== 'completed').length,
-      scheduledDelta: interviews.filter(i => i.status !== 'completed' && Date.parse(i.createdAt || '') >= week).length,
+      scheduledDelta: interviews.filter(i => i.status !== 'completed' && Date.parse(i.createdAt || '') >= from).length,
       shortlisted: inSet(['shortlisted']),
       offers: inSet(['offer']),
       rejected: inSet(['rejected']),
-      hired: inSet(['hired']),
-      newDelta: applicants.filter(a => Date.parse(a.createdAt || '') >= week).length,
-      shortDelta: enteredSince(applicants, 'shortlisted', week),
-      offerDelta: enteredSince(applicants, 'offer', week),
-      rejectDelta: enteredSince(applicants, 'rejected', week),
-      sources,
-      upcoming,
-      events: events.filter(e => e.at).sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 6),
+      newDelta: applicants.filter(a => Date.parse(a.createdAt || '') >= from).length,
+      shortDelta: enteredSince(applicants, 'shortlisted', from),
+      offerDelta: enteredSince(applicants, 'offer', from),
+      rejectDelta: enteredSince(applicants, 'rejected', from),
+      sources, upcoming,
+      events: events.filter(e => e.at).sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 5),
       openPositions: positions.filter(p => p.status === 'open'),
       rates: {
         applications: total,
@@ -125,14 +146,14 @@ export default function Dashboard() {
         hired: inSet(['hired']),
       },
       trends: {
-        applications: weekly(applicants.map(a => a.createdAt)),
-        interview: weekly(stageStamps('interviewed')),
-        shortlist: weekly(stageStamps('shortlisted')),
-        offer: weekly(stageStamps('offer')),
-        hired: weekly(stageStamps('hired')),
+        applications: series(applicants.map(a => a.createdAt)),
+        interview: series(stageStamps('interviewed')),
+        shortlist: series(stageStamps('shortlisted')),
+        offer: series(stageStamps('offer')),
+        hired: series(stageStamps('hired')),
       },
     };
-  }, [applicants, positions, interviews]);
+  }, [applicants, positions, interviews, days]);
 
   if (loading) return <p className="t-body text-[var(--color-ink-faint)]">Loading…</p>;
 
@@ -149,155 +170,190 @@ export default function Dashboard() {
     );
   }
 
-  const pipeMax = Math.max(...m.stages.map(s => s.count), 1);
-
   return (
     <div>
-      <PageHead title="Recruitment" />
+      <PageHead title="Recruitment">
+        <RangePicker value={range} onChange={setRange} />
+        <Link to="/recruitment/positions" className={BTN_LIGHT}><Briefcase size={16} /> Positions</Link>
+        <Link to="/recruitment/applicants?stage=cv_received" className={BTN_DARK}><Plus size={16} /> Work the list</Link>
+      </PageHead>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <Kpi icon={Users} label="Total applicants" value={m.total} delta={m.newDelta}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <Kpi icon={Users} label="Total applicants" value={m.total} delta={m.newDelta} deltaLabel={rangeLabel}
           tint="var(--color-stage-new-bg)" ink="var(--color-stage-new)" onClick={() => navigate('/recruitment/applicants?stage=all')} />
-        <Kpi icon={CalendarCheck} label="Interviews scheduled" value={m.scheduled} delta={m.scheduledDelta}
+        <Kpi icon={CalendarCheck} label="Interviews scheduled" value={m.scheduled} delta={m.scheduledDelta} deltaLabel={rangeLabel}
           tint="var(--color-stage-interview-bg)" ink="var(--color-stage-interview)" onClick={() => navigate('/recruitment/interviews')} />
-        <Kpi icon={Star} label="Shortlisted" value={m.shortlisted} delta={m.shortDelta}
+        <Kpi icon={Star} label="Shortlisted" value={m.shortlisted} delta={m.shortDelta} deltaLabel={rangeLabel}
           tint="var(--color-stage-short-bg)" ink="var(--color-stage-short)" onClick={() => navigate('/recruitment/applicants?stage=shortlisted')} />
-        <Kpi icon={BadgeCheck} label="Offers" value={m.offers} delta={m.offerDelta}
+        <Kpi icon={BadgeCheck} label="Offers" value={m.offers} delta={m.offerDelta} deltaLabel={rangeLabel}
           tint="var(--color-stage-offer-bg)" ink="var(--color-stage-offer)" onClick={() => navigate('/recruitment/applicants?stage=offer')} />
-        <Kpi icon={XCircle} label="Rejected" value={m.rejected} delta={m.rejectDelta}
+        <Kpi icon={XCircle} label="Rejected" value={m.rejected} delta={m.rejectDelta} deltaLabel={rangeLabel}
           tint="var(--color-stage-out-bg)" ink="var(--color-stage-out)" onClick={() => navigate('/recruitment/applicants?stage=rejected')} />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className={`${CARD} p-6 xl:col-span-2`}>
-          <CardHead title="Hiring pipeline" action={<Link to="/recruitment/applicants?stage=all" className="text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">All applicants</Link>} />
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
-            {m.stages.map(s => (
-              <button key={s.key} onClick={() => navigate(s.to)} className="group text-left">
-                <div className="t-label group-hover:text-[var(--color-ink)]">{s.label}</div>
-                <div className="mt-1.5 flex items-baseline gap-2">
-                  <span className="text-[24px] font-semibold leading-none text-[var(--color-ink)]">{s.count}</span>
-                  {s.delta > 0 && <span className="text-[12.5px] font-medium text-[var(--color-good)]">+{s.delta}</span>}
-                </div>
-                <div className="mt-3 h-1.5 rounded-full bg-[var(--color-line-soft)]">
-                  <div className="h-full rounded-full" style={{ width: `${Math.max(4, (s.count / pipeMax) * 100)}%`, background: s.color }} />
-                </div>
-              </button>
-            ))}
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
+        <div className={`${CARD} p-6`}>
+          <CardHead title="Hiring pipeline" action={
+            <Link to="/recruitment/applicants?stage=all" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+              View full pipeline <ArrowRight size={14} />
+            </Link>} />
+          <div className="grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-3 lg:grid-cols-6">
+            {m.stages.map(s => {
+              const Icon = STAGE_ICON[s.key];
+              return (
+                <button key={s.key} onClick={() => navigate(s.to)} className="group text-left">
+                  <span className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-[7px]" style={{ background: STAGE_TINT[s.key], color: s.color }}>
+                      <Icon size={13} strokeWidth={2.2} />
+                    </span>
+                    <span className="t-label truncate group-hover:text-[var(--color-ink)]">{s.label}</span>
+                  </span>
+                  <span className="mt-2 flex items-baseline gap-2">
+                    <span className="text-[24px] font-semibold leading-none text-[var(--color-ink)]">{s.count}</span>
+                    {s.delta > 0 && <span className="text-[12.5px] font-medium text-[var(--color-good)]">+{s.delta} in</span>}
+                  </span>
+                  <span className="mt-3 block h-[3px] rounded-full" style={{ background: s.color, opacity: s.count ? 1 : 0.25 }} />
+                </button>
+              );
+            })}
           </div>
 
-          <div className="mt-6 border-t border-[var(--color-line-soft)] pt-5">
-            <div className="flex items-center justify-between gap-4">
-              <span className="t-label">Drop-off rate</span>
-              <span className="text-[20px] font-semibold text-[var(--color-ink)]">{m.dropRate}%</span>
+          <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-4 rounded-[10px] bg-[var(--color-fill)] p-5">
+            <div>
+              <div className="t-label">Drop-off rate</div>
+              <div className="mt-1 text-[26px] font-semibold leading-none text-[var(--color-ink)]">{m.dropRate}%</div>
             </div>
-            <div className="mt-2 h-1.5 rounded-full bg-[var(--color-line-soft)]">
-              <div className="h-full rounded-full bg-[var(--color-stage-out)]" style={{ width: `${m.dropRate}%` }} />
+            <div className="min-w-[180px] flex-1">
+              <div className="h-2 rounded-full bg-[var(--color-line)]">
+                <div className="h-full rounded-full bg-[var(--color-stage-new)]" style={{ width: `${m.dropRate}%` }} />
+              </div>
             </div>
-            <p className="t-support mt-2.5">
-              {m.dropped} of the {m.worked} people you have worked dropped out{m.dropWhere ? `, most at ${m.dropWhere}` : ''}.
+            <p className="t-support max-w-xs flex-1">
+              {m.dropped} of the {m.worked} people worked so far dropped out{m.dropWhere ? `, most at ${m.dropWhere}` : ''}.
             </p>
           </div>
         </div>
 
-        <div className={`${CARD} p-6`}>
+        <div className={`${CARD} flex flex-col p-6`}>
           <CardHead title="Applicants by source" />
-          <div className="flex items-center justify-center">
+          <div className="flex flex-1 flex-wrap items-center justify-center gap-6">
             <Donut total={m.total} slices={m.sources.map(([, v], i) => ({ value: v, color: SOURCE_COLORS[i % SOURCE_COLORS.length] }))} />
+            <div className="min-w-[150px] flex-1 space-y-3">
+              {m.sources.map(([label, n], i) => (
+                <div key={label} className="flex items-center gap-2.5">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: SOURCE_COLORS[i % SOURCE_COLORS.length] }} />
+                  <span className="t-body flex-1 truncate text-[var(--color-ink-soft)]">{label}</span>
+                  <span className="text-[13.5px] font-semibold text-[var(--color-ink)]">{n}</span>
+                  <span className="w-14 text-right text-[12.5px] text-[var(--color-ink-faint)]">({pct(n, m.total)}%)</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="mt-5 space-y-2.5">
-            {m.sources.map(([label, n], i) => (
-              <div key={label} className="flex items-center gap-3">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: SOURCE_COLORS[i % SOURCE_COLORS.length] }} />
-                <span className="t-body flex-1 truncate text-[var(--color-ink-soft)]">{label}</span>
-                <span className="text-[13.5px] font-semibold text-[var(--color-ink)]">{n}</span>
-                <span className="w-12 text-right text-[12.5px] text-[var(--color-ink-faint)]">{pct(n, m.total)}%</span>
-              </div>
-            ))}
-          </div>
+          <Link to="/recruitment/reports" className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+            View full report <ArrowRight size={14} />
+          </Link>
         </div>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className={`${CARD} p-6`}>
-          <CardHead title="Open positions" action={<Link to="/recruitment/positions" className="text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">Manage</Link>} />
-          {m.openPositions.length === 0 && <p className="t-support">No open position. Add the job you are hiring for.</p>}
-          <div className="divide-y divide-[var(--color-line-soft)]">
-            {m.openPositions.slice(0, 4).map(p => (
-              <Link key={p.id} to={`/recruitment/applicants?position=${p.id}&stage=all`} className="group block py-4 first:pt-0 last:pb-0">
-                <div className="t-body font-semibold text-[var(--color-ink)] group-hover:underline">{p.title}</div>
-                <div className="t-support mt-0.5">{[p.employment, p.location].filter(Boolean).join(' · ')}</div>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-[var(--color-ink-soft)]">
-                  <span><span className="font-semibold text-[var(--color-ink)]">{p.applicantCount}</span> applicants</span>
-                  <span><span className="font-semibold text-[var(--color-ink)]">{p.interviewedCount}</span> interviewed</span>
-                  <span><span className="font-semibold text-[var(--color-ink)]">{p.hiredCount}</span>/{p.openings} hired</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <div className={`${CARD} p-6`}>
-          <CardHead title="Upcoming interviews" />
-          {m.upcoming.length === 0 && <p className="t-support">Nothing booked.</p>}
-          <div className="divide-y divide-[var(--color-line-soft)]">
-            {m.upcoming.slice(0, 4).map(i => (
-              <div key={i.id} className="flex items-center justify-between gap-3 py-4 first:pt-0">
-                <div className="min-w-0">
-                  <div className="t-body truncate font-semibold text-[var(--color-ink)]">{i.applicantName}</div>
-                  <div className="t-support mt-0.5 truncate">{i.templateName}</div>
-                  <div className="t-support mt-0.5">{dayTime(i.scheduledAt)}</div>
-                </div>
-                <Link to={`/recruitment/interviews/${i.id}`}
-                  className="shrink-0 rounded-[10px] border border-[var(--color-line)] px-3 py-2 text-[13px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-fill)]">
-                  Interview
-                </Link>
+        <div className={`${CARD} flex flex-col p-6`}>
+          <CardHead title="Open positions" action={
+            <Link to="/recruitment/positions" className="text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">View all</Link>} />
+          {m.openPositions.length === 0
+            ? <Empty>No open position yet. Add the job you are hiring for and applicants file under it.</Empty>
+            : (
+              <div className="flex-1 divide-y divide-[var(--color-line-soft)]">
+                {m.openPositions.slice(0, 4).map(p => (
+                  <Link key={p.id} to={`/recruitment/applicants?position=${p.id}&stage=all`} className="group flex items-center gap-3 py-4 first:pt-0">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--color-fill)] text-[var(--color-ink-soft)]">
+                      <Briefcase size={16} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="t-body block truncate font-semibold text-[var(--color-ink)] group-hover:underline">{p.title}</span>
+                      <span className="t-support block truncate">{[p.employment, p.location].filter(Boolean).join(' · ')}</span>
+                    </span>
+                    <span className="flex shrink-0 gap-4 text-center">
+                      {[[p.applicantCount, 'Applicants'], [p.interviewedCount, 'Interviewing'], [`${p.hiredCount}/${p.openings}`, 'Hired']].map(([v, l]) => (
+                        <span key={l} className="block">
+                          <span className="block text-[15px] font-semibold text-[var(--color-ink)]">{v}</span>
+                          <span className="block text-[11px] text-[var(--color-ink-faint)]">{l}</span>
+                        </span>
+                      ))}
+                    </span>
+                  </Link>
+                ))}
               </div>
-            ))}
-          </div>
-          {m.upcoming.length > 0 && (
-            <Link to="/recruitment/interviews" className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
-              View all interviews <ArrowRight size={14} />
-            </Link>
-          )}
+            )}
+          <Link to="/recruitment/positions" className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+            <Plus size={14} /> Create new position
+          </Link>
         </div>
 
-        <div className={`${CARD} p-6`}>
+        <div className={`${CARD} flex flex-col p-6`}>
+          <CardHead title="Upcoming interviews" />
+          {m.upcoming.length === 0
+            ? <Empty>Nothing booked. Open an applicant and start an interview.</Empty>
+            : (
+              <div className="flex-1 divide-y divide-[var(--color-line-soft)]">
+                {m.upcoming.slice(0, 4).map(i => (
+                  <div key={i.id} className="flex items-center gap-3 py-4 first:pt-0">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[12px] font-semibold text-[var(--color-ink-soft)]">
+                      {(i.applicantName || '?').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="t-body block truncate font-semibold text-[var(--color-ink)]">{i.applicantName}</span>
+                      <span className="t-support block truncate">{dayTime(i.scheduledAt)}{i.interviewer ? ` · ${i.interviewer}` : ''}</span>
+                    </span>
+                    <Link to={`/recruitment/interviews/${i.id}`}
+                      className="shrink-0 rounded-[9px] border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-fill)]">
+                      Interview
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          <Link to="/recruitment/interviews" className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+            View all interviews <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        <div className={`${CARD} flex flex-col p-6`}>
           <CardHead title="Recent activity" />
-          <div className="space-y-4">
-            {m.events.map((e, i) => (
-              <Link key={i} to={e.to} className="group block">
-                <div className="flex items-center gap-2">
-                  <span className="t-body font-semibold text-[var(--color-ink)] group-hover:underline">{e.title}</span>
-                  {e.stage && <StageChip stage={e.stage} />}
-                </div>
-                <div className="t-support mt-0.5 truncate">{e.line}</div>
-                <div className="t-support mt-0.5 text-[12px]">{ago(e.at)}</div>
-              </Link>
-            ))}
-            {m.events.length === 0 && <p className="t-support">Nothing has happened yet.</p>}
+          <div className="flex-1 divide-y divide-[var(--color-line-soft)]">
+            {m.events.map((e, i) => {
+              const [Icon, tint, ink] = ACT[e.kind] || ACT.moved;
+              return <FeedRow key={i} as={Link} to={e.to} icon={Icon} tint={tint} ink={ink} title={e.title} line={e.line} meta={ago(e.at)} />;
+            })}
+            {m.events.length === 0 && <Empty>Nothing has happened yet.</Empty>}
           </div>
+          <Link to="/recruitment/applicants?stage=all" className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+            View all activity <ArrowRight size={14} />
+          </Link>
         </div>
       </div>
 
       <div className={`${CARD} mt-6 p-6`}>
-        <CardHead title="Recruitment performance" action={<Link to="/recruitment/reports" className="text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">Reports</Link>} />
-        <div className="grid grid-cols-2 gap-x-6 gap-y-6 md:grid-cols-3 lg:grid-cols-5">
+        <CardHead title="Recruitment performance" action={
+          <Link to="/recruitment/reports" className="text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">Reports</Link>} />
+        <div className="grid grid-cols-2 gap-x-6 gap-y-7 md:grid-cols-3 lg:grid-cols-5">
           {[
-            ['Applications', m.rates.applications, m.trends.applications, 'var(--color-stage-new)'],
-            ['Interview rate', `${m.rates.interview}%`, m.trends.interview, 'var(--color-stage-interview)'],
-            ['Shortlist rate', `${m.rates.shortlist}%`, m.trends.shortlist, 'var(--color-stage-short)'],
-            ['Offer rate', `${m.rates.offer}%`, m.trends.offer, 'var(--color-stage-offer)'],
-            ['Hired', m.rates.hired, m.trends.hired, 'var(--color-stage-hired)'],
-          ].map(([label, value, points, color]) => (
+            ['Applications', m.rates.applications, m.newDelta, m.trends.applications, 'var(--color-stage-new)'],
+            ['Interview rate', `${m.rates.interview}%`, null, m.trends.interview, 'var(--color-stage-interview)'],
+            ['Shortlist rate', `${m.rates.shortlist}%`, m.shortDelta, m.trends.shortlist, 'var(--color-stage-short)'],
+            ['Offer rate', `${m.rates.offer}%`, m.offerDelta, m.trends.offer, 'var(--color-stage-offer)'],
+            ['Hired', m.rates.hired, null, m.trends.hired, 'var(--color-stage-hired)'],
+          ].map(([label, value, delta, points, color]) => (
             <div key={label}>
               <div className="t-label">{label}</div>
-              <div className="mt-1 text-[24px] font-semibold leading-none text-[var(--color-ink)]">{value}</div>
-              <div className="mt-2"><Sparkline points={points} color={color} /></div>
+              <div className="mt-1.5 flex items-baseline gap-2">
+                <span className="text-[24px] font-semibold leading-none text-[var(--color-ink)]">{value}</span>
+                {delta > 0 && <span className="text-[12.5px] font-medium text-[var(--color-good)]">↑ {delta}</span>}
+              </div>
+              <div className="mt-2.5"><Sparkline points={points} color={color} /></div>
             </div>
           ))}
         </div>
-        <p className="t-support mt-5">Lines show the last 8 weeks by volume. Rates are of all applicants, and only count moves recorded in Pulse.</p>
+        <p className="t-support mt-5">Lines cover the last {days} days. Rates are of all applicants and count only moves recorded in Pulse.</p>
       </div>
     </div>
   );
