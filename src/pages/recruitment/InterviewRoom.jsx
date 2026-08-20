@@ -134,6 +134,18 @@ export default function InterviewRoom() {
 
   const answeredCount = iv.answered;
   const initials = (iv.applicantName || '?').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  // Candidate summary shows only what we actually know (Adama 20 Aug: "remove
+  // the incomplete no email lets make the page neat"). A field the form never
+  // collected printed a dash, so a normal applicant read as a half-filled
+  // record. Empty fields are dropped, not dashed.
+  const summaryFields = [
+    ['Applied on', fullDate(applicant?.appliedAt) || fullDate(applicant?.createdAt)],
+    ['Source', [applicant?.source, applicant?.form].filter(Boolean).join(' · ')],
+    ['Can start now', applicant?.startNow === true ? 'Yes' : applicant?.startNow === false ? 'No' : ''],
+    ['Applying for', applicant?.role],
+    ['Phone', applicant?.phoneValid === false ? 'No usable number' : applicant?.phone],
+    ['Email', applicant?.email],
+  ].filter(([, value]) => String(value ?? '').trim() !== '');
 
   return (
     <div className="pb-20">
@@ -235,7 +247,7 @@ export default function InterviewRoom() {
             <div className={`${CARD} card-quiet p-4`}>
               <h2 className="text-[13px] font-semibold text-[var(--color-ink)]">From their application</h2>
               <div className="mt-2.5 space-y-2.5">
-                {Object.entries(applicant.answers).slice(0, 4).map(([q, v]) => (
+                {Object.entries(applicant.answers).filter(([, v]) => String(v ?? '').trim() !== '').slice(0, 4).map(([q, v]) => (
                   <div key={q}>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{q}</p>
                     <p className="mt-0.5 text-[12.5px] text-[var(--color-ink-soft)]">{v}</p>
@@ -373,20 +385,14 @@ export default function InterviewRoom() {
             )}
           </div>
 
+          {(summaryFields.length > 0 || applicant?.experience) && (
           <div className={`${CARD} card-quiet p-4`}>
             <h2 className="mb-3 text-[13px] font-semibold text-[var(--color-ink)]">Candidate summary</h2>
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              {[
-                ['Applied on', fullDate(applicant?.appliedAt) || fullDate(applicant?.createdAt)],
-                ['Source', [applicant?.source, applicant?.form].filter(Boolean).join(' · ')],
-                ['Can start now', applicant?.startNow === true ? 'Yes' : applicant?.startNow === false ? 'No' : ''],
-                ['Applying for', applicant?.role],
-                ['Phone', applicant?.phoneValid === false ? 'No usable number' : applicant?.phone],
-                ['Email', applicant?.email],
-              ].map(([label, value]) => (
+              {summaryFields.map(([label, value]) => (
                 <div key={label} className="min-w-0">
                   <p className="text-[11px] text-[var(--color-ink-faint)]">{label}</p>
-                  <p className="truncate text-[12.5px] text-[var(--color-ink)]">{value || <span className="text-[var(--color-ink-faint)]">—</span>}</p>
+                  <p className="truncate text-[12.5px] text-[var(--color-ink)]">{value}</p>
                 </div>
               ))}
             </div>
@@ -397,6 +403,7 @@ export default function InterviewRoom() {
               </div>
             )}
           </div>
+          )}
 
           <div className={`${CARD} p-4`}>
             <h2 className="mb-3 text-[13px] font-semibold text-[var(--color-ink)]">Your final assessment</h2>
