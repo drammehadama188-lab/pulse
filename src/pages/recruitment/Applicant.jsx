@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Phone, Mail, Upload, Download, ClipboardCheck } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
 import { STAGES } from './stages.js';
@@ -27,7 +27,14 @@ export default function Applicant() {
   const [interviews, setInterviews] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('overview');
+  const [params, setParams] = useSearchParams();
+  // ?tab= so the interview room's tabs land on the right part of the record.
+  const tab = TABS.some(([k]) => k === params.get('tab')) ? params.get('tab') : 'overview';
+  const setTab = (k) => setParams(prev => {
+    const n = new URLSearchParams(prev);
+    n.set('tab', k);
+    return n;
+  }, { replace: true });
   const [note, setNote] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);

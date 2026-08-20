@@ -4700,9 +4700,20 @@ app.put('/api/interviews/:id', auth, requireSub('hr', 'records'), notViewAs, (re
     iv.answers[b.answer.questionId] = {
       score: b.answer.score === undefined ? (prev.score ?? null) : (score >= 1 && score <= 5 ? score : null),
       notes: b.answer.notes === undefined ? (prev.notes || '') : String(b.answer.notes || ''),
+      // Flagged answers are the ones to come back to before deciding.
+      flag: b.answer.flag === undefined ? !!prev.flag : !!b.answer.flag,
       at: new Date().toISOString(),
     }
     if (iv.status === 'scheduled') iv.status = 'in_progress'
+  }
+  // A question asked on the spot joins THIS interview only. The template is
+  // never touched — an interview owns the questions it actually asked.
+  if (b.addQuestion) {
+    // Trim first: a question of nothing but spaces is not a question, and it
+    // would sit in the interview forever as an unanswerable row.
+    const text = String(b.addQuestion.text || '').trim()
+    const section = (iv.sections || []).find((x) => x.id === b.addQuestion.sectionId) || (iv.sections || [])[0]
+    if (text && section) section.questions.push({ id: crypto.randomUUID(), text, adhoc: true })
   }
   if (b.status && ['scheduled', 'in_progress', 'completed'].includes(b.status)) {
     iv.status = b.status
