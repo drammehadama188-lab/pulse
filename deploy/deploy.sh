@@ -87,10 +87,12 @@ if [ "${NO_RESTART}" -eq 1 ]; then
   warn "Skipping restart (--no-restart)"
 else
   say "Restarting damia-pulse systemd service"
-  "${SSH_CMD}" "${SSH_TARGET}" "systemctl restart damia-pulse"
-  sleep 1
-  "${SSH_CMD}" "${SSH_TARGET}" "systemctl is-active damia-pulse" \
-    | grep -q "^active$" || die "Service didn't come back up — check 'journalctl -u damia-pulse -n 50' via ssh prod"
+  # Wait for it rather than asking once a second after the restart: admin's
+  # identical check called a healthy service dead because it needs ~2s to bind
+  # (20 Aug). If it really is down, print the log here instead of asking for
+  # it. One ssh call, so it stays one YubiKey tap.
+  "${SSH_CMD}" "${SSH_TARGET}" "systemctl restart damia-pulse && for i in \$(seq 1 30); do systemctl is-active --quiet damia-pulse && exit 0; sleep 1; done; echo '--- last 30 lines of the service log ---'; journalctl -u damia-pulse -n 30 --no-pager; exit 1" \
+    || die "Service did not come back up — the log above says why"
   ok "Backend running"
   printf "\n\033[1;32m✓ Deployed.\033[0m  %s\n\n" "${URL}"
 fi
