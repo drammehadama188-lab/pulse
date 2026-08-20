@@ -21,6 +21,16 @@ const SORTS = [['best', 'Best first'], ['newest', 'Newest'], ['name', 'Name']];
 // Where the applicant came from. Imported rows carry the lead form's name;
 // these are the channels a CV arrives through by hand.
 const SOURCES = ['Ads', 'WhatsApp', 'Referral', 'Walk-in', 'Recruitment agency', 'Email'];
+// A whole batch shares one Added date, which is the point — it says which
+// import someone arrived in. Applied is their own date, from the lead form.
+const shortDate = (iso) => {
+  const d = new Date(iso || '');
+  return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+};
+const fullDate = (iso) => {
+  const d = new Date(iso || '');
+  return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
 
 export default function Recruitment() {
   const [applicants, setApplicants] = useState([]);
@@ -195,6 +205,7 @@ export default function Recruitment() {
                 <th className="px-4 py-3 font-bold">Phone</th>
                 <th className="px-4 py-3 font-bold">Can start</th>
                 <th className="px-4 py-3 font-bold">Has sold</th>
+                <th className="px-4 py-3 font-bold">Added</th>
                 <th className="px-4 py-3 font-bold">Stage</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -206,7 +217,7 @@ export default function Recruitment() {
                   onStage={moveStage} onNotes={saveNotes} onRemove={remove} />
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 text-sm">Nobody matches those filters.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400 text-sm">Nobody matches those filters.</td></tr>
               )}
             </tbody>
           </table>
@@ -354,6 +365,9 @@ function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
         <td className="px-4 py-3 align-top max-w-lg">
           <span className="text-gray-600 text-xs whitespace-pre-wrap break-words">{a.experience || '—'}</span>
         </td>
+        <td className="px-4 py-3 align-top whitespace-nowrap">
+          <span className="text-gray-500 text-xs">{shortDate(a.createdAt)}</span>
+        </td>
         <td className="px-4 py-3 align-top">
           <select value={a.stage} onChange={e => onStage(a, e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white">
             {STAGES.map(([sk, sl]) => <option key={sk} value={sk}>{sl}</option>)}
@@ -365,7 +379,7 @@ function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
       </tr>
       {open && (
         <tr className="bg-gray-50/60 border-b border-gray-100">
-          <td colSpan={6} className="px-10 py-4">
+          <td colSpan={7} className="px-10 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 {answers.length === 0 && <p className="text-xs text-gray-400">No answers on this record.</p>}
@@ -375,9 +389,11 @@ function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
                     <p className="text-sm text-gray-800">{v}</p>
                   </div>
                 ))}
-                {(a.email || a.dob || a.source || a.form) && (
-                  <p className="text-[11px] text-gray-400 pt-1">{[a.email, a.dob, a.source, a.form].filter(Boolean).join(' · ')}</p>
-                )}
+                <p className="text-[11px] text-gray-400 pt-1">
+                  {[a.email, a.dob, a.source, a.form,
+                    a.appliedAt ? `Applied ${fullDate(a.appliedAt)}` : '',
+                    `Added ${fullDate(a.createdAt)}`].filter(Boolean).join(' · ')}
+                </p>
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Notes</p>
