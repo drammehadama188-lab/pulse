@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Phone, Mail, Upload, Download, ClipboardCheck } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
 import { STAGES } from './stages.js';
+import { setCurrentApplicant } from './currentApplicant.js';
 import { CARD, BTN_LIGHT, BTN_PRIMARY, fullDate, dayTime, StageChip, scoreTone, scoreWord } from './ui.jsx';
 
 // One applicant, everything about them in one place: what they answered, their
@@ -20,21 +21,16 @@ function Detail({ label, value }) {
 }
 
 export default function Applicant() {
-  const { id } = useParams();
+  const { id, tab: tabParam } = useParams();
   const navigate = useNavigate();
   const [a, setA] = useState(null);
   const [positions, setPositions] = useState([]);
   const [interviews, setInterviews] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [params, setParams] = useSearchParams();
-  // ?tab= so the interview room's tabs land on the right part of the record.
-  const tab = TABS.some(([k]) => k === params.get('tab')) ? params.get('tab') : 'overview';
-  const setTab = (k) => setParams(prev => {
-    const n = new URLSearchParams(prev);
-    n.set('tab', k);
-    return n;
-  }, { replace: true });
+  // Each part of the record is its own page: /recruitment/applicants/:id/cv.
+  const tab = TABS.some(([k]) => k === tabParam) ? tabParam : 'overview';
+  const setTab = (k) => navigate(`/recruitment/applicants/${id}/${k}`, { replace: true });
   const [note, setNote] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
@@ -101,8 +97,23 @@ export default function Applicant() {
   const position = positions.find(p => p.id === a?.positionId);
   // An interview that is booked or half-scored is the one to go back to.
   const openInterview = interviews.find(i => i.status !== 'completed');
+  const openInterviewId = (openInterview || interviews[0])?.id || null;
 
-  if (loading) return <p className="text-sm text-[var(--color-ink-faint)]">Loading…</p>;
+  // /applicants/:id lands on Overview as a real page, so the rail has
+  // something to mark as the one you are on.
+  useEffect(() => {
+    if (!tabParam) navigate(`/recruitment/applicants/${id}/overview`, { replace: true });
+  }, [tabParam, id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The sidebar shows this person's pages while you are inside them. It sits
+  // after openInterviewId on purpose — a dependency array is read during
+  // render, so referencing a const declared below would be a TDZ crash.
+  useEffect(() => {
+    setCurrentApplicant(a ? { id: a.id, name: a.name, interviewId: openInterviewId } : null);
+    return () => setCurrentApplicant(null);
+  }, [a?.id, a?.name, openInterviewId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) return <p className="text-[13px] text-[var(--color-ink-soft)]">Loading…</p>;
   if (!a) return (
     <div className={`${CARD} p-12 text-center text-sm text-[var(--color-ink-faint)]`}>
       That applicant is not on the list. <Link to="/recruitment/applicants" className="text-[var(--color-ink)] underline">Back to applicants</Link>
@@ -151,7 +162,7 @@ export default function Applicant() {
         </div>
       </div>
 
-      <div className="mb-5 flex items-center gap-1 border-b border-[var(--color-line)]">
+      <div className="mb-5 flex items-center gap-1 border-b border-[var(--color-line)] md:hidden">
         {TABS.map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px ${tab === k ? 'border-[var(--color-ink)] text-[var(--color-ink)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>

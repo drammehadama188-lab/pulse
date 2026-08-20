@@ -126,6 +126,9 @@ export default function App() {
           <Route index element={<RecruitmentDashboard />} />
           <Route path="applicants" element={<RecruitmentApplicants />} />
           <Route path="applicants/:id" element={<RecruitmentApplicant />} />
+          {/* Each part of a person's record is a page, so the sidebar can
+              carry them the way Recruitment carries its own. */}
+          <Route path="applicants/:id/:tab" element={<RecruitmentApplicant />} />
           <Route path="interviews" element={<RecruitmentInterviews />} />
           <Route path="interviews/:id" element={<InterviewRoom />} />
           <Route path="calendar" element={<RecruitmentCalendar />} />
