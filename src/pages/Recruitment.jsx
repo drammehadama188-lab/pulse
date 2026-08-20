@@ -206,6 +206,7 @@ export default function Recruitment() {
                 <th className="px-4 py-3 font-bold">Can start</th>
                 <th className="px-4 py-3 font-bold">Has sold</th>
                 <th className="px-4 py-3 font-bold">Added</th>
+                <th className="px-4 py-3 font-bold">Notes</th>
                 <th className="px-4 py-3 font-bold">Stage</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -217,7 +218,7 @@ export default function Recruitment() {
                   onStage={moveStage} onNotes={saveNotes} onRemove={remove} />
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400 text-sm">Nobody matches those filters.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400 text-sm">Nobody matches those filters.</td></tr>
               )}
             </tbody>
           </table>
@@ -368,6 +369,14 @@ function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
         <td className="px-4 py-3 align-top whitespace-nowrap">
           <span className="text-gray-500 text-xs">{shortDate(a.createdAt)}</span>
         </td>
+        {/* Note is written here, in the row, so a called applicant looks
+            different from one nobody has touched. Saves when you click away. */}
+        <td className="px-4 py-3 align-top">
+          <textarea value={note} rows={2} placeholder="Add a note"
+            onChange={e => setNote(e.target.value)}
+            onBlur={() => note !== (a.notes || '') && onNotes(a, note)}
+            className="w-52 text-xs text-gray-700 rounded-lg px-2 py-1.5 bg-transparent border border-transparent hover:border-gray-200 focus:bg-white focus:border-gray-300 focus:outline-none resize-y placeholder:text-gray-300" />
+        </td>
         <td className="px-4 py-3 align-top">
           <select value={a.stage} onChange={e => onStage(a, e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white">
             {STAGES.map(([sk, sl]) => <option key={sk} value={sk}>{sl}</option>)}
@@ -379,7 +388,7 @@ function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
       </tr>
       {open && (
         <tr className="bg-gray-50/60 border-b border-gray-100">
-          <td colSpan={7} className="px-10 py-4">
+          <td colSpan={8} className="px-10 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 {answers.length === 0 && <p className="text-xs text-gray-400">No answers on this record.</p>}
