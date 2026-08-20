@@ -5,6 +5,12 @@ import { Card } from '../components/ui.jsx'
 // Tracker Guide — the product taught as a short course (Adama 19 Aug: "a page
 // that tells them about the tracker functions like learning a dev").
 //
+// v5, 19 Aug: lesson 1 stopped being a pitch ("they are not selling the
+// device"), harsh turning and harsh acceleration added to the alarm list, and
+// a price list lesson added — prices copied from the admin server's
+// ACCOUNT_TYPE_PRICING, including the rule that USE sets the tier, not the
+// account type.
+//
 // v4, 19 Aug: the bold line under each heading now SAYS WHAT THE THING IS.
 // Adama: "just explain what each is, stop with the cheeky your phone rings
 // bull, these are new agents they do not know what these are". Slogans teach
@@ -29,10 +35,10 @@ const readLearned = () => { try { return new Set(JSON.parse(localStorage.getItem
 
 const LESSONS = [
   {
-    id: 'product', name: 'What you are selling',
-    what: 'A small GPS device fitted in the vehicle that shows the owner where it is at any time.',
+    id: 'product', name: 'The tracker',
+    what: 'A small GPS device. Once the customer buys, we install it in the brain box of the vehicle.',
     points: [
-      "Wired into the vehicle's brain box. Not easily detected or removed, but we do not guarantee a thief will never find it.",
+      'Not easily detected or removed, but we do not guarantee a thief will never find it.',
       'Its own backup battery keeps it reporting if the wires are pulled.',
       'A SIM inside sends live data to the Damia Tracker app on the phone.',
       'Works anywhere there is internet, including from abroad.',
@@ -62,7 +68,7 @@ const LESSONS = [
     id: 'alerts', name: 'Alerts',
     what: 'Messages the tracker sends to the phone on its own when something happens to the vehicle.',
     points: [
-      'Alerts for power cut, towing, vibration, speeding, low battery, SOS, engine on and off, and zone entry and exit.',
+      'Alerts for power cut, towing, vibration, harsh turning, harsh acceleration, speeding, low battery, SOS, engine on and off, and zone entry and exit.',
       'Each one is pushed straight to the phone.',
       'The customer chooses which alerts they want in Alert Preferences.',
       'If the wires are cut, the power-cut alert fires and the tracker keeps reporting on its backup battery.',
@@ -84,6 +90,17 @@ const LESSONS = [
       'Reports available: Trips, Stops, Geofence, Speeding, Odometer, Engine hours, Ignition and Daily summary.',
       'Daily summary gives one row per vehicle per day.',
       'Engine hours shows how long each engine ran.',
+    ],
+  },
+  {
+    id: 'price', name: 'Price list',
+    what: 'What a customer pays for the first year, and what they pay to renew each year after.',
+    points: [
+      'Private car: D5,500 the first year, then D4,500 a year to renew.',
+      'Taxi, passenger transport or delivery vehicle: D6,500 the first year, then D5,500 a year.',
+      'Company, rental or logistics vehicle: D7,500 the first year, then D6,500 a year.',
+      'What the vehicle is used for sets the price, not who owns it. A rental car on a personal account is charged the company rate.',
+      'The first year covers the device and the installation. Renewals keep the tracking running.',
     ],
   },
   {
