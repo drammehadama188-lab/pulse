@@ -5,6 +5,10 @@ import { Card } from '../components/ui.jsx'
 // Tracker Guide — the product taught as a short course (Adama 19 Aug: "a page
 // that tells them about the tracker functions like learning a dev").
 //
+// v6, 19 Aug: the price list moved to its own tab inside the guide (Adama:
+// "price list can be on its own page inside the guide") — a table, not a
+// lesson card, since it is looked up rather than learned.
+//
 // v5, 19 Aug: lesson 1 stopped being a pitch ("they are not selling the
 // device"), harsh turning and harsh acceleration added to the alarm list, and
 // a price list lesson added — prices copied from the admin server's
@@ -93,17 +97,6 @@ const LESSONS = [
     ],
   },
   {
-    id: 'price', name: 'Price list',
-    what: 'What a customer pays for the first year, and what they pay to renew each year after.',
-    points: [
-      'Private car: D5,500 the first year, then D4,500 a year to renew.',
-      'Taxi, passenger transport or delivery vehicle: D6,500 the first year, then D5,500 a year.',
-      'Company, rental or logistics vehicle: D7,500 the first year, then D6,500 a year.',
-      'What the vehicle is used for sets the price, not who owns it. A rental car on a personal account is charged the company rate.',
-      'The first year covers the device and the installation. Renewals keep the tracking running.',
-    ],
-  },
-  {
     id: 'demo', name: 'Demoing to a customer',
     what: 'A temporary link that opens the real app with demo vehicles, for showing a customer.',
     points: [
@@ -112,6 +105,53 @@ const LESSONS = [
     ],
   },
 ]
+
+const PRICES = [
+  { use: 'Private car', first: 'D5,500', renew: 'D4,500' },
+  { use: 'Taxi, passenger transport, delivery', first: 'D6,500', renew: 'D5,500' },
+  { use: 'Company, rental, logistics', first: 'D7,500', renew: 'D6,500' },
+]
+
+const PRICE_NOTES = [
+  'What the vehicle is used for sets the price, not who owns it. A rental car on a personal account is charged the company rate.',
+  'The first year covers the device and the installation. Renewals keep the tracking running.',
+]
+
+function PriceList() {
+  return (
+    <Card className="p-5 sm:p-6">
+      <div className="-mx-1 overflow-x-auto">
+        <table className="w-full min-w-[420px] border-collapse text-sm">
+          <thead>
+            <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink-faint)]">
+              <th className="pb-2 pr-4 font-bold">What the vehicle is used for</th>
+              <th className="pb-2 pr-4 font-bold">First year</th>
+              <th className="pb-2 font-bold">Every year after</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--color-line-soft)]">
+            {PRICES.map((p) => (
+              <tr key={p.use}>
+                <td className="py-3 pr-4 text-[var(--color-ink-soft)]">{p.use}</td>
+                <td className="py-3 pr-4 font-extrabold text-[var(--color-ink)]">{p.first}</td>
+                <td className="py-3 font-extrabold text-[var(--color-ink)]">{p.renew}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <ul className="mt-5 space-y-1.5 border-t border-[var(--color-line-soft)] pt-4">
+        {PRICE_NOTES.map((n, i) => (
+          <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-[var(--color-ink-soft)]">
+            <span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-[var(--color-ink-faint)]" />
+            <span>{n}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
 
 function Lesson({ n, l, learned, onToggle }) {
   return (
@@ -146,6 +186,7 @@ function Lesson({ n, l, learned, onToggle }) {
 }
 
 export default function TrackerGuide() {
+  const [tab, setTab] = useState('lessons')
   const [learned, setLearned] = useState(readLearned)
   const toggle = (id) => setLearned((prev) => {
     const next = new Set(prev)
@@ -159,16 +200,35 @@ export default function TrackerGuide() {
     <div className="mx-auto max-w-3xl space-y-5">
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)] md:text-3xl">Tracker Guide</h1>
-        <p className="mt-1 text-[var(--color-ink-faint)]">{LESSONS.length} short lessons. Learn them and you can sell the tracker.</p>
-        <div className="mt-3 flex items-center gap-3">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--color-line-soft)]">
-            <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${(done / LESSONS.length) * 100}%` }} />
-          </div>
-          <span className="shrink-0 text-xs font-bold text-[var(--color-ink-soft)]">{done} of {LESSONS.length} learned</span>
+        <p className="mt-1 text-[var(--color-ink-faint)]">
+          {tab === 'lessons'
+            ? `${LESSONS.length} short lessons. Learn them and you can sell the tracker.`
+            : 'What a customer pays for the first year, and every year after.'}
+        </p>
+
+        <div className="mt-3 flex w-fit gap-1 rounded-full bg-gray-100 p-1">
+          {[{ id: 'lessons', label: 'Lessons' }, { id: 'price', label: 'Price list' }].map((tb) => (
+            <button
+              key={tb.id}
+              onClick={() => setTab(tb.id)}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${tab === tb.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {tb.label}
+            </button>
+          ))}
         </div>
+
+        {tab === 'lessons' && (
+          <div className="mt-3 flex items-center gap-3">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--color-line-soft)]">
+              <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${(done / LESSONS.length) * 100}%` }} />
+            </div>
+            <span className="shrink-0 text-xs font-bold text-[var(--color-ink-soft)]">{done} of {LESSONS.length} learned</span>
+          </div>
+        )}
       </div>
 
-      {LESSONS.map((l, i) => (
+      {tab === 'price' ? <PriceList /> : LESSONS.map((l, i) => (
         <Lesson key={l.id} n={i + 1} l={l} learned={learned.has(l.id)} onToggle={() => toggle(l.id)} />
       ))}
     </div>
