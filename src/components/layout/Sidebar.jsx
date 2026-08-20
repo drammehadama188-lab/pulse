@@ -99,18 +99,18 @@ export function Sidebar() {
 
       {/* Open Admin SSO button removed 12 Jun 2026 at Adama's request — Pulse is HR-only now. */}
 
-      <div className="mt-4 flex items-center gap-3 rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
-        <Avatar name={user?.name} size={38} />
+      <div className="mt-4 flex items-center gap-2.5 rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-2.5">
+        <Avatar name={user?.name} size={32} />
         <div className="min-w-0 flex-1 leading-tight">
-          <div className="truncate text-[13.5px] font-semibold text-[var(--color-ink)]">{user?.name}</div>
-          <div className="t-support truncate">{user?.title}</div>
+          <div className="truncate text-[13px] font-semibold text-[var(--color-ink)]">{user?.name}</div>
+          <div className="truncate text-[11.5px] text-[var(--color-ink-faint)]">{user?.title}</div>
         </div>
         <button
           onClick={logout}
           title="Log out"
-          className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-fill)] hover:text-[var(--color-ink)] focus-ring"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-fill)] hover:text-[var(--color-ink)] focus-ring"
         >
-          <LogOut size={18} />
+          <LogOut size={15} />
         </button>
       </div>
     </aside>

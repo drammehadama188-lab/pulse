@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Circle, Download, Phone, ThumbsUp, ThumbsDown, HelpCircle, Trash2 } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
-import { CARD, BTN_DARK, dayTime, toLocalInput, scoreTone, scoreWord, RECOMMENDATION } from './ui.jsx';
+import { CARD, BTN_PRIMARY, dayTime, toLocalInput, scoreTone, scoreWord, RECOMMENDATION } from './ui.jsx';
 
 // The interview room: the questions on the left, the CV beside them, one score
 // per answer, one recommendation at the end.
@@ -88,7 +88,7 @@ export default function InterviewRoom() {
         <div className="flex items-center gap-2">
           {savedAt && <span className="text-xs text-[var(--color-ink-faint)]">Saved {savedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>}
           <button onClick={removeInterview} className="p-2 rounded-lg text-[var(--color-ink-faint)] hover:text-[var(--color-stage-out)] hover:bg-[var(--color-stage-out-bg)]" title="Delete interview"><Trash2 size={16} /></button>
-          {!done && <button onClick={complete} disabled={busy} className={`${BTN_DARK} disabled:opacity-50`}><Check size={16} /> Complete interview</button>}
+          {!done && <button onClick={complete} disabled={busy} className={`${BTN_PRIMARY} disabled:opacity-50`}><Check size={16} /> Complete interview</button>}
         </div>
       </div>
 
@@ -178,7 +178,7 @@ export default function InterviewRoom() {
         <div className="space-y-4">
           <div className={`${CARD} p-4`}>
             <div className="flex items-center justify-between gap-2 mb-3">
-              <h3 className="text-sm font-bold text-[var(--color-ink)]">CV</h3>
+              <h3 className="t-card text-[var(--color-ink)]">CV</h3>
               {cvUrl && <a href={`${cvUrl}&download=1`} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]" title="Download"><Download size={15} /></a>}
             </div>
             {cvUrl ? (
@@ -193,19 +193,19 @@ export default function InterviewRoom() {
           </div>
 
           <div className={`${CARD} p-4`}>
-            <h3 className="text-sm font-bold text-[var(--color-ink)] mb-3">Section scores</h3>
+            <h3 className="t-card text-[var(--color-ink)] mb-3">Section scores</h3>
             <div className="space-y-2">
               {iv.sectionScores?.map(s => (
                 <div key={s.id} className="flex items-center justify-between gap-2">
                   <span className="text-xs text-[var(--color-ink-soft)] truncate">{s.title}</span>
-                  <span className="text-sm font-bold text-[var(--color-ink)]">{s.score == null ? <span className="text-[var(--color-ink-faint)]">—</span> : `${s.score}/5`}</span>
+                  <span className="t-card text-[var(--color-ink)]">{s.score == null ? <span className="text-[var(--color-ink-faint)]">—</span> : `${s.score}/5`}</span>
                 </div>
               ))}
             </div>
           </div>
 
           <div className={`${CARD} p-4`}>
-            <h3 className="text-sm font-bold text-[var(--color-ink)] mb-3">Recommendation</h3>
+            <h3 className="t-card text-[var(--color-ink)] mb-3">Recommendation</h3>
             <div className="grid grid-cols-2 gap-2">
               {RECS.map(([k, label, Icon]) => (
                 <button key={k} disabled={done} onClick={() => patch({ recommendation: k })}

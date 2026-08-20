@@ -154,7 +154,7 @@ export default function Dashboard() {
       offerDelta: enteredSince(applicants, 'offer', from),
       rejectDelta: enteredSince(applicants, 'rejected', from),
       sources, upcoming,
-      events: events.filter(e => e.at).sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 5),
+      events: events.filter(e => e.at).sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 4),
       openPositions: positions.filter(p => p.status === 'open'),
       rates: {
         applications: total,
@@ -196,11 +196,11 @@ export default function Dashboard() {
           <p className="t-support mt-1">Overview of your hiring pipeline and recruitment performance.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
+          <RangePicker value={range} onChange={setRange} />
           <button type="button" onClick={exportReport} className={BTN_LIGHT}><Download size={16} /> Export report</button>
           <Link to="/recruitment/positions?new=1" className={BTN_PRIMARY}><Plus size={16} /> Create position</Link>
         </div>
       </div>
-      <div className="mb-5 flex justify-end"><RangePicker value={range} onChange={setRange} /></div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
         <Kpi icon={Users} label="Total applicants" value={m.total} delta={m.newDelta} deltaLabel={rangeLabel}
@@ -216,7 +216,7 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
-        <div className={`${CARD} p-6`}>
+        <div className={`${CARD} p-5`}>
           <CardHead title="Hiring pipeline" action={
             <Link to="/recruitment/applicants?stage=all" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
               View full pipeline <ArrowRight size={14} />
@@ -248,14 +248,14 @@ export default function Dashboard() {
                 <span className="flex h-5 w-5 items-center justify-center rounded-[6px] bg-[var(--color-fill)] text-[var(--color-ink-faint)]">
                   <XCircle size={11} strokeWidth={2.4} />
                 </span>
-                <span className="text-[12px] font-medium text-[var(--color-ink-soft)] group-hover:text-[var(--color-ink)]">Left the pipeline</span>
+                <span className="text-[12px] font-medium text-[var(--color-ink-soft)] group-hover:text-[var(--color-ink)]">Exited</span>
               </span>
               <span className="mt-1.5 block text-[22px] font-semibold leading-none text-[var(--color-ink-faint)]">{m.dropped}</span>
-              <span className="mt-2 block h-[3px] rounded-full bg-[var(--color-ink-faint)]" style={{ opacity: m.dropped ? 0.5 : 0.2 }} />
+              <span className="mt-2 block h-[3px] rounded-full bg-[var(--color-line)]" />
             </button>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-3 rounded-[10px] bg-[var(--color-fill)] px-4 py-3.5">
+          <div className="mt-5 flex flex-wrap items-center gap-x-7 gap-y-3 border-t border-[var(--color-line-soft)] pt-4">
             <div>
               <div className="text-[12px] font-medium text-[var(--color-ink-soft)]">Drop-off rate</div>
               <div className="mt-1 text-[22px] font-semibold leading-none text-[var(--color-ink)]">{m.dropRate}%</div>
@@ -273,7 +273,7 @@ export default function Dashboard() {
 
         <div className={`${CARD} flex flex-col p-5`}>
           <CardHead title="Applicants by source" />
-          <div className="flex flex-1 flex-wrap items-center gap-5">
+          <div className="flex flex-1 flex-wrap items-center justify-center gap-5">
             <Donut total={m.total} size={m.sources.length > 1 ? 132 : 96} thickness={m.sources.length > 1 ? 16 : 12}
               slices={m.sources.map(([, v], i) => ({ value: v, color: SOURCE_COLORS[i % SOURCE_COLORS.length] }))} />
             <div className="min-w-[140px] flex-1 space-y-2">

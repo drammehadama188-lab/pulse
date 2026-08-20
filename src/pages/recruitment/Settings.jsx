@@ -29,7 +29,7 @@ export default function Settings() {
       <PageHead title="Settings" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className={`${CARD} p-5 space-y-4`}>
-          <h3 className="text-sm font-bold text-[var(--color-ink)]">New interviews</h3>
+          <h3 className="t-card text-[var(--color-ink)]">New interviews</h3>
           <label className="block">
             <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Questions</span>
             <select value={settings.defaultTemplateId || ''} onChange={e => save({ defaultTemplateId: e.target.value })}
@@ -51,7 +51,7 @@ export default function Settings() {
         </div>
 
         <div className={`${CARD} p-5`}>
-          <h3 className="text-sm font-bold text-[var(--color-ink)] mb-4">Stages</h3>
+          <h3 className="t-card text-[var(--color-ink)] mb-4">Stages</h3>
           <ol className="space-y-2">
             {STAGES.map(([k, label, , dot], i) => (
               <li key={k} className="flex items-center gap-3">

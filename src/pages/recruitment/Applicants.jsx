@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, Trash2, Mail, Phone, X, Upload, ClipboardPaste, ChevronDown, ChevronRight, FileText, ClipboardCheck } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { STAGES, DROPPED } from './stages.js';
-import { CARD, BTN_LIGHT, BTN_DARK, shortDate, fullDate } from './ui.jsx';
+import { CARD, BTN_LIGHT, BTN_PRIMARY, PageHead, shortDate, fullDate } from './ui.jsx';
 
 // Recruitment — applicants pipeline (CV received → interviewed → hired/rejected).
 // New HR module (24 Jun 2026, Adama). All real data via /api/applicants.
@@ -140,33 +140,29 @@ export default function Applicants() {
     });
   }, [applicants, stageFilter, positionFilter, positions, startOnly, query, sort]);
 
-  const chip = 'px-3 py-1.5 rounded-lg text-xs font-medium border';
-  const chipOn = 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]';
-  const chipOff = 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:bg-[var(--color-fill)]';
+  const chip = 'rounded-[8px] border px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors';
+  const chipOn = 'bg-[var(--color-brand-50)] text-[var(--color-brand)] border-[var(--color-brand-100)]';
+  const chipOff = 'bg-[var(--color-surface)] text-[var(--color-ink-soft)] border-[var(--color-line)] hover:bg-[var(--color-fill)]';
+  const field = 'rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-2 text-[12.5px] text-[var(--color-ink-soft)]';
 
   return (
     <div>
-      <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-[27px] font-bold text-[var(--color-ink)]">Applicants<span className="ml-2 text-lg font-semibold text-[var(--color-ink-faint)]">{applicants.length || ''}</span></h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* A label opens the picker itself. Scripting a click on a hidden
-              input looked like a working button and did nothing (19 Aug). */}
-          {/* No accept filter: it greyed out the very file being imported, so
-              the picker opened and nothing could be chosen (19 Aug). */}
-          <label className={`${BTN_LIGHT} cursor-pointer`}>
-            <Upload size={16} /> Import list
-            <input ref={fileRef} type="file" className="sr-only" onChange={e => importFile(e.target.files?.[0])} />
-          </label>
-          <button onClick={() => { setPasted(''); setImportError(null); setPasting(true); }} className={BTN_LIGHT}>
-            <ClipboardPaste size={16} /> Paste rows
-          </button>
-          <button onClick={() => { setForm(BLANK); setOtherSource(false); setAdding(true); }} className={BTN_DARK}>
-            <Plus size={16} /> Add applicant
-          </button>
-        </div>
-      </div>
+      <PageHead title="Applicants" count={applicants.length || null}>
+        {/* A label opens the picker itself. Scripting a click on a hidden
+            input looked like a working button and did nothing (19 Aug). */}
+        {/* No accept filter: it greyed out the very file being imported, so
+            the picker opened and nothing could be chosen (19 Aug). */}
+        <label className={`${BTN_LIGHT} cursor-pointer`}>
+          <Upload size={16} /> Import list
+          <input ref={fileRef} type="file" className="sr-only" onChange={e => importFile(e.target.files?.[0])} />
+        </label>
+        <button onClick={() => { setPasted(''); setImportError(null); setPasting(true); }} className={BTN_LIGHT}>
+          <ClipboardPaste size={16} /> Paste rows
+        </button>
+        <button onClick={() => { setForm(BLANK); setOtherSource(false); setAdding(true); }} className={BTN_PRIMARY}>
+          <Plus size={16} /> Add applicant
+        </button>
+      </PageHead>
 
       {(importing || importResult || importError) && (
         <div className="mb-5 rounded-xl border border-[var(--color-line)] bg-white p-4">
@@ -203,14 +199,14 @@ export default function Applicants() {
         )}
         <span className="flex-1" />
         <button onClick={() => setStartOnly(v => !v)} className={`${chip} ${startOnly ? chipOn : chipOff}`}>Can start now</button>
-        <select value={sort} onChange={e => setSort(e.target.value)} className="text-xs border border-[var(--color-line)] rounded-lg px-2 py-2 bg-white text-[var(--color-ink-soft)]">
+        <select value={sort} onChange={e => setSort(e.target.value)} className={field}>
           {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <select value={view} onChange={e => setView(e.target.value)} className="text-xs border border-[var(--color-line)] rounded-lg px-2 py-2 bg-white text-[var(--color-ink-soft)]">
+        <select value={view} onChange={e => setView(e.target.value)} className={field}>
           <option value="list">List</option>
           <option value="board">Board</option>
         </select>
-        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search name, phone…" className="text-sm border border-[var(--color-line)] rounded-lg px-3 py-2 bg-white w-56" />
+        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search name, phone…" className={`${field} w-56`} />
       </div>
 
       {loading ? (
@@ -221,15 +217,15 @@ export default function Applicants() {
         <div className={`${CARD} overflow-x-auto`}>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
-                <th className="px-4 py-3 font-bold">Name</th>
-                <th className="px-4 py-3 font-bold">Phone</th>
-                <th className="px-4 py-3 font-bold">Can start</th>
-                <th className="px-4 py-3 font-bold">Has sold</th>
-                <th className="px-4 py-3 font-bold">Added</th>
-                <th className="px-4 py-3 font-bold">Notes</th>
-                <th className="px-4 py-3 font-bold">Stage</th>
-                <th className="px-4 py-3" />
+              <tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
+                <th className="px-4 py-2.5 font-semibold">Name</th>
+                <th className="px-4 py-2.5 font-semibold">Phone</th>
+                <th className="px-4 py-2.5 font-semibold">Can start</th>
+                <th className="px-4 py-2.5 font-semibold">Has sold</th>
+                <th className="px-4 py-2.5 font-semibold">Added</th>
+                <th className="px-4 py-2.5 font-semibold">Notes</th>
+                <th className="px-4 py-2.5 font-semibold">Stage</th>
+                <th className="px-4 py-2.5" />
               </tr>
             </thead>
             <tbody>
@@ -292,7 +288,7 @@ export default function Applicants() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !importing && setPasting(false)}>
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[var(--color-ink)]">Paste rows</h3>
+              <h3 className="t-card text-[var(--color-ink)]">Paste rows</h3>
               <button onClick={() => setPasting(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
             <textarea value={pasted} onChange={e => setPasted(e.target.value)} rows={12} autoFocus
@@ -302,7 +298,7 @@ export default function Applicants() {
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setPasting(false)} disabled={!!importing} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
               <button onClick={() => importText(pasted, 'Pasted rows')} disabled={!!importing || pasted.trim().split('\n').length < 2}
-                className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-ink)] text-white hover:opacity-90 disabled:opacity-50">{importing ? 'Importing…' : 'Import'}</button>
+                className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{importing ? 'Importing…' : 'Import'}</button>
             </div>
           </div>
         </div>
@@ -312,7 +308,7 @@ export default function Applicants() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setAdding(false)}>
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[var(--color-ink)]">Add applicant</h3>
+              <h3 className="t-card text-[var(--color-ink)]">Add applicant</h3>
               <button onClick={() => setAdding(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
             <div className="space-y-3">
@@ -357,7 +353,7 @@ export default function Applicants() {
             </div>
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => setAdding(false)} disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-              <button onClick={addApplicant} disabled={saving || !form.name.trim()} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-ink)] text-white hover:opacity-90 disabled:opacity-50">{saving ? 'Adding…' : 'Add'}</button>
+              <button onClick={addApplicant} disabled={saving || !form.name.trim()} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Adding…' : 'Add'}</button>
             </div>
           </div>
         </div>
@@ -383,47 +379,47 @@ function RowGroup({ a, open, positions, onToggle, onStage, onNotes, onRemove, on
   return (
     <>
       <tr className="border-b border-[var(--color-line-soft)] hover:bg-[var(--color-fill)]">
-        <td className="px-4 py-3 align-top">
+        <td className="px-4 py-2.5 align-top">
           <span className="flex items-center gap-1.5">
             <button onClick={onToggle} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]">
               {open ? <ChevronDown size={14} className="text-[var(--color-ink-faint)]" /> : <ChevronRight size={14} />}
             </button>
-            <Link to={`/recruitment/applicants/${a.id}`} className="font-medium text-[var(--color-ink)] hover:underline">{a.name}</Link>
+            <Link to={`/recruitment/applicants/${a.id}`} className="text-[13.5px] font-semibold text-[var(--color-ink)] hover:underline">{a.name}</Link>
             {a.cv && <FileText size={13} className="text-[var(--color-ink-faint)]" title="CV on file" />}
           </span>
         </td>
-        <td className="px-4 py-3 align-top">
+        <td className="px-4 py-2.5 align-top">
           {a.phoneValid === false
             ? <span className="text-[var(--color-stage-out)] text-xs">No usable number</span>
             : <a href={`tel:${String(a.phone || '').replace(/\s/g, '')}`} className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">{a.phone || '—'}</a>}
         </td>
-        <td className="px-4 py-3 align-top">
+        <td className="px-4 py-2.5 align-top">
           {a.startNow === true ? <span className="px-2 py-0.5 rounded-md bg-[var(--color-stage-hired-bg)] text-[var(--color-stage-hired)] text-xs font-medium">Yes</span>
             : a.startNow === false ? <span className="px-2 py-0.5 rounded-md bg-[var(--color-fill)] text-[var(--color-ink-soft)] text-xs">No</span>
               : <span className="text-[var(--color-ink-faint)] text-xs">—</span>}
         </td>
         {/* Shown whole, not clipped: this answer is what the decision is made
             on, and clipping it meant opening every row to read one sentence. */}
-        <td className="px-4 py-3 align-top max-w-lg">
+        <td className="px-4 py-2.5 align-top max-w-lg">
           <span className="text-[var(--color-ink-soft)] text-xs whitespace-pre-wrap break-words">{a.experience || '—'}</span>
         </td>
-        <td className="px-4 py-3 align-top whitespace-nowrap">
+        <td className="px-4 py-2.5 align-top whitespace-nowrap">
           <span className="text-[var(--color-ink-soft)] text-xs">{shortDate(a.createdAt)}</span>
         </td>
         {/* Note is written here, in the row, so a called applicant looks
             different from one nobody has touched. Saves when you click away. */}
-        <td className="px-4 py-3 align-top">
+        <td className="px-4 py-2.5 align-top">
           <textarea ref={noteBox} value={note} rows={2} placeholder="Add a note"
             onChange={e => setNote(e.target.value)}
             onBlur={() => note !== (a.notes || '') && onNotes(a, note)}
             className="w-52 min-h-[2.75rem] overflow-hidden text-xs text-[var(--color-ink-soft)] rounded-lg px-2 py-1.5 bg-transparent border border-transparent hover:border-[var(--color-line)] focus:bg-white focus:border-[var(--color-line)] focus:outline-none resize-none placeholder:text-[var(--color-ink-faint)]" />
         </td>
-        <td className="px-4 py-3 align-top">
+        <td className="px-4 py-2.5 align-top">
           <select value={a.stage} onChange={e => onStage(a, e.target.value)} className="text-xs border border-[var(--color-line)] rounded-lg px-2 py-1.5 bg-white">
             {STAGES.map(([sk, sl]) => <option key={sk} value={sk}>{sl}</option>)}
           </select>
         </td>
-        <td className="px-4 py-3 text-right align-top">
+        <td className="px-4 py-2.5 text-right align-top">
           <button onClick={() => onRemove(a)} title="Remove" className="p-1 rounded text-[var(--color-ink-faint)] hover:text-[var(--color-stage-out)] hover:bg-[var(--color-stage-out-bg)]"><Trash2 size={14} /></button>
         </td>
       </tr>

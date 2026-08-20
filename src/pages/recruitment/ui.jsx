@@ -66,7 +66,6 @@ export const scoreWord = (n) =>
 export const CARD = 'card';
 export const BTN = 'inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-[13.5px] font-semibold transition-colors';
 export const BTN_LIGHT = `${BTN} bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] hover:bg-[var(--color-fill)]`;
-export const BTN_DARK = `${BTN} bg-[var(--color-ink)] text-white hover:opacity-90`;
 export const BTN_PRIMARY = `${BTN} bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)]`;
 export const INPUT = 'w-full rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-[13.5px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-faint)] focus:border-[var(--color-ink-faint)] focus:outline-none';
 
@@ -226,5 +225,5 @@ export function FeedRow({ icon: Icon, tint, ink, title, line, meta, to, as: Tag 
 // Empty state that keeps a card the same height as its neighbours instead of
 // collapsing into a tall white nothing.
 export function Empty({ children }) {
-  return <p className="t-support py-6">{children}</p>;
+  return <p className="py-6 text-[13px] leading-relaxed text-[var(--color-ink-soft)]">{children}</p>;
 }

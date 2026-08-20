@@ -12,7 +12,7 @@ const pct = (n, of) => (of > 0 ? `${Math.round((n / of) * 100)}%` : '—');
 function Table({ title, question, head, rows, empty }) {
   return (
     <div className={`${CARD} p-5`}>
-      <h3 className="text-sm font-bold text-[var(--color-ink)]">{title}</h3>
+      <h3 className="t-card text-[var(--color-ink)]">{title}</h3>
       <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">{question}</p>
       {rows.length === 0 ? <p className="mt-4 text-sm text-[var(--color-ink-faint)]">{empty}</p> : (
         <div className="mt-4 overflow-x-auto">

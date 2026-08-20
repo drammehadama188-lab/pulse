@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import { api } from '../../lib/api.js';
-import { CARD, BTN_DARK, PageHead, dayTime, scoreTone, scoreWord, RECOMMENDATION } from './ui.jsx';
+import { CARD, BTN_PRIMARY, PageHead, dayTime, scoreTone, scoreWord, RECOMMENDATION } from './ui.jsx';
 
 // Every interview booked or scored. The list is the record — a completed
 // interview keeps its own copy of the questions it asked, so it stays readable
@@ -78,7 +78,7 @@ export default function Interviews() {
   return (
     <div>
       <PageHead title="Interviews" count={interviews.length || null}>
-        <button onClick={() => { setError(null); setBooking(true); }} className={BTN_DARK}><Plus size={16} /> Book interview</button>
+        <button onClick={() => { setError(null); setBooking(true); }} className={BTN_PRIMARY}><Plus size={16} /> Book interview</button>
       </PageHead>
 
       <div className="mb-4 flex items-center gap-2 flex-wrap">
@@ -141,7 +141,7 @@ export default function Interviews() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setBooking(false)}>
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[var(--color-ink)]">Book interview</h3>
+              <h3 className="t-card text-[var(--color-ink)]">Book interview</h3>
               <button onClick={() => setBooking(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
             <div className="space-y-3">
@@ -175,7 +175,7 @@ export default function Interviews() {
             {error && <p className="mt-3 text-sm text-[var(--color-stage-out)]">{error}</p>}
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => setBooking(false)} disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-              <button onClick={book} disabled={saving || !pick.applicantId} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-ink)] text-white hover:opacity-90 disabled:opacity-50">{saving ? 'Booking…' : 'Book'}</button>
+              <button onClick={book} disabled={saving || !pick.applicantId} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Booking…' : 'Book'}</button>
             </div>
           </div>
         </div>

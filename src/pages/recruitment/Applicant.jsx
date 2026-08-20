@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Phone, Mail, Upload, Download, ClipboardCheck } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
 import { STAGES } from './stages.js';
-import { CARD, BTN_LIGHT, BTN_DARK, fullDate, dayTime, StageChip, scoreTone, scoreWord } from './ui.jsx';
+import { CARD, BTN_LIGHT, BTN_PRIMARY, fullDate, dayTime, StageChip, scoreTone, scoreWord } from './ui.jsx';
 
 // One applicant, everything about them in one place: what they answered, their
 // CV, every interview they sat, and how they moved through the stages.
@@ -129,7 +129,7 @@ export default function Applicant() {
               className="text-sm border border-[var(--color-line)] rounded-xl px-3 py-2.5 bg-white">
               {STAGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
-            <button onClick={() => startInterview(templates.find(t => t.isDefault)?.id)} disabled={starting || !templates.length} className={`${BTN_DARK} disabled:opacity-50`}>
+            <button onClick={() => startInterview(templates.find(t => t.isDefault)?.id)} disabled={starting || !templates.length} className={`${BTN_PRIMARY} disabled:opacity-50`}>
               <ClipboardCheck size={16} /> {starting ? 'Starting…' : 'Start interview'}
             </button>
           </div>
@@ -150,7 +150,7 @@ export default function Applicant() {
       {tab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className={`${CARD} lg:col-span-2 p-5`}>
-            <h3 className="text-sm font-bold text-[var(--color-ink)] mb-4">What they answered</h3>
+            <h3 className="t-card text-[var(--color-ink)] mb-4">What they answered</h3>
             {answers.length === 0 && <p className="text-sm text-[var(--color-ink-faint)]">Nothing on this record. It was added by hand, not imported from a form.</p>}
             <div className="space-y-4">
               {answers.map(([q, v]) => (
@@ -162,7 +162,7 @@ export default function Applicant() {
             </div>
           </div>
           <div className={`${CARD} p-5 space-y-4`}>
-            <h3 className="text-sm font-bold text-[var(--color-ink)]">Summary</h3>
+            <h3 className="t-card text-[var(--color-ink)]">Summary</h3>
             <Detail label="Can start now" value={a.startNow === true ? 'Yes' : a.startNow === false ? 'No' : ''} />
             <Detail label="Applied" value={fullDate(a.appliedAt)} />
             <Detail label="Added" value={fullDate(a.createdAt)} />
@@ -184,7 +184,7 @@ export default function Applicant() {
         <div className={`${CARD} p-5`}>
           <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
             <div>
-              <h3 className="text-sm font-bold text-[var(--color-ink)]">{a.cv ? a.cv.name : 'No CV on file'}</h3>
+              <h3 className="t-card text-[var(--color-ink)]">{a.cv ? a.cv.name : 'No CV on file'}</h3>
               {a.cv && <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">{Math.round(a.cv.sizeBytes / 1024)} KB · added {fullDate(a.cv.uploadedAt)} by {a.cv.uploadedBy}</p>}
             </div>
             <div className="flex items-center gap-2">

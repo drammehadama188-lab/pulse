@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, Star, Copy, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '../../lib/api.js';
-import { CARD, BTN_DARK, BTN_LIGHT, PageHead } from './ui.jsx';
+import { CARD, BTN_PRIMARY, BTN_LIGHT, PageHead } from './ui.jsx';
 
 // The question sets an interview runs on. Damia's own sales questions ship as
 // the starting set and every word of them is editable — a generic HR form
@@ -62,7 +62,7 @@ export default function Templates() {
   return (
     <div>
       <PageHead title="Templates" count={templates.length || null}>
-        <button onClick={blank} className={BTN_DARK}><Plus size={16} /> New set</button>
+        <button onClick={blank} className={BTN_PRIMARY}><Plus size={16} /> New set</button>
       </PageHead>
 
       {error && <p className="mb-4 text-sm text-[var(--color-stage-out)]">{error}</p>}
@@ -108,7 +108,7 @@ export default function Templates() {
                       <div key={s.id || si} className="rounded-xl border border-[var(--color-line)] p-4">
                         <div className="flex items-center gap-2">
                           <input value={s.title} onChange={e => upd(d => { d.sections[si].title = e.target.value; })}
-                            className="flex-1 border-0 border-b border-transparent hover:border-[var(--color-line)] focus:border-[var(--color-ink-faint)] focus:outline-none text-sm font-bold text-[var(--color-ink)] px-0 py-1" />
+                            className="flex-1 border-0 border-b border-transparent hover:border-[var(--color-line)] focus:border-[var(--color-ink-faint)] focus:outline-none t-card text-[var(--color-ink)] px-0 py-1" />
                           <button onClick={() => upd(d => { d.sections.splice(si, 1); })} className="p-1.5 rounded-lg text-[var(--color-ink-faint)] hover:text-[var(--color-stage-out)] hover:bg-[var(--color-stage-out-bg)]"><Trash2 size={14} /></button>
                         </div>
                         <div className="mt-3 space-y-2">
@@ -129,7 +129,7 @@ export default function Templates() {
                       <button onClick={() => upd(d => { d.sections.push({ title: 'New section', questions: [{ text: '' }] }); })} className={BTN_LIGHT}>+ Section</button>
                       <div className="flex items-center gap-2">
                         <button onClick={() => { setDraft(null); setOpenId(null); }} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-                        <button onClick={save} disabled={saving} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-ink)] text-white hover:opacity-90 disabled:opacity-50">{saving ? 'Saving…' : 'Save set'}</button>
+                        <button onClick={save} disabled={saving} className="px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Saving…' : 'Save set'}</button>
                       </div>
                     </div>
                   </div>
