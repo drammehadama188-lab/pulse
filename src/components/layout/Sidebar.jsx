@@ -24,16 +24,17 @@ function NavRow({ item, soon = false }) {
       to={item.to}
       end={item.end || item.to === '/'}
       className={({ isActive }) =>
-        `group flex items-center gap-3 rounded-[8px] px-3.5 py-2.5 text-[13.5px] font-semibold transition-colors ${
+        `group flex items-center gap-3 rounded-[8px] px-3.5 py-2.5 text-[13.5px] transition-colors ${
           isActive
-            ? 'bg-[var(--color-sidebar-active)] text-[var(--color-sidebar-ink-active)]'
-            : 'text-[var(--color-sidebar-ink)] hover:bg-[var(--color-fill)] hover:text-[var(--color-ink)]'
+            ? 'bg-[var(--color-sidebar-active)] font-semibold text-[var(--color-sidebar-ink-active)]'
+            : 'font-medium text-[var(--color-sidebar-ink)] hover:bg-white/5 hover:text-white'
         }`
       }
     >
       {({ isActive }) => (
         <>
-          <item.icon size={20} strokeWidth={isActive ? 2.4 : 2} className="shrink-0" />
+          <item.icon size={19} strokeWidth={isActive ? 2.2 : 1.9} className="shrink-0"
+            style={{ color: isActive ? 'var(--color-sidebar-icon)' : undefined }} />
           <span className="flex-1">{item.label}</span>
           {soon && (
             <span className="rounded-full bg-[var(--color-fill)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
@@ -99,16 +100,16 @@ export function Sidebar() {
 
       {/* Open Admin SSO button removed 12 Jun 2026 at Adama's request — Pulse is HR-only now. */}
 
-      <div className="mt-4 flex items-center gap-2.5 rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-2.5">
+      <div className="mt-4 flex items-center gap-2.5 rounded-[8px] border border-[var(--color-sidebar-edge)] bg-[var(--color-sidebar-tile)] px-2.5 py-2.5">
         <Avatar name={user?.name} size={32} />
         <div className="min-w-0 flex-1 leading-tight">
-          <div className="truncate text-[13px] font-semibold text-[var(--color-ink)]">{user?.name}</div>
-          <div className="truncate text-[11.5px] text-[var(--color-ink-faint)]">{user?.title}</div>
+          <div className="truncate text-[13px] font-semibold text-white">{user?.name}</div>
+          <div className="truncate text-[11.5px] text-[var(--color-sidebar-ink-faint)]">{user?.title}</div>
         </div>
         <button
           onClick={logout}
           title="Log out"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-[var(--color-ink-faint)] transition-colors hover:bg-[var(--color-fill)] hover:text-[var(--color-ink)] focus-ring"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-[var(--color-sidebar-ink-faint)] transition-colors hover:bg-white/10 hover:text-white focus-ring"
         >
           <LogOut size={15} />
         </button>

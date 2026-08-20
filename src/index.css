@@ -23,13 +23,19 @@
   --color-mint-tile: #dbe7fe;
   --color-mint-deep: #1d4ed8;
 
-  /* Sidebar is white now, separated by the same hairline as every card. The
-     active row is a soft blue pill, not a block of colour. */
-  --color-sidebar: #ffffff;
-  --color-sidebar-edge: #e1e5ee;
-  --color-sidebar-ink: #5b6472;
-  --color-sidebar-ink-active: #2563eb;
-  --color-sidebar-active: #eff5ff;
+  /* The rail is dark again (Adama, 20 Aug: the white one was "high and
+     boring"), lifted from admin's Midnight Slate so the two products feel
+     like one company. Near-black navy ground, neutral slate hairlines, the
+     active row a blue wash with a blue icon. Content stays light. */
+  --color-sidebar: #0c1424;
+  --color-sidebar-2: #0a101e;
+  --color-sidebar-edge: rgba(148, 163, 184, 0.15);
+  --color-sidebar-ink: rgba(163, 180, 204, 0.8);
+  --color-sidebar-ink-faint: rgba(155, 172, 196, 0.5);
+  --color-sidebar-ink-active: #ffffff;
+  --color-sidebar-active: rgba(59, 130, 246, 0.18);
+  --color-sidebar-icon: #3b82f6;
+  --color-sidebar-tile: rgba(255, 255, 255, 0.045);
 
   /* Neutral surfaces — clean white + cool grey (founder-style, no green) */
   --color-paper: #f2f4f8;
