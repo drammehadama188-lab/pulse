@@ -39,7 +39,7 @@ import StaffMember from './pages/StaffMember.jsx'
 import DepartmentShell from './pages/departments/DepartmentShell.jsx'
 import Policies from './pages/departments/Policies.jsx'
 import MyDocuments from './pages/MyDocuments.jsx'
-import { Target, Gift, BookOpen, FolderOpen } from 'lucide-react'
+import { Target, BookOpen, FolderOpen } from 'lucide-react'
 
 function FullScreenLoader() {
   return (
@@ -121,7 +121,8 @@ export default function App() {
         <Route path="/records" element={<RequireAuth power="hr"><HRTeam only={['warnings']} title="Employee Records" subtitle="Warnings, disciplinary actions and notes" /></RequireAuth>} />
         {/* PAYROLL */}
         <Route path="/payroll" element={<RequireAuth power="payroll"><HRTeam only={['payroll']} title="Payroll" subtitle="Salaries, commission and payroll history" /></RequireAuth>} />
-        <Route path="/benefits" element={<RequireAuth power="payroll"><DepartmentShell icon={Gift} title="Benefits" subtitle="Payroll" blurb="Allowances, bonuses and staff benefits. Being set up — coming online here soon." /></RequireAuth>} />
+        {/* /benefits was a "coming soon" shell; benefits live on the Pay page. Kept as a redirect so old links still land somewhere real. */}
+        <Route path="/benefits" element={<Navigate to="/pay" replace />} />
         {/* COMPANY */}
         <Route path="/policies" element={<Policies />} />
         <Route path="/tracker-guide" element={<TrackerGuide />} />

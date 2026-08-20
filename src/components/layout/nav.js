@@ -49,7 +49,10 @@ export const NAV = [
 
   // PAYROLL
   { id: 'payroll', to: '/payroll', label: 'Payroll', icon: Wallet, group: 'Payroll', show: (u) => has(u, 'payroll') },
-  { id: 'benefits', to: '/benefits', label: 'Benefits', icon: Gift, group: 'Payroll', show: (u) => has(u, 'payroll') },
+  // Was /benefits, a placeholder shell that was never built on. The real
+  // salary + benefits + payslips page is Pay.jsx, and managers had no link to
+  // it at all (my-pay below is staff-only) — Adama had to type the URL.
+  { id: 'benefits', to: '/pay', label: 'Payslips & Benefits', icon: Gift, group: 'Payroll', show: (u) => has(u, 'payroll') },
 
   // COMPANY
   // Tracker Guide — the product taught to staff (Adama 19 Aug); everyone sees it.
