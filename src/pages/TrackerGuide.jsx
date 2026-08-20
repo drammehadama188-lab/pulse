@@ -5,6 +5,10 @@ import { Card } from '../components/ui.jsx'
 // Tracker Guide — the product taught as a short course (Adama 19 Aug: "a page
 // that tells them about the tracker functions like learning a dev").
 //
+// v8, 19 Aug: each price is also shown per day, the renewal amount named as
+// what they pay from year two, and the renewal explained as recharging the SIM
+// data (Adama).
+//
 // v7, 19 Aug: price tab now says what the first year pays for and when the
 // renewal falls due (Adama: "add renewal pay day, break down the first year
 // too"). No money split inside the first year — we do not publish one.
@@ -111,10 +115,15 @@ const LESSONS = [
 ]
 
 const PRICES = [
-  { use: 'Private car', first: 'D5,500', renew: 'D4,500' },
-  { use: 'Taxi, passenger transport, delivery', first: 'D6,500', renew: 'D5,500' },
-  { use: 'Company, rental, logistics', first: 'D7,500', renew: 'D6,500' },
+  { use: 'Private car', first: 5500, renew: 4500 },
+  { use: 'Taxi, passenger transport, delivery', first: 6500, renew: 5500 },
+  { use: 'Company, rental, logistics', first: 7500, renew: 6500 },
 ]
+
+const dalasi = (n) => 'D' + n.toLocaleString()
+// Per day, because that is how it lands with a customer: a year sounds big,
+// fifteen dalasi a day does not (Adama 19 Aug).
+const perDay = (n) => 'about D' + Math.round(n / 365) + ' a day'
 
 const FIRST_YEAR = [
   'The tracker device.',
@@ -124,7 +133,9 @@ const FIRST_YEAR = [
 
 const RENEWAL = [
   'Due one year from the day the tracker is installed, and the same date every year after.',
-  'The renewal pays for the next twelve months of tracking only. There is no device or fitting to pay for again.',
+  'From that day they pay the renewal amount in the table, not the first-year amount.',
+  'The renewal recharges the data on the SIM inside the tracker for the next twelve months, and keeps the tracking, the app and support running.',
+  'There is no device and no fitting to pay for again, which is why the renewal costs less than the first year.',
   'The customer keeps the same tracker and the same app. Nothing is reinstalled.',
   'Renewals are taken by the office, not by the agent.',
 ]
@@ -164,9 +175,15 @@ function PriceList() {
           <tbody className="divide-y divide-[var(--color-line-soft)]">
             {PRICES.map((p) => (
               <tr key={p.use}>
-                <td className="py-3 pr-4 text-[var(--color-ink-soft)]">{p.use}</td>
-                <td className="py-3 pr-4 font-extrabold text-[var(--color-ink)]">{p.first}</td>
-                <td className="py-3 font-extrabold text-[var(--color-ink)]">{p.renew}</td>
+                <td className="py-3 pr-4 align-top text-[var(--color-ink-soft)]">{p.use}</td>
+                <td className="py-3 pr-4 align-top">
+                  <div className="font-extrabold text-[var(--color-ink)]">{dalasi(p.first)}</div>
+                  <div className="mt-0.5 text-xs text-[var(--color-ink-faint)]">{perDay(p.first)}</div>
+                </td>
+                <td className="py-3 align-top">
+                  <div className="font-extrabold text-[var(--color-ink)]">{dalasi(p.renew)}</div>
+                  <div className="mt-0.5 text-xs text-[var(--color-ink-faint)]">{perDay(p.renew)}</div>
+                </td>
               </tr>
             ))}
           </tbody>
