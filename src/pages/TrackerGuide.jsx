@@ -5,6 +5,10 @@ import { Card } from '../components/ui.jsx'
 // Tracker Guide — the product taught as a short course (Adama 19 Aug: "a page
 // that tells them about the tracker functions like learning a dev").
 //
+// v7, 19 Aug: price tab now says what the first year pays for and when the
+// renewal falls due (Adama: "add renewal pay day, break down the first year
+// too"). No money split inside the first year — we do not publish one.
+//
 // v6, 19 Aug: the price list moved to its own tab inside the guide (Adama:
 // "price list can be on its own page inside the guide") — a table, not a
 // lesson card, since it is looked up rather than learned.
@@ -112,10 +116,38 @@ const PRICES = [
   { use: 'Company, rental, logistics', first: 'D7,500', renew: 'D6,500' },
 ]
 
+const FIRST_YEAR = [
+  'The tracker device.',
+  'Fitting it into the vehicle.',
+  'Twelve months of tracking, the app and support.',
+]
+
+const RENEWAL = [
+  'Due one year from the day the tracker is installed, and the same date every year after.',
+  'The renewal pays for the next twelve months of tracking only. There is no device or fitting to pay for again.',
+  'The customer keeps the same tracker and the same app. Nothing is reinstalled.',
+  'Renewals are taken by the office, not by the agent.',
+]
+
 const PRICE_NOTES = [
   'What the vehicle is used for sets the price, not who owns it. A rental car on a personal account is charged the company rate.',
-  'The first year covers the device and the installation. Renewals keep the tracking running.',
 ]
+
+function PriceBlock({ title, items }) {
+  return (
+    <div className="mt-5 border-t border-[var(--color-line-soft)] pt-4">
+      {title && <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink-faint)]">{title}</div>}
+      <ul className={`space-y-1.5 ${title ? 'mt-2' : ''}`}>
+        {items.map((n, i) => (
+          <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-[var(--color-ink-soft)]">
+            <span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-[var(--color-ink-faint)]" />
+            <span>{n}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 function PriceList() {
   return (
@@ -141,14 +173,9 @@ function PriceList() {
         </table>
       </div>
 
-      <ul className="mt-5 space-y-1.5 border-t border-[var(--color-line-soft)] pt-4">
-        {PRICE_NOTES.map((n, i) => (
-          <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-[var(--color-ink-soft)]">
-            <span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-[var(--color-ink-faint)]" />
-            <span>{n}</span>
-          </li>
-        ))}
-      </ul>
+      <PriceBlock title="What the first year pays for" items={FIRST_YEAR} />
+      <PriceBlock title="When the renewal is due" items={RENEWAL} />
+      <PriceBlock items={PRICE_NOTES} />
     </Card>
   )
 }
