@@ -5,6 +5,11 @@ import { Card } from '../components/ui.jsx'
 // Tracker Guide — the product taught as a short course (Adama 19 Aug: "a page
 // that tells them about the tracker functions like learning a dev").
 //
+// v4, 19 Aug: the bold line under each heading now SAYS WHAT THE THING IS.
+// Adama: "just explain what each is, stop with the cheeky your phone rings
+// bull, these are new agents they do not know what these are". Slogans teach
+// a new agent nothing. The bullets he approved are untouched.
+//
 // v3, 19 Aug: Adama cut the sales scaffolding — "all these are so badly
 // written and make no sense, can be plain, just explain the functions and what
 // each does". Gone: the "show it", "they will ask" and "say it to the
@@ -25,7 +30,7 @@ const readLearned = () => { try { return new Set(JSON.parse(localStorage.getItem
 const LESSONS = [
   {
     id: 'product', name: 'What you are selling',
-    pitch: 'You always know where your vehicle is. Even if it is stolen.',
+    what: 'A small GPS device fitted in the vehicle that shows the owner where it is at any time.',
     points: [
       "Wired into the vehicle's brain box. Not easily detected or removed, but we do not guarantee a thief will never find it.",
       'Its own backup battery keeps it reporting if the wires are pulled.',
@@ -36,7 +41,7 @@ const LESSONS = [
   },
   {
     id: 'map', name: 'Live map',
-    pitch: 'Every vehicle, live on one map.',
+    what: 'One map showing every vehicle the customer owns, moving as they move.',
     points: [
       'Each vehicle shows as Moving, Idle, Parked or Offline, with its live speed.',
       'The map updates on its own while the vehicle moves. Nothing to refresh.',
@@ -46,7 +51,7 @@ const LESSONS = [
   },
   {
     id: 'replay', name: 'Trip replay',
-    pitch: 'Where was my car all day? Answered in one minute.',
+    what: 'A playback of everywhere a vehicle went on a chosen day.',
     points: [
       'Pick a vehicle, a day and a time range.',
       'The whole route plays back on the map, with every stop and every idle.',
@@ -55,7 +60,7 @@ const LESSONS = [
   },
   {
     id: 'alerts', name: 'Alerts',
-    pitch: 'The car calls for help by itself.',
+    what: 'Messages the tracker sends to the phone on its own when something happens to the vehicle.',
     points: [
       'Alerts for power cut, towing, vibration, speeding, low battery, SOS, engine on and off, and zone entry and exit.',
       'Each one is pushed straight to the phone.',
@@ -65,7 +70,7 @@ const LESSONS = [
   },
   {
     id: 'zones', name: 'Geofence zones',
-    pitch: 'Your phone rings if the car leaves the area.',
+    what: 'An area the customer draws on the map so they are told when a vehicle goes in or out of it.',
     points: [
       'The customer draws a zone on the map: home, the garage, the city.',
       'Any vehicle entering or leaving that zone sends an alert.',
@@ -74,7 +79,7 @@ const LESSONS = [
   },
   {
     id: 'reports', name: 'Reports',
-    pitch: 'The whole fleet on paper, without hiring a clerk.',
+    what: 'Summaries of how the vehicles were used over a chosen period, ready to read or print.',
     points: [
       'Reports available: Trips, Stops, Geofence, Speeding, Odometer, Engine hours, Ignition and Daily summary.',
       'Daily summary gives one row per vehicle per day.',
@@ -83,7 +88,7 @@ const LESSONS = [
   },
   {
     id: 'demo', name: 'Demoing to a customer',
-    pitch: 'Demo with the demo link. Never with a real customer’s account.',
+    what: 'A temporary link that opens the real app with demo vehicles, for showing a customer.',
     points: [
       'Ask the office for today’s demo link. It opens the real app, read only, with demo vehicles.',
       'Each link works for 60 minutes, so get it fresh before the meeting.',
@@ -100,7 +105,7 @@ function Lesson({ n, l, learned, onToggle }) {
         </span>
         <div className="min-w-0 flex-1">
           <span className="text-sm font-bold uppercase tracking-wide text-[var(--color-ink-faint)]">{l.name}</span>
-          <p className="mt-1 text-lg font-extrabold leading-snug tracking-tight text-[var(--color-ink)] sm:text-xl">{l.pitch}</p>
+          <p className="mt-1 text-lg font-extrabold leading-snug tracking-tight text-[var(--color-ink)] sm:text-xl">{l.what}</p>
 
           <ul className="mt-3 space-y-1.5">
             {l.points.map((p, i) => (
