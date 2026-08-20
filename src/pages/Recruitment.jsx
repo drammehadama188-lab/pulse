@@ -18,6 +18,9 @@ const STAGES = [
 ];
 const BLANK = { name: '', role: '', email: '', phone: '', source: '', notes: '' };
 const SORTS = [['best', 'Best first'], ['newest', 'Newest'], ['name', 'Name']];
+// Where the applicant came from. Imported rows carry the lead form's name;
+// these are the channels a CV arrives through by hand.
+const SOURCES = ['WhatsApp', 'Referral', 'Walk-in', 'Recruitment agency', 'Email'];
 
 export default function Recruitment() {
   const [applicants, setApplicants] = useState([]);
@@ -34,6 +37,7 @@ export default function Recruitment() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [importError, setImportError] = useState(null);
+  const [otherSource, setOtherSource] = useState(false);
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState('');
   const fileRef = useRef(null);
@@ -134,7 +138,7 @@ export default function Recruitment() {
           <button onClick={() => { setPasted(''); setImportError(null); setPasting(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-50">
             <ClipboardPaste size={16} /> Paste rows
           </button>
-          <button onClick={() => { setForm(BLANK); setAdding(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800">
+          <button onClick={() => { setForm(BLANK); setOtherSource(false); setAdding(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800">
             <Plus size={16} /> Add applicant
           </button>
         </div>
@@ -279,12 +283,32 @@ export default function Recruitment() {
               <button onClick={() => setAdding(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
             </div>
             <div className="space-y-3">
-              {[['name', 'Name *'], ['role', 'Applying for'], ['email', 'Email'], ['phone', 'Phone'], ['source', 'Source (referral, ad…)']].map(([k, label]) => (
+              {[['name', 'Name *'], ['role', 'Applying for'], ['email', 'Email'], ['phone', 'Phone']].map(([k, label]) => (
                 <label key={k} className="block">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">{label}</span>
                   <input value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
                 </label>
               ))}
+              {/* Fixed list, so the channels stay countable — typed sources
+                  split into "whatsapp", "WhatsApp", "wa" and stop adding up. */}
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Source</span>
+                <select value={otherSource ? '__other' : form.source}
+                  onChange={e => {
+                    const v = e.target.value;
+                    setOtherSource(v === '__other');
+                    setForm(f => ({ ...f, source: v === '__other' ? '' : v }));
+                  }}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  <option value="">Source…</option>
+                  {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
+                  <option value="__other">Other</option>
+                </select>
+                {otherSource && (
+                  <input autoFocus value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}
+                    className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                )}
+              </label>
               <label className="block">
                 <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Notes</span>
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
