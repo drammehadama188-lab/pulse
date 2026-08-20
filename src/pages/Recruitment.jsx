@@ -309,31 +309,33 @@ function RowGroup({ a, open, onToggle, onStage, onNotes, onRemove }) {
   return (
     <>
       <tr className="border-b border-gray-50 hover:bg-gray-50/60">
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 align-top">
           <button onClick={onToggle} className="flex items-center gap-1.5 text-left">
             {open ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-300" />}
             <span className="font-medium text-gray-900">{a.name}</span>
           </button>
         </td>
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 align-top">
           {a.phoneValid === false
             ? <span className="text-red-500 text-xs">No usable number</span>
             : <a href={`tel:${String(a.phone || '').replace(/\s/g, '')}`} className="text-gray-700 hover:text-gray-900">{a.phone || '—'}</a>}
         </td>
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 align-top">
           {a.startNow === true ? <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium">Yes</span>
             : a.startNow === false ? <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-500 text-xs">No</span>
               : <span className="text-gray-300 text-xs">—</span>}
         </td>
-        <td className="px-4 py-3 max-w-xs">
-          <span className="text-gray-600 text-xs line-clamp-1">{a.experience || '—'}</span>
+        {/* Shown whole, not clipped: this answer is what the decision is made
+            on, and clipping it meant opening every row to read one sentence. */}
+        <td className="px-4 py-3 align-top max-w-lg">
+          <span className="text-gray-600 text-xs whitespace-pre-wrap break-words">{a.experience || '—'}</span>
         </td>
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 align-top">
           <select value={a.stage} onChange={e => onStage(a, e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white">
             {STAGES.map(([sk, sl]) => <option key={sk} value={sk}>{sl}</option>)}
           </select>
         </td>
-        <td className="px-4 py-3 text-right">
+        <td className="px-4 py-3 text-right align-top">
           <button onClick={() => onRemove(a)} title="Remove" className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50"><Trash2 size={14} /></button>
         </td>
       </tr>
