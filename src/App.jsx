@@ -28,6 +28,7 @@ import Approvals from './pages/manager/Approvals.jsx'
 import Team from './pages/manager/Team.jsx'
 import HRTeam from './pages/departments/HRTeam.jsx'
 import Employees from './pages/Employees.jsx'
+import EmployeePage from './pages/EmployeePage.jsx'
 import EmployeeProfile from './pages/EmployeeProfile.jsx'
 import RecruitmentLayout from './pages/recruitment/RecruitmentLayout.jsx'
 import RecruitmentDashboard from './pages/recruitment/Dashboard.jsx'
@@ -126,6 +127,9 @@ export default function App() {
             behind it — contracts, past staff, warnings — are the same page
             they always were and open on ?tab=. */}
         <Route path="/people" element={<RequireAuth power="hr"><PeoplePage /></RequireAuth>} />
+        {/* One employee, resolved by username so people created in Pulse —
+            who are not in the static roster — have a profile too. */}
+        <Route path="/people/:username" element={<RequireAuth power="hr"><EmployeePage /></RequireAuth>} />
         <Route path="/performance" element={<RequireAuth power="hr"><Performance /></RequireAuth>} />
         <Route path="/performance/:slug" element={<RequireAuth power="hr"><PerformancePerson /></RequireAuth>} />
         <Route path="/past/:slug" element={<RequireAuth power="hr"><PastStaffProfile /></RequireAuth>} />

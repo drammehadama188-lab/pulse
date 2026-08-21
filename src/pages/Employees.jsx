@@ -22,7 +22,7 @@ const STATUS = {
 };
 const PAGE_SIZES = [10, 25, 50];
 const initials = (n) => (n || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-const profileHref = (name) => `/agents/${String(name || '').toLowerCase().replace(/\s+/g, '-')}`;
+const profileHref = (e) => `/people/${e.username}`;
 const day = (iso) => {
   const d = new Date(iso || '');
   return isNaN(d) ? '—' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -233,7 +233,7 @@ export default function Employees() {
                     <input type="checkbox" checked={picked.has(e.username)} onChange={() => toggleOne(e.username)} className="accent-[var(--color-brand)]" />
                   </td>
                   <td className="h-[72px] px-5 py-4">
-                    <Link to={profileHref(e.name)} className="flex items-center gap-2.5">
+                    <Link to={profileHref(e)} className="flex items-center gap-2.5">
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f2f4f8] text-[12.5px] font-semibold text-[#647086]">{initials(e.name)}</span>
                       <span className="min-w-0">
                         <span className="block truncate text-[13px] font-semibold text-[var(--color-ink)]">{e.name}</span>
@@ -275,7 +275,7 @@ export default function Employees() {
                     {menu === e.username && (
                       <div onMouseLeave={() => setMenu(null)}
                         className="absolute right-4 top-10 z-30 w-48 rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-lift)]">
-                        {[['Open profile', profileHref(e.name)],
+                        {[['Open profile', profileHref(e)],
                           ['Attendance', '/attendance'],
                           ['Performance', `/performance/${e.username}`],
                           ['Payslips', '/pay']].map(([label, to]) => (
@@ -334,7 +334,7 @@ export default function Employees() {
                 return (
                   <tr key={e.username} className="border-b border-[var(--color-line-soft)] last:border-0 transition-colors hover:bg-[var(--color-row-hover)]">
                     <td className="h-[72px] px-5 py-4">
-                      <Link to={profileHref(e.name)} className="font-semibold text-[var(--color-ink)] hover:underline">{e.name}</Link>
+                      <Link to={profileHref(e)} className="font-semibold text-[var(--color-ink)] hover:underline">{e.name}</Link>
                       <span className="block text-[12px] text-[var(--color-ink-faint)]">{e.title || '—'}</span>
                     </td>
                     <td className="h-[72px] px-5 py-4 text-[var(--color-ink-soft)]">{e.employment}<span className="block text-[12px] text-[var(--color-ink-faint)]">{e.employmentNote}</span></td>

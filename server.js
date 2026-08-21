@@ -4827,6 +4827,112 @@ app.get('/api/hr/employees', auth, requirePower('hr'), (req, res) => {
   })
 })
 
+// ---------- one employee, everything the profile shows (Adama 20 Aug) ----------
+// Resolved by USERNAME, not by matching a name against a static list — people
+// created in Pulse are not in that list, so their profile used to be
+// unreachable. 🔒 No pay here: the salary card reads the payroll-gated
+// endpoint separately, so a viewer without that power receives no figure at all.
+app.get('/api/hr/employee/:username', auth, requirePower('hr'), (req, res) => {
+  const u = findUser(req.params.username)
+  if (!u || isArchived(u)) return res.status(404).json({ error: 'not found' })
+
+  const today = todayKey()
+  const month = today.slice(0, 7)
+  const profile = db.read('profiles', {})[u.name] || {}
+  const attAll = db.read('attendance', []).filter((a) => a.username === u.username)
+  const mine = attAll.filter((a) => a.date?.startsWith(month))
+  const leaveAll = db.read('leave', []).filter((l) => l.username === u.username)
+
+  // Attendance for the month, counted the way the attendance page counts it:
+  // a check-in is a day worked, late still counts as present.
+  const present = mine.filter((a) => a.checkIn).length
+  const late = mine.filter((a) => a.late).length
+  const onLeave = leaveAll.filter((l) => l.status === 'approved' && l.from?.slice(0, 7) <= month && month <= (l.to || l.from)?.slice(0, 7)).length
+  // Working days so far this month, Monday to Friday (the team's week).
+  let workingDays = 0
+  for (let d = 1; d <= Number(today.slice(8, 10)); d++) {
+    const day = new Date(`${month}-${String(d).padStart(2, '0')}T00:00:00Z`).getUTCDay()
+    if (day !== 0 && day !== 6) workingDays++
+  }
+  const minutes = mine.reduce((sum, a) => {
+    if (!a.checkIn || !a.checkOut) return sum
+    return sum + Math.max(0, (Date.parse(a.checkOut) - Date.parse(a.checkIn)) / 60000)
+  }, 0)
+  const checkIns = mine.filter((a) => a.checkIn).map((a) => new Date(a.checkIn))
+  const avgCheckIn = checkIns.length
+    ? (() => {
+      const avg = checkIns.reduce((s, d) => s + d.getUTCHours() * 60 + d.getUTCMinutes(), 0) / checkIns.length
+      return `${String(Math.floor(avg / 60)).padStart(2, '0')}:${String(Math.round(avg % 60)).padStart(2, '0')}`
+    })()
+    : null
+
+  // Performance: the manager-entered score, and sales against target where the
+  // person carries one. 🔒 Nothing is computed from a formula nobody agreed to.
+  const salesRec = u.department === 'Sales' ? db.read('agent-sales', {})[u.name] : null
+  const monthSales = salesRec?.months?.[month]
+  const attendancePct = workingDays > 0 ? Math.round((present / workingDays) * 100) : null
+  const performance = {
+    score: profile.performanceScore === '' || profile.performanceScore == null ? null : Number(profile.performanceScore),
+    sales: salesRec ? { actual: monthSales && !monthSales.pending ? (monthSales.sales ?? null) : null, target: salesRec.monthlyTarget ?? null } : null,
+    attendancePct,
+  }
+
+  const documents = db.read('agent-files', [])
+    .filter((f) => f.agent === u.name)
+    .sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''))
+    .slice(0, 5)
+    .map(({ id, name, category, mimeType, sizeBytes, uploadedAt }) => ({ id, name, category, mimeType, sizeBytes, uploadedAt }))
+
+  const notes = [
+    ...db.read('coaching', [])
+      .filter((c) => c.targetUsername === u.username)
+      .map((c) => ({ kind: 'Coaching', text: c.notes || c.topic || '', by: c.byName || c.by || '', at: c.datetime || c.createdAt })),
+    ...(profile.notes ? [{ kind: 'Note', text: profile.notes, by: '', at: profile.notesAt || null }] : []),
+  ].sort((a, b) => String(b.at || '').localeCompare(String(a.at || ''))).slice(0, 5)
+
+  res.json({
+    employee: {
+      username: u.username,
+      name: u.name,
+      title: u.title || '',
+      department: u.department || '',
+      email: u.email || '',
+      personalEmail: u.personalEmail || '',
+      phone: u.phone || profile.phone || '',
+      address: u.address || profile.address || '',
+      joined: u.joined || null,
+      status: u.status || 'active',
+      employment: u.contractor ? 'Contractor' : u.contractEnd ? 'Contract' : 'Full-time',
+      contractEnd: u.contractEnd || null,
+      probationEnd: u.probationEnd || null,
+      reportsTo: profile.manager || '',
+      schedule: profile.schedule || 'Mon – Fri, 8:00 AM – 5:00 PM',
+      employeeId: u.employeeId || `EMP-${String(u.username).slice(0, 3).toUpperCase()}`,
+      dob: profile.dob || '',
+      gender: profile.gender || '',
+      nationality: profile.nationality || '',
+      maritalStatus: profile.maritalStatus || '',
+      emergencyContact: profile.emergencyContact || '',
+      emergencyPhone: profile.emergencyPhone || '',
+    },
+    attendance: {
+      workingDays,
+      present,
+      absent: Math.max(0, workingDays - present - onLeave),
+      late,
+      leave: onLeave,
+      hours: Math.round(minutes / 60),
+      minutes: Math.round(minutes % 60),
+      avgCheckIn,
+      month,
+    },
+    performance,
+    documents,
+    notes,
+    history: (u.history || []).slice().reverse().slice(0, 20),
+  })
+})
+
 // ---------- recruitment: positions ----------
 // A position is the job being hired for. Applicants attach to one, so "how is
 // the Sales Agent round going" is a question the system can answer instead of
