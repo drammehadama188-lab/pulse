@@ -21,7 +21,7 @@ function StatCard({ icon: Icon, label, value }) {
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">{label}</p>
+        <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</p>
         {Icon && <Icon size={15} className="text-[var(--color-ink-faint)]" />}
       </div>
       <p className="mt-1 text-[22px] font-semibold text-[var(--color-ink)]">{value}</p>
@@ -103,7 +103,7 @@ export default function Team() {
         </SectionTitle>
         <Card className="overflow-hidden p-0">
           <div className="border-b border-[var(--color-line-soft)] bg-[var(--color-fill)] px-4 py-2.5 sm:px-5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Member &amp; access</span>
+            <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Member &amp; access</span>
           </div>
           <div className="divide-y divide-[var(--color-line-soft)]">
             {users.map((u) => {

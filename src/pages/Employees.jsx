@@ -33,14 +33,14 @@ function Tile({ icon: Icon, value, label, sub, tint, ink, onClick, on }) {
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag {...(onClick ? { onClick, type: 'button' } : {})}
-      className={`${CARD} flex w-full items-start gap-3 p-[18px] text-left transition-colors ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''} ${on ? 'border-[var(--color-brand)]' : ''}`}>
+      className={`${CARD} flex w-full items-start gap-3.5 p-5 text-left transition-colors ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''} ${on ? 'border-[var(--color-brand)]' : ''}`}>
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[11px]" style={{ background: tint, color: ink }}>
         <Icon size={20} strokeWidth={1.9} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[28px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
-        <span className="mt-2 block text-[13.5px] font-medium text-[var(--color-ink-soft)]">{label}</span>
-        <span className="mt-1 block text-[12px] text-[var(--color-ink-faint)]">{sub}</span>
+        <span className="block text-[28px] font-[550] leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
+        <span className="mt-2.5 block text-[13.5px] font-normal text-[var(--color-ink-soft)]">{label}</span>
+        <span className="mt-1.5 block text-[12px] text-[var(--color-ink-faint)]">{sub}</span>
       </span>
     </Tag>
   );
@@ -113,7 +113,7 @@ export default function Employees() {
   // 🔒 Blue is rationed: the primary button, the live tab, the active nav row
   // and a real focus. A resting filter is grey.
   const field = 'rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[13px] text-[var(--color-ink-soft)] focus:border-[var(--color-ink-faint)] focus:outline-none';
-  const btn = 'inline-flex items-center gap-2 rounded-[8px] px-4 py-2.5 text-[13px] font-semibold transition-colors';
+  const btn = 'inline-flex items-center gap-2 rounded-[8px] px-4 py-2.5 text-[13px] font-medium transition-colors';
   const light = `${btn} border border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-fill)]`;
 
   if (error) return <p className="text-[13px] text-[var(--color-stage-out)]">{error}</p>;
@@ -143,7 +143,7 @@ export default function Employees() {
       <div className="mb-4 flex items-center gap-1 border-b border-[var(--color-line)]">
         {[['employees', 'Current'], ['contracts', 'Contracts'], ['past', `Past employees (${data.past.length})`]].map(([k, label]) => (
           <button key={k} onClick={() => setView(k)}
-            className={`-mb-px border-b-2 px-3.5 py-2.5 text-[13px] font-semibold ${view === k ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>
+            className={`-mb-px border-b-2 px-3.5 py-2.5 text-[13px] font-medium ${view === k ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>
             {label}
           </button>
         ))}
@@ -193,11 +193,11 @@ export default function Employees() {
       {moreFilters && (
         <div className={`${CARD} mt-3 flex flex-wrap items-end gap-3 p-3.5`}>
           <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Started on or after</span>
+            <span className="mb-1 block text-[11.5px] font-medium text-[var(--color-ink-faint)]">Started on or after</span>
             <input type="date" value={joinedFrom} onChange={(e) => setJoinedFrom(e.target.value)} className={field} />
           </label>
           <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Started on or before</span>
+            <span className="mb-1 block text-[11.5px] font-medium text-[var(--color-ink-faint)]">Started on or before</span>
             <input type="date" value={joinedTo} onChange={(e) => setJoinedTo(e.target.value)} className={field} />
           </label>
           {(joinedFrom || joinedTo) && (
@@ -210,7 +210,7 @@ export default function Employees() {
       <div className={`${CARD} mt-4 overflow-x-auto`}>
         <table className="w-full text-[13px]">
           <thead>
-            <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
+            <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[12px] font-medium text-[var(--color-ink-faint)]">
               <th className="w-10 rounded-tl-[8px] px-4 py-3">
                 <input type="checkbox" checked={allShownPicked} onChange={togglePage} className="accent-[var(--color-brand)]" />
               </th>
@@ -235,7 +235,7 @@ export default function Employees() {
                     <Link to={profileHref(e.name)} className="flex items-center gap-2.5">
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[12.5px] font-semibold text-[var(--color-ink-soft)]">{initials(e.name)}</span>
                       <span className="min-w-0">
-                        <span className="block truncate text-[14px] font-semibold text-[var(--color-ink)]">{e.name}</span>
+                        <span className="block truncate text-[14px] font-medium text-[var(--color-ink)]">{e.name}</span>
                         <span className="mt-0.5 block truncate text-[12px] text-[var(--color-ink-faint)]">{e.email || '—'}</span>
                         {e.phone && <span className="block truncate text-[12px] text-[var(--color-ink-faint)]">{e.phone}</span>}
                       </span>
@@ -245,16 +245,16 @@ export default function Employees() {
                     <span className="block max-w-[200px] text-[13.5px] text-[var(--color-ink)]">{e.title || '—'}</span>
                     <span className="mt-0.5 block text-[12px] text-[var(--color-ink-faint)]">{e.department || '—'}</span>
                   </td>
-                  <td className="px-4 py-4">
-                    <span className="block text-[13.5px] text-[var(--color-ink-soft)]">{e.employment}</span>
-                    <span className="mt-0.5 block text-[12px] text-[var(--color-ink-faint)]">{e.employmentNote}</span>
+                  <td className="px-4 py-4 text-[13.5px] text-[var(--color-ink-soft)]">
+                    {e.employment}
+                    {e.employmentNote && <span className="text-[var(--color-ink-faint)]"> · {e.employmentNote}</span>}
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 text-[13.5px] text-[var(--color-ink-soft)]">{day(e.startDate)}</td>
                   {/* What HR has to do about this person next. */}
                   <td className="whitespace-nowrap px-4 py-4">
                     {e.milestone ? (
                       <>
-                        <span className="block text-[13.5px] text-[var(--color-ink)]">{e.milestone.label}</span>
+                        <span className="block text-[13.5px] text-[var(--color-ink-soft)]">{e.milestone.label}</span>
                         <span className={`mt-0.5 block text-[12px] ${e.milestone.days <= 30 && e.milestone.label !== 'Annual review' ? 'font-semibold text-[var(--color-stage-out)]' : 'text-[var(--color-ink-faint)]'}`}>
                           {day(e.milestone.date)} · {e.milestone.days < 0 ? `${Math.abs(e.milestone.days)} days ago` : `${e.milestone.days} days`}
                         </span>
@@ -320,7 +320,7 @@ export default function Employees() {
         <div className={`${CARD} mt-4 overflow-x-auto`}>
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
+              <tr className="border-b border-[var(--color-line-soft)] text-left text-[12px] font-medium text-[var(--color-ink-faint)]">
                 {['Employee', 'Contract type', 'Started', 'Ends', 'Days remaining', 'Status'].map((h) => (
                   <th key={h} className="px-4 py-3 font-semibold">{h}</th>
                 ))}
@@ -361,7 +361,7 @@ export default function Employees() {
         <div className={`${CARD} mt-4 overflow-x-auto`}>
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
+              <tr className="border-b border-[var(--color-line-soft)] text-left text-[12px] font-medium text-[var(--color-ink-faint)]">
                 {['Employee', 'Former role', 'Joined', 'Left', 'Reason', ''].map((h, i) => (
                   <th key={i} className="px-4 py-3 font-semibold">{h}</th>
                 ))}

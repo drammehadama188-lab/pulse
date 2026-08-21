@@ -170,7 +170,7 @@ function WeekStat({ label, value, tone }) {
   const c = STAT_TONE[tone] || STAT_TONE.ink
   return (
     <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
+      <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</p>
       <p className={`mt-0.5 text-[22px] font-semibold tabular-nums ${c.text}`}>{value}</p>
     </div>
   )
@@ -341,7 +341,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
         <div className="min-w-[840px]">
           {/* header */}
           <div className="grid border-b border-[var(--color-line)] bg-[var(--color-surface)]" style={{ gridTemplateColumns: cols }}>
-            <div className="sticky left-0 z-20 bg-[var(--color-surface)] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Staff</div>
+            <div className="sticky left-0 z-20 bg-[var(--color-surface)] px-4 py-3 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Staff</div>
             {days.map((k) => {
               const d = new Date(`${k}T00:00:00Z`)
               const dow = d.getUTCDay()
@@ -1057,7 +1057,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
     >
       {/* Working days & hours */}
       <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-paper)] p-4">
-        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Schedule starts</p>
+        <p className="mb-1.5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Schedule starts</p>
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <input type="date" value={startDate} min={todayStr} onChange={(e) => setStartDate(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13px]" />
           <button className={quick} onClick={() => setStartDate(todayStr)}>Today</button>
@@ -1065,7 +1065,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
           {startDate > todayStr && <span className="text-[11px] font-medium text-[var(--color-good)]">Takes over from {prettyDate(startDate)} — earlier weeks stay as they are</span>}
         </div>
 
-        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Working days</p>
+        <p className="mb-1.5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Working days</p>
         <div className="flex flex-wrap gap-2">
           {WEEK_ORDER.map((dow) => {
             const dt = weekDates.map[dow]
@@ -1081,14 +1081,14 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
         </div>
         <p className="mt-1.5 text-[11px] text-[var(--color-ink-faint)]">First week: {weekDates.label} · repeats every week</p>
 
-        <p className="mb-1.5 mt-4 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Working hours</p>
+        <p className="mb-1.5 mt-4 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Working hours</p>
         <div className="flex items-center gap-2 text-[13px]">
           <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
           <span className="text-[var(--color-ink-faint)]">→</span>
           <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
         </div>
 
-        <p className="mb-1.5 mt-4 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Quick presets</p>
+        <p className="mb-1.5 mt-4 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Quick presets</p>
         <div className="flex flex-wrap gap-1.5">
           <button className={quick} onClick={() => setDays({ 1: true, 2: true, 3: true, 4: true, 5: true, 6: false, 0: false })}>Mon–Fri</button>
           <button className={quick} onClick={() => setDays((d) => ({ ...d, 6: false, 0: false }))}>Weekend off</button>
@@ -1104,7 +1104,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
       {/* 2 · Assign to employees */}
       <div className="mt-4">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Assign to</p>
+          <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Assign to</p>
           <div className="flex items-center gap-3 text-[11.5px] font-semibold">
             <button className="text-[var(--color-brand)]" onClick={() => setSelected(new Set(people.map((p) => p.username)))}>Select All</button>
             <button className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]" onClick={() => setSelected(new Set())} disabled={!selected.size}>Clear Selection</button>

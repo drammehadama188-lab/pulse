@@ -52,7 +52,7 @@ function StatCard({ label, value, tone }) {
   }[tone || 'ink']
   return (
     <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
+      <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</p>
       <p className={`mt-0.5 text-[26px] font-semibold tabular-nums ${c}`}>{value}</p>
     </div>
   )

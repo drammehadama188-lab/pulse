@@ -95,7 +95,7 @@ export default function Interviews() {
             <div className={`${CARD} overflow-x-auto`}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
+                  <tr className="text-left text-[12px] font-medium text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
                     <th className="px-4 py-3 font-bold">Candidate</th>
                     <th className="px-4 py-3 font-bold">When</th>
                     <th className="px-4 py-3 font-bold">Interviewer</th>
@@ -148,7 +148,7 @@ export default function Interviews() {
             </div>
             <div className="space-y-3">
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Candidate</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Candidate</span>
                 <input value={pick.query || ''} onChange={e => setPick(p => ({ ...p, query: e.target.value }))} placeholder="Type a name to narrow the list"
                   className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
                 <select value={pick.applicantId} onChange={e => setPick(p => ({ ...p, applicantId: e.target.value }))} size={6}
@@ -157,19 +157,19 @@ export default function Interviews() {
                 </select>
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Questions</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Questions</span>
                 <select value={pick.templateId} onChange={e => setPick(p => ({ ...p, templateId: e.target.value }))}
                   className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white">
                   {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">When</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">When</span>
                 <input type="datetime-local" value={pick.scheduledAt} onChange={e => setPick(p => ({ ...p, scheduledAt: e.target.value }))}
                   className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Interviewer</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Interviewer</span>
                 <input value={pick.interviewer} onChange={e => setPick(p => ({ ...p, interviewer: e.target.value }))}
                   className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
               </label>

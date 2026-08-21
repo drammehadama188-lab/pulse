@@ -231,13 +231,13 @@ function Payslip({ slip, canEdit, onDelete }) {
       </button>
       {open && (
         <div className="border-t border-[var(--color-line-soft)] px-5 py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Earnings</div>
+          <div className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Earnings</div>
           {slip.earnings?.length ? slip.earnings.map((l, i) => (
             <Line key={i} label={l.label} amount={l.amount} />
           )) : <div className="py-1 text-[13px] text-[var(--color-ink-faint)]">—</div>}
           {slip.deductions?.length > 0 && (
             <>
-              <div className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Deductions</div>
+              <div className="mt-3 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Deductions</div>
               {slip.deductions.map((l, i) => <Line key={i} label={l.label} amount={-l.amount} />)}
             </>
           )}
@@ -393,7 +393,7 @@ function LineEditor({ title, lines, setLines, addLabel }) {
   const add = () => setLines((ls) => [...ls, { label: '', amount: '' }])
   return (
     <div className="mt-4">
-      <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{title}</div>
+      <div className="mb-1.5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">{title}</div>
       <div className="space-y-2">
         {lines.map((l, i) => (
           <div key={i} className="flex items-center gap-2">

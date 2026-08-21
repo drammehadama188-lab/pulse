@@ -31,7 +31,7 @@ export default function Settings() {
         <div className={`${CARD} p-5 space-y-4`}>
           <h3 className="t-card text-[var(--color-ink)]">New interviews</h3>
           <label className="block">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Questions</span>
+            <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Questions</span>
             <select value={settings.defaultTemplateId || ''} onChange={e => save({ defaultTemplateId: e.target.value })}
               className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white">
               <option value="">Whichever set is marked default</option>
@@ -39,7 +39,7 @@ export default function Settings() {
             </select>
           </label>
           <label className="block">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Interviewer</span>
+            <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Interviewer</span>
             <input value={interviewer} onChange={e => setInterviewer(e.target.value)} onBlur={() => interviewer !== (settings.defaultInterviewer || '') && save({ defaultInterviewer: interviewer })}
               placeholder="Left blank, whoever books it is put down"
               className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />

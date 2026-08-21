@@ -13,7 +13,7 @@ const TABS = [['overview', 'Overview'], ['cv', 'CV'], ['interviews', 'Interviews
 function Detail({ label, value }) {
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">{label}</p>
+      <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</p>
       <p className="text-sm text-[var(--color-ink)] mt-0.5 break-words">{value || <span className="text-[var(--color-ink-faint)]">—</span>}</p>
     </div>
   );
@@ -172,7 +172,7 @@ export default function Applicant() {
             <div className="space-y-4">
               {answers.map(([q, v]) => (
                 <div key={q}>
-                  <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">{q}</p>
+                  <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{q}</p>
                   <p className="text-sm text-[var(--color-ink)] mt-0.5 whitespace-pre-wrap">{v}</p>
                 </div>
               ))}
@@ -186,7 +186,7 @@ export default function Applicant() {
             <Detail label="Source" value={[a.source, a.form].filter(Boolean).join(' · ')} />
             <Detail label="Date of birth" value={a.dob} />
             <div>
-              <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Position</p>
+              <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Position</p>
               <select value={a.positionId || ''} onChange={e => save({ positionId: e.target.value })}
                 className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white">
                 <option value="">Not filed</option>

@@ -140,7 +140,7 @@ export default function PerformancePerson() {
               </div>
               {editable && (
                 <div className="mt-4 border-t border-[var(--color-line-soft)] pt-3">
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Manager score {effSource === 'sales' && <span className="font-normal normal-case text-[var(--color-ink-faint)]">— set to override the sales score</span>}</p>
+                  <p className="mb-1 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Manager score {effSource === 'sales' && <span className="font-normal normal-case text-[var(--color-ink-faint)]">— set to override the sales score</span>}</p>
                   <input type="range" min="0" max="100" value={draft === '' ? 0 : draft} onChange={(e) => setDraft(e.target.value)} className="w-full accent-[var(--color-brand)]" />
                   <div className="mt-2 flex items-center gap-2">
                     <span className="text-[11px] text-[var(--color-ink-faint)]">{draft === '' ? 'No manual score — using the sales score above.' : `Manual score: ${draft}%`}</span>
@@ -275,7 +275,7 @@ function SalesBreakdown({ sales, period }) {
 function SummaryCard({ label, value, sub, accent = 'text-[var(--color-ink)]', big, small }) {
   return (
     <div className="rounded-lg border border-[var(--color-line)] bg-white p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p>
+      <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</p>
       <p className={`mt-1 truncate font-semibold ${big ? 'text-[26px]' : small ? 'text-base' : 'text-[22px]'} ${accent}`}>{value}</p>
       {sub ? <p className="mt-1 text-[11.5px] text-[var(--color-ink-soft)]">{sub}</p> : <p className="mt-1 text-[11.5px]">&nbsp;</p>}
     </div>

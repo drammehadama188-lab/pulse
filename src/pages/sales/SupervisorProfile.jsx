@@ -550,7 +550,7 @@ export default function SupervisorProfile({ supervisor }) {
                 </div>
 
                 <div className="flex items-baseline justify-between mb-2">
-                  <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)] font-semibold">Sales</p>
+                  <p className="text-[12px] font-medium text-[var(--color-ink-faint)] font-semibold">Sales</p>
                   <p className={`text-[22px] font-semibold ${r.perf >= 80 ? 'text-[var(--color-good)]' : r.perf >= 50 ? 'text-amber-600' : r.salesCount > 0 ? 'text-red-600' : 'text-red-600'}`}>
                     {r.salesCount}<span className="text-[var(--color-ink-faint)] text-[13px] font-normal"> / {r.target}</span>
                   </p>

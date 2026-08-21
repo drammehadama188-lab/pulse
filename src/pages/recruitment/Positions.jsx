@@ -124,24 +124,24 @@ export default function Positions() {
             <div className="space-y-3">
               {[['title', 'Title *'], ['department', 'Department'], ['location', 'Location']].map(([k, label]) => (
                 <label key={k} className="block">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">{label}</span>
+                  <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</span>
                   <input value={form[k] || ''} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
                 </label>
               ))}
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Type</span>
+                  <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Type</span>
                   <select value={form.employment} onChange={e => setForm(f => ({ ...f, employment: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white">
                     {EMPLOYMENT.map(x => <option key={x}>{x}</option>)}
                   </select>
                 </label>
                 <label className="block">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Openings</span>
+                  <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Openings</span>
                   <input type="number" min={1} value={form.openings} onChange={e => setForm(f => ({ ...f, openings: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
                 </label>
               </div>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">What the job is</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">What the job is</span>
                 <textarea value={form.summary || ''} onChange={e => setForm(f => ({ ...f, summary: e.target.value }))} rows={3} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
               </label>
             </div>

@@ -18,7 +18,7 @@ function Table({ title, question, head, rows, empty }) {
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
+              <tr className="text-left text-[12px] font-medium text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
                 {head.map((h, i) => <th key={h} className={`py-2 font-bold ${i ? 'text-right px-3' : 'pr-3'}`}>{h}</th>)}
               </tr>
             </thead>

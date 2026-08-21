@@ -238,7 +238,7 @@ export default function Applicants() {
             <div className={`${CARD} overflow-x-auto`}>
               <table className="w-full text-[13px]">
                 <thead>
-                  <tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
+                  <tr className="border-b border-[var(--color-line-soft)] text-left text-[12px] font-medium text-[var(--color-ink-faint)]">
                     <th className="w-10 px-4 py-2.5">
                       <input type="checkbox" checked={allOnPageSelected}
                         onChange={() => setSelected(s => {
@@ -433,12 +433,12 @@ export default function Applicants() {
             <div className="space-y-3">
               {[['name', 'Name *'], ['role', 'Applying for'], ['email', 'Email'], ['phone', 'Phone']].map(([k, label]) => (
                 <label key={k} className="block">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">{label}</span>
+                  <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</span>
                   <input value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} className="mt-1 w-full rounded-[8px] border border-[var(--color-line)] px-3 py-2 text-[13px]" />
                 </label>
               ))}
               <label className="block">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Position</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Position</span>
                 <select value={form.positionId} onChange={e => setForm(f => ({ ...f, positionId: e.target.value }))} className="mt-1 w-full rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13px]">
                   <option value="">Not filed</option>
                   {positions.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
@@ -447,7 +447,7 @@ export default function Applicants() {
               {/* Fixed list, so the channels stay countable — typed sources
                   split into "whatsapp", "WhatsApp", "wa" and stop adding up. */}
               <label className="block">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Source</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Source</span>
                 <select value={otherSource ? '__other' : form.source}
                   onChange={e => {
                     const v = e.target.value;
@@ -465,7 +465,7 @@ export default function Applicants() {
                 )}
               </label>
               <label className="block">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Notes</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Notes</span>
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="mt-1 w-full rounded-[8px] border border-[var(--color-line)] px-3 py-2 text-[13px]" />
               </label>
             </div>

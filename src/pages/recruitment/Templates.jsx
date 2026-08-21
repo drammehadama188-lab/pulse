@@ -95,11 +95,11 @@ export default function Templates() {
                   <div className="border-t border-[var(--color-line-soft)] p-5 space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <label className="block">
-                        <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">Name</span>
+                        <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Name</span>
                         <input value={draft.name} onChange={e => upd(d => { d.name = e.target.value; })} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
                       </label>
                       <label className="block">
-                        <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--color-ink-faint)]">For which role</span>
+                        <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">For which role</span>
                         <input value={draft.role || ''} onChange={e => upd(d => { d.role = e.target.value; })} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
                       </label>
                     </div>

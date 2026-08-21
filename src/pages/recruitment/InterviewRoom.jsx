@@ -237,7 +237,7 @@ export default function InterviewRoom() {
               <div className="mt-2.5 space-y-2.5">
                 {Object.entries(applicant.answers).slice(0, 4).map(([q, v]) => (
                   <div key={q}>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{q}</p>
+                    <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{q}</p>
                     <p className="mt-0.5 text-[12.5px] text-[var(--color-ink-soft)]">{v}</p>
                     {!done && (
                       <button onClick={() => { setAsking(`About your application: "${String(v).slice(0, 80)}" — tell me more.`); askRef.current?.focus(); }}

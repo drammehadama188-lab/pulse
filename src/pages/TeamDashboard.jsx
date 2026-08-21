@@ -157,7 +157,7 @@ export default function TeamDashboard() {
 function Metric({ label, value, hint, tone }) {
   return (
     <div className="text-right">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</div>
+      <div className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</div>
       <div className={`text-base font-semibold tabular-nums ${tone === 'bad' ? 'text-[var(--color-bad)]' : tone === 'good' ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink)]'}`}>{value}</div>
       {hint && <div className="text-[10px] text-[var(--color-ink-faint)]">{hint}</div>}
     </div>

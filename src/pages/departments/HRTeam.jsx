@@ -680,7 +680,7 @@ export default function HRTeam({
 
                   <div className="pt-4 border-t border-[var(--color-line-soft)]">
                     <div className="flex items-baseline justify-between mb-2">
-                      <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)] font-semibold">Performance</p>
+                      <p className="text-[12px] font-medium text-[var(--color-ink-faint)] font-semibold">Performance</p>
                       <div className="flex items-baseline gap-1.5">
                         <span className={`text-[18px] font-semibold ${perfColor(t.performance)}`}>{t.performance}%</span>
                         <span className="text-[11px] text-[var(--color-ink-faint)]">{perfLabel(t.performance)}</span>
@@ -693,7 +693,7 @@ export default function HRTeam({
 
                   {t.kpi && (
                     <div className="mt-4">
-                      <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)] font-semibold mb-1">KPI</p>
+                      <p className="text-[12px] font-medium text-[var(--color-ink-faint)] font-semibold mb-1">KPI</p>
                       <p className="text-[11.5px] text-[var(--color-ink-soft)] line-clamp-2">{t.kpi}</p>
                     </div>
                   )}
@@ -1170,7 +1170,7 @@ export default function HRTeam({
                 return (
                   <div className="border border-[var(--color-line)] rounded-lg overflow-hidden">
                     <table className="w-full">
-                      <thead><tr className="border-b border-[var(--color-line-soft)] text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]"><th className="text-left px-4 py-2 font-semibold">Month</th><th className="text-left px-4 py-2 font-semibold">Person</th><th className="text-right px-4 py-2 font-semibold">Amount</th></tr></thead>
+                      <thead><tr className="border-b border-[var(--color-line-soft)] text-[12px] font-medium text-[var(--color-ink-faint)]"><th className="text-left px-4 py-2 font-semibold">Month</th><th className="text-left px-4 py-2 font-semibold">Person</th><th className="text-right px-4 py-2 font-semibold">Amount</th></tr></thead>
                       <tbody>{hits.map((h, i) => (
                         <tr key={i} className="border-b border-[var(--color-line-soft)] last:border-0">
                           <td className="px-4 py-2 text-[13px] text-[var(--color-ink-soft)] whitespace-nowrap">{h.month}</td>

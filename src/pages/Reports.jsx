@@ -22,7 +22,7 @@ const monthTitle = (m) => `${MONTH_LABEL[Number(m.slice(5, 7))]} ${m.slice(0, 4)
 const prettyDay = (k) => new Date(`${k}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 const D = (n) => `D${Number(n || 0).toLocaleString()}`
 
-const th = 'px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]'
+const th = 'px-3 py-2 text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]'
 const td = 'px-3 py-2.5 text-[13px] text-[var(--color-ink)]'
 
 export default function Reports() {

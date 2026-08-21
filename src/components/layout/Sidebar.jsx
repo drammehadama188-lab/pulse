@@ -12,7 +12,7 @@ import { Avatar } from '../ui.jsx'
 
 function SectionLabel({ children }) {
   return (
-    <div className="mb-1.5 mt-6 px-3.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-faint)] first:mt-0">
+    <div className="mb-1.5 mt-6 px-3 text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--color-sidebar-ink-faint)] first:mt-0">
       {children}
     </div>
   )
@@ -24,20 +24,20 @@ function NavRow({ item, soon = false }) {
       to={item.to}
       end={item.end || item.to === '/'}
       className={({ isActive }) =>
-        `group flex items-center gap-2.5 whitespace-nowrap rounded-[8px] px-3 py-2 text-[13px] transition-colors ${
+        `group flex items-center gap-2.5 whitespace-nowrap rounded-[8px] px-3 py-2.5 text-[13px] transition-colors ${
           isActive
-            ? 'bg-[var(--color-brand)] font-semibold text-white'
-            : 'font-medium text-[var(--color-sidebar-ink)] hover:bg-white/5 hover:text-white'
+            ? 'bg-[var(--color-brand)] font-medium text-white'
+            : 'font-normal text-[var(--color-sidebar-ink)] hover:bg-white/[0.06] hover:text-white'
         }`
       }
     >
       {({ isActive }) => (
         <>
-          <item.icon size={18} strokeWidth={isActive ? 2.2 : 1.9} className="shrink-0"
+          <item.icon size={18} strokeWidth={isActive ? 2 : 1.7} className="shrink-0"
             style={{ color: isActive ? '#fff' : undefined }} />
           <span className="flex-1">{item.label}</span>
           {soon && (
-            <span className="rounded-full bg-[var(--color-fill)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
+            <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-sidebar-ink-faint)]">
               Soon
             </span>
           )}
@@ -67,7 +67,7 @@ export function Sidebar() {
 
       {inRecruitment ? (
         <nav className="mt-8 flex flex-1 flex-col gap-1">
-          <NavLink to="/" className="mb-3 flex items-center gap-2 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-ink)]">
+          <NavLink to="/" className="mb-3 flex items-center gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--color-sidebar-ink-faint)] transition-colors hover:text-white">
             <ArrowLeft size={14} /> Pulse
           </NavLink>
           <SectionLabel>Recruitment</SectionLabel>

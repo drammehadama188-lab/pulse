@@ -97,7 +97,7 @@ export default function ReportsHub() {
               <Card className="overflow-x-auto p-0">
                 <table className="w-full text-[13px]">
                   {sec.head && (
-                    <thead><tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
+                    <thead><tr className="border-b border-[var(--color-line-soft)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
                       {sec.head.map((h) => <th key={h} className="px-4 py-2.5">{h}</th>)}
                     </tr></thead>
                   )}

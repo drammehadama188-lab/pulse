@@ -130,7 +130,7 @@ export default function MyWeek() {
           <h2 className="mt-0.5 text-[15px] font-semibold text-[var(--color-ink)]">{otherTitle || <span className="font-semibold text-[var(--color-ink-faint)]">Adama hasn't named this objective yet</span>}</h2>
         </div>
         <div className="mt-3">
-          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
+          <div className="mb-1.5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">My plan</div>
           <PlanArea items={itemsFor('other')} canAct={canAct} canTick={canAct && isToday} focusKey="other" date={selDate} cap={5} placeholder="e.g. Coaching session with Sally" onToggle={toggle} onRemove={remove} onAdd={add} onEdit={editItem} />
         </div>
         <CommentBox label="Comments" value={objNotes.other || ''} saved={!!noteSaved.other} onChange={(text) => saveObjNote('other', text)} />
@@ -212,7 +212,7 @@ function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, pr
         </div>
       )}
       <div className="mt-4">
-        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">My plan</div>
+        <div className="mb-1.5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">My plan</div>
         <PlanArea items={items} canAct={canAct} canTick={canTick} focusKey={focusKey} date={date} cap={cap} placeholder={placeholder} onToggle={onToggle} onRemove={onRemove} onAdd={onAdd} onEdit={onEdit} />
       </div>
       {progress && (
@@ -228,7 +228,7 @@ function ObjectiveSection({ slot, title, metrics, agents, progress, weekPlan, pr
 function CommentBox({ label, value, saved, onChange }) {
   return (
     <div className="mt-3">
-      <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label} {saved && <span className="normal-case tracking-normal text-[var(--color-good)]">Saved ✓</span>}</div>
+      <div className="mb-1 flex items-center gap-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label} {saved && <span className="normal-case tracking-normal text-[var(--color-good)]">Saved ✓</span>}</div>
       <textarea
         value={value} onChange={(e) => onChange(e.target.value)} rows={2}
         placeholder="Why wasn't the goal met, or anything the business should know — saves by itself."

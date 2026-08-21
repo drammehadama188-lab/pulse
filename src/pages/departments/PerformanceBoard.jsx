@@ -157,7 +157,7 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
         <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-white">
           <table className="w-full border-collapse text-[13px]">
             <thead>
-              <tr className="border-b border-[var(--color-line)] text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
+              <tr className="border-b border-[var(--color-line)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
                 <th className="w-10 px-4 py-3 text-center font-semibold">#</th>
                 <th className="px-3 py-3 font-semibold">Employee</th>
                 <th className="hidden px-3 py-3 font-semibold md:table-cell">Department</th>
@@ -215,7 +215,7 @@ function Tile({ label, value, sub, accent = 'text-[var(--color-ink)]', icon: Ico
   const Cmp = onClick ? 'button' : 'div'
   return (
     <Cmp onClick={onClick || undefined} className={`rounded-lg border border-[var(--color-line)] bg-white p-4 text-left ${onClick ? 'hover:border-[var(--color-line)]' : ''}`}>
-      <div className="mb-1 flex items-center gap-1.5">{Icon && <Icon size={13} className="text-[var(--color-ink-faint)]" />}<p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{label}</p></div>
+      <div className="mb-1 flex items-center gap-1.5">{Icon && <Icon size={13} className="text-[var(--color-ink-faint)]" />}<p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</p></div>
       <p className={`truncate text-[22px] font-semibold ${accent}`}>{value}</p>
       <p className="mt-0.5 text-[11.5px] text-[var(--color-ink-faint)]">{sub}</p>
     </Cmp>
