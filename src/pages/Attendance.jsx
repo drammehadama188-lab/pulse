@@ -6,6 +6,7 @@ import { getLocation, mapsUrl } from '../lib/geo.js'
 import { Avatar, Button, Card, ConfirmDialog, Field, Input, Modal, Pill, Select, SectionTitle, Spinner } from '../components/ui.jsx'
 import { timeShort, dateLong } from '../lib/format.js'
 import { DAY_FULL, WEEK_ORDER, weekDays, ymd } from '../lib/schedule.js'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // Hours page. Staff see their own check-in + weekly shifts; managers see the whole
 // team's weekly shift grid (times + status per day), can log worked/off/sick/leave
@@ -554,13 +555,13 @@ function MyHours() {
   const hist = useMyHistory()
   const [undoOpen, setUndoOpen] = useState(false)
 
-  if (loading) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (loading) return <PageSkeleton tiles={0} rows={6} />
 
   const checkedIn = !!today?.checkIn && !today?.checkOut
   const done = !!today?.checkOut
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       <div>
         <h1 className="t-page">My hours</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()}</p>

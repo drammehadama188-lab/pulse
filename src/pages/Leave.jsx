@@ -4,6 +4,7 @@ import { api } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Button, Card, Pill, SectionTitle, Spinner, StatCard } from '../components/ui.jsx'
 import { dateShort } from '../lib/format.js'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // Maternity removed (Adama 1 Jul). Annual is only offered once eligible (12
 // months' service) — see availableTypes in the component.
@@ -53,7 +54,7 @@ export default function Leave() {
     }
   }
 
-  if (!data) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (!data) return <PageSkeleton tiles={4} rows={6} />
 
   const pending = data.requests.filter((r) => r.status === 'pending').length
   const annualNote = data.annualEligible ? 'Eligible' : data.eligibleFrom ? `From ${fmtDate(data.eligibleFrom)}` : 'After 12 months'

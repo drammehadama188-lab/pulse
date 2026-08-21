@@ -559,7 +559,7 @@ export default function SupervisorProfile({ supervisor }) {
                   </p>
                 </div>
                 <div className="w-full h-1.5 bg-[var(--color-fill)] rounded-full overflow-hidden mb-3">
-                  <div className={`h-full ${r.perf >= 80 ? 'bg-[var(--color-good-bg)]0' : r.perf >= 50 ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-bad)]'}`} style={{ width: `${Math.min(100, Math.max(2, r.perf))}%` }} />
+                  <div className={`h-full ${r.perf >= 80 ? 'bg-[var(--color-good)]' : r.perf >= 50 ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-bad)]'}`} style={{ width: `${Math.min(100, Math.max(2, r.perf))}%` }} />
                 </div>
 
                 <div className="flex items-center justify-between text-[11px]">

@@ -5,6 +5,7 @@ import { api } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Avatar, Button, Card, Field, Input, Pill, Select, SectionTitle, Spinner, Textarea } from '../components/ui.jsx'
 import { dateLong } from '../lib/format.js'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // MY TEAM · one team member. The lead sees the member's KPI SCORECARD (so they
 // know WHAT to coach on — the weak KPIs stand out), plus a "Log coaching /
@@ -56,7 +57,7 @@ export default function TeamMember() {
   }
   useEffect(() => { load() /* eslint-disable-next-line */ }, [username])
 
-  if (loading) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (loading) return <PageSkeleton tiles={0} rows={6} />
   if (error) return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">{error === 'not-your-team-member' ? "This person isn't on your team." : `Couldn't load — ${error}`}</Card>
 
   const kpis = data.scorecard?.kpis || []

@@ -680,7 +680,7 @@ export default function AgentProfile() {
             <p className={`text-[26px] font-semibold ${perf >= 80 ? 'text-[var(--color-good)]' : perf >= 50 ? 'text-[var(--color-warn)]' : perf > 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink-faint)]'}`}>{proratedTarget !== null ? `${perf}%` : '—'}</p>
             {proratedTarget !== null && (
               <div className="w-full h-1.5 bg-[var(--color-fill)] rounded-full overflow-hidden mt-2">
-                <div className={`h-full rounded-full ${perf >= 80 ? 'bg-[var(--color-good-bg)]0' : perf >= 50 ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-bad)]'}`} style={{ width: `${Math.min(100, perf)}%` }} />
+                <div className={`h-full rounded-full ${perf >= 80 ? 'bg-[var(--color-good)]' : perf >= 50 ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-bad)]'}`} style={{ width: `${Math.min(100, perf)}%` }} />
               </div>
             )}
           </div>
@@ -1210,7 +1210,7 @@ function ScoreBar({ label, weight, value, max, detail, neg }) {
         </p>
       </div>
       <div className="w-full h-2 bg-[var(--color-fill)] rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${isNegative ? 'bg-[var(--color-bad)]' : isPositive ? 'bg-[var(--color-good-bg)]0' : 'bg-[var(--color-ink-faint)]'}`} style={{ width: `${Math.min(100, pct)}%` }} />
+        <div className={`h-full rounded-full ${isNegative ? 'bg-[var(--color-bad)]' : isPositive ? 'bg-[var(--color-good)]' : 'bg-[var(--color-ink-faint)]'}`} style={{ width: `${Math.min(100, pct)}%` }} />
       </div>
       {detail && <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">{detail}</p>}
     </div>

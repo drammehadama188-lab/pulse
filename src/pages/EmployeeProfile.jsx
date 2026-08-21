@@ -401,7 +401,7 @@ export default function EmployeeProfile() {
                   <span className="text-[11.5px] font-medium text-[var(--color-ink-soft)]">{done}/{items.length} done</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-[var(--color-fill)] mb-5 overflow-hidden">
-                  <div className={`h-full rounded-full ${color === 'emerald' ? 'bg-[var(--color-good-bg)]0' : 'bg-[var(--color-bad)]'}`} style={{ width: `${pct}%` }} />
+                  <div className={`h-full rounded-full ${color === 'emerald' ? 'bg-[var(--color-good)]' : 'bg-[var(--color-bad)]'}`} style={{ width: `${pct}%` }} />
                 </div>
                 <div className="divide-y divide-[var(--color-line-soft)]">
                   {items.map((it) => (
@@ -426,7 +426,7 @@ export default function EmployeeProfile() {
               {activity.map((a, i) => (
                 <div key={i} className="flex gap-4 pb-4 last:pb-0">
                   <div className="flex flex-col items-center">
-                    <div className={`w-2 h-2 rounded-full mt-1.5 ${a.warn ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-good-bg)]0'}`} />
+                    <div className={`w-2 h-2 rounded-full mt-1.5 ${a.warn ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-good)]'}`} />
                     {i < activity.length - 1 && <div className="w-px flex-1 bg-[var(--color-line)] my-1" />}
                   </div>
                   <div className="min-w-0 pb-1">

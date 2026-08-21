@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Target, Trash2, CalendarClock, Plus } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { Card, SectionTitle, Button, Field, Input, Select, Pill, Spinner } from '../components/ui.jsx';
+import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 
 // KPI Targets — the ONE place the company's goals are set (Adama 3 Jul:
 // "Pulse should be responsible for changing the goals and it reflects in
@@ -111,7 +112,7 @@ export default function KpiTargets() {
     return r?.kpis.find((k) => k.key === kpi)?.label || kpi;
   };
 
-  if (loading && !data) return <div className="flex justify-center py-20"><Spinner size={28} /></div>;
+  if (loading && !data) return <PageSkeleton tiles={0} rows={6} />;
 
   return (
     <div className="space-y-4">

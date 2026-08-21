@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Megaphone, Share2, Filter, CalendarDays, Handshake, DollarSign, Plus, Trash2, Users2, Target, Wallet } from 'lucide-react'
 import { api } from '../../lib/api.js'
 import { Button, Card, Input, SectionTitle, Spinner, StatCard } from '../../components/ui.jsx'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 
 // Marketing department — built fresh in Pulse. Editable sections backed by
 // /api/marketing (Pulse's own store). Starts empty; the team fills it in.
@@ -39,12 +40,12 @@ export default function Marketing() {
     setData((d) => ({ ...d, [key]: items }))
   }
 
-  if (!data) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (!data) return <PageSkeleton tiles={4} rows={6} />
 
   const activeCampaigns = (data.campaigns || []).filter((c) => (c.status || '').toLowerCase() === 'active').length
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       <div>
         <h1 className="t-page">Marketing</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Department · social, leads, content, campaigns</p>

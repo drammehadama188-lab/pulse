@@ -50,7 +50,7 @@ const contractDeadlines = team.filter(t => t.contractEnd).sort((a, b) => a.contr
 // shown under a "Last Month" chip). Payroll's month comes from the server.
 
 const perfColor = p => p >= 80 ? 'text-[var(--color-good)]' : p >= 50 ? 'text-[var(--color-warn)]' : p > 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink-faint)]';
-const perfBg = p => p >= 80 ? 'bg-[var(--color-good-bg)]0' : p >= 50 ? 'bg-[var(--color-warn)]' : p > 0 ? 'bg-[var(--color-bad)]' : 'bg-[var(--color-ink-faint)]';
+const perfBg = p => p >= 80 ? 'bg-[var(--color-good)]' : p >= 50 ? 'bg-[var(--color-warn)]' : p > 0 ? 'bg-[var(--color-bad)]' : 'bg-[var(--color-ink-faint)]';
 const perfLabel = p => p >= 80 ? 'On Track' : p >= 50 ? 'Needs Attention' : p > 0 ? 'Underperforming' : 'New';
 const statusBadge = s => ({ active: 'bg-[var(--color-good-bg)] text-[var(--color-good)]', maternity: 'bg-[var(--color-rest-bg)] text-[var(--color-rest)]', probation: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]', training: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' })[s] || 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]';
 const typeBadge = t => ({ Sales: 'bg-[var(--color-good-bg)] text-[var(--color-good)]', Operations: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]', Marketing: 'bg-[var(--color-rest-bg)] text-[var(--color-rest)]', Technology: 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]', Training: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' })[t] || 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]';
@@ -934,7 +934,7 @@ export default function HRTeam({
                           <td className="py-3 px-4 text-[var(--color-ink-soft)] max-w-[140px] truncate">{r.weeklyTarget || '—'}</td>
                           <td className="py-3 px-4 text-[var(--color-ink-soft)] max-w-[260px] truncate">{r.kpi || '—'}</td>
                           <td className="py-3 px-4 text-center">
-                            <span className={`w-2 h-2 rounded-full inline-block ${r.active ? 'bg-[var(--color-good-bg)]0' : 'bg-[var(--color-ink-faint)]'}`} />
+                            <span className={`w-2 h-2 rounded-full inline-block ${r.active ? 'bg-[var(--color-good)]' : 'bg-[var(--color-ink-faint)]'}`} />
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1">
@@ -1028,7 +1028,7 @@ export default function HRTeam({
                   </label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button type="button" onClick={openOneOff} className="px-3 py-2 rounded-lg text-[13px] font-medium bg-white border border-[var(--color-line)] text-[var(--color-ink-soft)] hover:border-[var(--color-line-soft)]0">+ Record a payment</button>
+                  <button type="button" onClick={openOneOff} className="px-3 py-2 rounded-lg text-[13px] font-medium bg-white border border-[var(--color-line)] text-[var(--color-ink-soft)] hover:border-[var(--color-line)]">+ Record a payment</button>
                   {(payRun.people || []).some(p => !p.paid) && (
                     <button type="button" onClick={openBulk} className="px-3 py-2 rounded-lg text-[13px] font-medium bg-[var(--color-ink)] text-white hover:bg-[var(--color-ink)]">Pay all ({(payRun.people || []).filter(p => !p.paid).length})</button>
                   )}

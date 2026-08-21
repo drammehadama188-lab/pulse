@@ -3,6 +3,7 @@ import { LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import { Avatar, Button, Card, Pill, SectionTitle, Spinner } from '../components/ui.jsx'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // My Profile — the staff self-view. Their own contract (the rich card, read-only)
 // and employment history. Data comes from /api/my/record, scoped to the caller —
@@ -38,7 +39,7 @@ export default function Profile() {
       .finally(() => setLoading(false))
   }, [user.name])
 
-  if (loading) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (loading) return <PageSkeleton tiles={0} rows={6} />
 
   const c = rec?.contract || null
   const now = new Date()

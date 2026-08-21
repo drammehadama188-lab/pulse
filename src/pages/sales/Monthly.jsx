@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { Card, Pill, Spinner, StatCard } from '../../components/ui.jsx'
 import PeriodSelector, { computePeriod, inPeriod } from '../../components/PeriodSelector.jsx'
 import { dalasi, dateShort } from '../../lib/format.js'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -71,7 +72,7 @@ export default function Monthly() {
     })
   }, [data])
 
-  if (!data) return <div className="flex justify-center py-16"><Spinner size={26} /></div>
+  if (!data) return <PageSkeleton tiles={4} rows={6} />
 
   const met = r.target != null && r.closed >= r.target
   const pct = r.target ? Math.min(1, r.closed / r.target) : 0

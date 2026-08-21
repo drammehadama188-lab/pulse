@@ -4,7 +4,7 @@ import { Card } from '../../components/ui.jsx'
 // Each department gets fleshed out one at a time; this keeps the nav honest in the meantime.
 export default function DepartmentShell({ icon: Icon, title, blurb, subtitle = 'Department' }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       <div>
         <h1 className="t-page">{title}</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{subtitle}</p>

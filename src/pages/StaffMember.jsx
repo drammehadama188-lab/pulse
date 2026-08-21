@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Mail, Building2, ShieldCheck, KeyRound, Archive 
 import { api } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Avatar, Button, Spinner, Modal, Field, Input } from '../components/ui.jsx'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // Staff member — the per-person access page (admin Staff parity). Email + login,
 // reset password, and the permission toggles that save instantly and are logged.
@@ -21,7 +22,7 @@ function Toggle({ on, disabled, onClick }) {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${on ? 'bg-[var(--color-good-bg)]0' : 'bg-[var(--color-ink-faint)]'} ${disabled ? 'opacity-50' : ''}`}
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${on ? 'bg-[var(--color-good)]' : 'bg-[var(--color-ink-faint)]'} ${disabled ? 'opacity-50' : ''}`}
     >
       <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
     </button>
@@ -35,7 +36,7 @@ function MiniToggle({ on, disabled, onClick }) {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${on ? 'bg-[var(--color-good-bg)]0' : 'bg-[var(--color-ink-faint)]'} ${disabled ? 'opacity-50' : ''}`}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${on ? 'bg-[var(--color-good)]' : 'bg-[var(--color-ink-faint)]'} ${disabled ? 'opacity-50' : ''}`}
     >
       <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-4' : 'translate-x-0.5'}`} />
     </button>
@@ -84,7 +85,7 @@ export default function StaffMember() {
   useEffect(() => { load() }, [username])
   useEffect(() => { api('/departments').then((d) => setDepartments(d.departments || [])).catch(() => {}) }, [])
 
-  if (!loaded) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (!loaded) return <PageSkeleton tiles={0} rows={6} />
   if (!user) {
     return (
       <div className="max-w-4xl">
@@ -222,7 +223,7 @@ export default function StaffMember() {
             <div className="flex items-center gap-2 flex-wrap mt-1">
               <span className="text-[var(--color-ink-soft)] text-[13px]">{user.title}</span>
               {user.department && <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-fill)] text-[var(--color-ink-soft)]">{user.department}</span>}
-              <span className={`flex items-center gap-1 text-[11px] font-semibold ${accessTone}`}><span className={`w-1.5 h-1.5 rounded-full ${!canSignIn ? 'bg-[var(--color-bad)]' : powers.size > 0 ? 'bg-[var(--color-good-bg)]0' : 'bg-[var(--color-ink-faint)]'}`} /> {accessLabel}</span>
+              <span className={`flex items-center gap-1 text-[11px] font-semibold ${accessTone}`}><span className={`w-1.5 h-1.5 rounded-full ${!canSignIn ? 'bg-[var(--color-bad)]' : powers.size > 0 ? 'bg-[var(--color-good)]' : 'bg-[var(--color-ink-faint)]'}`} /> {accessLabel}</span>
             </div>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { Button, Card, Pill, Spinner, Modal, ConfirmDialog, Field, Input, Select, Textarea } from '../../components/ui.jsx'
 import { PRICING } from '../../lib/salesOptions.js'
 import { dalasi } from '../../lib/format.js'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 
 const TYPES = ['General', 'Pricing', 'Policy', 'Urgent']
 const TYPE_TONE = { General: 'brand', Pricing: 'good', Policy: 'rest', Urgent: 'bad' }
@@ -91,7 +92,7 @@ export default function Notices() {
         </div>
 
         {!items ? (
-          <div className="flex justify-center py-10"><Spinner size={24} /></div>
+          <PageSkeleton tiles={0} rows={6} />
         ) : items.length === 0 ? (
           <Card className="px-5 py-10 text-center text-[var(--color-ink-faint)]">No announcements yet.</Card>
         ) : (

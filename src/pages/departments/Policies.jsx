@@ -15,7 +15,7 @@ const linkOutline = `${linkBtn} border border-[var(--color-line)] bg-[var(--colo
 
 export default function Policies() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       <div>
         <h1 className="t-page">Policies</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Company</p>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
 import { Card, Spinner } from '../components/ui.jsx'
 import { dalasi } from '../lib/format.js'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // BUSINESS REPORT — the 1st-of-the-month read (Adama 10 Jul, CEO only). One
 // closed month: goals hit or missed, the money, the team, and the flags that
@@ -29,7 +30,7 @@ export default function BusinessReport() {
   }, [month])
 
   if (error) return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">Couldn't load — {error}</Card>
-  if (!data) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (!data) return <PageSkeleton tiles={0} rows={6} />
 
   return (
     <div className="max-w-4xl space-y-7">

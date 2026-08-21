@@ -4,6 +4,7 @@ import { api } from '../lib/api.js'
 import { Card, Spinner } from '../components/ui.jsx'
 import { greeting, firstName } from '../lib/format.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // MY WORKDAY — the manager's desk (Adama, 10 Jul). The system shows the goals
 // and live numbers; the PLAN is his, visible from today to NEXT week's Friday
@@ -66,7 +67,7 @@ export default function MyWeek() {
   }
 
   if (error) return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'My Workday is for team leads.' : `Couldn't load — ${error}`}</Card>
-  if (!data || !selDate) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (!data || !selDate) return <PageSkeleton tiles={0} rows={6} />
 
   const dateLabel = new Date(`${data.today}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
   const dayItems = data.planByDate[selDate] || []

@@ -4,6 +4,7 @@ import { api } from '../../lib/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { Button, Card, Pill, Spinner, Modal, ConfirmDialog, Field, Input, Select, Textarea } from '../../components/ui.jsx'
 import { CALL_STATUS, NEXT_ACTION } from '../../lib/salesOptions.js'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 
 const EMPTY = { date: new Date().toISOString().slice(0, 10), name: '', phone: '', callStatus: 'No Answer', note: '', nextAction: 'Call Back' }
 const TONE = { 'Interested - Lead': 'good', 'Wants More info': 'brand', 'Ask for call back': 'warn', 'Not Right Now': 'neutral', 'No Answer': 'neutral', 'Not Interested': 'bad', 'Wrong Number': 'bad', Visited: 'rest', 'Proposal Sent': 'brand' }
@@ -45,7 +46,7 @@ export default function Calls() {
     }
   }
 
-  if (!rows) return <div className="flex justify-center py-16"><Spinner size={26} /></div>
+  if (!rows) return <PageSkeleton tiles={0} rows={6} />
 
   return (
     <div className="space-y-4">

@@ -7,6 +7,7 @@ import { getLocation } from '../lib/geo.js'
 import { Avatar, Button, Card, Pill, SectionTitle, Spinner, StatCard } from '../components/ui.jsx'
 import CoachingFeed from '../components/CoachingFeed.jsx'
 import { greeting, firstName, timeShort, dateLong, dalasi } from '../lib/format.js'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 export default function Home() {
   const { user, isManager, isViewAs, hasPower } = useAuth()
@@ -97,9 +98,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-24">
-        <Spinner size={28} />
-      </div>
+      <PageSkeleton tiles={4} rows={6} />
     )
   }
 

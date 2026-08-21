@@ -4,6 +4,7 @@ import { ArrowRight, Plus, UserPlus, CheckCircle2, Archive, KeyRound, Users, Shi
 import { api } from '../../lib/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { Avatar, Button, Card, Pill, SectionTitle, Spinner, Modal, Field, Input, MenuSelect, Textarea } from '../../components/ui.jsx'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 
 // Staff — roles, permissions and accounts. The team-admin hub: invite staff,
 // grant/revoke powers (shown inline so access is visible at a glance), reset
@@ -74,13 +75,13 @@ export default function Team() {
       </div>
     )
   }
-  if (!users) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (!users) return <PageSkeleton tiles={4} rows={6} />
 
   const withAccess = users.filter((u) => (u.powers || []).length > 0).length
   const managers = users.filter((u) => u.role === 'manager').length
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       <div>
         <h1 className="t-page">Staff</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Roles, permissions and accounts.</p>
@@ -427,7 +428,7 @@ function AccessForm({ target, isCeo, onClose, onSaved }) {
         </>
       }
     >
-      {!catalogue && !error && <div className="flex justify-center py-8"><Spinner size={22} /></div>}
+      {!catalogue && !error && <PageSkeleton tiles={4} rows={6} />}
       {catalogue && (
         <div className="space-y-2">
           {/* Master switch — pause their Pulse sign-in entirely (reversible). */}

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import { Card, Spinner } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // REPORTING CENTRE (Adama 10 Jul): every report answers ONE question, and the
 // period is separate from the report type. One structure for all — summary,
@@ -63,7 +64,7 @@ export default function ReportsHub() {
       </div>
 
       {error && <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">Couldn't load — {error}</Card>}
-      {!data && !error && <div className="flex justify-center py-24"><Spinner size={28} /></div>}
+      {!data && !error && <PageSkeleton tiles={0} rows={6} />}
       {data && (
         <div className="space-y-4">
           {/* 1 · title */}

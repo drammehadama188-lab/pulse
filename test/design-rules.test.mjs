@@ -35,6 +35,18 @@ bad += rule(
   (f) => f.endsWith('ui/Pager.jsx') || /from '.*ui\/Pager\.jsx'/.test(readFileSync(f, 'utf8')),
 );
 bad += rule(
+  'no broken token class (a stray digit after the bracket styles nothing)',
+  /\[var\(--color-[a-z-]*\)\]\d/,
+);
+bad += rule(
+  'no full-page spinner (a page shows the shape of what it is loading)',
+  /<div className="flex[^"]*justify-center[^"]*py-\d+[^"]*">\s*<Spinner/,
+);
+bad += rule(
+  'page sections sit 24-32px apart (space-y-6 or more at the page root)',
+  /<div className="space-y-[1-5]">\s*\n\s*<div>\s*\n\s*<h1 className="t-page"/,
+);
+bad += rule(
   'no bare empty state ("No data.")',
   /["'>]\s*(No data|No results|Nothing to show)\.?\s*["'<]/,
 );

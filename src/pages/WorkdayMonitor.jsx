@@ -4,6 +4,7 @@ import { api } from '../lib/api.js'
 import { Card, Spinner } from '../components/ui.jsx'
 import { timeShort } from '../lib/format.js'
 import { DayStrip } from './MyWeek.jsx'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // TEAM WORKDAY (CEO) — Adama 10 Jul: "a page where I can monitor this, even
 // contribute to the plan, and a timeline of what he is editing — I don't want
@@ -75,9 +76,9 @@ export default function WorkdayMonitor() {
   }
 
   if (error) return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">Couldn't load — {error}</Card>
-  if (!leads) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (!leads) return <PageSkeleton tiles={0} rows={6} />
   if (!leads.length) return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">No team leads yet.</Card>
-  if (!data || !selDate) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (!data || !selDate) return <PageSkeleton tiles={0} rows={6} />
 
   const dayItems = data.planByDate[selDate] || []
   const itemsFor = (key) => dayItems.filter((i) => i.focusKey === key)
@@ -115,7 +116,7 @@ export default function WorkdayMonitor() {
               <div key={w.label} className="flex items-center gap-2">
                 <span className="text-[11.5px] font-semibold text-[var(--color-ink-soft)]">{w.label}</span>
                 <span className="h-1.5 w-16 overflow-hidden rounded-full bg-[var(--color-fill)]">
-                  <span className={`block h-full rounded-full ${pct >= 66 ? 'bg-[var(--color-good-bg)]0' : pct >= 33 ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-bad)]'}`} style={{ width: `${pct}%` }} />
+                  <span className={`block h-full rounded-full ${pct >= 66 ? 'bg-[var(--color-good)]' : pct >= 33 ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-bad)]'}`} style={{ width: `${pct}%` }} />
                 </span>
                 <span className="text-[11.5px] font-semibold tabular-nums text-[var(--color-ink)]">{w.actual ?? '—'}{w.unit || `/${w.target}`}</span>
               </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
 import { Card, Spinner } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // WEEKLY REPORT — the shared Friday document (Adama 10 Jul). Momodou opens
 // the exact same report Adama does; Monday's conversation starts from one
@@ -46,7 +47,7 @@ export default function WeeklyReport() {
   }, [lead, weekStart])
 
   if (error) return <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">{error === 'not-a-team-lead' ? 'Weekly reports are for team leads.' : `Couldn't load — ${error}`}</Card>
-  if (!data) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (!data) return <PageSkeleton tiles={0} rows={6} />
 
   const planKeys = Object.keys(data.plan)
 

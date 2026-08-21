@@ -9,6 +9,7 @@ import { dalasi } from '../../lib/format.js'
 import CustomerForm, { EMPTY_CUSTOMER } from './CustomerForm.jsx'
 import Pager, { usePager } from '../../components/ui/Pager.jsx'
 import EmptyState from '../../components/ui/EmptyState.jsx'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 
 // Funnel standard (Sally's Excel "Reference Lists" → salesOptions.js):
 // a PAID customer is one whose sale is closed — status "Won". Everyone else is
@@ -78,7 +79,7 @@ export default function Sales() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       <div>
         <h1 className="t-page">Customers</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{isViewAs ? `${user.name}'s` : 'Your'} prospects &amp; customers.</p>
@@ -107,7 +108,7 @@ export default function Sales() {
       </div>
 
       {customers === null ? (
-        <div className="flex justify-center py-16"><Spinner size={26} /></div>
+        <PageSkeleton tiles={4} rows={6} />
       ) : (
         <div className="space-y-4">
           <div className="flex items-center gap-2">

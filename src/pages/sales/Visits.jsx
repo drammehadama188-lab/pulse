@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { Button, Card, Pill, Spinner, Modal, ConfirmDialog, Field, Input, Select, Textarea } from '../../components/ui.jsx'
 import { TRANSPORT_OUTCOME } from '../../lib/salesOptions.js'
 import { dalasi } from '../../lib/format.js'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 
 const EMPTY = { date: new Date().toISOString().slice(0, 10), from: '', to: '', cost: '', reason: '', outcome: 'Follow Up Needed', company: '', notes: '' }
 const TONE = { 'Sale Closed': 'good', 'Lead Created': 'good', Interested: 'brand', 'Follow Up Needed': 'warn', 'No Show': 'bad' }
@@ -51,7 +52,7 @@ export default function Visits() {
     }
   }
 
-  if (!rows) return <div className="flex justify-center py-16"><Spinner size={26} /></div>
+  if (!rows) return <PageSkeleton tiles={0} rows={6} />
 
   return (
     <div className="space-y-4">

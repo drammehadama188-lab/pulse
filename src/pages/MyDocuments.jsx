@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Download, FolderOpen } from 'lucide-react'
 import { api, getToken } from '../lib/api.js'
 import { Card, Pill, SectionTitle, Spinner } from '../components/ui.jsx'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // Staff self-view — the signed-in person's OWN documents (CV, contract, ID,
 // certificates). Read-only; HR uploads from the staff profile. Self-scoped on the
@@ -21,10 +22,10 @@ export default function MyDocuments() {
     api('/my/file').then((d) => setDocs(d.documents || [])).catch(() => setDocs([]))
   }, [])
 
-  if (!docs) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (!docs) return <PageSkeleton tiles={0} rows={6} />
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       <div>
         <h1 className="t-page">Documents</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Your CV, contract, ID and certificates.</p>

@@ -8,6 +8,7 @@ import { Card, Pill, SectionTitle, Spinner } from '../components/ui.jsx'
 import {
   band, attendanceBand, statusFor, trendSeries, salesForPeriod, periodLabel, CUR_PERIOD,
 } from '../lib/performance.js'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // Staff self-view — "My Progress". The signed-in person's OWN goals, score,
 // KPI ratings, achievements and monthly history. Everything here is REAL: it
@@ -31,7 +32,7 @@ function Stars({ score, size = 18 }) {
   )
 }
 
-function Bar({ pct, tone = 'bg-[var(--color-good-bg)]0' }) {
+function Bar({ pct, tone = 'bg-[var(--color-good)]' }) {
   return (
     <div className="h-2.5 overflow-hidden rounded-full bg-[var(--color-line-soft)]">
       <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(0, Math.min(100, pct || 0))}%` }} />
@@ -111,7 +112,7 @@ export default function MyProgress() {
   }, [])
 
   if (!data) {
-    return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+    return <PageSkeleton tiles={0} rows={6} />
   }
 
   const reviews = data.reviews || []

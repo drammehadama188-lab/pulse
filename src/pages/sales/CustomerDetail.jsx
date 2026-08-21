@@ -7,6 +7,7 @@ import { Button, Card, Pill, Spinner, Modal, Field, Input, Select, Textarea } fr
 import { CUSTOMER_STATUS, CALL_STATUS, NEXT_ACTION, TRANSPORT_OUTCOME, STATUS_TONE } from '../../lib/salesOptions.js'
 import { dalasi, timeShort } from '../../lib/format.js'
 import CustomerForm from './CustomerForm.jsx'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 
 const ACT_TYPES = [
   { key: 'note', label: 'Note', icon: StickyNote, tone: 'warn' },
@@ -87,7 +88,7 @@ export default function CustomerDetail() {
     load()
   }
 
-  if (loading) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (loading) return <PageSkeleton tiles={0} rows={6} />
   if (!customer)
     return (
       <div className="py-16 text-center text-[var(--color-ink-faint)]">

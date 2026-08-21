@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Check, X, Palmtree, Inbox, Lock } from 'lucide-react'
 import { api } from '../../lib/api.js'
 import { Avatar, Button, Card, Field, Modal, Pill, SectionTitle, Spinner, Textarea } from '../../components/ui.jsx'
 import { dateShort } from '../../lib/format.js'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
+import Pager, { usePager } from '../../components/ui/Pager.jsx'
+import EmptyState from '../../components/ui/EmptyState.jsx'
+import { pageEnding } from '../../design.js'
 
 const STATUS_TONE = { pending: 'warn', approved: 'good', rejected: 'bad' }
 
@@ -24,18 +28,22 @@ export default function Approvals({ scope }) {
     load()
   }, [])
 
+  // Newest decision first. Hooks stay above the early return.
+  const decided = useMemo(
+    () => (requests || []).filter((r) => r.status !== 'pending').slice().reverse(),
+    [requests],
+  )
+  const decidedPager = usePager(decided, pageEnding.rows)
+
   if (!requests)
     return (
-      <div className="flex justify-center py-24">
-        <Spinner size={28} />
-      </div>
+      <PageSkeleton tiles={0} rows={6} />
     )
 
   const pending = requests.filter((r) => r.status === 'pending')
-  const decided = requests.filter((r) => r.status !== 'pending')
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       <div>
         <h1 className="t-page">{team ? 'Team Requests' : 'Approvals'}</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{team ? 'Leave requests from your team.' : 'Review and decide leave requests.'}</p>
@@ -44,9 +52,12 @@ export default function Approvals({ scope }) {
       <div>
         <SectionTitle>Pending {pending.length > 0 && <Pill tone="warn">{pending.length}</Pill>}</SectionTitle>
         {pending.length === 0 ? (
-          <Card className="flex flex-col items-center gap-2 py-12 text-center text-[var(--color-ink-faint)]">
-            <Inbox size={32} />
-            <span>You're all caught up.</span>
+          <Card>
+            <EmptyState
+              icon={Inbox}
+              title="Nothing waiting"
+              line={team ? 'A request from your team appears here the moment it is sent.' : 'A leave request appears here the moment someone sends one.'}
+            />
           </Card>
         ) : (
           <div className="space-y-3">
@@ -78,10 +89,7 @@ export default function Approvals({ scope }) {
         <div>
           <SectionTitle>Decided</SectionTitle>
           <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden">
-            {decided
-              .slice()
-              .reverse()
-              .map((r) => (
+            {decidedPager.slice.map((r) => (
                 <div key={r.id} className="flex items-start gap-4 px-5 py-4">
                   <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-rest-bg)] text-[var(--color-rest)]">
                     <Palmtree size={16} />
@@ -113,6 +121,7 @@ export default function Approvals({ scope }) {
                   </div>
                 </div>
               ))}
+            <Pager {...decidedPager.props} noun="decisions" />
           </Card>
         </div>
       )}

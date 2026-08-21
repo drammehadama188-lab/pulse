@@ -6,6 +6,7 @@ import PeriodSelector, { computePeriod, inPeriod } from '../../components/Period
 import { CUSTOMER_STATUS } from '../../lib/salesOptions.js'
 import { dalasi } from '../../lib/format.js'
 import EmptyState from '../../components/ui/EmptyState.jsx'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 
 const ACTIVE = (s) => !['Won', 'Lost', 'Not Available'].includes(s)
 
@@ -38,7 +39,7 @@ export default function Pipeline() {
     return { total: customers.length, active: active.length, won: won.length, lost: lost.length, conversion, wonInPeriod, calls, visits, leads, revenue }
   }, [data, period])
 
-  if (!calc) return <div className="flex justify-center py-16"><Spinner size={26} /></div>
+  if (!calc) return <PageSkeleton tiles={0} rows={6} />
 
   const target = (data.me?.target || 5) * (period.months || 1)
   const onTarget = period.months ? calc.wonInPeriod >= target : false

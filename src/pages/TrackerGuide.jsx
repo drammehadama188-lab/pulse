@@ -265,7 +265,7 @@ export default function TrackerGuide() {
         {tab === 'lessons' && (
           <div className="mt-3 flex items-center gap-3">
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--color-line-soft)]">
-              <div className="h-full rounded-full bg-[var(--color-good-bg)]0 transition-all" style={{ width: `${(done / LESSONS.length) * 100}%` }} />
+              <div className="h-full rounded-full bg-[var(--color-good)] transition-all" style={{ width: `${(done / LESSONS.length) * 100}%` }} />
             </div>
             <span className="shrink-0 text-[11.5px] font-semibold text-[var(--color-ink-soft)]">{done} of {LESSONS.length} learned</span>
           </div>

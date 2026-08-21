@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { FileText, Download, GraduationCap, Calendar, Flag, FolderOpen } from 'lucide-react'
 import { api, getToken } from '../lib/api.js'
 import { Card, Pill, SectionTitle, Spinner } from '../components/ui.jsx'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // Staff self-view — the signed-in person's OWN reviews, coaching and documents.
 // Read-only: HR authors everything from the staff profile; this is the employee's
@@ -49,9 +50,7 @@ export default function MyReviews() {
 
   if (!data) {
     return (
-      <div className="flex justify-center py-24">
-        <Spinner size={28} />
-      </div>
+      <PageSkeleton tiles={0} rows={6} />
     )
   }
 

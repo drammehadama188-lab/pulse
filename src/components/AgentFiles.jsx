@@ -153,7 +153,7 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
           >
             {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <label className="flex items-center gap-1.5 px-3 py-2 text-[11.5px] font-medium bg-white border border-[var(--color-line)] hover:border-[var(--color-line-soft)]0 text-[var(--color-ink-soft)] rounded-full cursor-pointer">
+          <label className="flex items-center gap-1.5 px-3 py-2 text-[11.5px] font-medium bg-white border border-[var(--color-line)] hover:border-[var(--color-line)] text-[var(--color-ink-soft)] rounded-full cursor-pointer">
             <Upload size={12} /> {uploading ? 'Uploading…' : 'Upload'}
             <input ref={fileInputRef} type="file" className="hidden" onChange={uploadFile} disabled={uploading} />
           </label>

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { Card, Pill, Spinner } from '../../components/ui.jsx'
 import { timeShort, dateLong, dalasi } from '../../lib/format.js'
 import { ymd } from '../../lib/schedule.js'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 
 const blank = () => ({ calls: 0, visits: 0, notes: 0, leads: 0, sales: 0, revenue: 0, checkIn: null, checkOut: null })
 
@@ -49,7 +50,7 @@ export default function DailyTracker() {
       .sort((a, b) => (a.key < b.key ? 1 : -1))
   }, [data])
 
-  if (!data) return <div className="flex justify-center py-16"><Spinner size={26} /></div>
+  if (!data) return <PageSkeleton tiles={0} rows={6} />
 
   const todayKey = ymd(new Date())
   const today = days.find((d) => d.key === todayKey) || { key: todayKey, ...blank() }
@@ -57,7 +58,7 @@ export default function DailyTracker() {
   const hasToday = today.calls || today.visits || today.notes || today.sales || today.checkIn
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-7">
       <div>
         <h1 className="t-page">My Day</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()} · auto-summarised from what you log.</p>

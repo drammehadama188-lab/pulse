@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import { Button, Card, ConfirmDialog, Field, Input, Modal, Pill, Select, SectionTitle, Spinner } from '../components/ui.jsx'
 import { dalasi } from '../lib/format.js'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 function monthLabel(p) {
   if (!/^\d{4}-\d{2}$/.test(p || '')) return p || ''
@@ -82,7 +83,7 @@ export default function Pay() {
     await loadDetails(selected)
   }
 
-  if (loading) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  if (loading) return <PageSkeleton tiles={0} rows={6} />
 
   const roster = isManager ? people.find((p) => p.username === selected) || null : ownRoster
   const personName = isManager ? people.find((p) => p.username === selected)?.name || user.name : user.name
@@ -372,7 +373,7 @@ function PayslipModal({ personName, username, onClose, onSaved }) {
         <Button variant="ghost" size="sm" onClick={() => draft(period)} disabled={drafting}>Auto-fill from salary</Button>
       </div>
       {drafting ? (
-        <div className="flex justify-center py-8"><Spinner size={22} /></div>
+        <PageSkeleton tiles={0} rows={6} />
       ) : (
         <>
           <LineEditor title="Earnings" lines={earnings} setLines={setEarnings} addLabel="Add earning" />
