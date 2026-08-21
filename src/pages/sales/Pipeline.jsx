@@ -5,6 +5,7 @@ import { Card, Pill, Spinner } from '../../components/ui.jsx'
 import PeriodSelector, { computePeriod, inPeriod } from '../../components/PeriodSelector.jsx'
 import { CUSTOMER_STATUS } from '../../lib/salesOptions.js'
 import { dalasi } from '../../lib/format.js'
+import EmptyState from '../../components/ui/EmptyState.jsx'
 
 const ACTIVE = (s) => !['Won', 'Lost', 'Not Available'].includes(s)
 
@@ -105,7 +106,10 @@ export default function Pipeline() {
       <Card className="p-5">
         <div className="mb-3 text-[13px] font-semibold text-[var(--color-ink-soft)]">Customers by status</div>
         {counts.length === 0 ? (
-          <p className="text-[13px] text-[var(--color-ink-faint)]">No data.</p>
+          <EmptyState
+            title="No customers yet"
+            line="Add a customer and their status appears in this breakdown."
+          />
         ) : (
           <div className="space-y-2.5">
             {counts.map(([status, n]) => (

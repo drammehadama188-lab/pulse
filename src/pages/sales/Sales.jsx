@@ -7,6 +7,8 @@ import { Button, Card, Pill, Spinner, StatCard } from '../../components/ui.jsx'
 import { CUSTOMER_STATUS, STATUS_TONE } from '../../lib/salesOptions.js'
 import { dalasi } from '../../lib/format.js'
 import CustomerForm, { EMPTY_CUSTOMER } from './CustomerForm.jsx'
+import Pager, { usePager } from '../../components/ui/Pager.jsx'
+import EmptyState from '../../components/ui/EmptyState.jsx'
 
 // Funnel standard (Sally's Excel "Reference Lists" → salesOptions.js):
 // a PAID customer is one whose sale is closed — status "Won". Everyone else is
@@ -22,10 +24,8 @@ export default function Sales() {
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState('All')
   const [tab, setTab] = useState('customers') // 'customers' (pipeline) | 'paid' (Won)
-  const [page, setPage] = useState(1)
   const [adding, setAdding] = useState(false)
   const [busy, setBusy] = useState(false)
-  const PAGE_SIZE = 20
 
   async function load() {
     const { customers } = await api('/customers')
@@ -61,13 +61,10 @@ export default function Sales() {
     return list
   }, [customers, q, filter, tab])
 
+  const pager = usePager(shown)
+  const paged = pager.slice
   // reset to first page whenever the visible set changes
-  useEffect(() => { setPage(1) }, [q, filter, tab])
-  const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE))
-  const safePage = Math.min(page, pageCount)
-  const paged = shown.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
-  const firstRow = shown.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1
-  const lastRow = Math.min(safePage * PAGE_SIZE, shown.length)
+  useEffect(() => { pager.reset() }, [q, filter, tab])
 
   async function addCustomer(values) {
     setBusy(true)
@@ -145,8 +142,14 @@ export default function Sales() {
           )}
 
           {shown.length === 0 ? (
-            <Card className="px-5 py-12 text-center text-[var(--color-ink-faint)]">
-              {tab === 'paid' ? 'No paid customers yet. Mark a sale Won to see it here.' : 'No customers match.'}
+            <Card>
+              <EmptyState
+                icon={Users}
+                title={tab === 'paid' ? 'No paid customers yet' : 'No customers match'}
+                line={tab === 'paid'
+                  ? 'A customer appears here once their sale is marked Won.'
+                  : 'Try a different search, or clear the status filter.'}
+              />
             </Card>
           ) : (
             <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden">
@@ -174,20 +177,8 @@ export default function Sales() {
                   <ChevronRight size={18} className="text-[var(--color-ink-faint)]" />
                 </Link>
               ))}
+              <Pager {...pager.props} noun="customers" />
             </Card>
-          )}
-
-          {shown.length > PAGE_SIZE && (
-            <div className="flex items-center justify-between gap-3 px-1">
-              <span className="text-[13px] text-[var(--color-ink-soft)]">
-                Showing <span className="font-semibold text-[var(--color-ink)]">{firstRow}–{lastRow}</span> of {shown.length}
-              </span>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>Prev</Button>
-                <span className="text-[13px] font-semibold text-[var(--color-ink-soft)]">{safePage} / {pageCount}</span>
-                <Button variant="outline" size="sm" disabled={safePage >= pageCount} onClick={() => setPage(safePage + 1)}>Next</Button>
-              </div>
-            </div>
           )}
         </div>
       )}

@@ -5,6 +5,7 @@ import {
   Search, MoreVertical, ChevronLeft, ChevronRight, Filter, AlertTriangle, FileClock,
 } from 'lucide-react';
 import { api } from '../lib/api.js';
+import Pager, { usePager } from '../components/ui/Pager.jsx';
 
 // Employees — the roster in the design Adama sent (20 Aug): five tiles, a
 // filter row, one row per person, and a footer that says what you are looking
@@ -20,7 +21,6 @@ const STATUS = {
   leave: ['On leave', 'var(--color-pill-leave-bg)', 'var(--color-pill-leave)'],
   inactive: ['Inactive', 'var(--color-pill-inactive-bg)', 'var(--color-pill-inactive)'],
 };
-const PAGE_SIZES = [10, 25, 50];
 const initials = (n) => (n || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 const profileHref = (e) => `/people/${e.username}`;
 const day = (iso) => {
@@ -53,8 +53,6 @@ export default function Employees() {
   const [dept, setDept] = useState('');
   const [status, setStatus] = useState('');
   const [employment, setEmployment] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [menu, setMenu] = useState(null);
   const [picked, setPicked] = useState(() => new Set());
   const [moreFilters, setMoreFilters] = useState(false);
@@ -64,7 +62,7 @@ export default function Employees() {
   const [view, setView] = useState('employees');
 
   useEffect(() => { api('/hr/employees').then(setData).catch((e) => setError(e.message)); }, []);
-  useEffect(() => { setPage(1); }, [query, dept, status, employment, pageSize, milestoneOnly, view]);
+  useEffect(() => { pager.reset(); }, [query, dept, status, employment, milestoneOnly, view]);
 
   const rows = useMemo(() => {
     const list = data?.employees || [];
@@ -82,8 +80,8 @@ export default function Employees() {
     });
   }, [data, query, dept, status, employment, joinedFrom, joinedTo, milestoneOnly]);
 
-  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
-  const shown = rows.slice((page - 1) * pageSize, page * pageSize);
+  const pager = usePager(rows);
+  const shown = pager.slice;
 
   const allShownPicked = shown.length > 0 && shown.every((e) => picked.has(e.username));
   const togglePage = () => setPicked((p) => {
@@ -293,27 +291,7 @@ export default function Employees() {
           </tbody>
         </table>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-line-soft)] px-4 py-3">
-          <span className="text-[12px] text-[var(--color-ink-soft)]">
-            {rows.length === 0 ? 'No employees to show'
-              : `Showing ${(page - 1) * pageSize + 1} to ${Math.min(page * pageSize, rows.length)} of ${rows.length} employees`}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}
-              className="rounded-[8px] border border-[var(--color-line)] p-2 text-[var(--color-ink-soft)] disabled:opacity-40"><ChevronLeft size={15} /></button>
-            {Array.from({ length: pages }, (_, i) => i + 1).slice(Math.max(0, page - 3), Math.max(0, page - 3) + 5).map((n) => (
-              <button key={n} onClick={() => setPage(n)}
-                className={`min-w-[34px] rounded-[8px] border px-2 py-1.5 text-[12.5px] font-semibold ${n === page ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-[var(--color-line)] text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
-                {n}
-              </button>
-            ))}
-            <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)}
-              className="rounded-[8px] border border-[var(--color-line)] p-2 text-[var(--color-ink-soft)] disabled:opacity-40"><ChevronRight size={15} /></button>
-            <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className={`${field} ml-2`}>
-              {PAGE_SIZES.map((n) => <option key={n} value={n}>{n} per page</option>)}
-            </select>
-          </span>
-        </div>
+        <Pager {...pager.props} noun="employees" />
       </div>
       )}
 

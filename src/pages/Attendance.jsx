@@ -27,7 +27,7 @@ const TONE = {
   late: 'border-l-[var(--color-warn)] bg-[var(--color-warn-bg)]',
   absent: 'border-l-[var(--color-bad)] bg-[var(--color-bad-bg)]',
   sick: 'border-l-[var(--color-rest)] bg-[var(--color-rest-bg)]',
-  leave: 'border-l-[#2563eb] bg-[#eff6ff]',
+  leave: 'border-l-[var(--color-brand)] bg-[var(--color-brand-50)]',
   offex: 'border-l-[var(--color-ink-faint)] bg-[var(--color-fill)]',
 }
 const TONE_DOT = {
@@ -35,7 +35,7 @@ const TONE_DOT = {
   worked: 'var(--color-good)',
   late: 'var(--color-warn)',
   sick: 'var(--color-rest)',
-  leave: '#2563eb',
+  leave: 'var(--color-brand)',
   absent: 'var(--color-bad)',
 }
 
@@ -93,7 +93,7 @@ const CHIP = {
   working: { label: 'Working', cls: 'bg-[var(--color-good-bg)] text-[var(--color-good)]', dot: 'var(--color-good)' },
   late: { label: 'Late', cls: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]', dot: 'var(--color-warn)' },
   done: { label: 'Shift done', cls: 'bg-[var(--color-good-bg)] text-[var(--color-good)]', dot: 'var(--color-good)' },
-  leave: { label: 'On leave', cls: 'bg-[#eff6ff] text-[#1d4ed8]', dot: '#2563eb' },
+  leave: { label: 'On leave', cls: 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]', dot: 'var(--color-brand)' },
   sick: { label: 'Sick', cls: 'bg-[var(--color-rest-bg)] text-[var(--color-rest)]', dot: 'var(--color-rest)' },
   notin: { label: 'Not in yet', cls: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]', dot: 'var(--color-ink-faint)' },
   absent: { label: 'Absent', cls: 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]', dot: 'var(--color-bad)' },
@@ -146,7 +146,7 @@ const STAT_TONE = {
   good: { text: 'text-[var(--color-good)]', dot: 'var(--color-good)', soft: 'bg-[var(--color-good-bg)]' },
   warn: { text: 'text-[var(--color-warn)]', dot: 'var(--color-warn)', soft: 'bg-[var(--color-warn-bg)]' },
   bad: { text: 'text-[var(--color-bad)]', dot: 'var(--color-bad)', soft: 'bg-[var(--color-bad-bg)]' },
-  blue: { text: 'text-[#1d4ed8]', dot: '#2563eb', soft: 'bg-[#eff6ff]' },
+  blue: { text: 'text-[var(--color-brand-700)]', dot: 'var(--color-brand)', soft: 'bg-[var(--color-brand-50)]' },
   rest: { text: 'text-[var(--color-rest)]', dot: 'var(--color-rest)', soft: 'bg-[var(--color-rest-bg)]' },
   ink: { text: 'text-[var(--color-ink)]', dot: 'var(--color-ink-faint)', soft: 'bg-[var(--color-fill)]' },
 }

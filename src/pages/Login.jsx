@@ -31,7 +31,7 @@ export default function Login() {
       {/* brand panel */}
       <div
         className="relative hidden flex-col items-center justify-center overflow-hidden p-12 md:flex"
-        style={{ background: 'linear-gradient(150deg, #f6f7f9 0%, #ffffff 55%, #f3f4f6 100%)' }}
+        style={{ background: 'var(--gradient-signin)' }}
       >
         <div
           className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full"
@@ -46,11 +46,11 @@ export default function Login() {
             <svg width="62" height="83" viewBox="0 0 120 160" aria-hidden>
               <path
                 d="M78 10 C 46 44 44 72 60 96 C 70 111 66 122 50 130 C 60 112 46 102 52 80 C 58 54 70 30 78 10 Z"
-                fill="#d6294f"
+                fill="var(--color-damia)"
               />
               <path
                 d="M56 92 C 32 118 32 140 48 154 C 41 140 52 130 60 122 C 71 112 68 96 56 92 Z"
-                fill="#d6294f"
+                fill="var(--color-damia)"
               />
             </svg>
             <div className="text-left leading-none">

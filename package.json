@@ -8,9 +8,10 @@
     "server": "node server.js",
     "start": "node server.js & vite",
     "build": "vite build",
-    "postbuild": "node test/no-pay-in-bundle.test.mjs && node test/render-pages.test.mjs && (node test/design-rules.test.mjs || true)",
+    "postbuild": "node test/no-pay-in-bundle.test.mjs && node test/render-pages.test.mjs && node test/design-rules.test.mjs",
     "preview": "vite preview",
-    "test": "node test/no-pay-in-bundle.test.mjs && node test/auth-coverage.test.mjs && node test/render-pages.test.mjs && node test/design-rules.test.mjs"
+    "test": "node test/no-pay-in-bundle.test.mjs && node test/auth-coverage.test.mjs && node test/render-pages.test.mjs && node test/design-rules.test.mjs",
+    "design-check": "node test/design-rules.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -4,6 +4,7 @@ import { Plus, X, Upload, ClipboardPaste, MoreVertical, ChevronLeft, ChevronRigh
 import { api } from '../../lib/api.js';
 import { STAGES, STAGE_TABS, CONTACT, CONTACT_LABEL, SCREENING, SCREENING_META } from './stages.js';
 import { CARD, BTN_LIGHT, BTN_PRIMARY, PageHead, StageChip, ago, fullDate } from './ui.jsx';
+import Pager, { usePager } from '../../components/ui/Pager.jsx';
 
 // Applicants — the whole pile, and one person at a time in the panel beside
 // it. This is both the call sheet and the profile list: they were the same
@@ -14,7 +15,6 @@ import { CARD, BTN_LIGHT, BTN_PRIMARY, PageHead, StageChip, ago, fullDate } from
 
 const BLANK = { name: '', role: '', email: '', phone: '', source: '', notes: '', positionId: '' };
 const SOURCES = ['Ads', 'WhatsApp', 'Referral', 'Walk-in', 'Recruitment agency', 'Email'];
-const PAGE_SIZES = [10, 25, 50, 100];
 const initials = (n) => (n || '?').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
 export default function Applicants() {
@@ -24,8 +24,6 @@ export default function Applicants() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(() => new Set());
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
   const [menuId, setMenuId] = useState(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(BLANK);
@@ -62,7 +60,6 @@ export default function Applicants() {
   useEffect(() => {
     api('/positions').then(d => setPositions(d.positions || [])).catch(() => setPositions([]));
   }, []);
-  useEffect(() => { setPage(1); }, [tab, positionFilter, contactFilter, availFilter, sourceFilter, query, pageSize]);
 
   async function patch(a, body) {
     setApplicants(list => list.map(x => x.id === a.id ? { ...x, ...body } : x));
@@ -141,8 +138,9 @@ export default function Applicants() {
     }).sort((a, b) => (Date.parse(b.appliedAt || b.createdAt || 0) || 0) - (Date.parse(a.appliedAt || a.createdAt || 0) || 0));
   }, [applicants, positions, tab, positionFilter, contactFilter, availFilter, sourceFilter, query]);
 
-  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const rows = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const pager = usePager(filtered);
+  const rows = pager.slice;
+  useEffect(() => { pager.reset(); }, [tab, positionFilter, contactFilter, availFilter, sourceFilter, query]);
   const allOnPageSelected = rows.length > 0 && rows.every(a => selected.has(a.id));
   const sources = useMemo(() => [...new Set(applicants.map(a => a.source).filter(Boolean))], [applicants]);
 
@@ -346,21 +344,7 @@ export default function Applicants() {
               </table>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <span className="text-[12px] text-[var(--color-ink-soft)]">
-                {filtered.length === 0 ? 'Nothing to show' : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filtered.length)} of ${filtered.length}`}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                  className="rounded-[8px] border border-[var(--color-line)] p-1.5 text-[var(--color-ink-soft)] disabled:opacity-40"><ChevronLeft size={15} /></button>
-                <span className="px-2 text-[12.5px] text-[var(--color-ink-soft)]">Page {page} of {pages}</span>
-                <button disabled={page >= pages} onClick={() => setPage(p => p + 1)}
-                  className="rounded-[8px] border border-[var(--color-line)] p-1.5 text-[var(--color-ink-soft)] disabled:opacity-40"><ChevronRight size={15} /></button>
-                <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className={`${field} ml-2`}>
-                  {PAGE_SIZES.map(n => <option key={n} value={n}>{n} per page</option>)}
-                </select>
-              </span>
-            </div>
+            <Pager {...pager.props} noun="applicants" />
           </>
         )}
 

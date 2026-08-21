@@ -99,6 +99,11 @@
   --radius-card: 10px;
   --radius-lg: 8px;
 
+  /* The Damia mark and the two places brand colour covers a whole surface —
+     the sign-in field and a customer hero. Nowhere else uses saturated colour. */
+  --gradient-signin: linear-gradient(150deg, #f6f7f9 0%, #ffffff 55%, #f3f4f6 100%);
+  --gradient-hero: linear-gradient(115deg, #e0345a 0%, #d6294f 42%, #b81e58 72%, #a3173a 100%);
+
   /* 🔒 If the shadow is noticed, it is too strong. */
   --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.018), 0 4px 12px rgba(15, 23, 42, 0.025);
   --shadow-lift: 0 6px 20px rgba(15, 23, 42, 0.09);
