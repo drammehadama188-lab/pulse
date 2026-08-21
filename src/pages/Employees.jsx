@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, CheckCircle2, Clock, GraduationCap, UserX, Upload, Download, Plus,
-  Search, MoreVertical, ChevronLeft, ChevronRight,
+  Search, MoreVertical, ChevronLeft, ChevronRight, Filter,
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 
@@ -33,14 +33,14 @@ function Tile({ icon: Icon, value, label, sub, tint, ink, onClick, on }) {
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag {...(onClick ? { onClick, type: 'button' } : {})}
-      className={`${CARD} flex w-full items-start gap-2.5 p-3.5 text-left ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''} ${on ? 'border-[var(--color-brand)]' : ''}`}>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px]" style={{ background: tint, color: ink }}>
-        <Icon size={17} strokeWidth={2} />
+      className={`${CARD} flex w-full items-start gap-3 p-[18px] text-left transition-colors ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''} ${on ? 'border-[var(--color-brand)]' : ''}`}>
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px]" style={{ background: tint, color: ink }}>
+        <Icon size={20} strokeWidth={2} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[24px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
-        <span className="mt-1.5 block text-[12.5px] font-medium text-[var(--color-ink-soft)]">{label}</span>
-        <span className="mt-0.5 block text-[11.5px] text-[var(--color-ink-faint)]">{sub}</span>
+        <span className="mt-1.5 block text-[13px] font-medium text-[var(--color-ink-soft)]">{label}</span>
+        <span className="mt-1 block text-[12px] text-[var(--color-ink-faint)]">{sub}</span>
       </span>
     </Tag>
   );
@@ -56,6 +56,10 @@ export default function Employees() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [menu, setMenu] = useState(null);
+  const [picked, setPicked] = useState(() => new Set());
+  const [moreFilters, setMoreFilters] = useState(false);
+  const [joinedFrom, setJoinedFrom] = useState('');
+  const [joinedTo, setJoinedTo] = useState('');
 
   useEffect(() => { api('/hr/employees').then(setData).catch((e) => setError(e.message)); }, []);
   useEffect(() => { setPage(1); }, [query, dept, status, employment, pageSize]);
@@ -68,16 +72,31 @@ export default function Employees() {
       if (status && e.status !== status) return false;
       if (employment && e.employment !== employment) return false;
       if (q && !`${e.name} ${e.email} ${e.phone} ${e.title}`.toLowerCase().includes(q)) return false;
+      if (joinedFrom && (!e.startDate || e.startDate < joinedFrom)) return false;
+      if (joinedTo && (!e.startDate || e.startDate > joinedTo)) return false;
       return true;
     });
-  }, [data, query, dept, status, employment]);
+  }, [data, query, dept, status, employment, joinedFrom, joinedTo]);
 
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   const shown = rows.slice((page - 1) * pageSize, page * pageSize);
 
-  function exportCsv() {
+  const allShownPicked = shown.length > 0 && shown.every((e) => picked.has(e.username));
+  const togglePage = () => setPicked((p) => {
+    const n = new Set(p);
+    shown.forEach((e) => (allShownPicked ? n.delete(e.username) : n.add(e.username)));
+    return n;
+  });
+  const toggleOne = (u) => setPicked((p) => {
+    const n = new Set(p);
+    n.has(u) ? n.delete(u) : n.add(u);
+    return n;
+  });
+
+  function exportCsv(only) {
     const head = ['Name', 'Role', 'Department', 'Status', 'Employment type', 'Start date', 'Email', 'Phone'];
-    const body = rows.map((e) => [e.name, e.title, e.department, STATUS[e.status]?.[0] || e.status, e.employment, e.startDate || '', e.email, e.phone]);
+    const list = only ? rows.filter((e) => picked.has(e.username)) : rows;
+    const body = list.map((e) => [e.name, e.title, e.department, STATUS[e.status]?.[0] || e.status, e.employment, e.startDate || '', e.email, e.phone]);
     const csv = [head, ...body].map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const a = document.createElement('a');
@@ -87,8 +106,8 @@ export default function Employees() {
     URL.revokeObjectURL(url);
   }
 
-  const field = 'rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[12.5px] text-[var(--color-ink-soft)]';
-  const btn = 'inline-flex items-center gap-2 rounded-[8px] px-3.5 py-2 text-[13px] font-semibold transition-colors';
+  const field = 'rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[13px] text-[var(--color-ink-soft)]';
+  const btn = 'inline-flex items-center gap-2 rounded-[8px] px-4 py-2.5 text-[13px] font-semibold transition-colors';
   const light = `${btn} border border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-fill)]`;
 
   if (error) return <p className="text-[13px] text-[var(--color-stage-out)]">{error}</p>;
@@ -108,7 +127,7 @@ export default function Employees() {
           {/* Importing a roster is Pulse's own job elsewhere — this is the page
               where you add one person, so the other two buttons are the honest
               pair: take the list out, or add somebody. */}
-          <button onClick={exportCsv} className={light}><Download size={15} /> Export</button>
+          <button onClick={() => exportCsv(false)} className={light}><Download size={15} /> Export</button>
           <Link to="/people?tab=roster" className={`${btn} bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)]`}>
             <Plus size={15} /> Add employee
           </Link>
@@ -146,19 +165,42 @@ export default function Employees() {
           <option value="">All employment types</option>
           {data.employmentTypes.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
+        <button onClick={() => setMoreFilters((v) => !v)}
+          className={`${light} ${joinedFrom || joinedTo ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : ''}`}>
+          <Filter size={15} /> Filters{joinedFrom || joinedTo ? ' · 1' : ''}
+        </button>
       </div>
+
+      {moreFilters && (
+        <div className={`${CARD} mt-3 flex flex-wrap items-end gap-3 p-3.5`}>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Started on or after</span>
+            <input type="date" value={joinedFrom} onChange={(e) => setJoinedFrom(e.target.value)} className={field} />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Started on or before</span>
+            <input type="date" value={joinedTo} onChange={(e) => setJoinedTo(e.target.value)} className={field} />
+          </label>
+          {(joinedFrom || joinedTo) && (
+            <button onClick={() => { setJoinedFrom(''); setJoinedTo(''); }} className="pb-2.5 text-[12.5px] font-semibold text-[var(--color-brand)]">Clear</button>
+          )}
+        </div>
+      )}
 
       <div className={`${CARD} mt-4 overflow-x-auto`}>
         <table className="w-full text-[13px]">
           <thead>
             <tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
-              <th className="px-4 py-2.5 font-semibold">Employee</th>
-              <th className="px-4 py-2.5 font-semibold">Role</th>
-              <th className="px-4 py-2.5 font-semibold">Department</th>
-              <th className="px-4 py-2.5 font-semibold">Status</th>
-              <th className="px-4 py-2.5 font-semibold">Employment type</th>
-              <th className="px-4 py-2.5 font-semibold">Start date</th>
-              <th className="w-10 px-4 py-2.5" />
+              <th className="w-10 px-4 py-3">
+                <input type="checkbox" checked={allShownPicked} onChange={togglePage} className="accent-[var(--color-brand)]" />
+              </th>
+              <th className="px-4 py-3 font-semibold">Employee</th>
+              <th className="px-4 py-3 font-semibold">Role</th>
+              <th className="px-4 py-3 font-semibold">Department</th>
+              <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">Employment type</th>
+              <th className="px-4 py-3 font-semibold">Start date</th>
+              <th className="px-4 py-3 text-right font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -166,24 +208,27 @@ export default function Employees() {
               const [label, tint, ink] = STATUS[e.status] || [e.status, 'var(--color-fill)', 'var(--color-ink-soft)'];
               return (
                 <tr key={e.username} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-fill)]">
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3.5">
+                    <input type="checkbox" checked={picked.has(e.username)} onChange={() => toggleOne(e.username)} className="accent-[var(--color-brand)]" />
+                  </td>
+                  <td className="px-4 py-3.5">
                     <Link to={profileHref(e.name)} className="flex items-center gap-2.5">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[11px] font-semibold text-[var(--color-ink-soft)]">{initials(e.name)}</span>
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[12px] font-semibold text-[var(--color-ink-soft)]">{initials(e.name)}</span>
                       <span className="min-w-0">
                         <span className="block truncate font-semibold text-[var(--color-ink)]">{e.name}</span>
-                        <span className="block truncate text-[11.5px] text-[var(--color-ink-faint)]">{e.email || '—'}</span>
-                        {e.phone && <span className="block truncate text-[11.5px] text-[var(--color-ink-faint)]">{e.phone}</span>}
+                        <span className="mt-0.5 block truncate text-[12px] text-[var(--color-ink-faint)]">{e.email || '—'}</span>
+                        {e.phone && <span className="block truncate text-[12px] text-[var(--color-ink-faint)]">{e.phone}</span>}
                       </span>
                     </Link>
                   </td>
-                  <td className="px-4 py-2.5 text-[var(--color-ink-soft)]">{e.title || '—'}</td>
-                  <td className="px-4 py-2.5 text-[var(--color-ink-soft)]">{e.department || '—'}</td>
-                  <td className="px-4 py-2.5">
-                    <span className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11.5px] font-semibold" style={{ background: tint, color: ink }}>
+                  <td className="px-4 py-3.5 text-[var(--color-ink-soft)]"><span className="block max-w-[180px]">{e.title || '—'}</span></td>
+                  <td className="px-4 py-3.5 text-[var(--color-ink-soft)]">{e.department || '—'}</td>
+                  <td className="px-4 py-3.5">
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ background: tint, color: ink }}>
                       <span className="h-1.5 w-1.5 rounded-full bg-current" /> {label}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-[var(--color-ink-soft)]">{e.employment}</td>
+                  <td className="px-4 py-3.5 text-[var(--color-ink-soft)]">{e.employment}</td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-[var(--color-ink-soft)]">{day(e.startDate)}</td>
                   <td className="relative px-4 py-2.5">
                     <button onClick={() => setMenu(menu === e.username ? null : e.username)}
@@ -206,7 +251,7 @@ export default function Employees() {
               );
             })}
             {shown.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-[13px] text-[var(--color-ink-soft)]">Nobody matches those filters.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-[13px] text-[var(--color-ink-soft)]">Nobody matches those filters.</td></tr>
             )}
           </tbody>
         </table>
@@ -218,16 +263,32 @@ export default function Employees() {
           </span>
           <span className="flex items-center gap-1.5">
             <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}
-              className="rounded-[8px] border border-[var(--color-line)] p-1.5 text-[var(--color-ink-soft)] disabled:opacity-40"><ChevronLeft size={15} /></button>
-            <span className="px-2 text-[12.5px] text-[var(--color-ink-soft)]">Page {page} of {pages}</span>
+              className="rounded-[8px] border border-[var(--color-line)] p-2 text-[var(--color-ink-soft)] disabled:opacity-40"><ChevronLeft size={15} /></button>
+            {Array.from({ length: pages }, (_, i) => i + 1).slice(Math.max(0, page - 3), Math.max(0, page - 3) + 5).map((n) => (
+              <button key={n} onClick={() => setPage(n)}
+                className={`min-w-[34px] rounded-[8px] border px-2 py-1.5 text-[12.5px] font-semibold ${n === page ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-[var(--color-line)] text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
+                {n}
+              </button>
+            ))}
             <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)}
-              className="rounded-[8px] border border-[var(--color-line)] p-1.5 text-[var(--color-ink-soft)] disabled:opacity-40"><ChevronRight size={15} /></button>
+              className="rounded-[8px] border border-[var(--color-line)] p-2 text-[var(--color-ink-soft)] disabled:opacity-40"><ChevronRight size={15} /></button>
             <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className={`${field} ml-2`}>
               {PAGE_SIZES.map((n) => <option key={n} value={n}>{n} per page</option>)}
             </select>
           </span>
         </div>
       </div>
+
+      {picked.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-[var(--color-surface)]/95 backdrop-blur md:pl-[228px]">
+          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-3 px-4 py-2.5 md:px-8">
+            <span className="text-[12.5px] font-semibold text-[var(--color-ink)]">{picked.size} selected</span>
+            <button onClick={() => setPicked(new Set())} className="text-[12.5px] font-semibold text-[var(--color-brand)]">Clear</button>
+            <span className="flex-1" />
+            <button onClick={() => exportCsv(true)} className={light}><Download size={15} /> Export selected</button>
+          </div>
+        </div>
+      )}
 
       {/* The rest of the employee record — contracts, past staff, warnings —
           is still the page it always was; this is the roster in front of it. */}
