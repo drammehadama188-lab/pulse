@@ -128,9 +128,9 @@ export default function EmployeeProfile() {
     : (daysToEnd != null && daysToEnd < 0) ? 'Expired'
     : 'Active';
   const statusColor = terminated ? 'bg-[var(--color-ink)] text-white'
-    : agent.status === 'training' ? 'bg-orange-100 text-orange-700'
-    : agent.status === 'probation' ? 'bg-amber-100 text-amber-700'
-    : (daysToEnd != null && daysToEnd < 0) ? 'bg-red-100 text-red-700'
+    : agent.status === 'training' ? 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]'
+    : agent.status === 'probation' ? 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]'
+    : (daysToEnd != null && daysToEnd < 0) ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]'
     : 'bg-[var(--color-good-bg)] text-[var(--color-good)]';
 
   const documents = files.filter((f) => f.category !== 'monthly-review');
@@ -147,10 +147,10 @@ export default function EmployeeProfile() {
     ? (typeof agent.performance === 'number' ? agent.performance : null)
     : Number(profile.performanceScore);
   const contractBadge = terminated ? { label: 'Terminated', cls: 'bg-[var(--color-ink)] text-white' }
-    : (agent.status === 'probation' || agent.status === 'training') ? { label: 'Probation', cls: 'bg-violet-100 text-violet-700' }
+    : (agent.status === 'probation' || agent.status === 'training') ? { label: 'Probation', cls: 'bg-[var(--color-rest-bg)] text-[var(--color-rest)]' }
     : permanent ? { label: 'Permanent', cls: 'bg-[var(--color-good-bg)] text-[var(--color-good)]' }
-    : daysToEnd < 0 ? { label: 'Expired', cls: 'bg-red-100 text-red-700' }
-    : daysToEnd <= 30 ? { label: 'Expiring soon', cls: 'bg-amber-100 text-amber-700' }
+    : daysToEnd < 0 ? { label: 'Expired', cls: 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' }
+    : daysToEnd <= 30 ? { label: 'Expiring soon', cls: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' }
     : { label: 'Active', cls: 'bg-[var(--color-good-bg)] text-[var(--color-good)]' };
   const recommendation = terminated ? null
     : permanent ? 'Permanent — no action'
@@ -249,12 +249,12 @@ export default function EmployeeProfile() {
 
       {/* Termination banner */}
       {terminated && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 flex items-start gap-3">
-          <UserX size={18} className="text-red-600 mt-0.5 shrink-0" />
+        <div className="bg-[var(--color-bad-bg)] border border-[var(--color-bad-bg)] rounded-lg p-4 mb-4 flex items-start gap-3">
+          <UserX size={18} className="text-[var(--color-bad)] mt-0.5 shrink-0" />
           <div>
-            <p className="text-[13px] font-semibold text-red-800">Contract terminated{termEvent?.toEnd ? ` — ${formatDate(termEvent.toEnd)}` : ''}</p>
-            <p className="text-[13px] text-red-700">{termEvent?.reason || 'No reason recorded.'}</p>
-            <p className="text-[11px] text-red-500 mt-0.5">This employee has been deactivated across Pulse and signed out.</p>
+            <p className="text-[13px] font-semibold text-[var(--color-bad)]">Contract terminated{termEvent?.toEnd ? ` — ${formatDate(termEvent.toEnd)}` : ''}</p>
+            <p className="text-[13px] text-[var(--color-bad)]">{termEvent?.reason || 'No reason recorded.'}</p>
+            <p className="text-[11px] text-[var(--color-bad)] mt-0.5">This employee has been deactivated across Pulse and signed out.</p>
           </div>
         </div>
       )}
@@ -277,16 +277,16 @@ export default function EmployeeProfile() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
               <Field label="Type" value={cType} />
               <Field label="Start date" value={cStart || '—'} />
-              <Field label="End date" value={cEnd ? formatDate(cEnd) : 'No end date'} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : daysToEnd !== null && daysToEnd <= 90 ? 'text-amber-600' : 'text-[var(--color-ink)]'} />
-              <Field label="Days left" value={daysToEnd == null ? '—' : daysToEnd < 0 ? `${-daysToEnd} days ago` : `${daysToEnd} days`} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-red-600' : 'text-[var(--color-ink)]'} />
+              <Field label="End date" value={cEnd ? formatDate(cEnd) : 'No end date'} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-[var(--color-bad)]' : daysToEnd !== null && daysToEnd <= 90 ? 'text-[var(--color-warn)]' : 'text-[var(--color-ink)]'} />
+              <Field label="Days left" value={daysToEnd == null ? '—' : daysToEnd < 0 ? `${-daysToEnd} days ago` : `${daysToEnd} days`} accent={daysToEnd !== null && daysToEnd <= 30 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink)]'} />
               <Field label="Performance" value={score == null ? '—' : `${score}%`} />
-              <Field label="Recommendation" value={recommendation || '—'} accent={recommendation === 'Renew' ? 'text-[var(--color-good)]' : /under|extend|end/i.test(recommendation || '') ? 'text-red-600' : 'text-[var(--color-ink)]'} />
+              <Field label="Recommendation" value={recommendation || '—'} accent={recommendation === 'Renew' ? 'text-[var(--color-good)]' : /under|extend|end/i.test(recommendation || '') ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink)]'} />
             </div>
             {!terminated ? (
               <div className="mt-5 flex flex-wrap gap-2">
                 {ACTIONS.filter((a) => !a.hide).map((a) => (
                   <button key={a.key} type="button" onClick={() => openAction(a.key)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-medium border transition-colors ${a.danger ? 'border-red-200 text-red-700 hover:bg-red-50' : 'border-[var(--color-line)] text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-medium border transition-colors ${a.danger ? 'border-[var(--color-bad-bg)] text-[var(--color-bad)] hover:bg-[var(--color-bad-bg)]' : 'border-[var(--color-line)] text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
                     <a.icon size={14} /> {a.label}
                   </button>
                 ))}
@@ -304,7 +304,7 @@ export default function EmployeeProfile() {
               <Field label="Status" value={statusLabel} accent={isActive ? 'text-[var(--color-good)]' : 'text-[var(--color-ink)]'} />
               <Field label="Base salary" value={`D${(pay?.base || 0).toLocaleString()}`} />
               <Field label="Commission" value={pay?.commission > 0 ? `Up to D${pay.commission.toLocaleString()}` : '—'} accent={pay?.commission > 0 ? 'text-[var(--color-good)]' : 'text-[var(--color-ink)]'} />
-              <Field label="Warnings" value={String(warnings.length)} accent={warnings.length > 0 ? 'text-red-600' : 'text-[var(--color-ink)]'} />
+              <Field label="Warnings" value={String(warnings.length)} accent={warnings.length > 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink)]'} />
             </div>
           </div>
 
@@ -354,7 +354,7 @@ export default function EmployeeProfile() {
                   <div className="flex items-center gap-3 min-w-0"><FileText size={16} className="text-[var(--color-ink-faint)] shrink-0" /><div className="min-w-0"><p className="text-[13px] text-[var(--color-ink)] truncate">{f.name}</p><p className="text-[11.5px] text-[var(--color-ink-faint)]">{formatDate(f.uploadedAt)}</p></div></div>
                   <div className="flex items-center gap-4 shrink-0">
                     <a href={`/api/agent-files/${f.id}/download`} className="flex items-center gap-1.5 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><Download size={14} /> Download</a>
-                    <button type="button" onClick={() => deleteDoc(f)} className="flex items-center gap-1.5 text-[13px] text-[var(--color-ink-faint)] hover:text-red-600"><Trash2 size={14} /> Delete</button>
+                    <button type="button" onClick={() => deleteDoc(f)} className="flex items-center gap-1.5 text-[13px] text-[var(--color-ink-faint)] hover:text-[var(--color-bad)]"><Trash2 size={14} /> Delete</button>
                   </div>
                 </div>
               ))}
@@ -373,7 +373,7 @@ export default function EmployeeProfile() {
             <h2 className="text-base font-semibold text-[var(--color-ink)] mb-3">Warnings</h2>
             {warnings.length === 0 ? <p className="text-[13px] text-[var(--color-ink-faint)]">No warnings on file.</p> : (
               <div className="space-y-2">{warnings.map((w) => (
-                <div key={w.id} className="flex items-start gap-2 text-[13px]"><AlertTriangle size={14} className="text-amber-500 mt-0.5 shrink-0" /><div><span className="text-[var(--color-ink)]">{w.reason}</span><span className="block text-[11.5px] text-[var(--color-ink-faint)]">{w.type} · {formatDate(w.date)}{w.issuedBy ? ` · ${w.issuedBy}` : ''}</span></div></div>
+                <div key={w.id} className="flex items-start gap-2 text-[13px]"><AlertTriangle size={14} className="text-[var(--color-warn)] mt-0.5 shrink-0" /><div><span className="text-[var(--color-ink)]">{w.reason}</span><span className="block text-[11.5px] text-[var(--color-ink-faint)]">{w.type} · {formatDate(w.date)}{w.issuedBy ? ` · ${w.issuedBy}` : ''}</span></div></div>
               ))}</div>
             )}
           </div>
@@ -401,12 +401,12 @@ export default function EmployeeProfile() {
                   <span className="text-[11.5px] font-medium text-[var(--color-ink-soft)]">{done}/{items.length} done</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-[var(--color-fill)] mb-5 overflow-hidden">
-                  <div className={`h-full rounded-full ${color === 'emerald' ? 'bg-[var(--color-good-bg)]0' : 'bg-red-400'}`} style={{ width: `${pct}%` }} />
+                  <div className={`h-full rounded-full ${color === 'emerald' ? 'bg-[var(--color-good-bg)]0' : 'bg-[var(--color-bad)]'}`} style={{ width: `${pct}%` }} />
                 </div>
                 <div className="divide-y divide-[var(--color-line-soft)]">
                   {items.map((it) => (
                     <button key={it.label} type="button" onClick={() => toggleCheck(type, it.label, !it.done)} className="w-full flex items-center gap-3 py-3 text-left hover:bg-[var(--color-fill)] -mx-2 px-2 rounded-lg">
-                      {it.done ? <CheckCircle2 size={18} className={color === 'emerald' ? 'text-[var(--color-good)]' : 'text-red-500'} /> : <Circle size={18} className="text-[var(--color-ink-faint)]" />}
+                      {it.done ? <CheckCircle2 size={18} className={color === 'emerald' ? 'text-[var(--color-good)]' : 'text-[var(--color-bad)]'} /> : <Circle size={18} className="text-[var(--color-ink-faint)]" />}
                       <span className={`flex-1 text-[13px] ${it.done ? 'text-[var(--color-ink-soft)] line-through' : 'text-[var(--color-ink)]'}`}>{it.label}</span>
                       {it.done && it.doneAt && <span className="text-[11px] text-[var(--color-ink-faint)]">{formatDate(it.doneAt)}</span>}
                     </button>
@@ -426,7 +426,7 @@ export default function EmployeeProfile() {
               {activity.map((a, i) => (
                 <div key={i} className="flex gap-4 pb-4 last:pb-0">
                   <div className="flex flex-col items-center">
-                    <div className={`w-2 h-2 rounded-full mt-1.5 ${a.warn ? 'bg-amber-500' : 'bg-[var(--color-good-bg)]0'}`} />
+                    <div className={`w-2 h-2 rounded-full mt-1.5 ${a.warn ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-good-bg)]0'}`} />
                     {i < activity.length - 1 && <div className="w-px flex-1 bg-[var(--color-line)] my-1" />}
                   </div>
                   <div className="min-w-0 pb-1">
@@ -483,7 +483,7 @@ export default function EmployeeProfile() {
               )}
               {action === 'terminate' && (
                 <>
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-[13px] text-red-700">
+                  <div className="bg-[var(--color-bad-bg)] border border-[var(--color-bad-bg)] rounded-lg p-3 text-[13px] text-[var(--color-bad)]">
                     Terminating deactivates <span className="font-semibold">{agent.name}</span> across Pulse — removed from the roster, payroll and attendance, and signed out immediately. This is recorded permanently.
                   </div>
                   <label className="block">
@@ -504,10 +504,10 @@ export default function EmployeeProfile() {
               )}
             </div>
 
-            {actionErr && <p className="text-[13px] text-red-600 mt-3">{actionErr}</p>}
+            {actionErr && <p className="text-[13px] text-[var(--color-bad)] mt-3">{actionErr}</p>}
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => setAction(null)} disabled={actionBusy} className="px-4 py-2 rounded-lg text-[13px] bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-              <button onClick={runAction} disabled={actionBusy} className={`px-4 py-2 rounded-lg text-[13px] text-white disabled:opacity-60 ${action === 'terminate' ? 'bg-red-600 hover:bg-red-700' : 'bg-[var(--color-brand)] hover:bg-[var(--color-brand-600)]'}`}>{actionBusy ? 'Working…' : ACTION_CONFIRM[action]}</button>
+              <button onClick={runAction} disabled={actionBusy} className={`px-4 py-2 rounded-lg text-[13px] text-white disabled:opacity-60 ${action === 'terminate' ? 'bg-[var(--color-bad)] hover:bg-[var(--color-bad)]' : 'bg-[var(--color-brand)] hover:bg-[var(--color-brand-600)]'}`}>{actionBusy ? 'Working…' : ACTION_CONFIRM[action]}</button>
             </div>
           </div>
         </div>

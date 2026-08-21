@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../lib/api.js';
 import { REACHED, INTERVIEWED } from './stages.js';
 import { CARD, PageHead, fullDate, scoreTone, RECOMMENDATION } from './ui.jsx';
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx';
 
 // One report answers one question. Everything is counted from the records —
 // nothing here is entered by hand or kept in a second place.
@@ -95,7 +96,7 @@ export default function Reports() {
     return nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null;
   }, [timeToHire]);
 
-  if (loading) return <p className="text-[13px] text-[var(--color-ink-faint)]">Loading…</p>;
+  if (loading) return <PageSkeleton tiles={4} rows={6} />;
 
   return (
     <div>

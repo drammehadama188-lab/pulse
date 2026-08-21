@@ -16,7 +16,7 @@ import {
 function Trend({ delta, size = 14 }) {
   if (delta == null) return <Minus size={size} className="text-[var(--color-ink-faint)]" />
   if (delta > 0) return <span className="inline-flex items-center font-semibold text-[var(--color-good)]"><TrendingUp size={size} />+{delta}</span>
-  if (delta < 0) return <span className="inline-flex items-center font-semibold text-red-500"><TrendingDown size={size} />{delta}</span>
+  if (delta < 0) return <span className="inline-flex items-center font-semibold text-[var(--color-bad)]"><TrendingDown size={size} />{delta}</span>
   return <Minus size={size} className="text-[var(--color-ink-faint)]" />
 }
 
@@ -122,8 +122,8 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Tile label="Performance health" value={avg == null ? '—' : `${avg}%`} sub={`${rated.length}/${roster.length} rated`} accent={band(avg).text} />
         <Tile label="Top performer" value={top ? top.t.name.split(' ')[0] : '—'} sub={top ? `${top.score}%` : 'no scores yet'} accent="text-[var(--color-good)]" icon={Trophy} onClick={top && (() => open(top.t.name))} />
-        <Tile label="Needs coaching" value={needs ? needs.t.name.split(' ')[0] : '—'} sub={needs ? `${needs.score}%` : '—'} accent="text-red-600" icon={AlertTriangle} onClick={needs && (() => open(needs.t.name))} />
-        <Tile label="Reviewed" value={`${reviewedCount}/${roster.length}`} sub={period.kind === 'current' ? 'this month' : 'in period'} accent="text-blue-600" icon={CheckCircle2} />
+        <Tile label="Needs coaching" value={needs ? needs.t.name.split(' ')[0] : '—'} sub={needs ? `${needs.score}%` : '—'} accent="text-[var(--color-bad)]" icon={AlertTriangle} onClick={needs && (() => open(needs.t.name))} />
+        <Tile label="Reviewed" value={`${reviewedCount}/${roster.length}`} sub={period.kind === 'current' ? 'this month' : 'in period'} accent="text-[var(--color-brand)]" icon={CheckCircle2} />
       </div>
 
       {/* Department performance */}
@@ -132,7 +132,7 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
         <div className="space-y-2.5">
           {depts.map((d) => {
             const b = band(d.avg)
-            const sb = d.status === 'Best performing' ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]' : d.status === 'Needs improvement' ? 'bg-red-100 text-red-700' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'
+            const sb = d.status === 'Best performing' ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]' : d.status === 'Needs improvement' ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'
             return (
               <div key={d.name} className="flex items-center gap-3">
                 <span className="w-36 shrink-0 truncate text-[13px] font-medium text-[var(--color-ink-soft)]">{d.name} <span className="text-[var(--color-ink-faint)]">· {d.n}</span></span>
@@ -186,8 +186,8 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="truncate font-semibold text-[var(--color-ink)]">{t.name}</span>
-                            {w > 0 && <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 px-1.5 text-[10px] font-medium text-red-600"><AlertTriangle size={9} />{w}</span>}
-                            {due && <span className="inline-flex items-center rounded-full bg-amber-50 px-1.5 text-[10px] font-medium text-amber-600">Review due</span>}
+                            {w > 0 && <span className="inline-flex items-center gap-0.5 rounded-full bg-[var(--color-bad-bg)] px-1.5 text-[10px] font-medium text-[var(--color-bad)]"><AlertTriangle size={9} />{w}</span>}
+                            {due && <span className="inline-flex items-center rounded-full bg-[var(--color-warn-bg)] px-1.5 text-[10px] font-medium text-[var(--color-warn)]">Review due</span>}
                           </div>
                           <div className="truncate text-[11.5px] text-[var(--color-ink-soft)]">{t.role}</div>
                         </div>

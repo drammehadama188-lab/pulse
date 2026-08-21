@@ -101,6 +101,10 @@
 
   /* The Damia mark and the two places brand colour covers a whole surface —
      the sign-in field and a customer hero. Nowhere else uses saturated colour. */
+  /* The avatar square on a person's page — one recipe, not three. */
+  --gradient-avatar: linear-gradient(135deg, #3478f6 0%, #1e40af 100%);
+  --gradient-avatar-rest: linear-gradient(135deg, #7547e8 0%, #5b21b6 100%);
+
   --gradient-signin: linear-gradient(150deg, #f6f7f9 0%, #ffffff 55%, #f3f4f6 100%);
   --gradient-hero: linear-gradient(115deg, #e0345a 0%, #d6294f 42%, #b81e58 72%, #a3173a 100%);
 

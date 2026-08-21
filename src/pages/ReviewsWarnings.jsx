@@ -15,12 +15,12 @@ const slugify = (n) => n.toLowerCase().replace(/\s+/g, '-');
 const period = new Date().toISOString().slice(0, 7); // YYYY-MM
 const periodLabel = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 const fmtDate = (d) => { if (!d) return '—'; const x = new Date(d); return isNaN(x) ? d : x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
-const typeCls = (t) => t === 'final' ? 'bg-red-200 text-red-900' : t === 'formal' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
+const typeCls = (t) => t === 'final' ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : t === 'formal' ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]';
 // coaching / flags / meetings share one store; each type gets its own look
 const COACH_META = {
   coaching: { icon: GraduationCap, label: 'Coaching', cls: 'bg-[var(--color-good-bg)] text-[var(--color-good)]' },
-  meeting: { icon: Calendar, label: 'Meeting', cls: 'bg-blue-50 text-blue-700' },
-  flag: { icon: Flag, label: 'Flag', cls: 'bg-red-100 text-red-700' },
+  meeting: { icon: Calendar, label: 'Meeting', cls: 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]' },
+  flag: { icon: Flag, label: 'Flag', cls: 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' },
 };
 const COACHING_SHOWN = 15;
 
@@ -145,8 +145,8 @@ export default function ReviewsWarnings({ scope }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <Stat label="Team" value={roster.length} />
         <Stat label={`Reviewed — ${periodLabel}`} value={reviewed.length} sub={`of ${roster.length}`} accent="text-[var(--color-good)]" />
-        <Stat label="Pending reviews" value={needsReview.length} accent={needsReview.length > 0 ? 'text-amber-600' : 'text-[var(--color-ink)]'} />
-        <Stat label="Warnings on record" value={warnings.length} accent={warnings.length > 0 ? 'text-red-600' : 'text-[var(--color-ink)]'} />
+        <Stat label="Pending reviews" value={needsReview.length} accent={needsReview.length > 0 ? 'text-[var(--color-warn)]' : 'text-[var(--color-ink)]'} />
+        <Stat label="Warnings on record" value={warnings.length} accent={warnings.length > 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink)]'} />
       </div>
 
       {/* Needs a review */}
@@ -205,9 +205,9 @@ export default function ReviewsWarnings({ scope }) {
                         <button onClick={() => { setCoachErr(''); setConfirmDelC(null); setEditCoach({ id: c.id, type: c.type || 'coaching', title: c.title || '', note: c.note || '', datetime: c.datetime || '' }); }} title="Edit" className="rounded-lg p-1.5 text-[var(--color-ink-faint)] hover:bg-[var(--color-fill)] hover:text-[var(--color-ink-soft)]"><Pencil size={14} /></button>
                       )}
                       {canDeleteCoaching && (confirmDelC === c.id ? (
-                        <button onClick={() => deleteCoach(c.id)} disabled={delCBusy} className="rounded-lg bg-red-600 px-2 py-1 text-[11.5px] font-semibold text-white disabled:opacity-60">{delCBusy ? 'Deleting…' : 'Delete?'}</button>
+                        <button onClick={() => deleteCoach(c.id)} disabled={delCBusy} className="rounded-lg bg-[var(--color-bad)] px-2 py-1 text-[11.5px] font-semibold text-white disabled:opacity-60">{delCBusy ? 'Deleting…' : 'Delete?'}</button>
                       ) : (
-                        <button onClick={() => setConfirmDelC(c.id)} title="Delete" className="rounded-lg p-1.5 text-[var(--color-ink-faint)] hover:bg-[var(--color-fill)] hover:text-red-600"><Trash2 size={14} /></button>
+                        <button onClick={() => setConfirmDelC(c.id)} title="Delete" className="rounded-lg p-1.5 text-[var(--color-ink-faint)] hover:bg-[var(--color-fill)] hover:text-[var(--color-bad)]"><Trash2 size={14} /></button>
                       ))}
                     </div>
                   )}
@@ -276,7 +276,7 @@ export default function ReviewsWarnings({ scope }) {
                 </label>
               )}
             </div>
-            {coachErr && <p className="text-[13px] text-red-600 mt-3">{coachErr}</p>}
+            {coachErr && <p className="text-[13px] text-[var(--color-bad)] mt-3">{coachErr}</p>}
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => setEditCoach(null)} disabled={coachBusy} className="px-4 py-2 rounded-lg text-[13px] bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
               <button onClick={saveCoach} disabled={coachBusy} className="px-4 py-2 rounded-lg text-[13px] text-white bg-[var(--color-ink)] hover:bg-[var(--color-ink)] disabled:opacity-60">{coachBusy ? 'Saving…' : 'Save changes'}</button>
@@ -290,7 +290,7 @@ export default function ReviewsWarnings({ scope }) {
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !busy && setAdding(null)}>
           <div className="bg-white rounded-lg shadow-[var(--shadow-lift)] w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[15px] font-semibold text-[var(--color-ink)] flex items-center gap-2"><ShieldAlert size={18} className="text-red-500" /> Log a warning</h3>
+              <h3 className="text-[15px] font-semibold text-[var(--color-ink)] flex items-center gap-2"><ShieldAlert size={18} className="text-[var(--color-bad)]" /> Log a warning</h3>
               <button onClick={() => setAdding(null)} disabled={busy} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
             <div className="space-y-4">
@@ -317,10 +317,10 @@ export default function ReviewsWarnings({ scope }) {
                 <input type="date" value={adding.date} onChange={(e) => setAdding((s) => ({ ...s, date: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
               </label>
             </div>
-            {err && <p className="text-[13px] text-red-600 mt-3">{err}</p>}
+            {err && <p className="text-[13px] text-[var(--color-bad)] mt-3">{err}</p>}
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => setAdding(null)} disabled={busy} className="px-4 py-2 rounded-lg text-[13px] bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-              <button onClick={submitWarning} disabled={busy} className="px-4 py-2 rounded-lg text-[13px] text-white bg-red-600 hover:bg-red-700 disabled:opacity-60">{busy ? 'Saving…' : 'Log warning'}</button>
+              <button onClick={submitWarning} disabled={busy} className="px-4 py-2 rounded-lg text-[13px] text-white bg-[var(--color-bad)] hover:bg-[var(--color-bad)] disabled:opacity-60">{busy ? 'Saving…' : 'Log warning'}</button>
             </div>
           </div>
         </div>

@@ -26,7 +26,7 @@ const PERIODS = [
   ['quarter', 'Quarter'],
   ['year', 'Year'],
 ]
-const STATUS_TONE = { 'On target': 'text-[var(--color-good)]', 'Needs attention': 'text-amber-600', Behind: 'text-[var(--color-bad)]', 'no data': 'text-[var(--color-ink-faint)]' }
+const STATUS_TONE = { 'On target': 'text-[var(--color-good)]', 'Needs attention': 'text-[var(--color-warn)]', Behind: 'text-[var(--color-bad)]', 'no data': 'text-[var(--color-ink-faint)]' }
 
 export default function ReportsHub() {
   const { hasPower } = useAuth()

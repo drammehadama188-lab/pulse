@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { CARD, BTN_PRIMARY, PageHead, dayTime, scoreTone, scoreWord, RECOMMENDATION } from './ui.jsx';
+import { TableSkeleton } from '../../components/ui/Skeleton.jsx';
+import EmptyState from '../../components/ui/EmptyState.jsx';
+import Pager, { usePager } from '../../components/ui/Pager.jsx';
 
 // Every interview booked or scored. The list is the record — a completed
 // interview keeps its own copy of the questions it asked, so it stays readable
@@ -48,6 +51,8 @@ export default function Interviews() {
     }).map(i => ({ ...i, late: i.status !== 'completed' && Date.parse(i.scheduledAt || '') < now }));
   }, [interviews, filter, query]);
 
+  const pager = usePager(rows);
+
   const candidates = useMemo(() => {
     const q = (pick.query || '').toLowerCase();
     return applicants.filter(a => !q || String(a.name || '').toLowerCase().includes(q)).slice(0, 200);
@@ -89,8 +94,13 @@ export default function Interviews() {
         <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search name…" className="text-[13px] border border-[var(--color-line)] rounded-lg px-3 py-2 bg-white w-56" />
       </div>
 
-      {loading ? <p className="text-[13px] text-[var(--color-ink-faint)]">Loading…</p>
-        : rows.length === 0 ? <div className={`${CARD} p-12 text-center text-[var(--color-ink-faint)] text-[13px]`}>Nothing here. Book one from an applicant's page or with the button above.</div>
+      {loading ? <TableSkeleton rows={6} />
+        : rows.length === 0 ? <div className={CARD}>
+            <EmptyState
+              title="No interviews booked"
+              line="Book one from an applicant's page, or with the button above."
+            />
+          </div>
           : (
             <div className={`${CARD} overflow-x-auto`}>
               <table className="w-full text-[13px]">
@@ -105,7 +115,7 @@ export default function Interviews() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map(i => (
+                  {pager.slice.map(i => (
                     <tr key={i.id} className="border-b border-[var(--color-line-soft)] hover:bg-[var(--color-fill)] cursor-pointer" onClick={() => navigate(`/recruitment/interviews/${i.id}`)}>
                       <td className="px-4 py-3">
                         <span className="font-medium text-[var(--color-ink)]">{i.applicantName}</span>
@@ -136,6 +146,7 @@ export default function Interviews() {
                   ))}
                 </tbody>
               </table>
+              <Pager {...pager.props} noun="interviews" />
             </div>
           )}
 

@@ -44,6 +44,10 @@ bad += rule(
   (f) => f.endsWith('ui.jsx'),
 );
 bad += rule(
+  "colour meaning comes from the tokens, not Tailwind's palette",
+  /\b(?:bg|text|border|ring|fill|stroke|divide|outline|from|to|via)-(?:blue|sky|cyan|green|emerald|teal|lime|red|rose|amber|yellow|orange|purple|violet|indigo|fuchsia|pink|slate|gray|grey|zinc|neutral|stone)-\d{2,3}\b/,
+);
+bad += rule(
   'spacing is 8 / 12 / 16 / 24 / 32 / 40',
   /\b(?:padding|margin|gap):\s*(?:[0-9]+px\s+)?(?:5|7|9|11|13|15|17|18|19|21|22|23|25|26|27|28|29|30|31)px/,
 );

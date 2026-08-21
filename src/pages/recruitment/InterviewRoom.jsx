@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
 import { CARD, BTN_PRIMARY, BTN_LIGHT, fullDate, dayTime, toLocalInput, scoreWord, RECOMMENDATION } from './ui.jsx';
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx';
 
 // The interview room: questions on the left, the CV beside them, one score per
 // answer, one recommendation at the end. Built to Adama's reference screen.
@@ -129,7 +130,7 @@ export default function InterviewRoom() {
     URL.revokeObjectURL(url);
   }
 
-  if (loading) return <p className="t-body text-[var(--color-ink-faint)]">Loading…</p>;
+  if (loading) return <PageSkeleton tiles={0} rows={5} />;
   if (!iv) return <div className={`${CARD} p-12 text-center text-[13px] text-[var(--color-ink-soft)]`}>{error || 'Interview not found.'}</div>;
 
   const answeredCount = iv.answered;

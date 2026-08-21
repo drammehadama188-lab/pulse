@@ -4,6 +4,7 @@ import { ArrowLeft, Phone, Mail, Upload, Download, ClipboardCheck } from 'lucide
 import { api, getToken } from '../../lib/api.js';
 import { STAGES } from './stages.js';
 import { CARD, BTN_LIGHT, BTN_PRIMARY, fullDate, dayTime, StageChip, scoreTone, scoreWord } from './ui.jsx';
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx';
 
 // One applicant, everything about them in one place: what they answered, their
 // CV, every interview they sat, and how they moved through the stages.
@@ -104,7 +105,7 @@ export default function Applicant() {
     if (!tabParam) navigate(`/recruitment/applicants/${id}/overview`, { replace: true });
   }, [tabParam, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading) return <p className="text-[13px] text-[var(--color-ink-soft)]">Loading…</p>;
+  if (loading) return <PageSkeleton tiles={0} rows={6} />;
   if (!a) return (
     <div className={`${CARD} p-12 text-center text-[13px] text-[var(--color-ink-faint)]`}>
       That applicant is not on the list. <Link to="/recruitment/applicants" className="text-[var(--color-ink)] underline">Back to applicants</Link>

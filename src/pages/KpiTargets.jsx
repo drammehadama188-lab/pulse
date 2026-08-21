@@ -128,7 +128,7 @@ export default function KpiTargets() {
         </Field>
       </div>
 
-      {err && !draft && <div className="rounded-lg bg-red-50 px-4 py-3 text-[13px] text-red-700">{err}</div>}
+      {err && !draft && <div className="rounded-lg bg-[var(--color-bad-bg)] px-4 py-3 text-[13px] text-[var(--color-bad)]">{err}</div>}
 
       {(data?.roles || []).map((role) => (
         <Card key={role.key} className="p-5">
@@ -172,11 +172,11 @@ export default function KpiTargets() {
                         <Button variant="ghost" size="sm" onClick={() => openDraft(role.key, k)}>Change…</Button>
                         {k.custom && (confirmRemove === k.customId ? (
                           <span className="inline-flex items-center gap-1">
-                            <button onClick={() => removeCustom(k.customId)} className="rounded bg-red-600 px-2 py-1 text-[11.5px] font-semibold text-white">Remove?</button>
+                            <button onClick={() => removeCustom(k.customId)} className="rounded bg-[var(--color-bad)] px-2 py-1 text-[11.5px] font-semibold text-white">Remove?</button>
                             <button onClick={() => setConfirmRemove(null)} className="rounded border border-[var(--color-line)] px-2 py-1 text-[11.5px] text-[var(--color-ink-soft)]">Keep</button>
                           </span>
                         ) : (
-                          <button onClick={() => setConfirmRemove(k.customId)} title="Remove this custom KPI" className="p-1 text-[var(--color-ink-faint)] hover:text-red-600">
+                          <button onClick={() => setConfirmRemove(k.customId)} title="Remove this custom KPI" className="p-1 text-[var(--color-ink-faint)] hover:text-[var(--color-bad)]">
                             <Trash2 size={15} />
                           </button>
                         ))}
@@ -211,7 +211,7 @@ export default function KpiTargets() {
                   <Pill tone={upcoming ? 'good' : 'neutral'} dot>{upcoming ? `from ${ymLabel(e.effectiveFrom)}` : `since ${ymLabel(e.effectiveFrom)}`}</Pill>
                   <span className="ml-auto text-[11.5px] text-[var(--color-ink-faint)]">by {e.setBy}</span>
                   {upcoming && (
-                    <button onClick={() => removeEntry(e.id)} title="Remove this scheduled change" className="text-[var(--color-ink-faint)] hover:text-red-600">
+                    <button onClick={() => removeEntry(e.id)} title="Remove this scheduled change" className="text-[var(--color-ink-faint)] hover:text-[var(--color-bad)]">
                       <Trash2 size={15} />
                     </button>
                   )}
@@ -256,7 +256,7 @@ export default function KpiTargets() {
                 The new KPI takes {addFor.weight || '—'}% of the score; the role's other KPIs scale down around it so everything still totals 100%.
                 It shows on scorecards as unmeasured until a data feed exists — nothing is ever faked.
               </p>
-              {err && <div className="rounded-lg bg-red-50 px-3 py-2 text-[13px] text-red-700">{err}</div>}
+              {err && <div className="rounded-lg bg-[var(--color-bad-bg)] px-3 py-2 text-[13px] text-[var(--color-bad)]">{err}</div>}
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => !saving && setAddFor(null)}>Cancel</Button>
                 <Button onClick={saveAdd} disabled={saving || !addFor.label.trim()}>{saving ? 'Adding…' : 'Add KPI'}</Button>
@@ -289,7 +289,7 @@ export default function KpiTargets() {
               <p className="text-[11.5px] text-[var(--color-ink-soft)]">
                 From {ymLabel(draft.effectiveFrom)}, scorecards in Pulse and the goal numbers in Admin use this. Months before that keep their numbers.
               </p>
-              {err && <div className="rounded-lg bg-red-50 px-3 py-2 text-[13px] text-red-700">{err}</div>}
+              {err && <div className="rounded-lg bg-[var(--color-bad-bg)] px-3 py-2 text-[13px] text-[var(--color-bad)]">{err}</div>}
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => !saving && setDraft(null)}>Cancel</Button>
                 <Button onClick={saveDraft} disabled={saving}>{saving ? 'Saving…' : 'Schedule change'}</Button>

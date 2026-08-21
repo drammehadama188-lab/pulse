@@ -16,9 +16,9 @@ const money = (n) => `D${(Number(n) || 0).toLocaleString()}`;
 
 function pastCategory(reason) {
   const r = (reason || '').toLowerCase();
-  if (/terminat|let go|dismiss|fired/.test(r)) return { label: 'Terminated', cls: 'bg-red-100 text-red-700' };
-  if (/contract end/.test(r)) return { label: 'Contract Ended', cls: 'bg-blue-100 text-blue-700' };
-  if (/training|intern|trainee|not confirmed|not converted|probation/.test(r)) return { label: 'Training/Internship', cls: 'bg-orange-100 text-orange-700' };
+  if (/terminat|let go|dismiss|fired/.test(r)) return { label: 'Terminated', cls: 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' };
+  if (/contract end/.test(r)) return { label: 'Contract Ended', cls: 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]' };
+  if (/training|intern|trainee|not confirmed|not converted|probation/.test(r)) return { label: 'Training/Internship', cls: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' };
   if (/left|resign|voluntar/.test(r)) return { label: 'Resigned', cls: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]' };
   return { label: 'Former staff', cls: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]' };
 }

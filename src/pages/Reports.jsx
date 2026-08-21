@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Clock, MessageSquareText, Palmtree, Trending
 import { api } from '../lib/api.js'
 import { Card, Pill, SectionTitle, Spinner } from '../components/ui.jsx'
 import { attendanceBand } from '../lib/performance.js'
+import EmptyState from '../components/ui/EmptyState.jsx'
 
 // Reports — the month's story (Adama 3 Jul): who came to work and who didn't
 // (with the exact days), coaching word-for-word, who's doing what, leave and
@@ -57,7 +58,12 @@ export default function Reports() {
       {loading ? (
         <Card className="flex justify-center py-16"><Spinner size={26} /></Card>
       ) : !sections.length ? (
-        <Card className="px-5 py-12 text-center text-[var(--color-ink-faint)]">Nothing to report with your access.</Card>
+        <Card>
+          <EmptyState
+            title="No reports for your access"
+            line="Reports appear here for the parts of the business your role covers."
+          />
+        </Card>
       ) : (
         <>
           {data.attendance && <AttendanceReport rows={data.attendance} />}
@@ -96,14 +102,14 @@ function AttendanceReport({ rows }) {
                     <p className="font-semibold">{r.name}</p>
                     <p className="text-[11.5px] text-[var(--color-ink-faint)]">{r.department}</p>
                     {r.absentDays.length > 0 && (
-                      <p className="mt-1 text-[11.5px] font-medium text-red-600">Missed: {r.absentDays.map(prettyDay).join(' · ')}</p>
+                      <p className="mt-1 text-[11.5px] font-medium text-[var(--color-bad)]">Missed: {r.absentDays.map(prettyDay).join(' · ')}</p>
                     )}
                   </td>
                   <td className={`${td} tabular-nums`}>{r.scheduled}</td>
                   <td className={`${td} tabular-nums`}>{r.worked}</td>
-                  <td className={`${td} tabular-nums ${r.late ? 'font-semibold text-amber-600' : ''}`}>{r.late}</td>
+                  <td className={`${td} tabular-nums ${r.late ? 'font-semibold text-[var(--color-warn)]' : ''}`}>{r.late}</td>
                   <td className={`${td} tabular-nums`}>{r.onLeave}</td>
-                  <td className={`${td} tabular-nums ${r.absent ? 'font-semibold text-red-600' : ''}`}>{r.absent}</td>
+                  <td className={`${td} tabular-nums ${r.absent ? 'font-semibold text-[var(--color-bad)]' : ''}`}>{r.absent}</td>
                   <td className={td}>
                     <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-semibold ${b.chip}`}>
                       {r.pct == null ? '—' : `${r.pct}%`} <span className="font-medium">{b.label}</span>
@@ -177,7 +183,7 @@ function PerformanceReport({ rows }) {
                   <td className={`${td} tabular-nums`}>{r.coachingCount || '—'}</td>
                   <td className={td}>
                     {!r.warnings.length ? <span className="text-[var(--color-ink-faint)]">none</span> : r.warnings.map((w, i) => (
-                      <p key={i} className="text-[11.5px]"><span className="font-semibold text-red-600">{w.type}</span>{w.reason ? ` — ${w.reason}` : ''} <span className="text-[var(--color-ink-faint)]">({w.date})</span></p>
+                      <p key={i} className="text-[11.5px]"><span className="font-semibold text-[var(--color-bad)]">{w.type}</span>{w.reason ? ` — ${w.reason}` : ''} <span className="text-[var(--color-ink-faint)]">({w.date})</span></p>
                     ))}
                   </td>
                 </tr>

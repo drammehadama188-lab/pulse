@@ -25,7 +25,7 @@ function Stars({ score, size = 18 }) {
   return (
     <span className="inline-flex items-center gap-0.5">
       {[0, 1, 2, 3, 4].map((i) => (
-        <Star key={i} size={size} className={i < filled ? 'fill-amber-400 text-amber-400' : 'text-[var(--color-line)]'} />
+        <Star key={i} size={size} className={i < filled ? 'fill-[var(--color-warn)] text-[var(--color-warn)]' : 'text-[var(--color-line)]'} />
       ))}
     </span>
   )
@@ -92,9 +92,9 @@ function statusLine({ score, goalPct, series, monthElapsedPct, daysLeft, daysSin
 
 const TONE = {
   green: { dot: '🟢', bg: 'bg-[var(--color-good-bg)]', text: 'text-[var(--color-good)]', ring: 'border-[var(--color-good-bg)]' },
-  amber: { dot: '🟡', bg: 'bg-amber-50', text: 'text-amber-800', ring: 'border-amber-200' },
-  blue: { dot: '🔵', bg: 'bg-blue-50', text: 'text-blue-800', ring: 'border-blue-200' },
-  red: { dot: '🔴', bg: 'bg-red-50', text: 'text-red-800', ring: 'border-red-200' },
+  amber: { dot: '🟡', bg: 'bg-[var(--color-warn-bg)]', text: 'text-[var(--color-warn)]', ring: 'border-[var(--color-warn-bg)]' },
+  blue: { dot: '🔵', bg: 'bg-[var(--color-brand-50)]', text: 'text-[var(--color-brand-700)]', ring: 'border-[var(--color-brand-50)]' },
+  red: { dot: '🔴', bg: 'bg-[var(--color-bad-bg)]', text: 'text-[var(--color-bad)]', ring: 'border-[var(--color-bad-bg)]' },
 }
 
 export default function MyProgress() {
@@ -426,7 +426,7 @@ export default function MyProgress() {
         {achievements.length ? (
           <div className="flex flex-wrap gap-2">
             {achievements.map((a, i) => (
-              <span key={i} className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-[13px] font-semibold text-amber-700">
+              <span key={i} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warn-bg)] px-3 py-1.5 text-[13px] font-semibold text-[var(--color-warn)]">
                 <Trophy size={14} />{a}
               </span>
             ))}

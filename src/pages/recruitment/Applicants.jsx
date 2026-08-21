@@ -5,6 +5,8 @@ import { api } from '../../lib/api.js';
 import { STAGES, STAGE_TABS, CONTACT, CONTACT_LABEL, SCREENING, SCREENING_META } from './stages.js';
 import { CARD, BTN_LIGHT, BTN_PRIMARY, PageHead, StageChip, ago, fullDate } from './ui.jsx';
 import Pager, { usePager } from '../../components/ui/Pager.jsx';
+import { TableSkeleton } from '../../components/ui/Skeleton.jsx';
+import EmptyState from '../../components/ui/EmptyState.jsx';
 
 // Applicants — the whole pile, and one person at a time in the panel beside
 // it. This is both the call sheet and the profile list: they were the same
@@ -228,7 +230,7 @@ export default function Applicants() {
         </span>
       </div>
 
-      {loading ? <p className="text-[13px] text-[var(--color-ink-soft)]">Loading…</p>
+      {loading ? <TableSkeleton rows={8} cols={5} />
         : applicants.length === 0 ? (
           <div className={`${CARD} p-12 text-center text-[13px] text-[var(--color-ink-soft)]`}>No applicants yet. Import a list or add the first CV you receive.</div>
         ) : (
@@ -338,7 +340,12 @@ export default function Applicants() {
                     );
                   })}
                   {rows.length === 0 && (
-                    <tr><td colSpan={9} className="px-4 py-10 text-center text-[13px] text-[var(--color-ink-soft)]">Nobody matches those filters.</td></tr>
+                    <tr><td colSpan={9}>
+                      <EmptyState
+                        title="Nobody matches those filters"
+                        line="Try a different search, or clear the position and contact filters."
+                      />
+                    </td></tr>
                   )}
                 </tbody>
               </table>

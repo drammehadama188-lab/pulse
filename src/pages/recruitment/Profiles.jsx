@@ -4,6 +4,7 @@ import { Phone, FileText } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { STAGES } from './stages.js';
 import { CARD, PageHead, StageChip, scoreTone, shortDate } from './ui.jsx';
+import { TableSkeleton } from '../../components/ui/Skeleton.jsx';
 
 // Profiles — every applicant as a person rather than a row to call. The
 // Applicants list is the call sheet; this is how you find someone and open
@@ -60,7 +61,7 @@ export default function Profiles() {
         ))}
       </div>
 
-      {loading ? <p className="text-[13px] text-[var(--color-ink-soft)]">Loading…</p>
+      {loading ? <TableSkeleton rows={6} />
         : rows.length === 0 ? <div className={`${CARD} p-10 text-center text-[13px] text-[var(--color-ink-soft)]`}>Nobody matches that.</div>
           : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">

@@ -9,6 +9,7 @@ import { api, getToken } from '../lib/api.js';
 import { payByName } from '../lib/pay.js';
 import { JobPay, Attendance, Documents, Notes, History } from './employee/tabs.jsx';
 import PerformancePerson from './PerformancePerson.jsx';
+import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 
 // One employee, in the design Adama sent (20 Aug): who they are, the four
 // facts that matter across the top, then Job, Salary, Quick actions,
@@ -103,7 +104,7 @@ export default function EmployeePage() {
   }, [roster, username]);
 
   if (error) return <p className="text-[13px] text-[var(--color-stage-out)]">{error}</p>;
-  if (!d) return <p className="text-[13px] text-[var(--color-ink-soft)]">Loading…</p>;
+  if (!d) return <PageSkeleton tiles={3} rows={5} />;
 
   const e = d.employee;
   const a = d.attendance;

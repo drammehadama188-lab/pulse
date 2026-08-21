@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { CARD, PageHead } from './ui.jsx';
+import { TableSkeleton } from '../../components/ui/Skeleton.jsx';
 
 // Interviews on a month. Booking happens on the interview itself; this is for
 // seeing the week ahead without opening every record.
@@ -57,7 +58,7 @@ export default function Calendar() {
         </div>
       </PageHead>
 
-      {loading ? <p className="text-[13px] text-[var(--color-ink-faint)]">Loading…</p> : (
+      {loading ? <TableSkeleton rows={5} cols={7} /> : (
         <div className={`${CARD} overflow-hidden`}>
           <div className="grid grid-cols-7 border-b border-[var(--color-line-soft)]">
             {DAYS.map(d => <div key={d} className="px-3 py-2.5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">{d}</div>)}

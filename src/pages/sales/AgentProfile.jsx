@@ -465,14 +465,14 @@ export default function AgentProfile() {
   const isOnLeave = agent.status === 'maternity' || agent.onLeave;
 
   const statusBadge = isOnLeave
-    ? { text: 'On Leave', color: 'bg-amber-100 text-amber-700' }
+    ? { text: 'On Leave', color: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' }
     : agent.status === 'active' || agent.status === 'probation'
       ? { text: 'Active', color: 'bg-[var(--color-good-bg)] text-[var(--color-good)]' }
       : agent.status === 'training'
-        ? { text: 'In Training', color: 'bg-blue-100 text-blue-700' }
+        ? { text: 'In Training', color: 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]' }
         : { text: agent.status || 'Inactive', color: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]' };
 
-  const scoreColor = (s) => s >= 80 ? 'text-[var(--color-good)]' : s >= 60 ? 'text-blue-600' : s >= 40 ? 'text-amber-600' : 'text-red-600';
+  const scoreColor = (s) => s >= 80 ? 'text-[var(--color-good)]' : s >= 60 ? 'text-[var(--color-brand)]' : s >= 40 ? 'text-[var(--color-warn)]' : 'text-[var(--color-bad)]';
 
   async function addFeedback() {
     const text = newNote.trim();
@@ -546,7 +546,7 @@ export default function AgentProfile() {
       <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div className="flex items-start gap-5 min-w-0">
-            <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-[18px] font-semibold shrink-0">
+            <div className="w-16 h-16 rounded-lg flex items-center justify-center text-white text-[18px] font-semibold shrink-0" style={{ background: 'var(--gradient-avatar)' }}>
               {agent.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
             </div>
             <div className="min-w-0">
@@ -581,9 +581,9 @@ export default function AgentProfile() {
                       {(() => {
                         // Position is always directional. Color reflects absolute score severity.
                         const pillColor = score.score >= 80 ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]'
-                          : score.score >= 60 ? 'bg-blue-100 text-blue-700'
-                          : score.score >= 40 ? 'bg-amber-100 text-amber-700'
-                          : 'bg-red-100 text-red-700';
+                          : score.score >= 60 ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]'
+                          : score.score >= 40 ? 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]'
+                          : 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]';
                         let label;
                         if (totalRanked === 1) label = 'Only member';
                         else if (rank === 1) label = 'Top of team';
@@ -605,7 +605,7 @@ export default function AgentProfile() {
                   {scoreDelta !== 0 && rangeKey === 'this_month' && (
                     scoreDelta > 0
                       ? <span className="text-[var(--color-good)] text-[11px] flex items-center"><TrendingUp size={11} /> +{scoreDelta}</span>
-                      : <span className="text-red-600 text-[11px] flex items-center"><TrendingDown size={11} /> {scoreDelta}</span>
+                      : <span className="text-[var(--color-bad)] text-[11px] flex items-center"><TrendingDown size={11} /> {scoreDelta}</span>
                   )}
                 </span>
               </div>
@@ -629,14 +629,14 @@ export default function AgentProfile() {
           <span>{agent.contract || 'No contract'}</span>
           <span className="text-[var(--color-ink-faint)]">·</span>
           <span>
-            Ends <span className={`font-medium ${daysToEndContract !== null && daysToEndContract <= 30 ? 'text-red-600' : daysToEndContract !== null && daysToEndContract <= 90 ? 'text-amber-600' : 'text-[var(--color-ink-soft)]'}`}>
+            Ends <span className={`font-medium ${daysToEndContract !== null && daysToEndContract <= 30 ? 'text-[var(--color-bad)]' : daysToEndContract !== null && daysToEndContract <= 90 ? 'text-[var(--color-warn)]' : 'text-[var(--color-ink-soft)]'}`}>
               {contractEnd ? formatDate(contractEnd) : '—'}
             </span>
             {daysToEndContract !== null && daysToEndContract > 0 && <span className="text-[var(--color-ink-faint)] ml-1">({daysToEndContract}d)</span>}
-            {daysToEndContract !== null && daysToEndContract <= 0 && <span className="text-red-500 ml-1">(expired)</span>}
+            {daysToEndContract !== null && daysToEndContract <= 0 && <span className="text-[var(--color-bad)] ml-1">(expired)</span>}
           </span>
           <span className="text-[var(--color-ink-faint)]">·</span>
-          <span>Warnings: <span className={`font-medium ${warningsCount > 0 ? 'text-red-600' : 'text-[var(--color-ink-soft)]'}`}>{warningsCount}</span></span>
+          <span>Warnings: <span className={`font-medium ${warningsCount > 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink-soft)]'}`}>{warningsCount}</span></span>
         </div>
       </div>
 
@@ -677,10 +677,10 @@ export default function AgentProfile() {
           </div>
           <div>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">% to target</p>
-            <p className={`text-[26px] font-semibold ${perf >= 80 ? 'text-[var(--color-good)]' : perf >= 50 ? 'text-amber-600' : perf > 0 ? 'text-red-600' : 'text-[var(--color-ink-faint)]'}`}>{proratedTarget !== null ? `${perf}%` : '—'}</p>
+            <p className={`text-[26px] font-semibold ${perf >= 80 ? 'text-[var(--color-good)]' : perf >= 50 ? 'text-[var(--color-warn)]' : perf > 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink-faint)]'}`}>{proratedTarget !== null ? `${perf}%` : '—'}</p>
             {proratedTarget !== null && (
               <div className="w-full h-1.5 bg-[var(--color-fill)] rounded-full overflow-hidden mt-2">
-                <div className={`h-full rounded-full ${perf >= 80 ? 'bg-[var(--color-good-bg)]0' : perf >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, perf)}%` }} />
+                <div className={`h-full rounded-full ${perf >= 80 ? 'bg-[var(--color-good-bg)]0' : perf >= 50 ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-bad)]'}`} style={{ width: `${Math.min(100, perf)}%` }} />
               </div>
             )}
           </div>
@@ -693,10 +693,10 @@ export default function AgentProfile() {
           </div>
           <div>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Days silent</p>
-            <p className={`text-[26px] font-semibold ${daysSinceLastSale === null ? 'text-red-600' : daysSinceLastSale > 30 ? 'text-red-600' : daysSinceLastSale > 14 ? 'text-amber-600' : 'text-[var(--color-good)]'}`}>
+            <p className={`text-[26px] font-semibold ${daysSinceLastSale === null ? 'text-[var(--color-bad)]' : daysSinceLastSale > 30 ? 'text-[var(--color-bad)]' : daysSinceLastSale > 14 ? 'text-[var(--color-warn)]' : 'text-[var(--color-good)]'}`}>
               {daysSinceLastSale !== null ? daysSinceLastSale : '∞'}
             </p>
-            <p className={`text-[11.5px] mt-1 font-medium ${daysSinceLastSale === null ? 'text-red-600' : daysSinceLastSale > 30 ? 'text-red-600' : daysSinceLastSale > 14 ? 'text-amber-600' : 'text-[var(--color-good)]'}`}>
+            <p className={`text-[11.5px] mt-1 font-medium ${daysSinceLastSale === null ? 'text-[var(--color-bad)]' : daysSinceLastSale > 30 ? 'text-[var(--color-bad)]' : daysSinceLastSale > 14 ? 'text-[var(--color-warn)]' : 'text-[var(--color-good)]'}`}>
               {daysSinceLastSale === null
                 ? (rangeKey === 'this_month' ? 'Entire month inactive' : 'No sales ever recorded')
                 : daysSinceLastSale > 30 ? 'Cold — needs action'
@@ -757,14 +757,14 @@ export default function AgentProfile() {
           </div>
           <div>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Revenue − Cost</p>
-            <p className={`text-[22px] font-semibold ${profit >= 0 ? 'text-[var(--color-good)]' : 'text-red-600'}`}>
+            <p className={`text-[22px] font-semibold ${profit >= 0 ? 'text-[var(--color-good)]' : 'text-[var(--color-bad)]'}`}>
               {profit >= 0 ? '+' : '−'}D{Math.abs(profit).toLocaleString()}
             </p>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">{profit >= 0 ? 'net contribution' : 'short of cost'}</p>
           </div>
           <div>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">ROI</p>
-            <p className={`text-[22px] font-semibold ${roi >= 100 ? 'text-[var(--color-good)]' : roi >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+            <p className={`text-[22px] font-semibold ${roi >= 100 ? 'text-[var(--color-good)]' : roi >= 50 ? 'text-[var(--color-warn)]' : 'text-[var(--color-bad)]'}`}>
               {cost > 0 ? `${roi}%` : '—'}
             </p>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">revenue / cost</p>
@@ -783,8 +783,8 @@ export default function AgentProfile() {
               </>
             ) : (
               <>
-                <p className="text-[22px] font-semibold text-red-600">−D{Math.abs(profit).toLocaleString()}</p>
-                <p className="text-red-600 text-[11.5px] mt-1 font-medium">
+                <p className="text-[22px] font-semibold text-[var(--color-bad)]">−D{Math.abs(profit).toLocaleString()}</p>
+                <p className="text-[var(--color-bad)] text-[11.5px] mt-1 font-medium">
                   {Math.ceil(Math.abs(profit) / 7500)} more sales needed
                 </p>
               </>
@@ -803,15 +803,15 @@ export default function AgentProfile() {
           {last4Months.map((m, i) => {
             const isZero = m.sales === 0;
             return (
-              <div key={i} className={`p-4 rounded-lg ${m.isCurrent ? 'bg-blue-50 border-2 border-blue-300' : isZero ? 'bg-[var(--color-fill)] border border-[var(--color-line)]' : 'bg-[var(--color-fill)] border border-[var(--color-line-soft)]'}`}>
-                <p className={`text-[11.5px] font-medium mb-1 ${m.isCurrent ? 'text-blue-600' : isZero ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>
+              <div key={i} className={`p-4 rounded-lg ${m.isCurrent ? 'bg-[var(--color-brand-50)] border-2 border-[var(--color-brand)]' : isZero ? 'bg-[var(--color-fill)] border border-[var(--color-line)]' : 'bg-[var(--color-fill)] border border-[var(--color-line-soft)]'}`}>
+                <p className={`text-[11.5px] font-medium mb-1 ${m.isCurrent ? 'text-[var(--color-brand)]' : isZero ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>
                   {m.label}{m.isCurrent ? ' · now' : ''}
                 </p>
                 <p className={`text-[22px] font-semibold ${isZero ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink)]'}`}>
                   {isZero ? '—' : m.sales}
                 </p>
                 <div className={`w-full h-1.5 rounded-full overflow-hidden mt-2 ${m.isCurrent ? 'bg-white' : 'bg-white'}`}>
-                  <div className={`h-full rounded-full ${m.isCurrent ? 'bg-blue-500' : isZero ? 'bg-[var(--color-ink-faint)]' : 'bg-[var(--color-ink-faint)]'}`} style={{ width: `${Math.max(isZero ? 0 : 4, (m.sales / maxTrendSales) * 100)}%` }} />
+                  <div className={`h-full rounded-full ${m.isCurrent ? 'bg-[var(--color-brand)]' : isZero ? 'bg-[var(--color-ink-faint)]' : 'bg-[var(--color-ink-faint)]'}`} style={{ width: `${Math.max(isZero ? 0 : 4, (m.sales / maxTrendSales) * 100)}%` }} />
                 </div>
                 <p className={`text-[11.5px] mt-2 ${isZero ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>
                   {isZero ? 'no activity' : `D${(m.revenue / 1000).toFixed(1)}k`}
@@ -928,7 +928,7 @@ export default function AgentProfile() {
             <button
               key={c.value}
               onClick={() => setNoteCategory(c.value)}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors ${noteCategory === c.value ? (c.color === 'blue' ? 'bg-blue-600 text-white' : c.color === 'red' ? 'bg-red-600 text-white' : 'bg-amber-600 text-white') : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]'}`}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors ${noteCategory === c.value ? (c.color === 'blue' ? 'bg-[var(--color-brand)] text-white' : c.color === 'red' ? 'bg-[var(--color-bad)] text-white' : 'bg-[var(--color-warn)] text-white') : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]'}`}
             >
               {c.label}
             </button>
@@ -953,7 +953,7 @@ export default function AgentProfile() {
               return (
                 <div key={n.id} className="flex items-start gap-3 p-4 bg-[var(--color-fill)] rounded-lg group">
                   {catDef && (
-                    <span className={`px-2 py-0.5 rounded-full text-[11.5px] font-medium shrink-0 ${catDef.color === 'blue' ? 'bg-blue-100 text-blue-700' : catDef.color === 'red' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[11.5px] font-medium shrink-0 ${catDef.color === 'blue' ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]' : catDef.color === 'red' ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]'}`}>
                       {catDef.label.split(' ')[0]}
                     </span>
                   )}
@@ -961,7 +961,7 @@ export default function AgentProfile() {
                     <p className="text-[var(--color-ink-soft)] text-[13px]">{parsed.text}</p>
                     <p className="text-[var(--color-ink-faint)] text-[11px] mt-1">{new Date(n.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · {n.createdBy || 'Damia'}</p>
                   </div>
-                  <button onClick={() => removeFeedback(n.id)} className="text-[var(--color-ink-faint)] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => removeFeedback(n.id)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-bad)] opacity-0 group-hover:opacity-100 transition-opacity">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -1017,11 +1017,11 @@ export default function AgentProfile() {
             </div>
           </div>
         ) : (
-          <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-100 flex items-center gap-3">
-            <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+          <div className="mb-4 p-4 rounded-lg bg-[var(--color-warn-bg)] border border-[var(--color-warn-bg)] flex items-center gap-3">
+            <AlertTriangle size={16} className="text-[var(--color-warn)] shrink-0" />
             <div>
-              <p className="text-[11.5px] font-medium text-amber-700">No decision on record</p>
-              <p className="text-[13px] text-amber-900 font-medium">Pick one below — this is how you track accountability.</p>
+              <p className="text-[11.5px] font-medium text-[var(--color-warn)]">No decision on record</p>
+              <p className="text-[13px] text-[var(--color-warn)] font-medium">Pick one below — this is how you track accountability.</p>
             </div>
           </div>
         )}
@@ -1034,10 +1034,10 @@ export default function AgentProfile() {
             const active = pickedDecision === d.value;
             const colorMap = {
               gray: active ? 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-[var(--color-ink-faint)]',
-              blue: active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-blue-400',
-              red: active ? 'bg-red-600 text-white border-red-600' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-red-400',
-              amber: active ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-amber-400',
-              emerald: active ? 'bg-[var(--color-good)] text-white border-[var(--color-good)]' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-emerald-400',
+              blue: active ? 'bg-[var(--color-brand)] text-white border-[var(--color-brand)]' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-[var(--color-brand)]',
+              red: active ? 'bg-[var(--color-bad)] text-white border-[var(--color-bad)]' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-[var(--color-bad)]',
+              amber: active ? 'bg-[var(--color-warn)] text-white border-[var(--color-warn)]' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-[var(--color-warn)]',
+              emerald: active ? 'bg-[var(--color-good)] text-white border-[var(--color-good)]' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:border-[var(--color-good)]',
             };
             return (
               <button key={d.value} onClick={() => setPickedDecision(d.value)}
@@ -1098,11 +1098,11 @@ export default function AgentProfile() {
       </div>
 
       {/* BLOCK 10b — Warnings (moved here from top per Adama's preference) */}
-      <div className={`rounded-lg border p-5 mb-4 ${warningsCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-[var(--color-line-soft)]'}`}>
+      <div className={`rounded-lg border p-5 mb-4 ${warningsCount > 0 ? 'bg-[var(--color-bad-bg)] border-[var(--color-bad-bg)]' : 'bg-white border-[var(--color-line-soft)]'}`}>
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
-            <Gavel size={18} className={warningsCount > 0 ? 'text-red-600' : 'text-[var(--color-ink-faint)]'} />
-            <h2 className={`font-semibold ${warningsCount > 0 ? 'text-red-900' : 'text-[var(--color-ink)]'}`}>
+            <Gavel size={18} className={warningsCount > 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink-faint)]'} />
+            <h2 className={`font-semibold ${warningsCount > 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink)]'}`}>
               {warningsCount > 0 ? `${warningsCount} active warning${warningsCount === 1 ? '' : 's'}` : 'No warnings on file'}
             </h2>
           </div>
@@ -1138,7 +1138,7 @@ export default function AgentProfile() {
             </div>
             <div className="flex justify-end">
               <button onClick={issueWarning} disabled={savingWarning || !newWarning.reason.trim()}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-[13px] font-medium rounded-full disabled:bg-[var(--color-ink-faint)] disabled:cursor-not-allowed">
+                className="px-5 py-2 bg-[var(--color-bad)] hover:bg-[var(--color-bad)] text-white text-[13px] font-medium rounded-full disabled:bg-[var(--color-ink-faint)] disabled:cursor-not-allowed">
                 {savingWarning ? 'Saving…' : 'Issue warning'}
               </button>
             </div>
@@ -1148,7 +1148,7 @@ export default function AgentProfile() {
         {warnings.length > 0 && (
           <div className="space-y-2">
             {warnings.map(w => {
-              const typeColor = w.type === 'final' ? 'bg-red-200 text-red-900' : w.type === 'formal' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
+              const typeColor = w.type === 'final' ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : w.type === 'formal' ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]';
               return (
                 <div key={w.id} className="bg-white rounded-lg border border-[var(--color-line)] p-4 flex items-start gap-3">
                   <span className={`px-2 py-0.5 rounded-full text-[11.5px] font-medium shrink-0 ${typeColor}`}>{w.type}</span>
@@ -1156,7 +1156,7 @@ export default function AgentProfile() {
                     <p className="text-[13px] text-[var(--color-ink)]">{w.reason}</p>
                     <p className="text-[11px] text-[var(--color-ink-soft)] mt-1">{new Date(w.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · issued by {w.issuedBy}</p>
                   </div>
-                  <button onClick={() => deleteWarning(w.id)} className="text-[var(--color-ink-faint)] hover:text-red-600 p-1" title="Remove warning">
+                  <button onClick={() => deleteWarning(w.id)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-bad)] p-1" title="Remove warning">
                     <X size={14} />
                   </button>
                 </div>
@@ -1174,7 +1174,7 @@ export default function AgentProfile() {
             {[...agent.history].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((h, i, arr) => (
               <div key={i} className="flex gap-4 pb-4 last:pb-0">
                 <div className="flex flex-col items-center shrink-0">
-                  <div className={`w-2.5 h-2.5 rounded-full mt-1.5 ${i === 0 ? 'bg-blue-600' : 'bg-[var(--color-ink-faint)]'}`} />
+                  <div className={`w-2.5 h-2.5 rounded-full mt-1.5 ${i === 0 ? 'bg-[var(--color-brand)]' : 'bg-[var(--color-ink-faint)]'}`} />
                   {i < arr.length - 1 && <div className="w-px flex-1 bg-[var(--color-line)] mt-1" />}
                 </div>
                 <div className="flex-1 pb-1">
@@ -1205,12 +1205,12 @@ function ScoreBar({ label, weight, value, max, detail, neg }) {
           <p className="text-[13px] text-[var(--color-ink-soft)] font-medium">{label}</p>
           {weight && <span className="text-[10px] text-[var(--color-ink-faint)] font-semibold">{weight}</span>}
         </div>
-        <p className={`text-[13px] font-semibold ${isNegative ? 'text-red-600' : isPositive ? 'text-[var(--color-good)]' : 'text-[var(--color-ink-faint)]'}`}>
+        <p className={`text-[13px] font-semibold ${isNegative ? 'text-[var(--color-bad)]' : isPositive ? 'text-[var(--color-good)]' : 'text-[var(--color-ink-faint)]'}`}>
           {value >= 0 ? '+' : ''}{value}<span className="text-[var(--color-ink-faint)] font-normal">/{neg ? `-${max}` : max}</span>
         </p>
       </div>
       <div className="w-full h-2 bg-[var(--color-fill)] rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${isNegative ? 'bg-red-500' : isPositive ? 'bg-[var(--color-good-bg)]0' : 'bg-[var(--color-ink-faint)]'}`} style={{ width: `${Math.min(100, pct)}%` }} />
+        <div className={`h-full rounded-full ${isNegative ? 'bg-[var(--color-bad)]' : isPositive ? 'bg-[var(--color-good-bg)]0' : 'bg-[var(--color-ink-faint)]'}`} style={{ width: `${Math.min(100, pct)}%` }} />
       </div>
       {detail && <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">{detail}</p>}
     </div>

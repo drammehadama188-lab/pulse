@@ -12,6 +12,7 @@ import Contracts from '../Contracts.jsx';
 import { api } from '../../lib/api.js';
 import { rosterPay, rosterPrivate } from '../../lib/pay.js';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { LinesSkeleton } from '../../components/ui/Skeleton.jsx';
 
 // HR & Team — migrated from the Founder Hub HR page into Pulse.
 // Metrics read from team.js (Pulse's roster source of truth). KPI rules and
@@ -48,12 +49,12 @@ const contractDeadlines = team.filter(t => t.contractEnd).sort((a, b) => a.contr
 // dropdown controlled nothing and mislabelled pages like Run Payroll (July
 // shown under a "Last Month" chip). Payroll's month comes from the server.
 
-const perfColor = p => p >= 80 ? 'text-[var(--color-good)]' : p >= 50 ? 'text-amber-600' : p > 0 ? 'text-red-600' : 'text-[var(--color-ink-faint)]';
-const perfBg = p => p >= 80 ? 'bg-[var(--color-good-bg)]0' : p >= 50 ? 'bg-amber-500' : p > 0 ? 'bg-red-500' : 'bg-[var(--color-ink-faint)]';
+const perfColor = p => p >= 80 ? 'text-[var(--color-good)]' : p >= 50 ? 'text-[var(--color-warn)]' : p > 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink-faint)]';
+const perfBg = p => p >= 80 ? 'bg-[var(--color-good-bg)]0' : p >= 50 ? 'bg-[var(--color-warn)]' : p > 0 ? 'bg-[var(--color-bad)]' : 'bg-[var(--color-ink-faint)]';
 const perfLabel = p => p >= 80 ? 'On Track' : p >= 50 ? 'Needs Attention' : p > 0 ? 'Underperforming' : 'New';
-const statusBadge = s => ({ active: 'bg-[var(--color-good-bg)] text-[var(--color-good)]', maternity: 'bg-purple-100 text-purple-700', probation: 'bg-amber-100 text-amber-700', training: 'bg-orange-100 text-orange-700' })[s] || 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]';
-const typeBadge = t => ({ Sales: 'bg-green-100 text-green-700', Operations: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]', Marketing: 'bg-pink-100 text-pink-700', Technology: 'bg-blue-100 text-blue-700', Training: 'bg-amber-100 text-amber-700' })[t] || 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]';
-const actionBadge = a => ({ review: 'bg-blue-100 text-blue-700', warning: 'bg-red-100 text-red-700', training: 'bg-orange-100 text-orange-700', promotion: 'bg-green-100 text-green-700', 'let-go': 'bg-red-200 text-red-800', monitor: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]', none: 'bg-[var(--color-fill)] text-[var(--color-ink-faint)]' })[a] || 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]';
+const statusBadge = s => ({ active: 'bg-[var(--color-good-bg)] text-[var(--color-good)]', maternity: 'bg-[var(--color-rest-bg)] text-[var(--color-rest)]', probation: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]', training: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' })[s] || 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]';
+const typeBadge = t => ({ Sales: 'bg-[var(--color-good-bg)] text-[var(--color-good)]', Operations: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]', Marketing: 'bg-[var(--color-rest-bg)] text-[var(--color-rest)]', Technology: 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]', Training: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' })[t] || 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]';
+const actionBadge = a => ({ review: 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]', warning: 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]', training: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]', promotion: 'bg-[var(--color-good-bg)] text-[var(--color-good)]', 'let-go': 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]', monitor: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]', none: 'bg-[var(--color-fill)] text-[var(--color-ink-faint)]' })[a] || 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]';
 
 // Derive a leave/exit category from a past-staff reason (categorising existing
 // text — no data invented). Drives the Past Staff filter chips.
@@ -66,9 +67,9 @@ function pastCategory(reason) {
   return 'Other';
 }
 const PAST_CAT_COLOR = {
-  Terminated: 'bg-red-100 text-red-700',
-  'Contract Ended': 'bg-blue-100 text-blue-700',
-  'Training/Internship': 'bg-orange-100 text-orange-700',
+  Terminated: 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]',
+  'Contract Ended': 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]',
+  'Training/Internship': 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]',
   Resigned: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]',
   Other: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]',
 };
@@ -520,7 +521,7 @@ export default function HRTeam({
                   </div>
                 ))}
                 {(w.adamaOverdue || []).length > 0 && (
-                  <div className="rounded-lg bg-red-50 px-2.5 py-2 text-[11.5px] font-semibold text-red-700">
+                  <div className="rounded-lg bg-[var(--color-bad-bg)] px-2.5 py-2 text-[11.5px] font-semibold text-[var(--color-bad)]">
                     Your items he hasn't done: {w.adamaOverdue.map((o) => `“${o.title}” (${o.date})`).join(' · ')}
                   </div>
                 )}
@@ -548,12 +549,12 @@ export default function HRTeam({
 
       {showOverview && alerts.length > 0 && (
         <div className="mb-6 space-y-2">
-          <p className="text-[11.5px] font-semibold text-[var(--color-ink-faint)] flex items-center gap-2"><AlertTriangle size={14} className="text-red-500" /> Attention Required</p>
+          <p className="text-[11.5px] font-semibold text-[var(--color-ink-faint)] flex items-center gap-2"><AlertTriangle size={14} className="text-[var(--color-bad)]" /> Attention Required</p>
           {alerts.map((a, i) => (
-            <div key={i} className={`flex items-center gap-3 p-3 rounded-lg border ${a.type === 'danger' ? 'bg-red-50 border-red-200' : a.type === 'warning' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
-              <AlertTriangle size={14} className={a.type === 'danger' ? 'text-red-500' : a.type === 'warning' ? 'text-amber-500' : 'text-blue-500'} />
+            <div key={i} className={`flex items-center gap-3 p-3 rounded-lg border ${a.type === 'danger' ? 'bg-[var(--color-bad-bg)] border-[var(--color-bad-bg)]' : a.type === 'warning' ? 'bg-[var(--color-warn-bg)] border-[var(--color-warn-bg)]' : 'bg-[var(--color-brand-50)] border-[var(--color-brand-50)]'}`}>
+              <AlertTriangle size={14} className={a.type === 'danger' ? 'text-[var(--color-bad)]' : a.type === 'warning' ? 'text-[var(--color-warn)]' : 'text-[var(--color-brand)]'} />
               <div className="flex-1">
-                <p className={`text-[13px] font-medium ${a.type === 'danger' ? 'text-red-800' : a.type === 'warning' ? 'text-amber-800' : 'text-blue-800'}`}>{a.msg}</p>
+                <p className={`text-[13px] font-medium ${a.type === 'danger' ? 'text-[var(--color-bad)]' : a.type === 'warning' ? 'text-[var(--color-warn)]' : 'text-[var(--color-brand-700)]'}`}>{a.msg}</p>
                 {a.detail && <p className="text-[11.5px] text-[var(--color-ink-soft)]">{a.detail}</p>}
               </div>
             </div>
@@ -564,23 +565,23 @@ export default function HRTeam({
       {showOverview && (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg border border-[var(--color-line)] p-4">
-          <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-blue-50"><Users size={16} className="text-blue-600" /></div><p className="text-[var(--color-ink-soft)] text-[11.5px]">Headcount</p></div>
+          <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-[var(--color-brand-50)]"><Users size={16} className="text-[var(--color-brand)]" /></div><p className="text-[var(--color-ink-soft)] text-[11.5px]">Headcount</p></div>
           <h3 className="text-[22px] font-semibold text-[var(--color-ink)]">{team.length}</h3>
           <p className="text-[10px] text-[var(--color-ink-soft)] mt-1">{activeTeam.length} active, {probationTeam.length} probation, {trainingTeam.length} training</p>
         </div>
         <div className="bg-white rounded-lg border border-[var(--color-line)] p-4">
-          <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-purple-50"><DollarSign size={16} className="text-purple-600" /></div><p className="text-[var(--color-ink-soft)] text-[11.5px]">Payroll</p></div>
+          <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-[var(--color-rest-bg)]"><DollarSign size={16} className="text-[var(--color-rest)]" /></div><p className="text-[var(--color-ink-soft)] text-[11.5px]">Payroll</p></div>
           <h3 className="text-[22px] font-semibold text-[var(--color-ink)]">D{totalBase.toLocaleString()}</h3>
           <p className="text-[10px] text-[var(--color-ink-soft)] mt-1">Base only</p>
         </div>
         <div className="bg-white rounded-lg border border-[var(--color-line)] p-4">
-          <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-amber-50"><Target size={16} className="text-amber-600" /></div><p className="text-[var(--color-ink-soft)] text-[11.5px]">In Evaluation</p></div>
-          <h3 className="text-[22px] font-semibold text-amber-600">{probationTeam.length + trainingTeam.length}</h3>
+          <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-[var(--color-warn-bg)]"><Target size={16} className="text-[var(--color-warn)]" /></div><p className="text-[var(--color-ink-soft)] text-[11.5px]">In Evaluation</p></div>
+          <h3 className="text-[22px] font-semibold text-[var(--color-warn)]">{probationTeam.length + trainingTeam.length}</h3>
           <p className="text-[10px] text-[var(--color-ink-soft)] mt-1">{probationTeam.length} probation, {trainingTeam.length} training</p>
         </div>
         <div className="bg-white rounded-lg border border-[var(--color-line)] p-4">
-          <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-red-50"><Shield size={16} className="text-red-600" /></div><p className="text-[var(--color-ink-soft)] text-[11.5px]">Expiring</p></div>
-          <h3 className="text-[22px] font-semibold text-red-600">{contractDeadlines.filter(c => c.daysLeft <= 90).length}</h3>
+          <div className="flex items-center gap-2 mb-2"><div className="p-1.5 rounded-lg bg-[var(--color-bad-bg)]"><Shield size={16} className="text-[var(--color-bad)]" /></div><p className="text-[var(--color-ink-soft)] text-[11.5px]">Expiring</p></div>
+          <h3 className="text-[22px] font-semibold text-[var(--color-bad)]">{contractDeadlines.filter(c => c.daysLeft <= 90).length}</h3>
           <p className="text-[10px] text-[var(--color-ink-soft)] mt-1">Within 90 days</p>
         </div>
       </div>
@@ -624,7 +625,7 @@ export default function HRTeam({
                 <div key={i} onClick={() => openProfile(c.name)} className="p-4 border border-[var(--color-line)] rounded-lg cursor-pointer transition-shadow">
                   <div className="flex items-center justify-between mb-2">
                     <div><p className="font-medium text-[var(--color-ink)] text-[13px]">{c.name}</p><p className="text-[11.5px] text-[var(--color-ink-soft)]">{c.role} — {c.contract}</p></div>
-                    <div className={`text-center px-3 py-1 rounded-lg ${c.daysLeft <= 7 ? 'bg-red-100 text-red-700' : c.daysLeft <= 21 ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                    <div className={`text-center px-3 py-1 rounded-lg ${c.daysLeft <= 7 ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : c.daysLeft <= 21 ? 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' : 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]'}`}>
                       <p className="text-[15px] font-semibold">{c.daysLeft}</p><p className="text-[10px]">days left</p>
                     </div>
                   </div>
@@ -634,9 +635,9 @@ export default function HRTeam({
                   </div>
                   <p className="text-[11.5px] text-[var(--color-ink-soft)] mt-2">{c.nextActionNote}</p>
                   <div className="flex gap-2 mt-3">
-                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-medium rounded">Pass</span>
-                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-medium rounded">Extend</span>
-                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-medium rounded">Terminate</span>
+                    <span className="px-2 py-0.5 bg-[var(--color-good-bg)] text-[var(--color-good)] text-[10px] font-medium rounded">Pass</span>
+                    <span className="px-2 py-0.5 bg-[var(--color-warn-bg)] text-[var(--color-warn)] text-[10px] font-medium rounded">Extend</span>
+                    <span className="px-2 py-0.5 bg-[var(--color-bad-bg)] text-[var(--color-bad)] text-[10px] font-medium rounded">Terminate</span>
                   </div>
                 </div>
               ))}
@@ -660,7 +661,7 @@ export default function HRTeam({
               return (
                 <div key={i} onClick={() => openProfile(t.name)} className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 cursor-pointer hover:border-[var(--color-line)] transition-all">
                   <div className="flex items-start gap-4 mb-5">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-[13px] font-semibold shrink-0">
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white text-[13px] font-semibold shrink-0" style={{ background: 'var(--gradient-avatar)' }}>
                       {initials}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -672,7 +673,7 @@ export default function HRTeam({
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${statusBadge(t.status)}`}>{t.status}</span>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${typeBadge(t.type)}`}>{t.type}</span>
                         {(warningsByAgent[t.name]?.length || 0) > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-700 flex items-center gap-1"><AlertTriangle size={10} /> {warningsByAgent[t.name].length}</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--color-bad-bg)] text-[var(--color-bad)] flex items-center gap-1"><AlertTriangle size={10} /> {warningsByAgent[t.name].length}</span>
                         )}
                       </div>
                     </div>
@@ -897,7 +898,7 @@ export default function HRTeam({
 
           <div className="bg-white rounded-lg border border-[var(--color-line-soft)] overflow-hidden">
             {kpiLoading ? (
-              <p className="p-5 text-[13px] text-[var(--color-ink-faint)]">Loading…</p>
+              <LinesSkeleton lines={5} />
             ) : filteredRules.length === 0 ? (
               <div className="p-10 text-center">
                 <p className="text-[13px] text-[var(--color-ink-soft)]">{kpiRules.length === 0 ? 'No KPI rules yet. Click "Add KPI rule" above to set your first one.' : 'No rules match this filter.'}</p>
@@ -924,7 +925,7 @@ export default function HRTeam({
                       return (
                         <tr key={r.id} className={`border-b border-[var(--color-line-soft)] ${!r.active ? 'opacity-50' : ''}`}>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-0.5 rounded-full text-[11.5px] font-medium ${r.scope === 'role' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{r.scope}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[11.5px] font-medium ${r.scope === 'role' ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]' : 'bg-[var(--color-rest-bg)] text-[var(--color-rest)]'}`}>{r.scope}</span>
                           </td>
                           <td className="py-3 px-4 font-medium text-[var(--color-ink)]">{r.agent || r.role}</td>
                           <td className="py-3 px-4 text-[var(--color-ink-soft)]">{rPeriodLabel}</td>
@@ -941,7 +942,7 @@ export default function HRTeam({
                                 className="p-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] rounded-full hover:bg-[var(--color-fill)]">
                                 <Edit2 size={13} />
                               </button>
-                              <button onClick={() => deleteKpiRule(r.id)} className="p-2 text-[var(--color-ink-faint)] hover:text-red-600 rounded-full hover:bg-red-50">
+                              <button onClick={() => deleteKpiRule(r.id)} className="p-2 text-[var(--color-ink-faint)] hover:text-[var(--color-bad)] rounded-full hover:bg-[var(--color-bad-bg)]">
                                 <Trash2 size={13} />
                               </button>
                             </div>
@@ -983,8 +984,8 @@ export default function HRTeam({
                   <div><p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Department</p><p className="text-[13px] text-[var(--color-ink)] mt-0.5">{p.type || '—'}</p></div>
                   <div><p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Salary</p><p className="text-[13px] text-[var(--color-ink)] mt-0.5">D{(payMap[p.name]?.base || 0).toLocaleString()}</p></div>
                   <div><p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Commission</p><p className="text-[13px] text-[var(--color-ink)] mt-0.5">{payMap[p.name]?.commission > 0 ? `Up to D${payMap[p.name].commission.toLocaleString()}` : '—'}</p></div>
-                  <div><p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Contract ends</p><p className={`text-[13px] mt-0.5 ${daysLeft !== null && daysLeft <= 30 ? 'text-red-600' : daysLeft !== null && daysLeft <= 90 ? 'text-amber-600' : 'text-[var(--color-ink)]'}`}>{ends}</p></div>
-                  <div><p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Warnings</p><p className={`text-[13px] mt-0.5 ${warns > 0 ? 'text-red-600 font-medium' : 'text-[var(--color-ink)]'}`}>{warns}</p></div>
+                  <div><p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Contract ends</p><p className={`text-[13px] mt-0.5 ${daysLeft !== null && daysLeft <= 30 ? 'text-[var(--color-bad)]' : daysLeft !== null && daysLeft <= 90 ? 'text-[var(--color-warn)]' : 'text-[var(--color-ink)]'}`}>{ends}</p></div>
+                  <div><p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Warnings</p><p className={`text-[13px] mt-0.5 ${warns > 0 ? 'text-[var(--color-bad)] font-medium' : 'text-[var(--color-ink)]'}`}>{warns}</p></div>
                 </div>
               </div>
             );
@@ -1034,7 +1035,7 @@ export default function HRTeam({
                   <span className="text-[11px] text-[var(--color-ink-faint)] flex items-center gap-1"><DollarSign size={11} /> Records to Zoho Books</span>
                 </div>
               </div>
-              <p className="text-[11.5px] text-[var(--color-ink-soft)] mb-4">Enter what each person receives, pick how you paid them, then mark paid. Nothing posts until you confirm.{payPeriod !== new Date().toISOString().slice(0, 7) && <span className="font-semibold text-amber-600"> You are paying into a past month — payments record under that month.</span>}</p>
+              <p className="text-[11.5px] text-[var(--color-ink-soft)] mb-4">Enter what each person receives, pick how you paid them, then mark paid. Nothing posts until you confirm.{payPeriod !== new Date().toISOString().slice(0, 7) && <span className="font-semibold text-[var(--color-warn)]"> You are paying into a past month — payments record under that month.</span>}</p>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead><tr className="border-b border-[var(--color-line)] text-[11.5px] uppercase text-[var(--color-ink-soft)]">
@@ -1085,9 +1086,9 @@ export default function HRTeam({
                           ) : (
                             <td className="px-3 py-2 text-right whitespace-nowrap">
                               <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-good-bg)] px-2 py-1 text-[11.5px] font-medium text-[var(--color-good)]" title={p.paid.expenseId ? `Zoho Books #${String(p.paid.expenseId).slice(-6)}` : undefined}>✓ Paid {p.paid.date}</span>
-                              {p.paid.editedInZoho && <span className="ml-1 text-[11px] text-amber-600" title="Total was changed directly in Zoho">⚠</span>}
+                              {p.paid.editedInZoho && <span className="ml-1 text-[11px] text-[var(--color-warn)]" title="Total was changed directly in Zoho">⚠</span>}
                               <button type="button" title="Edit payment" onClick={() => setPayEdit({ rec: p.paid, salary: p.paid.salary, bonus: p.paid.bonus, source: p.paid.paySourceKey, date: p.paid.date, label: p.paid.label || '' })} className="p-1.5 rounded-lg text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)] ml-1"><Edit2 size={15} /></button>
-                              <button type="button" title="Undo payment" onClick={() => setPayUndo({ rec: p.paid })} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 ml-1"><Trash2 size={15} /></button>
+                              <button type="button" title="Undo payment" onClick={() => setPayUndo({ rec: p.paid })} className="p-1.5 rounded-lg text-[var(--color-bad)] hover:bg-[var(--color-bad-bg)] ml-1"><Trash2 size={15} /></button>
                             </td>
                           )}
                         </tr>
@@ -1125,7 +1126,7 @@ export default function HRTeam({
               <th className="text-right px-4 py-3 text-[11.5px] uppercase text-[var(--color-ink-soft)]">Base</th><th className="text-right px-4 py-3 text-[11.5px] uppercase text-[var(--color-ink-soft)]">Commission</th>
               <th className="text-right px-4 py-3 text-[11.5px] uppercase text-[var(--color-ink-soft)]">Total</th>
             </tr></thead><tbody>
-              {team.filter((p) => !archivedNames.has(p.name)).map((p, i) => { const pay = payMap[p.name] || {}; return <tr key={i} className="border-b border-[var(--color-line-soft)]"><td className="px-4 py-3 text-[13px] font-medium text-[var(--color-ink)]">{p.name}</td><td className="px-4 py-3 text-[13px] text-[var(--color-ink-soft)]">{p.role}</td><td className="px-4 py-3 text-[13px] text-right">D{(pay.base || 0).toLocaleString()}</td><td className="px-4 py-3 text-[13px] text-right">{pay.commission > 0 ? <span className="text-green-600">Up to D{pay.commission.toLocaleString()}</span> : '—'}</td><td className="px-4 py-3 text-[13px] font-semibold text-right">D{(pay.total || 0).toLocaleString()}</td></tr>; })}
+              {team.filter((p) => !archivedNames.has(p.name)).map((p, i) => { const pay = payMap[p.name] || {}; return <tr key={i} className="border-b border-[var(--color-line-soft)]"><td className="px-4 py-3 text-[13px] font-medium text-[var(--color-ink)]">{p.name}</td><td className="px-4 py-3 text-[13px] text-[var(--color-ink-soft)]">{p.role}</td><td className="px-4 py-3 text-[13px] text-right">D{(pay.base || 0).toLocaleString()}</td><td className="px-4 py-3 text-[13px] text-right">{pay.commission > 0 ? <span className="text-[var(--color-good)]">Up to D{pay.commission.toLocaleString()}</span> : '—'}</td><td className="px-4 py-3 text-[13px] font-semibold text-right">D{(pay.total || 0).toLocaleString()}</td></tr>; })}
             </tbody><tfoot><tr className="border-t-2 border-[var(--color-line)]"><td colSpan={4} className="px-4 py-3 font-semibold">Total</td><td className="px-4 py-3 text-[15px] font-semibold text-right">D{totalPayroll.toLocaleString()}</td></tr></tfoot></table>
           </div>
           )}
@@ -1207,8 +1208,8 @@ export default function HRTeam({
                         ? <ChevronDown size={13} className={`text-[var(--color-ink-faint)] transition-transform ${isOpen ? '' : '-rotate-90'}`} />
                         : <span className="inline-block w-[13px]" />}
                       <span className="text-[13px] font-medium text-[var(--color-ink)]">{m.month}</span>
-                      {m.confidence === 'in_progress' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">In progress</span>}
-                      {m.confidence === 'low' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">May be incomplete</span>}
+                      {m.confidence === 'in_progress' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--color-brand-50)] text-[var(--color-brand-700)]">In progress</span>}
+                      {m.confidence === 'low' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--color-warn-bg)] text-[var(--color-warn)]">May be incomplete</span>}
                       {m.breakdown
                         ? <span className="text-[11.5px] text-[var(--color-ink-faint)] truncate hidden md:inline">· {m.breakdown}</span>
                         : m.headcount != null && <span className="text-[11.5px] text-[var(--color-ink-faint)]">· {m.headcount} {m.headcount === 1 ? 'person' : 'people'} paid</span>}
@@ -1237,12 +1238,12 @@ export default function HRTeam({
                         </div>
                       </div>
                       {!reconciles && (
-                        <p className="text-[11.5px] text-amber-600 px-3 py-2 pl-[34px] flex items-center gap-1">
+                        <p className="text-[11.5px] text-[var(--color-warn)] px-3 py-2 pl-[34px] flex items-center gap-1">
                           <AlertTriangle size={12} /> Itemised lines (D{itemised.toLocaleString()}) don't match the recorded total (D{m.total.toLocaleString()}).
                         </p>
                       )}
                       {m.confidence === 'low' && (
-                        <p className="text-[11.5px] text-amber-600 px-3 py-2 pl-[34px] flex items-center gap-1">
+                        <p className="text-[11.5px] text-[var(--color-warn)] px-3 py-2 pl-[34px] flex items-center gap-1">
                           <AlertTriangle size={12} /> This month looks low vs. the others — likely incomplete bookkeeping. Verify before relying on it.
                         </p>
                       )}
@@ -1285,9 +1286,9 @@ export default function HRTeam({
                 {payConfirm.loading ? (
                   <p className="text-[13px] text-[var(--color-ink-soft)] py-5 text-center">Checking Zoho…</p>
                 ) : payConfirm.error ? (
-                  <div className="text-[13px] text-red-600 bg-red-50 rounded-lg p-3">{payConfirm.error}</div>
+                  <div className="text-[13px] text-[var(--color-bad)] bg-[var(--color-bad-bg)] rounded-lg p-3">{payConfirm.error}</div>
                 ) : payConfirm.preview && payConfirm.preview.ok === false ? (
-                  <div className="text-[13px] text-amber-700 bg-amber-50 rounded-lg p-3 flex items-start gap-2">
+                  <div className="text-[13px] text-[var(--color-warn)] bg-[var(--color-warn-bg)] rounded-lg p-3 flex items-start gap-2">
                     <AlertTriangle size={16} className="mt-0.5 shrink-0" /><span>{payConfirm.preview.message || 'Already recorded.'}</span>
                   </div>
                 ) : payConfirm.preview ? (
@@ -1300,9 +1301,9 @@ export default function HRTeam({
                     {payConfirm.label && <div className="flex justify-between"><span className="text-[var(--color-ink-soft)]">Note</span><span className="font-medium text-right">{payConfirm.label}</span></div>}
                     <div className="flex justify-between"><span className="text-[var(--color-ink-soft)]">Account</span><span className="font-medium">Salaries and Employee Wages</span></div>
                     <div className="flex justify-between"><span className="text-[var(--color-ink-soft)]">Vendor</span><span className="font-medium text-right">{payConfirm.preview.vendor?.name}{payConfirm.preview.createdVendor && ' (new)'}</span></div>
-                    {payConfirm.preview.fuzzyVendor && <p className="text-[11.5px] text-amber-600 flex items-center gap-1"><AlertTriangle size={12} /> Matched by name — confirm this is the right person.</p>}
-                    {payConfirm.preview.vendor && String(payConfirm.preview.vendor.id).startsWith('(') && <p className="text-[11.5px] text-blue-600">A new vendor "{payConfirm.preview.vendor.name}" will be created in Zoho.</p>}
-                    {payConfirm.duplicate && <p className="text-[11.5px] text-amber-600 flex items-center gap-1"><AlertTriangle size={12} /> {payConfirm.message}</p>}
+                    {payConfirm.preview.fuzzyVendor && <p className="text-[11.5px] text-[var(--color-warn)] flex items-center gap-1"><AlertTriangle size={12} /> Matched by name — confirm this is the right person.</p>}
+                    {payConfirm.preview.vendor && String(payConfirm.preview.vendor.id).startsWith('(') && <p className="text-[11.5px] text-[var(--color-brand)]">A new vendor "{payConfirm.preview.vendor.name}" will be created in Zoho.</p>}
+                    {payConfirm.duplicate && <p className="text-[11.5px] text-[var(--color-warn)] flex items-center gap-1"><AlertTriangle size={12} /> {payConfirm.message}</p>}
                   </div>
                 ) : null}
                 <div className="flex justify-end gap-2 mt-6">
@@ -1314,7 +1315,7 @@ export default function HRTeam({
                     <button type="button" onClick={adoptExisting} disabled={payPosting} className="px-3 py-2 rounded-lg text-[13px] font-medium bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-60">{payPosting ? 'Linking…' : 'Use this payment — edit it'}</button>
                   )}
                   {payConfirm.duplicate && (
-                    <button type="button" onClick={() => confirmPay(true)} disabled={payPosting} className="px-3 py-2 rounded-lg text-[13px] font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-60">{payPosting ? 'Recording…' : 'Pay again anyway'}</button>
+                    <button type="button" onClick={() => confirmPay(true)} disabled={payPosting} className="px-3 py-2 rounded-lg text-[13px] font-medium bg-[var(--color-warn)] text-white hover:bg-[var(--color-warn)] disabled:opacity-60">{payPosting ? 'Recording…' : 'Pay again anyway'}</button>
                   )}
                 </div>
               </div>
@@ -1351,7 +1352,7 @@ export default function HRTeam({
                     </select>
                   </label>
                 </div>
-                {oneOff.error && <p className="text-[13px] text-red-600 mt-3">{oneOff.error}</p>}
+                {oneOff.error && <p className="text-[13px] text-[var(--color-bad)] mt-3">{oneOff.error}</p>}
                 <div className="flex justify-end gap-2 mt-5">
                   <button type="button" onClick={() => setOneOff(null)} disabled={oneOff.busy} className="px-4 py-2 rounded-lg text-[13px] bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
                   <button type="button" onClick={submitOneOff} disabled={oneOff.busy} className="px-4 py-2 rounded-lg text-[13px] text-white bg-[var(--color-brand)] hover:bg-[var(--color-brand-600)] disabled:opacity-60">{oneOff.busy ? 'Recording…' : 'Save'}</button>
@@ -1383,7 +1384,7 @@ export default function HRTeam({
                 ) : (
                   <>
                     <div className="space-y-1.5 text-[13px] mt-3 max-h-56 overflow-y-auto">
-                      {(bulk.results || []).map(r => <div key={r.name} className="flex justify-between gap-3"><span className="text-[var(--color-ink-soft)]">{r.name}</span><span className={`text-right ${r.status.startsWith('paid') ? 'text-[var(--color-good)]' : 'text-amber-600'}`}>{r.status}</span></div>)}
+                      {(bulk.results || []).map(r => <div key={r.name} className="flex justify-between gap-3"><span className="text-[var(--color-ink-soft)]">{r.name}</span><span className={`text-right ${r.status.startsWith('paid') ? 'text-[var(--color-good)]' : 'text-[var(--color-warn)]'}`}>{r.status}</span></div>)}
                     </div>
                     <div className="flex justify-end mt-5">
                       <button type="button" onClick={() => setBulk(null)} className="px-4 py-2 rounded-lg text-[13px] text-white bg-[var(--color-ink)] hover:bg-[var(--color-ink)]">Done</button>
@@ -1411,7 +1412,7 @@ export default function HRTeam({
                     </select>
                   </label>
                   <label className="flex items-center justify-between gap-3"><span className="text-[var(--color-ink-soft)]">Date</span><input type="date" value={payEdit.date} onChange={e => setPayEdit(c => ({ ...c, date: e.target.value }))} className="border border-[var(--color-line)] rounded px-2 py-1" /></label>
-                  {payEdit.error && <div className="text-[13px] text-red-600 bg-red-50 rounded-lg p-2">{payEdit.error}</div>}
+                  {payEdit.error && <div className="text-[13px] text-[var(--color-bad)] bg-[var(--color-bad-bg)] rounded-lg p-2">{payEdit.error}</div>}
                 </div>
                 <div className="flex justify-end gap-2 mt-6">
                   <button type="button" onClick={() => setPayEdit(null)} disabled={payPosting} className="px-3 py-2 rounded-lg text-[13px] font-medium bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
@@ -1427,10 +1428,10 @@ export default function HRTeam({
               <div className="bg-white rounded-lg shadow-[var(--shadow-lift)] max-w-sm w-full p-5" onClick={e => e.stopPropagation()}>
                 <h3 className="text-[15px] font-semibold text-[var(--color-ink)] mb-1">Undo payment?</h3>
                 <p className="text-[13px] text-[var(--color-ink-soft)] mb-4">This deletes {payUndo.rec.name}'s D{payUndo.rec.total.toLocaleString()} payment ({payUndo.rec.paySource}, {payUndo.rec.date}) from Zoho Books. {payUndo.rec.name} will show as unpaid again.</p>
-                {payUndo.error && <div className="text-[13px] text-red-600 bg-red-50 rounded-lg p-2 mb-3">{payUndo.error}</div>}
+                {payUndo.error && <div className="text-[13px] text-[var(--color-bad)] bg-[var(--color-bad-bg)] rounded-lg p-2 mb-3">{payUndo.error}</div>}
                 <div className="flex justify-end gap-2">
                   <button type="button" onClick={() => setPayUndo(null)} disabled={payPosting} className="px-3 py-2 rounded-lg text-[13px] font-medium bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
-                  <button type="button" onClick={confirmUndo} disabled={payPosting} className="px-3 py-2 rounded-lg text-[13px] font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-60">{payPosting ? 'Removing…' : 'Undo & delete'}</button>
+                  <button type="button" onClick={confirmUndo} disabled={payPosting} className="px-3 py-2 rounded-lg text-[13px] font-medium bg-[var(--color-bad)] text-white hover:bg-[var(--color-bad)] disabled:opacity-60">{payPosting ? 'Removing…' : 'Undo & delete'}</button>
                 </div>
               </div>
             </div>
@@ -1446,9 +1447,9 @@ export default function HRTeam({
         const cards = [
           { label: 'Active employees', value: team.filter(t => !archivedNames.has(t.name)).length },
           { label: 'Past employees', value: pastStaff.length + archivedAgents.length },
-          { label: 'Warnings', value: allWarnings.length, accent: allWarnings.length > 0 ? 'text-red-600' : 'text-[var(--color-ink)]' },
-          { label: 'Probation', value: probationCount, accent: probationCount > 0 ? 'text-amber-600' : 'text-[var(--color-ink)]' },
-          { label: 'Contracts expiring', value: expiring, sub: '≤ 90 days', accent: expiring > 0 ? 'text-amber-600' : 'text-[var(--color-ink)]' },
+          { label: 'Warnings', value: allWarnings.length, accent: allWarnings.length > 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink)]' },
+          { label: 'Probation', value: probationCount, accent: probationCount > 0 ? 'text-[var(--color-warn)]' : 'text-[var(--color-ink)]' },
+          { label: 'Contracts expiring', value: expiring, sub: '≤ 90 days', accent: expiring > 0 ? 'text-[var(--color-warn)]' : 'text-[var(--color-ink)]' },
           { label: 'Leave requests', value: pendingLeave == null ? '—' : pendingLeave, sub: 'pending' },
         ];
         return (
@@ -1472,7 +1473,7 @@ export default function HRTeam({
             ) : (
               <div className="space-y-2">
                 {allWarnings.map(w => {
-                  const typeColor = w.type === 'final' ? 'bg-red-200 text-red-900' : w.type === 'formal' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
+                  const typeColor = w.type === 'final' ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : w.type === 'formal' ? 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]' : 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]';
                   return (
                     <div key={w.id} className="flex items-start gap-3 p-4 border border-[var(--color-line)] rounded-lg">
                       <span className={`px-2 py-0.5 rounded-full text-[11.5px] font-medium shrink-0 mt-0.5 ${typeColor}`}>{w.type}</span>

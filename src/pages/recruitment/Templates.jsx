@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2, Star, Copy, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { CARD, BTN_PRIMARY, BTN_LIGHT, PageHead } from './ui.jsx';
+import { TableSkeleton } from '../../components/ui/Skeleton.jsx';
 
 // The question sets an interview runs on. Damia's own sales questions ship as
 // the starting set and every word of them is editable — a generic HR form
@@ -66,7 +67,7 @@ export default function Templates() {
       </PageHead>
 
       {error && <p className="mb-4 text-[13px] text-[var(--color-stage-out)]">{error}</p>}
-      {loading ? <p className="text-[13px] text-[var(--color-ink-faint)]">Loading…</p> : (
+      {loading ? <TableSkeleton rows={3} cols={2} /> : (
         <div className="space-y-4">
           {templates.map(t => {
             const isOpen = openId === t.id && draft;

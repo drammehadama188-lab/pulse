@@ -7,6 +7,7 @@ import {
 import { api } from '../../lib/api.js';
 import { PIPELINE, DROPPED, STAGES, INTERVIEWED, SHORTLISTED, OFFERED } from './stages.js';
 import { CARD, CardHead, PageHead, BTN_PRIMARY, BTN_LIGHT, Kpi, Sparkline, Donut, RangePicker, RANGES, FeedRow, Empty, ago, dayTime, scoreWord } from './ui.jsx';
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx';
 
 // Recruitment Dashboard — see. Not understand, not evaluate, not analyse:
 // those are the applicant profile, the interview room and Reports.
@@ -173,7 +174,7 @@ export default function Dashboard() {
     };
   }, [applicants, positions, interviews, days]);
 
-  if (loading) return <p className="t-body text-[var(--color-ink-faint)]">Loading…</p>;
+  if (loading) return <PageSkeleton tiles={4} rows={5} />;
 
   if (m.total === 0) {
     return (

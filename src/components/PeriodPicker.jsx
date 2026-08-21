@@ -43,8 +43,8 @@ export default function PeriodPicker({ value, onChange }) {
           {presets.map((p) => {
             const active = value?.id === p.id
             return (
-              <button key={p.id} onClick={() => pick(p)} className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors ${active ? 'bg-blue-50 font-semibold text-blue-600' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
-                <Calendar size={15} className={active ? 'text-blue-500' : 'text-[var(--color-ink-faint)]'} />
+              <button key={p.id} onClick={() => pick(p)} className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors ${active ? 'bg-[var(--color-brand-50)] font-semibold text-[var(--color-brand)]' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}>
+                <Calendar size={15} className={active ? 'text-[var(--color-brand)]' : 'text-[var(--color-ink-faint)]'} />
                 {p.label}
               </button>
             )

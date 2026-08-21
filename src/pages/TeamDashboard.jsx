@@ -5,8 +5,11 @@ import {
   TrendingUp, AlertTriangle, Building2, CircleSlash, MessageSquare, ChevronRight,
 } from 'lucide-react'
 import { api } from '../lib/api.js'
-import { Avatar, Card, Pill, SectionTitle, Spinner, StatCard } from '../components/ui.jsx'
+import { Avatar, Card, Pill, SectionTitle, StatCard } from '../components/ui.jsx'
 import { timeShort, dateLong } from '../lib/format.js'
+import Pager, { usePager } from '../components/ui/Pager.jsx'
+import { pageEnding } from '../design.js'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
 // MY TEAM · Team Dashboard — the page a team lead opens every morning. A SCOPED
 // snapshot of the people they manage (Momodou → Ya Fatou, Kaddy, Sally; the
@@ -46,7 +49,11 @@ export default function TeamDashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div className="flex justify-center py-24"><Spinner size={28} /></div>
+  // Hooks run on every render, so this sits above the early returns.
+  const attentionPager = usePager(data?.attention || [], pageEnding.panel)
+
+  // A page waiting for its own data shows the shape of that data, not a spinner.
+  if (loading) return <PageSkeleton tiles={5} rows={5} />
   if (error) {
     return (
       <Card className="p-8 text-center text-[13px] text-[var(--color-ink-faint)]">
@@ -67,15 +74,12 @@ export default function TeamDashboard() {
       {/* TODAY — at-a-glance counts */}
       <div>
         <SectionTitle>Today</SectionTitle>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard icon={UserCheck} tone="good" label="Present" value={`${stats.present} / ${stats.total}`} />
           <StatCard icon={Clock} tone="warn" label="Late" value={stats.late} />
           <StatCard icon={CircleSlash} tone="neutral" label="Not in yet" value={stats.notIn} />
           <StatCard icon={Palmtree} tone="brand" label="On leave" value={stats.onLeave} />
           <StatCard icon={FileText} tone="rest" label="Reviews due" value={stats.reviewsDue} />
-          <StatCard icon={Target} tone="brand" label="Goals" value={stats.goalsPct == null ? '—' : `${stats.goalsPct}%`} sub={stats.goalsPct == null ? 'No targets tracked yet' : 'sales avg vs target'} />
-          <StatCard icon={MessageSquare} tone="rest" label="Coaching (2-weekly)" value={`${stats.coachedThisPeriod} / ${stats.total}`} sub="checked in ≤ 14 days" />
-          <StatCard icon={CalendarClock} tone="warn" label="Contracts ending" value={stats.contractsEndingSoon} sub="within 45 days" />
         </div>
       </div>
 
@@ -86,7 +90,7 @@ export default function TeamDashboard() {
           <Card className="p-5 text-center text-[13px] text-[var(--color-ink-faint)]">Nothing needs attention right now.</Card>
         ) : (
           <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden p-0">
-            {attention.map((a, i) => {
+            {attentionPager.slice.map((a, i) => {
               const Icon = ATTN_ICON[a.type] || AlertTriangle
               const clickable = !!a.to
               return (
@@ -104,6 +108,7 @@ export default function TeamDashboard() {
                 </button>
               )
             })}
+            <Pager {...attentionPager.props} noun="items" compact />
           </Card>
         )}
       </div>

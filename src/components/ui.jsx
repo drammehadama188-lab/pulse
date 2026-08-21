@@ -195,10 +195,10 @@ export function MenuSelect({ value, onChange, options = [], placeholder = 'Choos
                 type="button"
                 key={o.value}
                 onClick={() => { onChange(o.value); setOpen(false) }}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors ${active ? 'bg-blue-50 font-semibold text-blue-600' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors ${active ? 'bg-[var(--color-brand-50)] font-semibold text-[var(--color-brand)]' : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]'}`}
               >
                 {o.label}
-                {active && <Check size={15} className="shrink-0 text-blue-500" />}
+                {active && <Check size={15} className="shrink-0 text-[var(--color-brand)]" />}
               </button>
             )
           })}

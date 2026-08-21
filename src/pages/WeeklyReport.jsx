@@ -145,7 +145,7 @@ export default function WeeklyReport() {
           <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Worth asking about</h2>
           <Card className="space-y-1 p-4 text-[13px]">
             {data.flags.map((f, i) => (
-              <p key={i} className="text-amber-700">{f.action === 'unticked' ? 'Unticked' : 'Removed'}: “{f.title}” · {fmt(f.at.slice(0, 10))}</p>
+              <p key={i} className="text-[var(--color-warn)]">{f.action === 'unticked' ? 'Unticked' : 'Removed'}: “{f.title}” · {fmt(f.at.slice(0, 10))}</p>
             ))}
           </Card>
         </section>

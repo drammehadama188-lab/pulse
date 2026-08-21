@@ -207,7 +207,7 @@ export default function StaffMember() {
   function viewAs() { enterViewAs(user); navigate('/') }
 
   const accessLabel = !canSignIn ? 'Sign-in paused' : powers.size > 0 ? 'Has access' : 'No admin access'
-  const accessTone = !canSignIn ? 'text-red-600' : powers.size > 0 ? 'text-[var(--color-good)]' : 'text-[var(--color-ink-faint)]'
+  const accessTone = !canSignIn ? 'text-[var(--color-bad)]' : powers.size > 0 ? 'text-[var(--color-good)]' : 'text-[var(--color-ink-faint)]'
 
   return (
     <div className="max-w-5xl">
@@ -222,7 +222,7 @@ export default function StaffMember() {
             <div className="flex items-center gap-2 flex-wrap mt-1">
               <span className="text-[var(--color-ink-soft)] text-[13px]">{user.title}</span>
               {user.department && <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-fill)] text-[var(--color-ink-soft)]">{user.department}</span>}
-              <span className={`flex items-center gap-1 text-[11px] font-semibold ${accessTone}`}><span className={`w-1.5 h-1.5 rounded-full ${!canSignIn ? 'bg-red-500' : powers.size > 0 ? 'bg-[var(--color-good-bg)]0' : 'bg-[var(--color-ink-faint)]'}`} /> {accessLabel}</span>
+              <span className={`flex items-center gap-1 text-[11px] font-semibold ${accessTone}`}><span className={`w-1.5 h-1.5 rounded-full ${!canSignIn ? 'bg-[var(--color-bad)]' : powers.size > 0 ? 'bg-[var(--color-good-bg)]0' : 'bg-[var(--color-ink-faint)]'}`} /> {accessLabel}</span>
             </div>
           </div>
         </div>
@@ -269,7 +269,7 @@ export default function StaffMember() {
           <Button onClick={saveEmail} disabled={emailBusy || (email.trim() === (user.email || '') && personalEmail.trim() === (user.personalEmail || ''))}>{emailBusy ? <Spinner size={16} /> : 'Save emails'}</Button>
           {hasRealPower('staffadmin') && <Button variant="outline" icon={KeyRound} onClick={() => setResetOpen(true)}>Reset password</Button>}
         </div>
-        {emailMsg && <p className={`text-[11.5px] mt-2 ${emailMsg === 'Saved' ? 'text-[var(--color-good)]' : 'text-red-600'}`}>{emailMsg}</p>}
+        {emailMsg && <p className={`text-[11.5px] mt-2 ${emailMsg === 'Saved' ? 'text-[var(--color-good)]' : 'text-[var(--color-bad)]'}`}>{emailMsg}</p>}
         <LoginState user={user} />
         <div className="mt-4 flex items-center justify-between rounded-lg border border-[var(--color-line-soft)] px-4 py-3">
           <div>
@@ -347,7 +347,7 @@ export default function StaffMember() {
                         <span className="truncate">{s.name}</span>
                       </label>
                     ))}
-                    <p className={`mt-1 text-[11px] font-medium ${cov.size ? 'text-[var(--color-ink-faint)]' : 'text-red-500'}`}>
+                    <p className={`mt-1 text-[11px] font-medium ${cov.size ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-bad)]'}`}>
                       {cov.size === roster.length ? `Affects all ${roster.length} staff` : cov.size ? `Affects ${cov.size} of ${roster.length} staff` : 'Affects no one — pick staff below'}
                     </p>
                   </div>
@@ -374,10 +374,10 @@ function LoginState({ user }) {
   let tone = 'text-[var(--color-good)] bg-[var(--color-good-bg)]'
   let text = `Password set. ${first} signs in with ${user.email}.`
   if (user.passwordLinkExpires && mins > 0) {
-    tone = 'text-amber-800 bg-amber-50'
+    tone = 'text-[var(--color-warn)] bg-[var(--color-warn-bg)]'
     text = `A set-password link is open, sent to ${user.email}, ${mins} min left. It works once. Until ${first} opens it, the old password still applies.`
   } else if (!user.passwordChosen) {
-    tone = 'text-amber-800 bg-amber-50'
+    tone = 'text-[var(--color-warn)] bg-[var(--color-warn-bg)]'
     text = `${first} has never chosen a password. Any link sent has expired or was not opened. Set a temporary password below and send it to ${first} directly.`
   }
   return <p className={`mt-3 rounded-lg px-3.5 py-2.5 text-[11.5px] font-semibold ${tone}`}>{text}</p>

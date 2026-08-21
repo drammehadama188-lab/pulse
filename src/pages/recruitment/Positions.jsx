@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, X, Trash2, Pencil } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { CARD, BTN_PRIMARY, BTN_LIGHT, PageHead, fullDate } from './ui.jsx';
+import { TableSkeleton } from '../../components/ui/Skeleton.jsx';
 
 // The jobs being hired for. An applicant files under one, which is what turns
 // "259 people applied" into "the Sales Agent round is 2 of 3 filled".
@@ -96,7 +97,7 @@ export default function Positions() {
 
       {error && <p className="mb-4 text-[13px] text-[var(--color-stage-out)]">{error}</p>}
 
-      {loading ? <p className="text-[13px] text-[var(--color-ink-faint)]">Loading…</p>
+      {loading ? <TableSkeleton rows={5} />
         : positions.length === 0 ? <div className={`${CARD} p-12 text-center text-[var(--color-ink-faint)] text-[13px]`}>No positions yet. Add the job you are hiring for and applicants file under it.</div>
           : (
             <div className="space-y-6">

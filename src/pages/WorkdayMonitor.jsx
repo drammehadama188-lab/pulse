@@ -115,7 +115,7 @@ export default function WorkdayMonitor() {
               <div key={w.label} className="flex items-center gap-2">
                 <span className="text-[11.5px] font-semibold text-[var(--color-ink-soft)]">{w.label}</span>
                 <span className="h-1.5 w-16 overflow-hidden rounded-full bg-[var(--color-fill)]">
-                  <span className={`block h-full rounded-full ${pct >= 66 ? 'bg-[var(--color-good-bg)]0' : pct >= 33 ? 'bg-amber-400' : 'bg-red-500'}`} style={{ width: `${pct}%` }} />
+                  <span className={`block h-full rounded-full ${pct >= 66 ? 'bg-[var(--color-good-bg)]0' : pct >= 33 ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-bad)]'}`} style={{ width: `${pct}%` }} />
                 </span>
                 <span className="text-[11.5px] font-semibold tabular-nums text-[var(--color-ink)]">{w.actual ?? '—'}{w.unit || `/${w.target}`}</span>
               </div>
@@ -126,11 +126,11 @@ export default function WorkdayMonitor() {
 
       {/* management items he did NOT do on their day */}
       {(data.adamaOverdue || []).length > 0 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-[13px] font-semibold text-red-700">Your items he hasn't done:</p>
+        <div className="rounded-lg border border-[var(--color-bad-bg)] bg-[var(--color-bad-bg)] p-4">
+          <p className="text-[13px] font-semibold text-[var(--color-bad)]">Your items he hasn't done:</p>
           <div className="mt-1 space-y-0.5">
             {data.adamaOverdue.map((o, i) => (
-              <p key={i} className="text-[13px] text-red-700">“{o.title}” — was for {new Date(`${o.date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}</p>
+              <p key={i} className="text-[13px] text-[var(--color-bad)]">“{o.title}” — was for {new Date(`${o.date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}</p>
             ))}
           </div>
         </div>
@@ -178,8 +178,8 @@ export default function WorkdayMonitor() {
                 <span className="mt-0.5 shrink-0">{it.done ? <CheckCircle2 size={16} className="text-[var(--color-good)]" /> : <Circle size={16} className="text-[var(--color-ink-faint)]" />}</span>
                 <span className={`flex-1 ${it.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>
                   {it.title}
-                  {it.byAdama && <span className="ml-2 rounded-full bg-red-50 px-1.5 py-0.5 text-[11.5px] font-medium text-red-600">from you</span>}
-                  {it.carried ? <span className="ml-2 rounded-full bg-amber-50 px-1.5 py-0.5 text-[11.5px] font-medium text-amber-600">carried</span> : null}
+                  {it.byAdama && <span className="ml-2 rounded-full bg-[var(--color-bad-bg)] px-1.5 py-0.5 text-[11.5px] font-medium text-[var(--color-bad)]">from you</span>}
+                  {it.carried ? <span className="ml-2 rounded-full bg-[var(--color-warn-bg)] px-1.5 py-0.5 text-[11.5px] font-medium text-[var(--color-warn)]">carried</span> : null}
                 </span>
               </div>
             ))}
@@ -207,8 +207,8 @@ export default function WorkdayMonitor() {
             {(audit || []).map((e) => (
               <div key={e.id} className="flex items-start gap-3 px-4 py-2.5 text-[13px]">
                 <span className="w-24 shrink-0 text-[11.5px] tabular-nums text-[var(--color-ink-faint)]">{new Date(e.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })} {timeShort(e.at)}</span>
-                <span className={`w-20 shrink-0 text-[11.5px] font-semibold ${e.actor === 'adama' ? 'text-red-600' : 'text-[var(--color-ink-soft)]'}`}>{e.actor === 'adama' ? 'You' : e.actor}</span>
-                <span className={`flex-1 ${RED_FLAGS.has(e.action) ? 'font-semibold text-amber-700' : 'text-[var(--color-ink-soft)]'}`}>
+                <span className={`w-20 shrink-0 text-[11.5px] font-semibold ${e.actor === 'adama' ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink-soft)]'}`}>{e.actor === 'adama' ? 'You' : e.actor}</span>
+                <span className={`flex-1 ${RED_FLAGS.has(e.action) ? 'font-semibold text-[var(--color-warn)]' : 'text-[var(--color-ink-soft)]'}`}>
                   {(ACTION_TEXT[e.action] || (() => e.action))(e.detail || {})}
                 </span>
               </div>

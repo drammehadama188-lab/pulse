@@ -5,6 +5,7 @@ import {
   Star, AlertTriangle, MessageSquare,
 } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
+import EmptyState from '../../components/ui/EmptyState.jsx';
 
 // The tabs of an employee's record. Each shows what Pulse actually holds and
 // says so plainly when it holds nothing — an empty month is not a zero.
@@ -229,7 +230,12 @@ export function Attendance({ a, records, overtimeMinutes }) {
                 </tr>
               );
             })}
-            {records.length === 0 && <tr><td colSpan={5} className="px-5 py-8 text-center text-[13px] text-[var(--color-ink-soft)]">No check-ins recorded this month.</td></tr>}
+            {records.length === 0 && <tr><td colSpan={5}>
+              <EmptyState
+                title="No check-ins this month"
+                line="A check-in appears here once their manager records one."
+              />
+            </td></tr>}
           </tbody>
         </table>
       </div>
@@ -292,7 +298,12 @@ export function Documents({ documents, onUpload, uploading }) {
                 </td>
               </tr>
             ))}
-            {shown.length === 0 && <tr><td colSpan={6} className="px-5 py-8 text-center text-[13px] text-[var(--color-ink-soft)]">Nothing here.</td></tr>}
+            {shown.length === 0 && <tr><td colSpan={6}>
+              <EmptyState
+                title="No files yet"
+                line="Contracts, CVs and anything else uploaded for this person appear here."
+              />
+            </td></tr>}
           </tbody>
         </table>
       </div>

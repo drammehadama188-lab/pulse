@@ -87,7 +87,7 @@ export default function MyWeek() {
                 <div key={w.label} className="flex items-center gap-2">
                   <span className="text-[11.5px] font-semibold text-[var(--color-ink-soft)]">{w.label}</span>
                   <span className="h-1.5 w-16 overflow-hidden rounded-full bg-[var(--color-fill)]">
-                    <span className={`block h-full rounded-full ${pct >= 66 ? 'bg-[var(--color-good)]' : pct >= 33 ? 'bg-amber-400' : 'bg-[var(--color-bad)]'}`} style={{ width: `${pct}%` }} />
+                    <span className={`block h-full rounded-full ${pct >= 66 ? 'bg-[var(--color-good)]' : pct >= 33 ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-bad)]'}`} style={{ width: `${pct}%` }} />
                   </span>
                   <span className="text-[11.5px] font-semibold tabular-nums text-[var(--color-ink)]">{w.actual ?? '—'}{w.unit || `/${w.target}`}</span>
                 </div>

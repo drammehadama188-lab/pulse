@@ -18,11 +18,11 @@ const CATEGORY_LABELS = {
 };
 
 const CATEGORY_COLORS = {
-  'monthly-review': 'bg-blue-100 text-blue-700',
-  'coaching': 'bg-amber-100 text-amber-700',
-  'warning': 'bg-red-100 text-red-700',
+  'monthly-review': 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]',
+  'coaching': 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]',
+  'warning': 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]',
   'contract': 'bg-[var(--color-good-bg)] text-[var(--color-good)]',
-  'cv': 'bg-purple-100 text-purple-700',
+  'cv': 'bg-[var(--color-rest-bg)] text-[var(--color-rest)]',
   'id': 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]',
   'general': 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]',
 };
@@ -222,7 +222,7 @@ export default function AgentFiles({ agentName, agentEmail, generateReviewFn, de
               )}
               {canDelete && (
                 <button onClick={() => deleteFile(f.id)}
-                  className="flex items-center gap-1 p-2 text-[var(--color-ink-faint)] hover:text-red-600 rounded-full hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                  className="flex items-center gap-1 p-2 text-[var(--color-ink-faint)] hover:text-[var(--color-bad)] rounded-full hover:bg-[var(--color-bad-bg)] opacity-0 group-hover:opacity-100 transition-opacity">
                   <Trash2 size={14} />
                 </button>
               )}

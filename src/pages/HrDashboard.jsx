@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 
 // HR Dashboard — the landing page in the design Adama sent (20 Aug): five
 // tiles, what needs a decision, who is in today, then performance, the people
@@ -101,7 +102,7 @@ export default function HrDashboard() {
   }
 
   if (error) return <p className="text-[13px] text-[var(--color-stage-out)]">{error}</p>;
-  if (!d) return <p className="text-[13px] text-[var(--color-ink-soft)]">Loading…</p>;
+  if (!d) return <PageSkeleton tiles={4} rows={5} />;
 
   return (
     <div>

@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import Pager, { usePager } from '../components/ui/Pager.jsx';
+import { PageSkeleton } from '../components/ui/Skeleton.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
 
 // Employees — the roster in the design Adama sent (20 Aug): five tiles, a
 // filter row, one row per person, and a footer that says what you are looking
@@ -115,7 +117,7 @@ export default function Employees() {
   const light = `${btn} btn-secondary hover:bg-[var(--color-soft)]`;
 
   if (error) return <p className="text-[13px] text-[var(--color-stage-out)]">{error}</p>;
-  if (!data) return <p className="text-[13px] text-[var(--color-ink-soft)]">Loading…</p>;
+  if (!data) return <PageSkeleton tiles={4} rows={8} />;
   const c = data.counts;
 
   return (
@@ -286,7 +288,12 @@ export default function Employees() {
               );
             })}
             {shown.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-[13px] text-[var(--color-ink-soft)]">Nobody matches those filters.</td></tr>
+              <tr><td colSpan={8}>
+                <EmptyState
+                  title="Nobody matches those filters"
+                  line="Try a different search, or widen the department and status filters."
+                />
+              </td></tr>
             )}
           </tbody>
         </table>

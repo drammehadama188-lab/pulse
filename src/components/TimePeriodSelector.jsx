@@ -35,7 +35,7 @@ export default function TimePeriodSelector({ selected, onChange, showExport = tr
               <button
                 key={period.value}
                 onClick={() => { onChange(period.value); setOpen(false); }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-[var(--color-fill)] transition-colors ${selected === period.value ? 'bg-blue-50 text-blue-600' : 'text-[var(--color-ink-soft)]'}`}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-[var(--color-fill)] transition-colors ${selected === period.value ? 'bg-[var(--color-brand-50)] text-[var(--color-brand)]' : 'text-[var(--color-ink-soft)]'}`}
               >
                 <Calendar size={14} className="text-[var(--color-ink-faint)]" />
                 {period.label}
