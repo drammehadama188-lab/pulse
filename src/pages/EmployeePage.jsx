@@ -324,7 +324,7 @@ export default function EmployeePage() {
 
       {tab === 'Job & pay' && <JobPay e={e} pay={pay} contract={d.contract} />}
       {tab === 'Attendance' && <Attendance a={a} records={d.attendanceRecords} overtimeMinutes={d.overtimeMinutes} />}
-      {tab === 'Performance' && <Performance perf={d.performance} username={e.username} />}
+      {tab === 'Performance' && <Performance person={e} username={e.username} />}
       {tab === 'Documents' && <Documents documents={d.documents} onUpload={uploadDocument} uploading={uploading} />}
       {tab === 'Notes' && <Notes notes={d.notes} username={e.username} />}
       {tab === 'History' && <History history={d.history} />}
