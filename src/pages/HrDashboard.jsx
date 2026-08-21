@@ -34,6 +34,8 @@ const ago = (iso) => {
 };
 const D = (n) => 'D' + Number(n || 0).toLocaleString('en-US');
 
+// One colour per bar, in the order the departments come back.
+const BAR = ['var(--color-stage-screening)', 'var(--color-good)', 'var(--color-stage-new)', 'var(--color-stage-interview)'];
 const KIND = {
   Attendance: [Clock, 'var(--color-stage-interview-bg)', 'var(--color-stage-interview)'],
   Performance: [TrendingUp, 'var(--color-stage-screening-bg)', 'var(--color-stage-screening)'],
@@ -45,15 +47,15 @@ const KIND = {
 function Tile({ icon: Icon, label, value, sub, dot, tint, ink, to }) {
   const Tag = to ? Link : 'div';
   return (
-    <Tag {...(to ? { to } : {})} className={`${CARD} flex items-start gap-3 p-4 ${to ? 'hover:border-[var(--color-ink-faint)]' : ''}`}>
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px]" style={{ background: tint, color: ink }}>
-        <Icon size={18} strokeWidth={2} />
+    <Tag {...(to ? { to } : {})} className={`${CARD} flex items-start gap-2.5 p-3.5 ${to ? 'hover:border-[var(--color-ink-faint)]' : ''}`}>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px]" style={{ background: tint, color: ink }}>
+        <Icon size={17} strokeWidth={2} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[12.5px] font-medium text-[var(--color-ink-soft)]">{label}</span>
-        <span className="mt-1 block text-[26px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
+        <span className="mt-1 block text-[24px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
         {sub && (
-          <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-[var(--color-ink-faint)]">
+          <span className="mt-1 flex items-center gap-1.5 text-[11.5px] text-[var(--color-ink-faint)]">
             {dot && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: dot }} />}
             {sub}
           </span>
@@ -63,7 +65,7 @@ function Tile({ icon: Icon, label, value, sub, dot, tint, ink, to }) {
   );
 }
 const CardHead = ({ title, count, action }) => (
-  <div className="mb-4 flex items-center justify-between gap-3">
+  <div className="mb-3 flex items-center justify-between gap-3">
     <h2 className="flex items-center gap-2 text-[15px] font-semibold text-[var(--color-ink)]">
       {title}
       {count > 0 && <span className="rounded-full bg-[var(--color-stage-out-bg)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-stage-out)]">{count}</span>}
@@ -103,7 +105,7 @@ export default function HrDashboard() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="t-page text-[var(--color-ink)]">HR Dashboard</h1>
           <p className="t-support mt-1">Your team, performance and people actions at a glance.</p>
@@ -132,7 +134,7 @@ export default function HrDashboard() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,42fr)_minmax(0,58fr)]">
-        <div className={`${CARD} p-5`}>
+        <div className={`${CARD} p-4`}>
           <CardHead title="Needs attention" count={d.attentionCount} action={viewAll('/people')} />
           {d.attention.length === 0 && <p className="py-4 text-[12.5px] text-[var(--color-ink-soft)]">Nothing needs a decision today.</p>}
           <div className="divide-y divide-[var(--color-line-soft)]">
@@ -156,7 +158,7 @@ export default function HrDashboard() {
           </div>
         </div>
 
-        <div className={`${CARD} p-5`}>
+        <div className={`${CARD} p-4`}>
           <CardHead title="Today's team" action={viewAll('/attendance')} />
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">
@@ -171,7 +173,7 @@ export default function HrDashboard() {
               <tbody>
                 {d.today.people.map((p) => (
                   <tr key={p.username} className="border-b border-[var(--color-line-soft)] last:border-0">
-                    <td className="py-2.5 pr-3">
+                    <td className="py-2 pr-3">
                       <span className="flex items-center gap-2.5">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[11px] font-semibold text-[var(--color-ink-soft)]">
                           {(p.name || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
@@ -179,14 +181,14 @@ export default function HrDashboard() {
                         <span className="font-semibold text-[var(--color-ink)]">{p.name}</span>
                       </span>
                     </td>
-                    <td className="py-2.5 pr-3 text-[var(--color-ink-soft)]">{p.title || '—'}</td>
-                    <td className="py-2.5 pr-3">
+                    <td className="py-2 pr-3 text-[var(--color-ink-soft)]">{p.title || '—'}</td>
+                    <td className="py-2 pr-3">
                       <span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--color-ink-soft)]">
                         <span className="h-1.5 w-1.5 rounded-full" style={{ background: p.present ? 'var(--color-good)' : 'var(--color-bad)' }} />
                         {p.present ? 'Present' : 'Absent'}
                       </span>
                     </td>
-                    <td className="py-2.5 text-[var(--color-ink-soft)]">{p.present ? time(p.startTime) : '—'}</td>
+                    <td className="py-2 text-[var(--color-ink-soft)]">{p.present ? time(p.startTime) : '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -195,13 +197,37 @@ export default function HrDashboard() {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <div className={`${CARD} p-5`}>
+      <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <div className={`${CARD} p-4`}>
+          <CardHead title="Team performance" action={viewAll('/performance')} />
+          {d.performance.length === 0
+            ? <p className="py-4 text-[12.5px] text-[var(--color-ink-soft)]">No targets or review scores recorded this month.</p>
+            : (
+              <div className="space-y-3.5">
+                {d.performance.map((row, i) => (
+                  <div key={row.area}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-semibold text-[var(--color-ink)]">{row.area}</span>
+                        <span className="block truncate text-[11.5px] text-[var(--color-ink-soft)]">{row.line}</span>
+                      </span>
+                      <span className="text-[15px] font-semibold text-[var(--color-ink)]">{row.pct}%</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-[var(--color-line-soft)]">
+                      <div className="h-full rounded-full" style={{ width: `${row.pct}%`, background: BAR[i % BAR.length] }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+        </div>
+
+        <div className={`${CARD} p-4`}>
           <CardHead title="People development" action={viewAll('/performance')} />
           {d.development.length === 0 && <p className="py-6 text-[12.5px] text-[var(--color-ink-soft)]">Nobody is in probation or coaching.</p>}
           <div className="divide-y divide-[var(--color-line-soft)]">
             {d.development.map((p, i) => (
-              <div key={i} className="py-3.5 first:pt-0">
+              <div key={i} className="py-2.5 first:pt-0">
                 <div className="flex items-center gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[11px] font-semibold text-[var(--color-ink-soft)]">
                     {(p.name || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
@@ -222,10 +248,10 @@ export default function HrDashboard() {
           </div>
         </div>
 
-        <div className={`${CARD} p-5`}>
+        <div className={`${CARD} p-4`}>
           <CardHead title="Recent activity" action={viewAll('/attendance')} />
           {d.activity.length === 0 && <p className="py-6 text-[12.5px] text-[var(--color-ink-soft)]">Nothing has happened yet today.</p>}
-          <div className="space-y-3.5">
+          <div className="space-y-2.5">
             {d.activity.map((a, i) => (
               <div key={i} className="flex items-center gap-3">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[var(--color-fill)] text-[var(--color-ink-soft)]">

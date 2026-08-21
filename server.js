@@ -4652,6 +4652,44 @@ app.get('/api/hr/dashboard', auth, requirePower('hr'), (req, res) => {
   }
   activity.sort((x, y) => (x.at < y.at ? 1 : -1))
 
+  // Team performance, from Pulse's OWN records — sales against target for the
+  // Sales department, and the manager-entered review score for the others. A
+  // department with nothing recorded is left out rather than shown at zero,
+  // which would read as failure instead of silence.
+  const salesStore = db.read('agent-sales', {})
+  const profiles = db.read('profiles', {})
+  const performance = []
+  const salesPeople = roster.filter((u) => u.department === 'Sales')
+  let sold = 0
+  let target = 0
+  for (const u of salesPeople) {
+    const rec = salesStore[u.name]
+    const month = rec?.months?.[monthPrefix]
+    if (rec?.monthlyTarget) target += Number(rec.monthlyTarget) || 0
+    if (month && !month.pending) sold += Number(month.sales) || 0
+  }
+  if (target > 0) {
+    performance.push({
+      area: 'Sales',
+      line: `${sold} of ${target} sales target`,
+      pct: Math.min(100, Math.round((sold / target) * 100)),
+    })
+  }
+  const byDept = {}
+  for (const u of roster) {
+    if (u.department === 'Sales') continue
+    const score = Number(profiles[u.name]?.performanceScore)
+    if (!score) continue
+    ;(byDept[u.department || 'Other'] ||= []).push(score)
+  }
+  for (const [dept, scores] of Object.entries(byDept)) {
+    performance.push({
+      area: dept,
+      line: `Review score · ${scores.length} ${scores.length === 1 ? 'person' : 'people'}`,
+      pct: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+    })
+  }
+
   // 🔒 Pay only for a payroll holder.
   let payroll = null
   if (canSub(req.realUser, 'payroll', 'run') || can(req.realUser, 'payroll')) {
@@ -4667,11 +4705,12 @@ app.get('/api/hr/dashboard', auth, requirePower('hr'), (req, res) => {
     headcount: { total: roster.length, active: roster.filter((u) => (u.status || 'active') === 'active').length },
     today: { present, absent: scheduled.length - present, people: people.sort((a, b) => Number(b.present) - Number(a.present)) },
     payroll,
-    attention: attention.slice(0, 6),
+    attention: attention.slice(0, 5),
+    performance,
     attentionCount: attention.length,
     probation: roster.filter((u) => daysUntil(u.probationEnd) != null && daysUntil(u.probationEnd) >= 0).length,
-    development: development.slice(0, 4),
-    activity: activity.slice(0, 6),
+    development: development.slice(0, 3),
+    activity: activity.slice(0, 5),
     asOf: new Date().toISOString(),
   })
 })
