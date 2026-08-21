@@ -52,15 +52,15 @@ export default function Calendar() {
       <PageHead title="Calendar">
         <div className="flex items-center gap-1">
           <button onClick={() => shift(-1)} className="p-2 rounded-lg border border-[var(--color-line)] bg-white text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]"><ChevronLeft size={16} /></button>
-          <span className="px-3 text-sm font-semibold text-[var(--color-ink)] w-40 text-center">{monthLabel}</span>
+          <span className="px-3 text-[13px] font-semibold text-[var(--color-ink)] w-40 text-center">{monthLabel}</span>
           <button onClick={() => shift(1)} className="p-2 rounded-lg border border-[var(--color-line)] bg-white text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]"><ChevronRight size={16} /></button>
         </div>
       </PageHead>
 
-      {loading ? <p className="text-sm text-[var(--color-ink-faint)]">Loading…</p> : (
+      {loading ? <p className="text-[13px] text-[var(--color-ink-faint)]">Loading…</p> : (
         <div className={`${CARD} overflow-hidden`}>
           <div className="grid grid-cols-7 border-b border-[var(--color-line-soft)]">
-            {DAYS.map(d => <div key={d} className="px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-ink-faint)]">{d}</div>)}
+            {DAYS.map(d => <div key={d} className="px-3 py-2.5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">{d}</div>)}
           </div>
           <div className="grid grid-cols-7">
             {cells.map((d, i) => {
@@ -69,7 +69,7 @@ export default function Calendar() {
               const otherMonth = d.getMonth() !== month.getMonth();
               return (
                 <div key={i} className={`min-h-[104px] border-b border-r border-[var(--color-line-soft)] p-2 ${otherMonth ? 'bg-[var(--color-fill)]/40' : ''}`}>
-                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${k === todayKey ? 'bg-[var(--color-ink)] text-white' : otherMonth ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>
+                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-semibold ${k === todayKey ? 'bg-[var(--color-ink)] text-white' : otherMonth ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>
                     {d.getDate()}
                   </span>
                   <div className="mt-1 space-y-1">
@@ -88,7 +88,7 @@ export default function Calendar() {
       )}
 
       {!loading && interviews.length === 0 && (
-        <p className="mt-4 text-sm text-[var(--color-ink-faint)]">Nothing booked yet. Book an interview from an applicant's page.</p>
+        <p className="mt-4 text-[13px] text-[var(--color-ink-faint)]">Nothing booked yet. Book an interview from an applicant's page.</p>
       )}
     </div>
   );

@@ -44,7 +44,7 @@ export default function Reports() {
     <div className="max-w-6xl space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Reports</h1>
+          <h1 className="t-page">Reports</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">The month's story — attendance, coaching, performance, leave and pay.</p>
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-1 py-1">

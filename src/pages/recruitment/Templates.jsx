@@ -65,8 +65,8 @@ export default function Templates() {
         <button onClick={blank} className={BTN_PRIMARY}><Plus size={16} /> New set</button>
       </PageHead>
 
-      {error && <p className="mb-4 text-sm text-[var(--color-stage-out)]">{error}</p>}
-      {loading ? <p className="text-sm text-[var(--color-ink-faint)]">Loading…</p> : (
+      {error && <p className="mb-4 text-[13px] text-[var(--color-stage-out)]">{error}</p>}
+      {loading ? <p className="text-[13px] text-[var(--color-ink-faint)]">Loading…</p> : (
         <div className="space-y-4">
           {templates.map(t => {
             const isOpen = openId === t.id && draft;
@@ -78,10 +78,10 @@ export default function Templates() {
                     {isOpen ? <ChevronDown size={16} className="text-[var(--color-ink-faint)]" /> : <ChevronRight size={16} className="text-[var(--color-ink-faint)]" />}
                     <span className="min-w-0">
                       <span className="flex items-center gap-2">
-                        <span className="text-base font-bold text-[var(--color-ink)]">{t.name}</span>
-                        {t.isDefault && <span className="rounded-md bg-[var(--color-ink)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Default</span>}
+                        <span className="text-base font-semibold text-[var(--color-ink)]">{t.name}</span>
+                        {t.isDefault && <span className="rounded-md bg-[var(--color-ink)] px-1.5 py-0.5 text-[11.5px] font-medium text-white">Default</span>}
                       </span>
-                      <span className="block text-xs text-[var(--color-ink-faint)] mt-0.5">{t.sections.length} sections · {questions} questions{t.role ? ` · ${t.role}` : ''}</span>
+                      <span className="block text-[12px] text-[var(--color-ink-faint)] mt-0.5">{t.sections.length} sections · {questions} questions{t.role ? ` · ${t.role}` : ''}</span>
                     </span>
                   </button>
                   <div className="flex items-center gap-1 shrink-0">
@@ -96,11 +96,11 @@ export default function Templates() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <label className="block">
                         <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Name</span>
-                        <input value={draft.name} onChange={e => upd(d => { d.name = e.target.value; })} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                        <input value={draft.name} onChange={e => upd(d => { d.name = e.target.value; })} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                       </label>
                       <label className="block">
                         <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">For which role</span>
-                        <input value={draft.role || ''} onChange={e => upd(d => { d.role = e.target.value; })} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                        <input value={draft.role || ''} onChange={e => upd(d => { d.role = e.target.value; })} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                       </label>
                     </div>
 
@@ -114,21 +114,21 @@ export default function Templates() {
                         <div className="mt-3 space-y-2">
                           {s.questions.map((q, qi) => (
                             <div key={q.id || qi} className="flex items-start gap-2">
-                              <span className="mt-2 text-[11px] font-bold text-[var(--color-ink-faint)] w-6 shrink-0">Q{qi + 1}</span>
+                              <span className="mt-2 text-[11px] font-semibold text-[var(--color-ink-faint)] w-6 shrink-0">Q{qi + 1}</span>
                               <textarea value={q.text} rows={2} onChange={e => upd(d => { d.sections[si].questions[qi].text = e.target.value; })}
-                                className="flex-1 border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                                className="flex-1 border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                               <button onClick={() => upd(d => { d.sections[si].questions.splice(qi, 1); })} className="mt-1 p-1.5 rounded-lg text-[var(--color-ink-faint)] hover:text-[var(--color-stage-out)] hover:bg-[var(--color-stage-out-bg)]"><Trash2 size={14} /></button>
                             </div>
                           ))}
                         </div>
-                        <button onClick={() => upd(d => { d.sections[si].questions.push({ text: '' }); })} className="mt-3 text-sm font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">+ Question</button>
+                        <button onClick={() => upd(d => { d.sections[si].questions.push({ text: '' }); })} className="mt-3 text-[13px] font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">+ Question</button>
                       </div>
                     ))}
 
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <button onClick={() => upd(d => { d.sections.push({ title: 'New section', questions: [{ text: '' }] }); })} className={BTN_LIGHT}>+ Section</button>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => { setDraft(null); setOpenId(null); }} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
+                        <button onClick={() => { setDraft(null); setOpenId(null); }} className="px-3 py-2 rounded-lg text-[13px] bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
                         <button onClick={save} disabled={saving} className="px-3.5 py-2.5 rounded-[8px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Saving…' : 'Save set'}</button>
                       </div>
                     </div>

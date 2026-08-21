@@ -14,7 +14,7 @@ function Detail({ label, value }) {
   return (
     <div>
       <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</p>
-      <p className="text-sm text-[var(--color-ink)] mt-0.5 break-words">{value || <span className="text-[var(--color-ink-faint)]">—</span>}</p>
+      <p className="text-[13px] text-[var(--color-ink)] mt-0.5 break-words">{value || <span className="text-[var(--color-ink-faint)]">—</span>}</p>
     </div>
   );
 }
@@ -106,29 +106,29 @@ export default function Applicant() {
 
   if (loading) return <p className="text-[13px] text-[var(--color-ink-soft)]">Loading…</p>;
   if (!a) return (
-    <div className={`${CARD} p-12 text-center text-sm text-[var(--color-ink-faint)]`}>
+    <div className={`${CARD} p-12 text-center text-[13px] text-[var(--color-ink-faint)]`}>
       That applicant is not on the list. <Link to="/recruitment/applicants" className="text-[var(--color-ink)] underline">Back to applicants</Link>
     </div>
   );
 
   return (
     <div>
-      <Link to="/recruitment/applicants" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-4">
+      <Link to="/recruitment/applicants" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-4">
         <ArrowLeft size={15} /> Applicants
       </Link>
 
       <div className={`${CARD} p-5 mb-5`}>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-4 min-w-0">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[var(--color-ink)] text-lg font-bold text-white">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[var(--color-ink)] text-lg font-semibold text-white">
               {(a.name || '?').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
             </span>
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-[var(--color-ink)] truncate">{a.name}</h1>
-              <p className="text-sm text-[var(--color-ink-soft)]">{position?.title || a.role || 'No position filed'}</p>
-              <div className="mt-2 flex items-center gap-4 flex-wrap text-sm text-[var(--color-ink-soft)]">
+              <h1 className="text-2xl font-semibold text-[var(--color-ink)] truncate">{a.name}</h1>
+              <p className="text-[13px] text-[var(--color-ink-soft)]">{position?.title || a.role || 'No position filed'}</p>
+              <div className="mt-2 flex items-center gap-4 flex-wrap text-[13px] text-[var(--color-ink-soft)]">
                 {a.phoneValid === false
-                  ? <span className="text-[var(--color-stage-out)] text-xs">No usable number</span>
+                  ? <span className="text-[var(--color-stage-out)] text-[12px]">No usable number</span>
                   : a.phone && <a href={`tel:${String(a.phone).replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-[var(--color-ink)]"><Phone size={14} /> {a.phone}</a>}
                 {a.email && <span className="flex items-center gap-1.5"><Mail size={14} /> {a.email}</span>}
                 <StageChip stage={a.stage} />
@@ -137,7 +137,7 @@ export default function Applicant() {
           </div>
           <div className="flex items-center gap-2">
             <select value={a.stage} onChange={e => save({ stage: e.target.value })}
-              className="text-sm border border-[var(--color-line)] rounded-lg px-3 py-2.5 bg-white">
+              className="text-[13px] border border-[var(--color-line)] rounded-lg px-3 py-2.5 bg-white">
               {STAGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
             {openInterview ? (
@@ -156,24 +156,24 @@ export default function Applicant() {
       <div className="mb-5 flex items-center gap-1 border-b border-[var(--color-line)]">
         {TABS.map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px ${tab === k ? 'border-[var(--color-ink)] text-[var(--color-ink)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>
+            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 -mb-px ${tab === k ? 'border-[var(--color-ink)] text-[var(--color-ink)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>
             {label}{k === 'interviews' && interviews.length ? ` (${interviews.length})` : ''}
           </button>
         ))}
       </div>
 
-      {uploadError && <p className="mb-4 text-sm text-[var(--color-stage-out)]">{uploadError}</p>}
+      {uploadError && <p className="mb-4 text-[13px] text-[var(--color-stage-out)]">{uploadError}</p>}
 
       {tab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className={`${CARD} lg:col-span-2 p-5`}>
             <h3 className="t-card text-[var(--color-ink)] mb-4">What they answered</h3>
-            {answers.length === 0 && <p className="text-sm text-[var(--color-ink-faint)]">Nothing on this record. It was added by hand, not imported from a form.</p>}
+            {answers.length === 0 && <p className="text-[13px] text-[var(--color-ink-faint)]">Nothing on this record. It was added by hand, not imported from a form.</p>}
             <div className="space-y-4">
               {answers.map(([q, v]) => (
                 <div key={q}>
                   <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{q}</p>
-                  <p className="text-sm text-[var(--color-ink)] mt-0.5 whitespace-pre-wrap">{v}</p>
+                  <p className="text-[13px] text-[var(--color-ink)] mt-0.5 whitespace-pre-wrap">{v}</p>
                 </div>
               ))}
             </div>
@@ -188,7 +188,7 @@ export default function Applicant() {
             <div>
               <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Position</p>
               <select value={a.positionId || ''} onChange={e => save({ positionId: e.target.value })}
-                className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white">
+                className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px] bg-white">
                 <option value="">Not filed</option>
                 {positions.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
               </select>
@@ -202,7 +202,7 @@ export default function Applicant() {
           <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
             <div>
               <h3 className="t-card text-[var(--color-ink)]">{a.cv ? a.cv.name : 'No CV on file'}</h3>
-              {a.cv && <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">{Math.round(a.cv.sizeBytes / 1024)} KB · added {fullDate(a.cv.uploadedAt)} by {a.cv.uploadedBy}</p>}
+              {a.cv && <p className="text-[12px] text-[var(--color-ink-faint)] mt-0.5">{Math.round(a.cv.sizeBytes / 1024)} KB · added {fullDate(a.cv.uploadedAt)} by {a.cv.uploadedBy}</p>}
             </div>
             <div className="flex items-center gap-2">
               {a.cv && <a href={`${cvUrl}&download=1`} className={BTN_LIGHT}><Download size={16} /> Download</a>}
@@ -217,7 +217,7 @@ export default function Applicant() {
               ? <img src={cvUrl} alt={a.cv.name} className="max-h-[70vh] rounded-lg border border-[var(--color-line-soft)]" />
               : <iframe title="CV" src={cvUrl} className="w-full h-[70vh] rounded-lg border border-[var(--color-line-soft)]" />
           ) : (
-            <p className="text-sm text-[var(--color-ink-faint)] py-10 text-center">Upload the CV and it opens here beside the interview questions.</p>
+            <p className="text-[13px] text-[var(--color-ink-faint)] py-10 text-center">Upload the CV and it opens here beside the interview questions.</p>
           )}
         </div>
       )}
@@ -226,7 +226,7 @@ export default function Applicant() {
         <div className="space-y-3">
           {interviews.length === 0 && (
             <div className={`${CARD} p-10 text-center`}>
-              <p className="text-sm text-[var(--color-ink-faint)] mb-4">No interview yet.</p>
+              <p className="text-[13px] text-[var(--color-ink-faint)] mb-4">No interview yet.</p>
               <div className="flex items-center justify-center gap-2 flex-wrap">
                 {templates.map(t => (
                   <button key={t.id} onClick={() => startInterview(t.id)} disabled={starting} className={BTN_LIGHT}>{t.name}</button>
@@ -237,8 +237,8 @@ export default function Applicant() {
           {interviews.map(i => (
             <Link key={i.id} to={`/recruitment/interviews/${i.id}`} className={`${CARD} flex items-center justify-between gap-4 p-4 hover:border-[var(--color-line)]`}>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-[var(--color-ink)]">{i.templateName}</p>
-                <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">
+                <p className="text-[13px] font-semibold text-[var(--color-ink)]">{i.templateName}</p>
+                <p className="text-[12px] text-[var(--color-ink-faint)] mt-0.5">
                   {dayTime(i.scheduledAt)}{i.interviewer ? ` · ${i.interviewer}` : ''} · {i.status === 'completed' ? 'Completed' : i.status === 'in_progress' ? 'In progress' : 'Scheduled'}
                 </p>
               </div>
@@ -260,7 +260,7 @@ export default function Applicant() {
         <div className={`${CARD} p-5`}>
           <textarea value={note} onChange={e => setNote(e.target.value)} onBlur={() => note !== (a.notes || '') && save({ notes: note })}
             rows={12} placeholder="What was said on the call, who referred them, anything you want to remember."
-            className="w-full border border-[var(--color-line)] rounded-lg px-3 py-2.5 text-sm" />
+            className="w-full border border-[var(--color-line)] rounded-lg px-3 py-2.5 text-[13px]" />
         </div>
       )}
 
@@ -272,17 +272,17 @@ export default function Applicant() {
                 <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--color-ink-faint)]" />
                 <div>
                   <StageChip stage={h.stage} />
-                  <p className="text-xs text-[var(--color-ink-faint)] mt-1">{dayTime(h.at)} · {h.by}</p>
+                  <p className="text-[12px] text-[var(--color-ink-faint)] mt-1">{dayTime(h.at)} · {h.by}</p>
                 </div>
               </li>
             ))}
-            {(a.history || []).length === 0 && <p className="text-sm text-[var(--color-ink-faint)]">Nothing recorded yet.</p>}
+            {(a.history || []).length === 0 && <p className="text-[13px] text-[var(--color-ink-faint)]">Nothing recorded yet.</p>}
           </ol>
         </div>
       )}
 
       {tab === 'interviews' && interviews.some(i => i.status === 'completed') && (
-        <p className="mt-4 text-xs text-[var(--color-ink-faint)]">
+        <p className="mt-4 text-[12px] text-[var(--color-ink-faint)]">
           {interviews.filter(i => i.status === 'completed').map(i => `${i.templateName}: ${i.totalScore} (${scoreWord(i.totalScore)})`).join(' · ')}
         </p>
       )}

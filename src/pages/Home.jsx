@@ -116,7 +116,7 @@ export default function Home() {
       {/* greeting */}
       <div className="flex items-center justify-between gap-4 rise">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-[var(--color-ink)] md:text-[26px]">
+          <h1 className="t-page">
             {greeting()}, {firstName(user.name)} <span className="inline-block">👋</span>
           </h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()}</p>
@@ -369,7 +369,7 @@ function TodayStat({ icon: Icon, label, value }) {
         <Icon size={18} strokeWidth={2.2} />
       </span>
       <div className="text-[22px] font-semibold leading-none text-[var(--color-ink)]">{value}</div>
-      <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
+      <div className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">
         {label} today
       </div>
     </div>

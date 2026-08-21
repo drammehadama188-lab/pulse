@@ -26,7 +26,7 @@ function pastCategory(reason) {
 function Field({ label, value, accent }) {
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-1">{label}</p>
+      <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)] mb-1">{label}</p>
       <p className={`text-[13px] font-medium ${accent || 'text-[var(--color-ink)]'}`}>{value ?? <span className="text-[var(--color-ink-faint)] font-normal">—</span>}</p>
     </div>
   );
@@ -77,7 +77,7 @@ export default function PastStaffProfile() {
           <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--color-ink-faint)] to-[var(--color-ink-soft)] flex items-center justify-center text-white text-[18px] font-semibold shrink-0">{initials}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h1 className="text-[22px] font-semibold text-[var(--color-ink)]">{person.name}</h1>
+              <h1 className="t-page">{person.name}</h1>
               <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${cat.cls}`}>{cat.label}</span>
             </div>
             <p className="text-[var(--color-ink-soft)]">{person.role}</p>

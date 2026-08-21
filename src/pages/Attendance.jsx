@@ -411,7 +411,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
 
           {/* day totals — darker bar so weekly hours read instantly */}
           <div className="grid border-t border-[var(--color-line)] bg-[var(--color-fill)]" style={{ gridTemplateColumns: cols }}>
-            <div className="sticky left-0 z-10 bg-[var(--color-fill)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">Totals</div>
+            <div className="sticky left-0 z-10 bg-[var(--color-fill)] px-4 py-2.5 text-[11.5px] font-medium text-[var(--color-ink-soft)]">Totals</div>
             {totals.map((t, i) => {
               const isToday = days[i] === today
               return (
@@ -562,7 +562,7 @@ function MyHours() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">My hours</h1>
+        <h1 className="t-page">My hours</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()}</p>
       </div>
 
@@ -725,7 +725,7 @@ function ManagerHours() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Schedule</h1>
+          <h1 className="t-page">Schedule</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">Team shifts, attendance &amp; leave</p>
         </div>
         <Button icon={CalendarCog} onClick={() => setEditorOpen(true)} disabled={!people.length}>Edit schedules</Button>
@@ -796,7 +796,7 @@ function TeamHours() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Team Schedule</h1>
+          <h1 className="t-page">Team Schedule</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">Your team's shifts, attendance &amp; leave</p>
         </div>
         <div className="flex items-center gap-2">
@@ -1120,7 +1120,7 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
               <div key={dept} className="rounded-lg border border-[var(--color-line-soft)] p-2.5">
                 <div className="flex items-center gap-2">
                   <input type="checkbox" checked={deptAll} onChange={(e) => setDeptAll(dept, e.target.checked)} className="accent-[var(--color-brand)]" onClick={(e) => e.stopPropagation()} />
-                  <button onClick={() => toggleDept(dept)} className="flex flex-1 items-center gap-1.5 text-left text-[12px] font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                  <button onClick={() => toggleDept(dept)} className="flex flex-1 items-center gap-1.5 text-left text-[11.5px] font-medium text-[var(--color-ink-soft)]">
                     <ChevronRight size={14} className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                     {dept} <span className="font-medium text-[var(--color-ink-faint)]">({members.length}{picked ? ` · ${picked} selected` : ''})</span>
                   </button>

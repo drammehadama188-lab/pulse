@@ -95,7 +95,7 @@ export default function WorkdayMonitor() {
   return (
     <div className="max-w-5xl space-y-7">
       <div>
-        <h1 className="text-[26px] font-semibold text-[var(--color-ink)]">Team Workday</h1>
+        <h1 className="t-page">Team Workday</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{data.lead.name}'s plans, live — add to them, and read the full history below. Ticking stays his.</p>
         {leads.length > 1 && (
           <div className="mt-2 flex gap-2">
@@ -143,7 +143,7 @@ export default function WorkdayMonitor() {
         <span className="font-semibold text-[var(--color-ink-soft)]">Objectives:</span>
         {['primary', 'supporting'].map((field) => (
           <label key={field} className="flex items-center gap-1.5">
-            <span className="text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{field}</span>
+            <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{field}</span>
             <select
               value={(data.objectivePick || {})[field] || ''}
               onChange={(e) => setObjectives(field, e.target.value)}
@@ -178,8 +178,8 @@ export default function WorkdayMonitor() {
                 <span className="mt-0.5 shrink-0">{it.done ? <CheckCircle2 size={16} className="text-[var(--color-good)]" /> : <Circle size={16} className="text-[var(--color-ink-faint)]" />}</span>
                 <span className={`flex-1 ${it.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>
                   {it.title}
-                  {it.byAdama && <span className="ml-2 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600">from you</span>}
-                  {it.carried ? <span className="ml-2 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">carried</span> : null}
+                  {it.byAdama && <span className="ml-2 rounded-full bg-red-50 px-1.5 py-0.5 text-[11.5px] font-medium text-red-600">from you</span>}
+                  {it.carried ? <span className="ml-2 rounded-full bg-amber-50 px-1.5 py-0.5 text-[11.5px] font-medium text-amber-600">carried</span> : null}
                 </span>
               </div>
             ))}
@@ -200,7 +200,7 @@ export default function WorkdayMonitor() {
 
       {/* the timeline — nothing disappears quietly */}
       <div>
-        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Timeline — every change, who and when</h2>
+        <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Timeline — every change, who and when</h2>
         <div className="rounded-lg border border-[var(--color-line)] bg-white">
           {(audit || []).length === 0 && <p className="p-5 text-center text-[13px] text-[var(--color-ink-faint)]">No activity logged yet.</p>}
           <div className="max-h-[28rem] divide-y divide-[var(--color-line-soft)] overflow-y-auto">

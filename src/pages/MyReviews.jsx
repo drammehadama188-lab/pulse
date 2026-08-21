@@ -60,7 +60,7 @@ export default function MyReviews() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight text-[var(--color-ink)] md:text-[26px]">Reviews</h1>
+        <h1 className="t-page">Reviews</h1>
         <p className="mt-1 text-[var(--color-ink-faint)]">Your performance reviews and coaching notes.</p>
       </div>
 

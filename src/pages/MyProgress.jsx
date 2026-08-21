@@ -191,7 +191,7 @@ export default function MyProgress() {
     <div className="space-y-7">
       {/* Header */}
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight text-[var(--color-ink)] md:text-[26px]">My Progress</h1>
+        <h1 className="t-page">My Progress</h1>
         <p className="mt-1 text-[var(--color-ink-faint)]">{periodLabel(CUR_PERIOD)} · this month's goals, and your record before.</p>
       </div>
 
@@ -219,7 +219,7 @@ export default function MyProgress() {
       <Card className="p-5 sm:p-5">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Overall progress</div>
+            <div className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Overall progress</div>
             <div className="mt-1 flex items-end gap-3">
               <span className={`text-5xl font-semibold tracking-tight ${b.text}`}>{score == null ? '' : `${score}%`}</span>
               <div className="pb-1">
@@ -232,7 +232,7 @@ export default function MyProgress() {
 
         <div className="mt-6 grid grid-cols-1 gap-4 border-t border-[var(--color-line-soft)] pt-5 sm:grid-cols-3">
           <div>
-            <div className="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Goal completion</div>
+            <div className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Goal completion</div>
             {goalText ? (
               <>
                 <div className="mt-1 text-[22px] font-semibold text-[var(--color-ink)]">{goalText}</div>
@@ -241,11 +241,11 @@ export default function MyProgress() {
             ) : <div className="mt-1 text-[13px] text-[var(--color-ink-faint)]">No goals set yet</div>}
           </div>
           <div>
-            <div className="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Current score</div>
+            <div className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Current score</div>
             <div className="mt-1 text-[22px] font-semibold text-[var(--color-ink)]">{score == null ? 'Not scored' : `${score}%`}</div>
           </div>
           <div>
-            <div className="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Manager review</div>
+            <div className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Manager review</div>
             <div className="mt-1">
               {currentReview
                 ? <Pill tone="good" dot>Reviewed</Pill>
@@ -311,7 +311,7 @@ export default function MyProgress() {
         {(kpiGoals.length > 0 || salesGoal) && (
           <div className="mt-3 space-y-2.5">
             {kpiGoals.length > 0 && (
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Added by your manager</p>
+              <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Added by your manager</p>
             )}
             {salesGoal && (
               <Card className="flex items-center gap-3 p-4">

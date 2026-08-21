@@ -26,7 +26,7 @@ export default function MyDocuments() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Documents</h1>
+        <h1 className="t-page">Documents</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Your CV, contract, ID and certificates.</p>
       </div>
 

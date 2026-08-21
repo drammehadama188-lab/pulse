@@ -117,7 +117,7 @@ export default function KpiTargets() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold text-[var(--color-ink)]">KPI Targets</h1>
+          <h1 className="t-page">KPI Targets</h1>
           <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">
             The company's goals, set here once — every scorecard in Pulse and the goal numbers in Admin follow.
             Changes take effect from the month you pick; history is never rewritten.
@@ -142,7 +142,7 @@ export default function KpiTargets() {
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
-                <tr className="text-left text-[11.5px] uppercase tracking-wide text-[var(--color-ink-faint)]">
+                <tr className="text-left text-[11.5px] text-[var(--color-ink-faint)]">
                   <th className="pb-2 pr-4">KPI</th>
                   <th className="pb-2 pr-4">Target · {ymLabel(data.month)}</th>
                   <th className="pb-2 pr-4">Weight</th>
@@ -226,7 +226,7 @@ export default function KpiTargets() {
       {/* Add-KPI dialog — a new KPI for the role; weights rebalance around it. */}
       {addFor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => !saving && setAddFor(null)}>
-          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-[var(--shadow-lift)]" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center gap-2">
               <Plus size={18} className="text-[var(--color-good)]" />
               <h2 className="text-[15px] font-semibold text-[var(--color-ink)]">Add a KPI · {addFor.roleLabel}</h2>
@@ -269,7 +269,7 @@ export default function KpiTargets() {
       {/* Change drawer — schedule one KPI's new number. */}
       {draft && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => !saving && setDraft(null)}>
-          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-[var(--shadow-lift)]" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center gap-2">
               <Target size={18} className="text-brand-600 text-[var(--color-good)]" />
               <h2 className="text-[15px] font-semibold text-[var(--color-ink)]">Change: {draft.label}</h2>

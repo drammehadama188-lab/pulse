@@ -83,7 +83,7 @@ export default function Sales() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Customers</h1>
+        <h1 className="t-page">Customers</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{isViewAs ? `${user.name}'s` : 'Your'} prospects &amp; customers.</p>
       </div>
 

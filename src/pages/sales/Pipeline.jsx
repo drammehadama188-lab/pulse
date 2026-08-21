@@ -46,7 +46,7 @@ export default function Pipeline() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Pipeline</h1>
+        <h1 className="t-page">Pipeline</h1>
         <PeriodSelector period={period} onChange={setPeriod} />
       </div>
 

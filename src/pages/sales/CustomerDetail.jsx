@@ -118,7 +118,7 @@ export default function CustomerDetail() {
             {initials(customer.company)}
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-[22px] font-semibold tracking-tight sm:text-[26px]">{customer.company}</h1>
+            <h1 className="t-page">{customer.company}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-white/85">
               {customer.contact && <span>{customer.contact}{customer.role ? ` · ${customer.role}` : ''}</span>}
               {customer.phone && <span>{customer.phone}</span>}

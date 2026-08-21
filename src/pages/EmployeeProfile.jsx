@@ -34,7 +34,7 @@ const ACTION_CONFIRM = { renew: 'Renew', extend: 'Extend', convert: 'Convert', t
 function Field({ label, value, accent }) {
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-1">{label}</p>
+      <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)] mb-1">{label}</p>
       <p className={`text-[13px] font-medium ${accent || 'text-[var(--color-ink)]'}`}>{value || <span className="text-[var(--color-ink-faint)] font-normal">Not set</span>}</p>
     </div>
   );
@@ -238,7 +238,7 @@ export default function EmployeeProfile() {
           <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--color-good)] to-[var(--color-good)] flex items-center justify-center text-white text-[18px] font-semibold shrink-0">{initials}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h1 className="text-[22px] font-semibold text-[var(--color-ink)]">{agent.name}</h1>
+              <h1 className="t-page">{agent.name}</h1>
               <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusColor}`}>{statusLabel}</span>
             </div>
             <p className="text-[var(--color-ink-soft)]">{agent.role}{agent.type ? ` · ${agent.type}` : ''}</p>
@@ -326,7 +326,7 @@ export default function EmployeeProfile() {
               <div className="grid grid-cols-2 gap-4">
                 {PERSONAL.map(([k, label]) => (
                   <label key={k} className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">{label}</span>
+                    <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</span>
                     <input type={k === 'nextReview' ? 'date' : 'text'} value={draft[k] || ''} onChange={(e) => setDraft(s => ({ ...s, [k]: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                 ))}
@@ -443,7 +443,7 @@ export default function EmployeeProfile() {
       {/* Contract action modal */}
       {action && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !actionBusy && setAction(null)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-[var(--shadow-lift)] w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[15px] font-semibold text-[var(--color-ink)]">{ACTION_TITLES[action]}</h3>
               <button onClick={() => setAction(null)} disabled={actionBusy} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
@@ -453,22 +453,22 @@ export default function EmployeeProfile() {
               {action === 'renew' && (
                 <>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">New contract type</span>
+                    <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">New contract type</span>
                     <input type="text" value={form.newType || ''} onChange={(e) => setF('newType', e.target.value)} placeholder="e.g. 6-month fixed" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">New start date (optional)</span>
+                    <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">New start date (optional)</span>
                     <input type="date" value={form.newStart || ''} onChange={(e) => setF('newStart', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">New end date</span>
+                    <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">New end date</span>
                     <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                 </>
               )}
               {action === 'extend' && (
                 <label className="block">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Extend end date to</span>
+                  <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Extend end date to</span>
                   <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                 </label>
               )}
@@ -476,7 +476,7 @@ export default function EmployeeProfile() {
                 <>
                   <p className="text-[13px] text-[var(--color-ink-soft)]">This makes the contract permanent — no end date, no expiry reminders.</p>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Contract type</span>
+                    <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Contract type</span>
                     <input type="text" value={form.newType || ''} onChange={(e) => setF('newType', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                 </>
@@ -487,18 +487,18 @@ export default function EmployeeProfile() {
                     Terminating deactivates <span className="font-semibold">{agent.name}</span> across Pulse — removed from the roster, payroll and attendance, and signed out immediately. This is recorded permanently.
                   </div>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Reason (required)</span>
+                    <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Reason (required)</span>
                     <textarea value={form.reason || ''} onChange={(e) => setF('reason', e.target.value)} rows={3} placeholder="Why is this contract being terminated?" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                   <label className="block">
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Termination date</span>
+                    <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Termination date</span>
                     <input type="date" value={form.newEnd || ''} onChange={(e) => setF('newEnd', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                   </label>
                 </>
               )}
               {action !== 'terminate' && (
                 <label className="block">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Note (optional)</span>
+                  <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Note (optional)</span>
                   <input type="text" value={form.note || ''} onChange={(e) => setF('note', e.target.value)} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                 </label>
               )}

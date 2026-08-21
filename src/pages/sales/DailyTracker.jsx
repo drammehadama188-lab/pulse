@@ -59,7 +59,7 @@ export default function DailyTracker() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">My Day</h1>
+        <h1 className="t-page">My Day</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{dateLong()} · auto-summarised from what you log.</p>
       </div>
 

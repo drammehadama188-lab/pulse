@@ -46,7 +46,7 @@ export default function Marketing() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Marketing</h1>
+        <h1 className="t-page">Marketing</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Department · social, leads, content, campaigns</p>
       </div>
 
@@ -108,7 +108,7 @@ function EditableSection({ section, rows, onSaved }) {
         {/* header */}
         <div className="hidden gap-3 border-b border-[var(--color-line-soft)] px-4 py-2.5 sm:flex">
           {section.cols.map((c) => (
-            <div key={c.k} className="flex-1 text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{c.label}</div>
+            <div key={c.k} className="flex-1 text-[11.5px] font-medium text-[var(--color-ink-faint)]">{c.label}</div>
           ))}
           <div className="w-9" />
         </div>
@@ -123,7 +123,7 @@ function EditableSection({ section, rows, onSaved }) {
           <div key={i} className="flex flex-col gap-2 border-b border-[var(--color-line-soft)] px-3 py-2.5 last:border-0 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
             {section.cols.map((c) => (
               <div key={c.k} className="flex-1">
-                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)] sm:hidden">{c.label}</span>
+                <span className="mb-1 block text-[11.5px] font-medium text-[var(--color-ink-faint)] sm:hidden">{c.label}</span>
                 <Input
                   type={c.type || 'text'}
                   value={row[c.k] ?? ''}

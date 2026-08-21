@@ -95,7 +95,7 @@ export default function PerformancePerson() {
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-[18px] font-semibold text-white">{initials}</div>
           <div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-[var(--color-ink)]">{person.name}</h1>
+            <h1 className="t-page">{person.name}</h1>
             <p className="text-[13px] text-[var(--color-ink-soft)]">{person.role} · {person.type}</p>
             <button onClick={() => navigate(`/agents/${slugify(person.name)}`)} className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><ExternalLink size={12} /> Full employee profile</button>
           </div>
@@ -107,7 +107,7 @@ export default function PerformancePerson() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <SummaryCard label="Score" value={effScore == null ? '—' : `${effScore}%`} accent={b.text}
-          sub={<span className="flex items-center gap-1.5"><span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${b.chip}`}>{b.label}</span>{effSource === 'sales' && <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-good)]">from sales</span>}</span>} big />
+          sub={<span className="flex items-center gap-1.5"><span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${b.chip}`}>{b.label}</span>{effSource === 'sales' && <span className="text-[11.5px] font-medium text-[var(--color-good)]">from sales</span>}</span>} big />
         <SummaryCard label="Revenue" value={periodSales ? `D${periodSales.revenue.toLocaleString()}` : '—'} accent="text-[var(--color-ink)]" sub={periodSales ? `${periodSales.sales}/${periodSales.target} sales` : 'no sales data'} />
         <SummaryCard label="Status" value={periodStatus} accent={b.text} small />
         <SummaryCard label="Trend" value={delta == null ? '—' : <span className={`inline-flex items-center gap-0.5 ${delta > 0 ? 'text-[var(--color-good)]' : delta < 0 ? 'text-red-500' : 'text-[var(--color-ink-faint)]'}`}>{delta > 0 ? <TrendingUp size={20} /> : delta < 0 ? <TrendingDown size={20} /> : <Minus size={20} />}{delta > 0 ? `+${delta}` : delta}</span>} accent="text-[var(--color-ink)]" sub="vs last month" />
@@ -132,7 +132,7 @@ export default function PerformancePerson() {
             <Card title={`Performance · ${period.label}`}>
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-[11.5px] uppercase tracking-wide text-[var(--color-ink-faint)]">{effSource === 'sales' ? 'Sales score · target attainment' : period.kind === 'range' ? 'Average score' : period.kind === 'current' ? 'Score' : 'Locked score'}</p>
+                  <p className="text-[11.5px] text-[var(--color-ink-faint)]">{effSource === 'sales' ? 'Sales score · target attainment' : period.kind === 'range' ? 'Average score' : period.kind === 'current' ? 'Score' : 'Locked score'}</p>
                   <p className={`text-6xl font-semibold leading-none ${b.text}`}>{effScore == null ? '—' : `${effScore}%`}</p>
                   {effSource === 'sales' && periodSales && <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">{periodSales.sales}/{periodSales.target} sales · D{periodSales.revenue.toLocaleString()}</p>}
                 </div>
@@ -166,7 +166,7 @@ export default function PerformancePerson() {
                 <>
                   <textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} rows={3} placeholder="e.g. Strong month — candidate for promotion." className="w-full rounded-lg border border-[var(--color-line)] p-3 text-[13px] focus:border-[var(--color-ink-faint)] focus:outline-none" />
                   <div className="mt-3 flex items-center gap-3">
-                    <button onClick={saveScore} disabled={saving} className="rounded-full bg-[var(--color-brand)] px-5 py-2.5 text-[13px] font-semibold text-white hover:brightness-95 disabled:opacity-50">{saving ? 'Saving…' : 'Save score & notes'}</button>
+                    <button onClick={saveScore} disabled={saving} className="rounded-[8px] bg-[var(--color-brand)] px-[18px] py-2.5 text-[13px] font-medium text-white hover:brightness-95 disabled:opacity-50">{saving ? 'Saving…' : 'Save score & notes'}</button>
                     {savedFlash && <span className="inline-flex items-center gap-1 text-[13px] text-[var(--color-good)]"><Check size={15} /> Saved</span>}
                   </div>
                 </>
@@ -285,7 +285,7 @@ function SummaryCard({ label, value, sub, accent = 'text-[var(--color-ink)]', bi
 function Card({ title, icon: Icon, children }) {
   return (
     <div className="rounded-lg border border-[var(--color-line)] bg-white p-5">
-      <div className="mb-3 flex items-center gap-2">{Icon && <Icon size={15} className="text-[var(--color-ink-faint)]" />}<h3 className="text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">{title}</h3></div>
+      <div className="mb-3 flex items-center gap-2">{Icon && <Icon size={15} className="text-[var(--color-ink-faint)]" />}<h3 className="text-[11.5px] font-medium text-[var(--color-ink-soft)]">{title}</h3></div>
       {children}
     </div>
   )
@@ -353,7 +353,7 @@ function ReviewsTab({ reviews, hasCurrent, onComplete, onOpen }) {
         : <div className="flex items-center gap-2 rounded-lg bg-[var(--color-good-bg)] px-4 py-3 text-[13px] text-[var(--color-good)]"><Check size={16} />{periodLabel(CUR_PERIOD)} review is locked.</div>}
 
       <div>
-        <p className="mb-2.5 text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">Review history</p>
+        <p className="mb-2.5 text-[11.5px] font-medium text-[var(--color-ink-soft)]">Review history</p>
         {reviews.length === 0 ? <p className="rounded-lg bg-[var(--color-fill)] p-4 text-[13px] text-[var(--color-ink-soft)]">No reviews yet. Completing a monthly review creates a permanent, locked record here — your audit trail.</p>
           : <div className="space-y-2">{reviews.slice().sort((a, b) => (b.period || '').localeCompare(a.period || '')).map((r) => { const st = statusFor(r.score); const bb = band(r.score); return (
             <button key={r.id} onClick={() => onOpen(r)} className="flex w-full items-center gap-3 rounded-lg border border-[var(--color-line)] bg-white px-4 py-3 text-left hover:border-[var(--color-line)]">
@@ -374,11 +374,11 @@ function ReviewDetail({ review: r, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative h-full w-full max-w-md overflow-y-auto bg-white shadow-2xl">
+      <div className="relative h-full w-full max-w-md overflow-y-auto bg-[var(--color-surface)] shadow-[var(--shadow-lift)]">
         <div className="sticky top-0 flex items-center gap-2 border-b border-[var(--color-line-soft)] bg-white px-5 py-4"><button onClick={onClose} className="rounded-full p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]"><ArrowLeft size={18} /></button><h3 className="font-semibold text-[var(--color-ink)]">{periodLabel(r.period)} review</h3><span className="ml-auto inline-flex items-center gap-1 rounded-full bg-[var(--color-fill)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-ink-soft)]"><Lock size={11} /> Locked</span></div>
         <div className="space-y-4 p-5">
           <div className="flex items-end justify-between">
-            <div><p className="text-[11.5px] uppercase tracking-wide text-[var(--color-ink-faint)]">Overall score</p><p className={`text-5xl font-semibold ${bb.text}`}>{r.score == null ? '—' : `${r.score}%`}</p><span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${st.tone}`}>{r.status || st.label}</span></div>
+            <div><p className="text-[11.5px] text-[var(--color-ink-faint)]">Overall score</p><p className={`text-5xl font-semibold ${bb.text}`}>{r.score == null ? '—' : `${r.score}%`}</p><span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${st.tone}`}>{r.status || st.label}</span></div>
             <div className="text-right text-[11.5px] text-[var(--color-ink-soft)]"><p>Manager</p><p className="font-semibold text-[var(--color-ink-soft)]">{r.manager}</p><p className="mt-1">Completed</p><p className="font-semibold text-[var(--color-ink-soft)]">{fmtDateY(r.completedAt)}</p></div>
           </div>
           {r.kpis?.length > 0 && <Section title="KPI"><div className="space-y-1.5">{r.kpis.map((k, i) => <div key={i} className="flex items-center gap-2 text-[13px]">{k.done ? <Check size={15} className="text-[var(--color-good)]" /> : <X size={15} className="text-red-400" />}<span className={k.done ? 'text-[var(--color-ink-soft)]' : 'text-[var(--color-ink-faint)]'}>{k.label}</span></div>)}</div></Section>}
@@ -422,7 +422,7 @@ function ReviewForm({ person, defaultScore, defaultNotes, warningsCount, onClose
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative h-full w-full max-w-md overflow-y-auto bg-white shadow-2xl">
+      <div className="relative h-full w-full max-w-md overflow-y-auto bg-[var(--color-surface)] shadow-[var(--shadow-lift)]">
         <div className="sticky top-0 flex items-center gap-2 border-b border-[var(--color-line-soft)] bg-white px-5 py-4"><button onClick={onClose} className="rounded-full p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]"><ArrowLeft size={18} /></button><h3 className="font-semibold text-[var(--color-ink)]">Complete {periodLabel(CUR_PERIOD)} review</h3></div>
         <div className="space-y-5 p-5">
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-700">Once saved, this review is <b>locked permanently</b> as part of {person.name.split(' ')[0]}'s record. It cannot be edited.</p>
@@ -437,7 +437,7 @@ function ReviewForm({ person, defaultScore, defaultNotes, warningsCount, onClose
           {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-[13px] text-red-600">{err}</p>}
         </div>
         <div className="sticky bottom-0 flex gap-2 border-t border-[var(--color-line-soft)] bg-white px-5 py-4">
-          <button onClick={onClose} className="rounded-full border border-[var(--color-line)] px-5 py-3 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]">Cancel</button>
+          <button onClick={onClose} className="rounded-[8px] border border-[var(--color-line-control)] px-[18px] py-2.5 text-[13px] font-medium text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]">Cancel</button>
           <button onClick={submit} disabled={busy} className="flex-1 rounded-full bg-[var(--color-brand)] py-3 text-base font-semibold text-white hover:brightness-95 disabled:opacity-50">{busy ? 'Locking…' : 'Lock review'}</button>
         </div>
       </div>
@@ -445,5 +445,5 @@ function ReviewForm({ person, defaultScore, defaultNotes, warningsCount, onClose
   )
 }
 
-function Field({ label, children }) { return <div><p className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">{label}</p>{children}</div> }
-function Section({ title, children }) { return <div><p className="mb-2.5 text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">{title}</p>{children}</div> }
+function Field({ label, children }) { return <div><p className="mb-1.5 text-[11.5px] font-medium text-[var(--color-ink-soft)]">{label}</p>{children}</div> }
+function Section({ title, children }) { return <div><p className="mb-2.5 text-[11.5px] font-medium text-[var(--color-ink-soft)]">{title}</p>{children}</div> }

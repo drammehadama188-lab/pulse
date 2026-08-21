@@ -20,7 +20,7 @@ function fmtDate(d) {
 function Stat({ label, value, accent }) {
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)] mb-1">{label}</p>
+      <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)] mb-1">{label}</p>
       <p className={`text-[13px] font-semibold ${accent || 'text-[var(--color-ink)]'}`}>{value}</p>
     </div>
   )
@@ -55,7 +55,7 @@ export default function Profile() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">My profile</h1>
+      <h1 className="t-page">My profile</h1>
 
       <Card className="overflow-hidden">
         <div className="flex flex-col items-center gap-3 p-8 text-center" style={{ background: 'linear-gradient(160deg, var(--color-brand-50), var(--color-surface) 70%)' }}>

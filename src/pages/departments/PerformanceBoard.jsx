@@ -128,7 +128,7 @@ export default function PerformanceBoard({ team = [], warningsByAgent = {} }) {
 
       {/* Department performance */}
       <div className="rounded-lg border border-[var(--color-line)] bg-white p-5">
-        <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">Department performance · {period.label}</h3>
+        <h3 className="mb-3 text-[11.5px] font-medium text-[var(--color-ink-soft)]">Department performance · {period.label}</h3>
         <div className="space-y-2.5">
           {depts.map((d) => {
             const b = band(d.avg)

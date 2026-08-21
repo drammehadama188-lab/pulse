@@ -313,7 +313,7 @@ export default function Dashboard() {
                     <span className="flex shrink-0 gap-4 text-center">
                       {[[p.applicantCount, 'Applicants'], [p.interviewedCount, 'Interviewing'], [`${p.hiredCount}/${p.openings}`, 'Hired']].map(([v, l]) => (
                         <span key={l} className="block">
-                          <span className="block text-[14px] font-semibold text-[var(--color-ink)]">{v}</span>
+                          <span className="block text-[13px] font-semibold text-[var(--color-ink)]">{v}</span>
                           <span className="block text-[10.5px] text-[var(--color-ink-faint)]">{l}</span>
                         </span>
                       ))}

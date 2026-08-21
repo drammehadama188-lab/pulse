@@ -218,7 +218,7 @@ export default function StaffMember() {
         <div className="flex items-center gap-4 min-w-0">
           <Avatar name={user.name} size={56} />
           <div className="min-w-0">
-            <h1 className="text-[22px] font-semibold text-[var(--color-ink)]">{user.name}</h1>
+            <h1 className="t-page">{user.name}</h1>
             <div className="flex items-center gap-2 flex-wrap mt-1">
               <span className="text-[var(--color-ink-soft)] text-[13px]">{user.title}</span>
               {user.department && <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-fill)] text-[var(--color-ink-soft)]">{user.department}</span>}
@@ -259,11 +259,11 @@ export default function StaffMember() {
         <h2 className="text-base font-semibold text-[var(--color-ink)] mb-4">Login</h2>
         <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div className="flex-1">
-            <label className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Work email (login)</label>
+            <label className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Work email (login)</label>
             <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setEmailMsg('') }} placeholder="name@damiatracker.com" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
           </div>
           <div className="flex-1">
-            <label className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Personal email</label>
+            <label className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Personal email</label>
             <input type="email" value={personalEmail} onChange={(e) => { setPersonalEmail(e.target.value); setEmailMsg('') }} placeholder="name@gmail.com" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
           </div>
           <Button onClick={saveEmail} disabled={emailBusy || (email.trim() === (user.email || '') && personalEmail.trim() === (user.personalEmail || ''))}>{emailBusy ? <Spinner size={16} /> : 'Save emails'}</Button>
@@ -310,7 +310,7 @@ export default function StaffMember() {
                 <p className="text-[11.5px] text-[var(--color-ink-soft)] mt-1">{p.detail}</p>
                 {on && (p.subs || []).length > 0 && (
                   <div className="mt-3 border-t border-[var(--color-good-bg)] pt-2">
-                    <p className="mb-1 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">They can</p>
+                    <p className="mb-1 text-[11.5px] font-medium text-[var(--color-ink-faint)]">They can</p>
                     {p.subs.map((s) => {
                       const subOn = subCoverage(p.key).has(s.key)
                       return (
@@ -328,7 +328,7 @@ export default function StaffMember() {
                 {scoped && (
                   <div className="mt-3 border-t border-[var(--color-good-bg)] pt-2">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Applies to</p>
+                      <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Applies to</p>
                       <button
                         className="text-[11px] font-semibold text-[var(--color-good)] hover:text-[var(--color-good)]"
                         onClick={() => setScopeAll(p.key, cov.size !== roster.length)}

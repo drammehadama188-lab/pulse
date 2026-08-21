@@ -10,7 +10,7 @@
     "build": "vite build",
     "postbuild": "node test/no-pay-in-bundle.test.mjs",
     "preview": "vite preview",
-    "test": "node test/no-pay-in-bundle.test.mjs && node test/auth-coverage.test.mjs"
+    "test": "node test/no-pay-in-bundle.test.mjs && node test/auth-coverage.test.mjs && node test/design-rules.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -82,7 +82,7 @@ export default function Team() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Staff</h1>
+        <h1 className="t-page">Staff</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Roles, permissions and accounts.</p>
       </div>
 

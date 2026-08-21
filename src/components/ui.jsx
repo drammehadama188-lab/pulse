@@ -96,15 +96,15 @@ export function Button({
   ...rest
 }) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all focus-ring disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]'
-  const sizes = { sm: 'px-3.5 py-2 text-[13px]', md: 'px-5 py-2.5 text-[13px]', lg: 'px-5 py-3 text-base' }
+    'inline-flex items-center justify-center gap-2 rounded-[8px] font-medium transition-colors focus-ring disabled:opacity-50 disabled:cursor-not-allowed'
+  const sizes = { sm: 'h-9 px-3.5 text-[13px]', md: 'h-[42px] px-[18px] text-[13px]', lg: 'h-[46px] px-6 text-[13px]' }
   const variants = {
     primary:
-      'bg-[var(--color-brand)] text-white shadow-[0_6px_16px_rgba(214,41,79,0.25)] hover:bg-[var(--color-brand-600)]',
+      'bg-[var(--color-brand)] text-white shadow-[0_2px_5px_rgba(37,99,235,0.12)] hover:bg-[var(--color-brand-600)]',
     ghost:
       'bg-[var(--color-line-soft)] text-[var(--color-ink)] hover:bg-[var(--color-line)]',
     outline:
-      'border border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-brand)] hover:text-[var(--color-brand)]',
+      'border border-[var(--color-line-control)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-soft)]',
     good: 'bg-[var(--color-good)] text-white hover:brightness-95',
     danger: 'bg-[var(--color-bad-bg)] text-[var(--color-bad)] hover:brightness-97',
   }
@@ -134,8 +134,10 @@ export function SectionTitle({ children, action }) {
   )
 }
 
+// 🔒 Inputs: 42px, 8px radius, 13/400, a control-weight border, and a focus
+// glow you can barely see. A resting field is never blue.
 const FIELD_CLS =
-  'focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5 text-[var(--color-ink)] outline-none transition-colors placeholder:text-[var(--color-ink-faint)]'
+  'focus-ring w-full rounded-[8px] border border-[var(--color-line-control)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[13px] text-[var(--color-ink)] outline-none transition-colors placeholder:text-[#a1aaba]'
 
 export function Field({ label, children }) {
   return (

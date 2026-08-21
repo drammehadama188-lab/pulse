@@ -48,7 +48,7 @@ export default function Notices() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Notices</h1>
+      <h1 className="t-page">Notices</h1>
 
       {/* pricing reference */}
       <Card className="overflow-hidden">

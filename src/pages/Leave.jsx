@@ -67,7 +67,7 @@ export default function Leave() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Requests</h1>
+          <h1 className="t-page">Requests</h1>
           <p className="mt-1 text-[var(--color-ink-soft)]">Request time off and track approvals.</p>
         </div>
         {!isViewAs && (

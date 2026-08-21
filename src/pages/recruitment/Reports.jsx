@@ -13,13 +13,13 @@ function Table({ title, question, head, rows, empty }) {
   return (
     <div className={`${CARD} p-5`}>
       <h3 className="t-card text-[var(--color-ink)]">{title}</h3>
-      <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">{question}</p>
-      {rows.length === 0 ? <p className="mt-4 text-sm text-[var(--color-ink-faint)]">{empty}</p> : (
+      <p className="text-[12px] text-[var(--color-ink-faint)] mt-0.5">{question}</p>
+      {rows.length === 0 ? <p className="mt-4 text-[13px] text-[var(--color-ink-faint)]">{empty}</p> : (
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-[13px]">
             <thead>
-              <tr className="text-left text-[12px] font-medium text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
-                {head.map((h, i) => <th key={h} className={`py-2 font-bold ${i ? 'text-right px-3' : 'pr-3'}`}>{h}</th>)}
+              <tr className="text-left text-[11.5px] font-medium text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
+                {head.map((h, i) => <th key={h} className={`py-2 font-semibold ${i ? 'text-right px-3' : 'pr-3'}`}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -77,7 +77,7 @@ export default function Reports() {
     i.templateName,
     i.interviewer || '—',
     i.recommendation ? RECOMMENDATION[i.recommendation][0] : '—',
-    <span key="s" className={`font-bold ${scoreTone(i.totalScore)}`}>{i.totalScore}</span>,
+    <span key="s" className={`font-semibold ${scoreTone(i.totalScore)}`}>{i.totalScore}</span>,
   ]);
 
   // Time to hire reads the stage history: the day they were added against the
@@ -95,7 +95,7 @@ export default function Reports() {
     return nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null;
   }, [timeToHire]);
 
-  if (loading) return <p className="text-sm text-[var(--color-ink-faint)]">Loading…</p>;
+  if (loading) return <p className="text-[13px] text-[var(--color-ink-faint)]">Loading…</p>;
 
   return (
     <div>
@@ -125,7 +125,7 @@ export default function Reports() {
           head={['Person', 'Added', 'Hired', 'Took']}
           rows={timeToHire}
           empty="Nobody hired yet." />
-        {avgDays != null && <p className="text-xs text-[var(--color-ink-faint)]">Average across recorded hires: {avgDays} days.</p>}
+        {avgDays != null && <p className="text-[12px] text-[var(--color-ink-faint)]">Average across recorded hires: {avgDays} days.</p>}
       </div>
     </div>
   );

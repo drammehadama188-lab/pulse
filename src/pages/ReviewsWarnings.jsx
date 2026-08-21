@@ -27,7 +27,7 @@ const COACHING_SHOWN = 15;
 function Stat({ label, value, sub, accent }) {
   return (
     <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-4">
-      <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">{label}</p>
+      <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</p>
       <p className={`text-[22px] font-semibold mt-1 ${accent || 'text-[var(--color-ink)]'}`}>{value}</p>
       {sub && <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">{sub}</p>}
     </div>
@@ -135,7 +135,7 @@ export default function ReviewsWarnings({ scope }) {
     <div className="max-w-5xl">
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-[26px] font-semibold text-[var(--color-ink)]">{scoped ? 'Team Reviews' : 'Reviews & Warnings'}</h1>
+          <h1 className="t-page">{scoped ? 'Team Reviews' : 'Reviews & Warnings'}</h1>
           <p className="text-[var(--color-ink-soft)] mt-1">{scoped ? "Your team's reviews and warnings on record." : 'Who needs a review this month, and who has warnings on record.'}</p>
         </div>
         {!scoped && <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-white text-[13px] font-medium rounded-full"><Plus size={14} /> Log a warning</button>}
@@ -191,7 +191,7 @@ export default function ReviewsWarnings({ scope }) {
               const m = COACH_META[c.type] || COACH_META.coaching;
               return (
                 <div key={c.id} className="flex items-start gap-3 p-4 border border-[var(--color-line)] rounded-lg">
-                  <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 mt-0.5 ${m.cls}`}>
+                  <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11.5px] font-medium shrink-0 mt-0.5 ${m.cls}`}>
                     <m.icon size={11} /> {m.label}
                   </span>
                   <div className="flex-1 min-w-0">
@@ -231,7 +231,7 @@ export default function ReviewsWarnings({ scope }) {
           <div className="space-y-2">
             {sortedWarnings.map((w) => (
               <button key={w.id} onClick={() => openProfile(w.agent)} className="w-full flex items-start gap-3 p-4 border border-[var(--color-line)] rounded-lg text-left hover:border-[var(--color-line)] transition-all">
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 mt-0.5 ${typeCls(w.type)}`}>{w.type}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[11.5px] font-medium shrink-0 mt-0.5 ${typeCls(w.type)}`}>{w.type}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-medium text-[var(--color-ink)]">{w.agent}</p>
                   {w.reason && <p className="text-[13px] text-[var(--color-ink-soft)] mt-0.5">{w.reason}</p>}
@@ -247,14 +247,14 @@ export default function ReviewsWarnings({ scope }) {
       {/* Edit a coaching entry modal */}
       {editCoach && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !coachBusy && setEditCoach(null)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-[var(--shadow-lift)] w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[15px] font-semibold text-[var(--color-ink)] flex items-center gap-2"><GraduationCap size={18} className="text-[var(--color-good)]" /> Edit entry</h3>
               <button onClick={() => setEditCoach(null)} disabled={coachBusy} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Type</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Type</span>
                 <select value={editCoach.type} onChange={(e) => setEditCoach((s) => ({ ...s, type: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]">
                   <option value="coaching">Coaching</option>
                   <option value="meeting">Meeting</option>
@@ -262,16 +262,16 @@ export default function ReviewsWarnings({ scope }) {
                 </select>
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Title</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Title</span>
                 <input value={editCoach.title} onChange={(e) => setEditCoach((s) => ({ ...s, title: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Note</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Note</span>
                 <textarea value={editCoach.note} onChange={(e) => setEditCoach((s) => ({ ...s, note: e.target.value }))} rows={3} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
               </label>
               {editCoach.type === 'meeting' && (
                 <label className="block">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">When</span>
+                  <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">When</span>
                   <input type="datetime-local" value={editCoach.datetime} onChange={(e) => setEditCoach((s) => ({ ...s, datetime: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                 </label>
               )}
@@ -288,20 +288,20 @@ export default function ReviewsWarnings({ scope }) {
       {/* Log a warning modal */}
       {adding && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !busy && setAdding(null)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-[var(--shadow-lift)] w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[15px] font-semibold text-[var(--color-ink)] flex items-center gap-2"><ShieldAlert size={18} className="text-red-500" /> Log a warning</h3>
               <button onClick={() => setAdding(null)} disabled={busy} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Person</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Person</span>
                 <select value={adding.agent} onChange={(e) => setAdding((s) => ({ ...s, agent: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]">
                   {roster.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
                 </select>
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Type</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Type</span>
                 <select value={adding.type} onChange={(e) => setAdding((s) => ({ ...s, type: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]">
                   <option value="verbal">Verbal</option>
                   <option value="formal">Formal</option>
@@ -309,11 +309,11 @@ export default function ReviewsWarnings({ scope }) {
                 </select>
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Reason</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Reason</span>
                 <textarea value={adding.reason} onChange={(e) => setAdding((s) => ({ ...s, reason: e.target.value }))} rows={3} placeholder="What happened?" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-ink-faint)]">Date</span>
+                <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Date</span>
                 <input type="date" value={adding.date} onChange={(e) => setAdding((s) => ({ ...s, date: e.target.value }))} className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
               </label>
             </div>

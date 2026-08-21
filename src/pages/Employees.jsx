@@ -211,7 +211,7 @@ export default function Employees() {
       <div className={`${CARD} mt-5 overflow-x-auto`}>
         <table className="w-full text-[13px]">
           <thead>
-            <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[13px] font-normal text-[var(--color-ink-faint)]">
+            <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
               <th className="h-[46px] w-12 rounded-tl-[10px] px-5">
                 <input type="checkbox" checked={allShownPicked} onChange={togglePage} className="accent-[var(--color-brand)]" />
               </th>
@@ -236,7 +236,7 @@ export default function Employees() {
                     <Link to={profileHref(e.name)} className="flex items-center gap-2.5">
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f2f4f8] text-[12.5px] font-semibold text-[#647086]">{initials(e.name)}</span>
                       <span className="min-w-0">
-                        <span className="block truncate text-[14px] font-semibold text-[var(--color-ink)]">{e.name}</span>
+                        <span className="block truncate text-[13px] font-semibold text-[var(--color-ink)]">{e.name}</span>
                         <span className="mt-1 block truncate text-[12px] text-[var(--color-ink-faint)]">{e.email || '—'}</span>
                         {e.phone && <span className="block truncate text-[12px] text-[var(--color-ink-faint)]">{e.phone}</span>}
                       </span>
@@ -321,7 +321,7 @@ export default function Employees() {
         <div className={`${CARD} mt-5 overflow-x-auto`}>
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="border-b border-[var(--color-line-soft)] text-left text-[13px] font-normal text-[var(--color-ink-faint)]">
+              <tr className="border-b border-[var(--color-line-soft)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
                 {['Employee', 'Contract type', 'Started', 'Ends', 'Days remaining', 'Status'].map((h) => (
                   <th key={h} className="px-4 py-3 font-semibold">{h}</th>
                 ))}
@@ -362,7 +362,7 @@ export default function Employees() {
         <div className={`${CARD} mt-5 overflow-x-auto`}>
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="border-b border-[var(--color-line-soft)] text-left text-[13px] font-normal text-[var(--color-ink-faint)]">
+              <tr className="border-b border-[var(--color-line-soft)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
                 {['Employee', 'Former role', 'Joined', 'Left', 'Reason', ''].map((h, i) => (
                   <th key={i} className="px-4 py-3 font-semibold">{h}</th>
                 ))}

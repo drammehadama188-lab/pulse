@@ -551,7 +551,7 @@ export default function AgentProfile() {
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-3 mb-1 flex-wrap">
-                <h1 className="text-[22px] font-semibold text-[var(--color-ink)]">{agent.name}</h1>
+                <h1 className="t-page">{agent.name}</h1>
                 <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${statusBadge.color}`}>{statusBadge.text}</span>
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-[var(--color-fill)] text-[var(--color-ink-soft)]">{agent.type || 'Sales'}</span>
               </div>
@@ -561,7 +561,7 @@ export default function AgentProfile() {
 
           <div className="flex items-stretch gap-4">
             <div className="text-right">
-              <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold">Score</p>
+              <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium">Score</p>
               <p className={`text-5xl font-semibold mt-1 ${scoreColor(score.score)}`}>
                 {score.score}<span className="text-[22px] text-[var(--color-ink-faint)] font-normal">/100</span>
               </p>
@@ -666,17 +666,17 @@ export default function AgentProfile() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Sales</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Sales</p>
             <p className="text-[26px] font-semibold text-[var(--color-ink)]">{salesCount}</p>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">{proratedTarget !== null ? `of ${proratedTarget} target` : 'all-time'}</p>
           </div>
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Revenue</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Revenue</p>
             <p className="text-[26px] font-semibold text-[var(--color-ink)]">D{(revenue / 1000).toFixed(1)}k</p>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">D{revenue.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">% to target</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">% to target</p>
             <p className={`text-[26px] font-semibold ${perf >= 80 ? 'text-[var(--color-good)]' : perf >= 50 ? 'text-amber-600' : perf > 0 ? 'text-red-600' : 'text-[var(--color-ink-faint)]'}`}>{proratedTarget !== null ? `${perf}%` : '—'}</p>
             {proratedTarget !== null && (
               <div className="w-full h-1.5 bg-[var(--color-fill)] rounded-full overflow-hidden mt-2">
@@ -687,12 +687,12 @@ export default function AgentProfile() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-5 border-t border-[var(--color-line-soft)]">
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Last sale</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Last sale</p>
             <p className="text-[15px] font-semibold text-[var(--color-ink)] leading-tight">{lastSaleDate ? formatDate(lastSaleDate) : 'No recorded sales'}</p>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">{lastSaleDate ? `${daysSinceLastSale} day${daysSinceLastSale === 1 ? '' : 's'} ago` : (agent.joined ? `since joining (${agent.joined})` : 'ever')}</p>
           </div>
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Days silent</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Days silent</p>
             <p className={`text-[26px] font-semibold ${daysSinceLastSale === null ? 'text-red-600' : daysSinceLastSale > 30 ? 'text-red-600' : daysSinceLastSale > 14 ? 'text-amber-600' : 'text-[var(--color-good)]'}`}>
               {daysSinceLastSale !== null ? daysSinceLastSale : '∞'}
             </p>
@@ -705,7 +705,7 @@ export default function AgentProfile() {
             </p>
           </div>
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Last check-in</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Last check-in</p>
             <p className="text-[15px] font-semibold text-[var(--color-ink)] leading-tight">{formatDate(agent.lastCheckIn)}</p>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">
               {agent.lastCheckIn ? `${Math.floor((now - new Date(agent.lastCheckIn)) / 86400000)} days ago` : 'never'}
@@ -715,7 +715,7 @@ export default function AgentProfile() {
 
         {periodSales.length > 0 && (
           <div className="mt-6 pt-5 border-t border-[var(--color-line-soft)]">
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-3">Sales in this period</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-3">Sales in this period</p>
             <div className="space-y-2">
               {periodSales.slice(0, 6).map((t, i) => (
                 <div key={i} className="flex items-center justify-between text-[13px] py-2 border-b border-[var(--color-line-soft)] last:border-0">
@@ -741,41 +741,41 @@ export default function AgentProfile() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-5">
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Monthly cost</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Monthly cost</p>
             <p className="text-[22px] font-semibold text-[var(--color-ink)]">D{cost.toLocaleString()}</p>
             <p className="text-[var(--color-ink-soft)] text-[11.5px] mt-1 font-medium">D{Math.round(cost / 30).toLocaleString()}/day</p>
           </div>
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Lifetime cost</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Lifetime cost</p>
             <p className="text-[22px] font-semibold text-[var(--color-ink)]">{lifetimeCost !== null ? `D${lifetimeCost.toLocaleString()}` : '—'}</p>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">{lifetimeLabel ? `over ${lifetimeLabel}` : 'no start date'}</p>
           </div>
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Revenue</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Revenue</p>
             <p className="text-[22px] font-semibold text-[var(--color-ink)]">D{revenue.toLocaleString()}</p>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">{rangeLabel.toLowerCase()}</p>
           </div>
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Revenue − Cost</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Revenue − Cost</p>
             <p className={`text-[22px] font-semibold ${profit >= 0 ? 'text-[var(--color-good)]' : 'text-red-600'}`}>
               {profit >= 0 ? '+' : '−'}D{Math.abs(profit).toLocaleString()}
             </p>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">{profit >= 0 ? 'net contribution' : 'short of cost'}</p>
           </div>
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">ROI</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">ROI</p>
             <p className={`text-[22px] font-semibold ${roi >= 100 ? 'text-[var(--color-good)]' : roi >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
               {cost > 0 ? `${roi}%` : '—'}
             </p>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">revenue / cost</p>
           </div>
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Cost per sale</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Cost per sale</p>
             <p className="text-[22px] font-semibold text-[var(--color-ink)]">{costPerSale !== null ? `D${costPerSale.toLocaleString()}` : '—'}</p>
             <p className="text-[var(--color-ink-faint)] text-[11.5px] mt-1">{costPerSale !== null ? 'effective cost' : 'no sales'}</p>
           </div>
           <div>
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Break-even</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Break-even</p>
             {profit >= 0 ? (
               <>
                 <p className="text-[22px] font-semibold text-[var(--color-good)]">✓</p>
@@ -804,7 +804,7 @@ export default function AgentProfile() {
             const isZero = m.sales === 0;
             return (
               <div key={i} className={`p-4 rounded-lg ${m.isCurrent ? 'bg-blue-50 border-2 border-blue-300' : isZero ? 'bg-[var(--color-fill)] border border-[var(--color-line)]' : 'bg-[var(--color-fill)] border border-[var(--color-line-soft)]'}`}>
-                <p className={`text-[11px] uppercase tracking-wider font-semibold mb-1 ${m.isCurrent ? 'text-blue-600' : isZero ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>
+                <p className={`text-[11.5px] font-medium mb-1 ${m.isCurrent ? 'text-blue-600' : isZero ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink-soft)]'}`}>
                   {m.label}{m.isCurrent ? ' · now' : ''}
                 </p>
                 <p className={`text-[22px] font-semibold ${isZero ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink)]'}`}>
@@ -863,30 +863,30 @@ export default function AgentProfile() {
         {roleOpen && (
           <div className="px-5 pb-5 space-y-3 text-[13px]">
             <div>
-              <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Core responsibility</p>
+              <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Core responsibility</p>
               <p className="text-[var(--color-ink-soft)]">{effectiveResp || <span className="text-[var(--color-ink-faint)] italic">Not set</span>}</p>
             </div>
             <div>
-              <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">KPI for {periodLabelForKpi}</p>
+              <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">KPI for {periodLabelForKpi}</p>
               <p className="text-[var(--color-ink-soft)]">{effectiveKpi || <span className="text-[var(--color-ink-faint)] italic">Not set — configure in HR → KPI Settings</span>}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               <div>
-                <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Monthly target</p>
+                <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Monthly target</p>
                 <p className="text-[var(--color-ink-soft)] font-medium">{effectiveTarget ?? <span className="text-[var(--color-ink-faint)] italic font-normal">Not set</span>}</p>
               </div>
               <div>
-                <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Weekly target</p>
+                <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Weekly target</p>
                 <p className="text-[var(--color-ink-soft)] font-medium">{effectiveWeekly || <span className="text-[var(--color-ink-faint)] italic font-normal">Not set</span>}</p>
               </div>
               <div>
-                <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Team target</p>
+                <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Team target</p>
                 <p className="text-[var(--color-ink-soft)] font-medium">{effectiveTeamTarget ?? <span className="text-[var(--color-ink-faint)] italic font-normal">Not set</span>}</p>
               </div>
             </div>
             {effectiveFocus && (
               <div className="pt-2">
-                <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-1">Focus</p>
+                <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-1">Focus</p>
                 <p className="text-[var(--color-ink-soft)]">{effectiveFocus}</p>
               </div>
             )}
@@ -894,7 +894,7 @@ export default function AgentProfile() {
             {/* Rules chain — most specific to most general */}
             {ruleSources.length > 0 && (
               <div className="pt-3 border-t border-[var(--color-line-soft)]">
-                <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-2">Resolution chain</p>
+                <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-2">Resolution chain</p>
                 <div className="space-y-1">
                   {[...ruleSources].reverse().map((s, i) => {
                     const label = /^\d{4}-\d{2}$/.test(s.period) ? new Date(s.period + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : s.period;
@@ -953,7 +953,7 @@ export default function AgentProfile() {
               return (
                 <div key={n.id} className="flex items-start gap-3 p-4 bg-[var(--color-fill)] rounded-lg group">
                   {catDef && (
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 ${catDef.color === 'blue' ? 'bg-blue-100 text-blue-700' : catDef.color === 'red' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[11.5px] font-medium shrink-0 ${catDef.color === 'blue' ? 'bg-blue-100 text-blue-700' : catDef.color === 'red' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                       {catDef.label.split(' ')[0]}
                     </span>
                   )}
@@ -1008,7 +1008,7 @@ export default function AgentProfile() {
           <div className="mb-4 p-4 rounded-lg bg-[var(--color-ink)] text-white flex items-center gap-3">
             <CheckCircle size={18} className="text-[var(--color-good)] shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-white/60 mb-0.5">Current status</p>
+              <p className="text-[11.5px] font-medium text-white/60 mb-0.5">Current status</p>
               <p className="text-[13px] font-medium">
                 {DECISIONS.find(d => d.value === decision.decision)?.label || decision.decision}
                 <span className="text-white/60 font-normal"> · set {new Date(decision.setAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
@@ -1020,7 +1020,7 @@ export default function AgentProfile() {
           <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-100 flex items-center gap-3">
             <AlertTriangle size={16} className="text-amber-600 shrink-0" />
             <div>
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-amber-700">No decision on record</p>
+              <p className="text-[11.5px] font-medium text-amber-700">No decision on record</p>
               <p className="text-[13px] text-amber-900 font-medium">Pick one below — this is how you track accountability.</p>
             </div>
           </div>
@@ -1063,11 +1063,11 @@ export default function AgentProfile() {
         {/* Decision history */}
         {(decision || decisionHistory.length > 0) && (
           <div className="mt-6 pt-5 border-t border-[var(--color-line-soft)]">
-            <p className="text-[var(--color-ink-faint)] text-[11px] uppercase tracking-wider font-semibold mb-3">Decision history</p>
+            <p className="text-[var(--color-ink-faint)] text-[11.5px] font-medium mb-3">Decision history</p>
             <div className="space-y-2">
               {decision && (
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--color-ink)] text-white">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/20 uppercase tracking-wider shrink-0 mt-0.5">Current</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/20 shrink-0 mt-0.5">Current</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-medium">{DECISIONS.find(d => d.value === decision.decision)?.label || decision.decision}</p>
                     {decision.reason && <p className="text-[11px] text-white/70 mt-0.5">{decision.reason}</p>}
@@ -1077,7 +1077,7 @@ export default function AgentProfile() {
               )}
               {decisionHistory.map((h, i) => (
                 <div key={h.id || i} className="flex items-start gap-3 p-3 rounded-lg bg-[var(--color-fill)]">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--color-line)] text-[var(--color-ink-soft)] uppercase tracking-wider shrink-0 mt-0.5">Prev</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--color-line)] text-[var(--color-ink-soft)] shrink-0 mt-0.5">Prev</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] text-[var(--color-ink-soft)]">{DECISIONS.find(d => d.value === h.decision)?.label || h.decision}</p>
                     {h.reason && <p className="text-[11px] text-[var(--color-ink-soft)] mt-0.5">{h.reason}</p>}
@@ -1116,7 +1116,7 @@ export default function AgentProfile() {
           <div className="bg-white rounded-lg border border-[var(--color-line)] p-4 mb-4 space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Type</label>
+                <label className="text-[var(--color-ink-soft)] text-[11.5px] font-medium mb-1 block">Type</label>
                 <select value={newWarning.type} onChange={e => setNewWarning(w => ({ ...w, type: e.target.value }))}
                   className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-[13px] focus:outline-none focus:border-[var(--color-ink-faint)]">
                   <option value="verbal">Verbal</option>
@@ -1125,13 +1125,13 @@ export default function AgentProfile() {
                 </select>
               </div>
               <div>
-                <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Date</label>
+                <label className="text-[var(--color-ink-soft)] text-[11.5px] font-medium mb-1 block">Date</label>
                 <input type="date" value={newWarning.date} onChange={e => setNewWarning(w => ({ ...w, date: e.target.value }))}
                   className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-[13px] focus:outline-none focus:border-[var(--color-ink-faint)]" />
               </div>
             </div>
             <div>
-              <label className="text-[var(--color-ink-soft)] text-[11px] uppercase tracking-wider font-semibold mb-1 block">Reason</label>
+              <label className="text-[var(--color-ink-soft)] text-[11.5px] font-medium mb-1 block">Reason</label>
               <textarea value={newWarning.reason} onChange={e => setNewWarning(w => ({ ...w, reason: e.target.value }))}
                 placeholder="What did they do? Be specific."
                 className="w-full px-3 py-2 border border-[var(--color-line)] rounded-lg text-[13px] focus:outline-none focus:border-[var(--color-ink-faint)] resize-none" rows={2} />
@@ -1151,7 +1151,7 @@ export default function AgentProfile() {
               const typeColor = w.type === 'final' ? 'bg-red-200 text-red-900' : w.type === 'formal' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
               return (
                 <div key={w.id} className="bg-white rounded-lg border border-[var(--color-line)] p-4 flex items-start gap-3">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 ${typeColor}`}>{w.type}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[11.5px] font-medium shrink-0 ${typeColor}`}>{w.type}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] text-[var(--color-ink)]">{w.reason}</p>
                     <p className="text-[11px] text-[var(--color-ink-soft)] mt-1">{new Date(w.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · issued by {w.issuedBy}</p>
@@ -1203,7 +1203,7 @@ function ScoreBar({ label, weight, value, max, detail, neg }) {
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-baseline gap-2">
           <p className="text-[13px] text-[var(--color-ink-soft)] font-medium">{label}</p>
-          {weight && <span className="text-[10px] text-[var(--color-ink-faint)] uppercase tracking-wider font-semibold">{weight}</span>}
+          {weight && <span className="text-[10px] text-[var(--color-ink-faint)] font-semibold">{weight}</span>}
         </div>
         <p className={`text-[13px] font-semibold ${isNegative ? 'text-red-600' : isPositive ? 'text-[var(--color-good)]' : 'text-[var(--color-ink-faint)]'}`}>
           {value >= 0 ? '+' : ''}{value}<span className="text-[var(--color-ink-faint)] font-normal">/{neg ? `-${max}` : max}</span>

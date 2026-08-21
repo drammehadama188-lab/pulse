@@ -68,7 +68,7 @@ export default function ReportsHub() {
         <div className="space-y-4">
           {/* 1 · title */}
           <div>
-            <h1 className="text-[26px] font-semibold tracking-tight text-[var(--color-ink)]">{reports.find(([k]) => k === report)?.[1]} report</h1>
+            <h1 className="t-page">{reports.find(([k]) => k === report)?.[1]} report</h1>
             <p className="mt-0.5 text-[var(--color-ink-soft)]">{data.period.label} · <span className="italic">{data.question}</span></p>
           </div>
 
@@ -82,7 +82,7 @@ export default function ReportsHub() {
             <div className="flex flex-wrap gap-3">
               {data.metrics.map((m) => (
                 <Card key={m.label} className="min-w-[9rem] p-4">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{m.label}</div>
+                  <div className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{m.label}</div>
                   <div className="mt-1 text-[22px] font-semibold tabular-nums text-[var(--color-ink)]">{m.value}</div>
                   {m.sub && <div className="text-[11.5px] text-[var(--color-ink-faint)]">{m.sub}</div>}
                 </Card>
@@ -93,7 +93,7 @@ export default function ReportsHub() {
           {/* 4 · detail */}
           {data.sections.map((sec) => (
             <section key={sec.title}>
-              <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{sec.title}</h2>
+              <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">{sec.title}</h2>
               <Card className="overflow-x-auto p-0">
                 <table className="w-full text-[13px]">
                   {sec.head && (
@@ -116,7 +116,7 @@ export default function ReportsHub() {
           {/* 5 · recent activity */}
           {data.activity.length > 0 && (
             <section>
-              <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Recent activity</h2>
+              <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Recent activity</h2>
               <Card className="space-y-1 p-4">
                 {data.activity.map((a, i) => <p key={i} className="text-[13px] text-[var(--color-ink-soft)]">{a}</p>)}
               </Card>
@@ -126,7 +126,7 @@ export default function ReportsHub() {
           {/* 6 · notes */}
           {data.notes.length > 0 && (
             <section>
-              <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Notes</h2>
+              <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Notes</h2>
               <Card className="space-y-1 p-4">
                 {data.notes.map((n, i) => <p key={i} className="text-[11.5px] text-[var(--color-ink-faint)]">{n}</p>)}
               </Card>

@@ -53,7 +53,7 @@ export default function WeeklyReport() {
   return (
     <div className="max-w-4xl space-y-7">
       <div>
-        <h1 className="text-[26px] font-semibold tracking-tight text-[var(--color-ink)]">Weekly report</h1>
+        <h1 className="t-page">Weekly report</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">{data.lead.name} · week of {fmt(data.week.start)} – {fmt(data.week.end)} · the same document for both of you.</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {weeks.map((w) => (
@@ -66,7 +66,7 @@ export default function WeeklyReport() {
 
       {/* the goals — what this week added, where the month stands */}
       <section>
-        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Goals</h2>
+        <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Goals</h2>
         <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden p-0">
           {data.goals.map((g) => (
             <div key={g.key} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
@@ -84,11 +84,11 @@ export default function WeeklyReport() {
 
       {/* who held the chair each day */}
       <section>
-        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Objectives by day</h2>
+        <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Objectives by day</h2>
         <div className="flex flex-wrap gap-1.5">
           {data.objectivesByDay.map((d) => (
             <Card key={d.date} className="px-3 py-2 text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{new Date(`${d.date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })} {fmt(d.date)}</div>
+              <div className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{new Date(`${d.date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })} {fmt(d.date)}</div>
               <div className="text-[11.5px] font-semibold text-[var(--color-ink)]">{KEY_TITLES[d.primary] || d.primary}</div>
               <div className="text-[11px] text-[var(--color-ink-soft)]">{KEY_TITLES[d.supporting] || d.supporting}</div>
             </Card>
@@ -98,7 +98,7 @@ export default function WeeklyReport() {
 
       {/* plan discipline */}
       <section>
-        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">His plan — written vs done</h2>
+        <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">His plan — written vs done</h2>
         <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden p-0">
           {planKeys.length === 0 && <p className="p-4 text-[13px] text-[var(--color-ink-faint)]">No plan written this week.</p>}
           {planKeys.map((k) => (
@@ -113,7 +113,7 @@ export default function WeeklyReport() {
 
       {/* management items */}
       <section>
-        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-brand)]">From Adama</h2>
+        <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-brand)]">From Adama</h2>
         <Card className="p-4 text-[13px]">
           {data.fromAdama.total === 0 ? (
             <p className="text-[var(--color-ink-faint)]">No management items this week.</p>
@@ -130,7 +130,7 @@ export default function WeeklyReport() {
 
       {/* his words */}
       <section>
-        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">His comments</h2>
+        <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">His comments</h2>
         <Card className="space-y-2 p-4 text-[13px]">
           {Object.keys(data.comments).length === 0 && <p className="text-[var(--color-ink-faint)]">No comments written this week.</p>}
           {Object.entries(data.comments).map(([k, text]) => (
@@ -142,7 +142,7 @@ export default function WeeklyReport() {
       {/* honesty notes */}
       {data.flags.length > 0 && (
         <section>
-          <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Worth asking about</h2>
+          <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Worth asking about</h2>
           <Card className="space-y-1 p-4 text-[13px]">
             {data.flags.map((f, i) => (
               <p key={i} className="text-amber-700">{f.action === 'unticked' ? 'Unticked' : 'Removed'}: “{f.title}” · {fmt(f.at.slice(0, 10))}</p>
@@ -153,7 +153,7 @@ export default function WeeklyReport() {
 
       {/* team attendance */}
       <section>
-        <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Team attendance</h2>
+        <h2 className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Team attendance</h2>
         <Card className="divide-y divide-[var(--color-line-soft)] overflow-hidden p-0">
           {data.attendance.map((a) => (
             <div key={a.name} className="flex items-center gap-4 px-4 py-2.5 text-[13px]">

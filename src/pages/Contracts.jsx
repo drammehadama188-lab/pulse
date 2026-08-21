@@ -114,7 +114,7 @@ export default function Contracts() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Contracts</h1>
+        <h1 className="t-page">Contracts</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Which contracts need your attention — renew, extend or let expire</p>
       </div>
 

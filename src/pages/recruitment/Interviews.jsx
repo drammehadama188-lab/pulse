@@ -73,7 +73,7 @@ export default function Interviews() {
     }
   }
 
-  const chip = 'px-3 py-1.5 rounded-lg text-xs font-medium border';
+  const chip = 'px-3 py-1.5 rounded-lg text-[12px] font-medium border';
 
   return (
     <div>
@@ -86,22 +86,22 @@ export default function Interviews() {
           <button key={k} onClick={() => setFilter(k)} className={`${chip} ${filter === k ? 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]' : 'bg-white text-[var(--color-ink-soft)] border-[var(--color-line)] hover:bg-[var(--color-fill)]'}`}>{label}</button>
         ))}
         <span className="flex-1" />
-        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search name…" className="text-sm border border-[var(--color-line)] rounded-lg px-3 py-2 bg-white w-56" />
+        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search name…" className="text-[13px] border border-[var(--color-line)] rounded-lg px-3 py-2 bg-white w-56" />
       </div>
 
-      {loading ? <p className="text-sm text-[var(--color-ink-faint)]">Loading…</p>
-        : rows.length === 0 ? <div className={`${CARD} p-12 text-center text-[var(--color-ink-faint)] text-sm`}>Nothing here. Book one from an applicant's page or with the button above.</div>
+      {loading ? <p className="text-[13px] text-[var(--color-ink-faint)]">Loading…</p>
+        : rows.length === 0 ? <div className={`${CARD} p-12 text-center text-[var(--color-ink-faint)] text-[13px]`}>Nothing here. Book one from an applicant's page or with the button above.</div>
           : (
             <div className={`${CARD} overflow-x-auto`}>
-              <table className="w-full text-sm">
+              <table className="w-full text-[13px]">
                 <thead>
-                  <tr className="text-left text-[12px] font-medium text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
-                    <th className="px-4 py-3 font-bold">Candidate</th>
-                    <th className="px-4 py-3 font-bold">When</th>
-                    <th className="px-4 py-3 font-bold">Interviewer</th>
-                    <th className="px-4 py-3 font-bold">Status</th>
-                    <th className="px-4 py-3 font-bold">Recommendation</th>
-                    <th className="px-4 py-3 font-bold text-right">Score</th>
+                  <tr className="text-left text-[11.5px] font-medium text-[var(--color-ink-faint)] border-b border-[var(--color-line-soft)]">
+                    <th className="px-4 py-3 font-semibold">Candidate</th>
+                    <th className="px-4 py-3 font-semibold">When</th>
+                    <th className="px-4 py-3 font-semibold">Interviewer</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">Recommendation</th>
+                    <th className="px-4 py-3 font-semibold text-right">Score</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -109,7 +109,7 @@ export default function Interviews() {
                     <tr key={i.id} className="border-b border-[var(--color-line-soft)] hover:bg-[var(--color-fill)] cursor-pointer" onClick={() => navigate(`/recruitment/interviews/${i.id}`)}>
                       <td className="px-4 py-3">
                         <span className="font-medium text-[var(--color-ink)]">{i.applicantName}</span>
-                        <span className="block text-xs text-[var(--color-ink-faint)]">{i.templateName}</span>
+                        <span className="block text-[12px] text-[var(--color-ink-faint)]">{i.templateName}</span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className={i.late ? 'text-[var(--color-stage-out)]' : 'text-[var(--color-ink-soft)]'}>{dayTime(i.scheduledAt)}</span>
@@ -117,13 +117,13 @@ export default function Interviews() {
                       </td>
                       <td className="px-4 py-3 text-[var(--color-ink-soft)]">{i.interviewer || '—'}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${i.status === 'completed' ? 'bg-[var(--color-stage-hired-bg)] text-[var(--color-stage-hired)]' : i.status === 'in_progress' ? 'bg-[var(--color-stage-interview-bg)] text-[var(--color-stage-interview)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
+                        <span className={`px-2 py-0.5 rounded-md text-[12px] font-medium ${i.status === 'completed' ? 'bg-[var(--color-stage-hired-bg)] text-[var(--color-stage-hired)]' : i.status === 'in_progress' ? 'bg-[var(--color-stage-interview-bg)] text-[var(--color-stage-interview)]' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>
                           {i.status === 'completed' ? 'Completed' : i.status === 'in_progress' ? 'In progress' : 'Scheduled'}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         {i.recommendation
-                          ? <span className={`px-2 py-0.5 rounded-md border text-xs font-medium ${RECOMMENDATION[i.recommendation][1]}`}>{RECOMMENDATION[i.recommendation][0]}</span>
+                          ? <span className={`px-2 py-0.5 rounded-md border text-[12px] font-medium ${RECOMMENDATION[i.recommendation][1]}`}>{RECOMMENDATION[i.recommendation][0]}</span>
                           : <span className="text-[var(--color-ink-faint)]">—</span>}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -141,7 +141,7 @@ export default function Interviews() {
 
       {booking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setBooking(false)}>
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-[var(--shadow-lift)] max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="t-card text-[var(--color-ink)]">Book interview</h3>
               <button onClick={() => setBooking(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]"><X size={18} /></button>
@@ -150,33 +150,33 @@ export default function Interviews() {
               <label className="block">
                 <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Candidate</span>
                 <input value={pick.query || ''} onChange={e => setPick(p => ({ ...p, query: e.target.value }))} placeholder="Type a name to narrow the list"
-                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
                 <select value={pick.applicantId} onChange={e => setPick(p => ({ ...p, applicantId: e.target.value }))} size={6}
-                  className="mt-2 w-full border border-[var(--color-line)] rounded-lg px-2 py-2 text-sm bg-white">
+                  className="mt-2 w-full border border-[var(--color-line)] rounded-lg px-2 py-2 text-[13px] bg-white">
                   {candidates.map(a => <option key={a.id} value={a.id}>{a.name}{a.phone ? ` · ${a.phone}` : ''}</option>)}
                 </select>
               </label>
               <label className="block">
                 <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Questions</span>
                 <select value={pick.templateId} onChange={e => setPick(p => ({ ...p, templateId: e.target.value }))}
-                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white">
+                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px] bg-white">
                   {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </label>
               <label className="block">
                 <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">When</span>
                 <input type="datetime-local" value={pick.scheduledAt} onChange={e => setPick(p => ({ ...p, scheduledAt: e.target.value }))}
-                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
               </label>
               <label className="block">
                 <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Interviewer</span>
                 <input value={pick.interviewer} onChange={e => setPick(p => ({ ...p, interviewer: e.target.value }))}
-                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+                  className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
               </label>
             </div>
-            {error && <p className="mt-3 text-sm text-[var(--color-stage-out)]">{error}</p>}
+            {error && <p className="mt-3 text-[13px] text-[var(--color-stage-out)]">{error}</p>}
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setBooking(false)} disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
+              <button onClick={() => setBooking(false)} disabled={saving} className="px-3 py-2 rounded-lg text-[13px] bg-[var(--color-fill)] text-[var(--color-ink-soft)] hover:bg-[var(--color-line)]">Cancel</button>
               <button onClick={book} disabled={saving || !pick.applicantId} className="px-3.5 py-2.5 rounded-[8px] text-[13.5px] font-semibold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">{saving ? 'Booking…' : 'Book'}</button>
             </div>
           </div>

@@ -9,15 +9,15 @@ import { Card } from '../../components/ui.jsx'
 const BLUE_BOOK_URL = '/docs/blue-book.pdf'
 
 const linkBtn =
-  'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-all focus-ring active:scale-[0.98]'
-const linkPrimary = `${linkBtn} bg-[var(--color-brand)] text-white shadow-[0_6px_16px_rgba(214,41,79,0.25)] hover:bg-[var(--color-brand-600)]`
+  'inline-flex items-center justify-center gap-2 rounded-[8px] px-[18px] py-2.5 text-[13px] font-medium transition-colors focus-ring active:scale-[0.98]'
+const linkPrimary = `${linkBtn} bg-[var(--color-brand)] text-white shadow-[0_2px_5px_rgba(37,99,235,0.12)] hover:bg-[var(--color-brand-600)]`
 const linkOutline = `${linkBtn} border border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-brand)] hover:text-[var(--color-brand)]`
 
 export default function Policies() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight md:text-[26px]">Policies</h1>
+        <h1 className="t-page">Policies</h1>
         <p className="mt-1 text-[var(--color-ink-soft)]">Company</p>
       </div>
 

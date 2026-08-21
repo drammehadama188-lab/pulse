@@ -33,7 +33,7 @@ export default function Settings() {
           <label className="block">
             <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Questions</span>
             <select value={settings.defaultTemplateId || ''} onChange={e => save({ defaultTemplateId: e.target.value })}
-              className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm bg-white">
+              className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px] bg-white">
               <option value="">Whichever set is marked default</option>
               {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
@@ -42,10 +42,10 @@ export default function Settings() {
             <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Interviewer</span>
             <input value={interviewer} onChange={e => setInterviewer(e.target.value)} onBlur={() => interviewer !== (settings.defaultInterviewer || '') && save({ defaultInterviewer: interviewer })}
               placeholder="Left blank, whoever books it is put down"
-              className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-sm" />
+              className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
           </label>
-          {saved && <p className="text-xs text-[var(--color-stage-hired)]">Saved</p>}
-          <p className="text-xs text-[var(--color-ink-faint)]">
+          {saved && <p className="text-[12px] text-[var(--color-stage-hired)]">Saved</p>}
+          <p className="text-[12px] text-[var(--color-ink-faint)]">
             Questions are edited in <Link to="/recruitment/templates" className="text-[var(--color-ink-soft)] underline">Templates</Link>.
           </p>
         </div>
@@ -55,13 +55,13 @@ export default function Settings() {
           <ol className="space-y-2">
             {STAGES.map(([k, label, , dot], i) => (
               <li key={k} className="flex items-center gap-3">
-                <span className="w-5 text-xs font-bold text-[var(--color-ink-faint)]">{i + 1}</span>
+                <span className="w-5 text-[12px] font-semibold text-[var(--color-ink-faint)]">{i + 1}</span>
                 <span className={`h-2 w-2 rounded-full ${dot}`} />
-                <span className="text-sm text-[var(--color-ink)]">{label}</span>
+                <span className="text-[13px] text-[var(--color-ink)]">{label}</span>
               </li>
             ))}
           </ol>
-          <p className="mt-4 text-xs text-[var(--color-ink-faint)]">A completed interview moves the applicant to Interviewed unless a later decision is already recorded.</p>
+          <p className="mt-4 text-[12px] text-[var(--color-ink-faint)]">A completed interview moves the applicant to Interviewed unless a later decision is already recorded.</p>
         </div>
       </div>
     </div>

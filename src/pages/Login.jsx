@@ -57,7 +57,7 @@ export default function Login() {
               <div className="text-5xl font-semibold tracking-tight text-[var(--color-ink)]">
                 Pulse
               </div>
-              <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-ink-soft)]">
+              <div className="mt-2 text-[11.5px] font-medium text-[var(--color-ink-soft)]">
                 by Damia Tracker
               </div>
             </div>

@@ -147,7 +147,7 @@ const PRICE_NOTES = [
 function PriceBlock({ title, items }) {
   return (
     <div className="mt-5 border-t border-[var(--color-line-soft)] pt-4">
-      {title && <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">{title}</div>}
+      {title && <div className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{title}</div>}
       <ul className={`space-y-1.5 ${title ? 'mt-2' : ''}`}>
         {items.map((n, i) => (
           <li key={i} className="flex gap-2.5 text-[13px] leading-relaxed text-[var(--color-ink-soft)]">
@@ -166,7 +166,7 @@ function PriceList() {
       <div className="-mx-1 overflow-x-auto">
         <table className="w-full min-w-[420px] border-collapse text-[13px]">
           <thead>
-            <tr className="text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
+            <tr className="text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
               <th className="pb-2 pr-4 font-semibold">What the vehicle is used for</th>
               <th className="pb-2 pr-4 font-semibold">First year</th>
               <th className="pb-2 font-semibold">Every year after</th>
@@ -205,7 +205,7 @@ function Lesson({ n, l, learned, onToggle }) {
           {learned ? <CheckCircle2 size={18} /> : n}
         </span>
         <div className="min-w-0 flex-1">
-          <span className="text-[13px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">{l.name}</span>
+          <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{l.name}</span>
           <p className="mt-1 text-[15px] font-semibold leading-snug tracking-tight text-[var(--color-ink)] sm:text-[18px]">{l.what}</p>
 
           <ul className="mt-3 space-y-1.5">
@@ -243,7 +243,7 @@ export default function TrackerGuide() {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight text-[var(--color-ink)] md:text-[26px]">Tracker Guide</h1>
+        <h1 className="t-page">Tracker Guide</h1>
         <p className="mt-1 text-[var(--color-ink-faint)]">
           {tab === 'lessons'
             ? `${LESSONS.length} short lessons. Learn them and you can sell the tracker.`

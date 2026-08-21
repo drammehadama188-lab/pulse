@@ -163,7 +163,7 @@ export default function HrDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
-                <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[12px] font-medium text-[var(--color-ink-faint)]">
+                <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
                   <th className="py-2 pr-3 font-semibold">Employee</th>
                   <th className="py-2 pr-3 font-semibold">Role</th>
                   <th className="py-2 pr-3 font-semibold">Status</th>

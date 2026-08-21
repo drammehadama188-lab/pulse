@@ -92,7 +92,7 @@ export default function PeriodSelector({ period, onChange }) {
               ))}
             </div>
             <div className="border-t border-[var(--color-line-soft)] p-3">
-              <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">Custom range</div>
+              <div className="mb-2 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Custom range</div>
               <div className="space-y-2">
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13px] outline-none" />
                 <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="focus-ring w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13px] outline-none" />

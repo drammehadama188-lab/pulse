@@ -238,7 +238,7 @@ export default function Applicants() {
             <div className={`${CARD} overflow-x-auto`}>
               <table className="w-full text-[13px]">
                 <thead>
-                  <tr className="border-b border-[var(--color-line-soft)] text-left text-[12px] font-medium text-[var(--color-ink-faint)]">
+                  <tr className="border-b border-[var(--color-line-soft)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
                     <th className="w-10 px-4 py-2.5">
                       <input type="checkbox" checked={allOnPageSelected}
                         onChange={() => setSelected(s => {

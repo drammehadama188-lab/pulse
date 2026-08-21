@@ -10,7 +10,7 @@ export default function RecruitmentLayout() {
       <div className="-mx-4 mb-5 flex gap-1 overflow-x-auto px-4 pb-1 md:hidden">
         {RECRUITMENT_NAV.map(item => (
           <NavLink key={item.id} to={item.to} end={item.end}
-            className={({ isActive }) => `shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold ${isActive ? 'bg-[var(--color-ink)] text-white' : 'bg-white border border-[var(--color-line)] text-[var(--color-ink-soft)]'}`}>
+            className={({ isActive }) => `shrink-0 rounded-full px-3.5 py-2 text-[12px] font-semibold ${isActive ? 'bg-[var(--color-ink)] text-white' : 'bg-white border border-[var(--color-line)] text-[var(--color-ink-soft)]'}`}>
             {item.label}
           </NavLink>
         ))}
