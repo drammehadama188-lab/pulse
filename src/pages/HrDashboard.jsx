@@ -42,7 +42,7 @@ const KIND = {
   Contract: [CalendarDays, 'var(--color-stage-offer-bg)', 'var(--color-stage-offer)'],
 };
 
-function Tile({ icon: Icon, label, value, sub, tint, ink, to }) {
+function Tile({ icon: Icon, label, value, sub, dot, tint, ink, to }) {
   const Tag = to ? Link : 'div';
   return (
     <Tag {...(to ? { to } : {})} className={`${CARD} flex items-start gap-3 p-4 ${to ? 'hover:border-[var(--color-ink-faint)]' : ''}`}>
@@ -52,7 +52,12 @@ function Tile({ icon: Icon, label, value, sub, tint, ink, to }) {
       <span className="min-w-0 flex-1">
         <span className="block text-[12.5px] font-medium text-[var(--color-ink-soft)]">{label}</span>
         <span className="mt-1 block text-[26px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
-        {sub && <span className="mt-1.5 block text-[11.5px] text-[var(--color-ink-faint)]">{sub}</span>}
+        {sub && (
+          <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-[var(--color-ink-faint)]">
+            {dot && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: dot }} />}
+            {sub}
+          </span>
+        )}
       </span>
     </Tag>
   );
@@ -110,9 +115,10 @@ export default function HrDashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
-        <Tile icon={Users} label="Employees" value={d.headcount.total} sub={`${d.headcount.active} active`}
+        <Tile icon={Users} label="Employees" value={d.headcount.total} sub={`${d.headcount.active} active`} dot="var(--color-good)"
           tint="var(--color-stage-new-bg)" ink="var(--color-stage-new)" to="/people" />
-        <Tile icon={Clock} label="Present today" value={d.today.present} sub={d.today.absent ? `${d.today.absent} absent` : 'everybody in'}
+        <Tile icon={Clock} label="Present today" value={d.today.present} sub={d.today.absent ? `${d.today.absent} absent` : 'Everybody in'}
+          dot={d.today.absent ? 'var(--color-bad)' : 'var(--color-good)'}
           tint="var(--color-stage-short-bg)" ink="var(--color-stage-short)" to="/attendance" />
         {/* 🔒 Rendered only when the server sent it — pay is gated there. */}
         {d.payroll && (
@@ -125,10 +131,10 @@ export default function HrDashboard() {
           tint="var(--color-stage-offer-bg)" ink="var(--color-stage-offer)" to="/people" />
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,42fr)_minmax(0,58fr)]">
+      <div className="mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,42fr)_minmax(0,58fr)]">
         <div className={`${CARD} p-5`}>
           <CardHead title="Needs attention" count={d.attentionCount} action={viewAll('/people')} />
-          {d.attention.length === 0 && <p className="py-6 text-[12.5px] text-[var(--color-ink-soft)]">Nothing needs a decision today.</p>}
+          {d.attention.length === 0 && <p className="py-4 text-[12.5px] text-[var(--color-ink-soft)]">Nothing needs a decision today.</p>}
           <div className="divide-y divide-[var(--color-line-soft)]">
             {d.attention.map((a, i) => {
               const [Icon, tint, ink] = KIND[a.kind] || KIND.Request;
@@ -189,7 +195,7 @@ export default function HrDashboard() {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         <div className={`${CARD} p-5`}>
           <CardHead title="People development" action={viewAll('/performance')} />
           {d.development.length === 0 && <p className="py-6 text-[12.5px] text-[var(--color-ink-soft)]">Nobody is in probation or coaching.</p>}

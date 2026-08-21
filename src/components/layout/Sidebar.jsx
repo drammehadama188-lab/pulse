@@ -24,17 +24,17 @@ function NavRow({ item, soon = false }) {
       to={item.to}
       end={item.end || item.to === '/'}
       className={({ isActive }) =>
-        `group flex items-center gap-3 rounded-[8px] px-3.5 py-2.5 text-[13.5px] transition-colors ${
+        `group flex items-center gap-2.5 whitespace-nowrap rounded-[8px] px-3 py-2 text-[13px] transition-colors ${
           isActive
-            ? 'bg-[var(--color-sidebar-active)] font-semibold text-[var(--color-sidebar-ink-active)]'
+            ? 'bg-[var(--color-brand)] font-semibold text-white'
             : 'font-medium text-[var(--color-sidebar-ink)] hover:bg-white/5 hover:text-white'
         }`
       }
     >
       {({ isActive }) => (
         <>
-          <item.icon size={19} strokeWidth={isActive ? 2.2 : 1.9} className="shrink-0"
-            style={{ color: isActive ? 'var(--color-sidebar-icon)' : undefined }} />
+          <item.icon size={18} strokeWidth={isActive ? 2.2 : 1.9} className="shrink-0"
+            style={{ color: isActive ? '#fff' : undefined }} />
           <span className="flex-1">{item.label}</span>
           {soon && (
             <span className="rounded-full bg-[var(--color-fill)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
@@ -57,9 +57,12 @@ export function Sidebar() {
   const inRecruitment = pathname.startsWith('/recruitment')
 
   return (
-    <aside className="hidden w-[216px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-sidebar-edge)] bg-[var(--color-sidebar)] px-4 py-5 md:flex">
+    <aside
+      className="hidden w-[228px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-sidebar-edge)] px-4 py-5 md:flex"
+      style={{ background: 'linear-gradient(180deg, var(--color-sidebar) 0%, var(--color-sidebar-2) 100%)' }}
+    >
       <div className="px-2">
-        <Brand />
+        <Brand onDark />
       </div>
 
       {inRecruitment ? (
