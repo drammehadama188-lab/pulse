@@ -9,11 +9,36 @@ backend pattern). Never edit `~/damia/founder-app` from here.
 ## What it is
 
 - **Audience:** staff (self-service) + managers (approvals + team view). Role-based, one app.
-- **Design:** "warm people-platform" (BambooHR/Personio feel) — light, soft rounded cards,
-  mobile-friendly. Brand = Damia blue `#1E4FCC`, font = Plus Jakarta Sans. Do NOT clone The
-  Desk's dark sidebar look.
+- **Design:** governed by **`DESIGN.md`** — read it before touching any page. Light, soft
+  rounded cards, dark sidebar, Inter, brand blue from the tokens. (This line used to name a
+  different blue and a different font than the code actually ships; the tokens win, always.)
 - **v1 scope:** real login, attendance check-in/out, leave requests + manager approval,
   staff dashboard, manager team/presence view.
+
+## The design rules — not optional
+
+Three files, in this order, before you design or change any page:
+
+1. **`DESIGN.md`** — the rulebook Adama wrote. One job per page, the six page types,
+   what a dashboard leads with, how a list ends, what a record header may carry, one
+   source of truth, what each colour MEANS, spacing, type, empty states, tables.
+2. **`src/design.js`** — the same rules as numbers. If a page needs a number this file
+   does not have, the number goes IN this file. Never invent one on the page.
+3. **`src/index.css`** (`@theme`) — every colour, radius and shadow. A page never writes
+   a hex or a Tailwind palette class (`bg-red-100`, `text-blue-700`). Colour carries
+   meaning: blue = action, green = healthy, amber = attention, red = critical, purple =
+   special workflow, grey = neutral.
+
+**`test/design-rules.test.mjs` runs inside `npm run build`, and the build is what deploys.**
+A page that breaks a rule does not ship.
+
+🔒 If a page cannot follow a rule, the answer is to change the page — or to raise it with
+Adama and change the RULE. Never weaken the check to make a page pass, and never add a
+second rulebook: these three files are the only ones.
+
+Shared pieces that exist so pages stop reinventing them: `components/ui/Pager.jsx`
+(how every list ends), `components/ui/EmptyState.jsx`, `components/ui/Skeleton.jsx`,
+and the kit in `components/ui.jsx`.
 
 ## Ports
 
