@@ -218,7 +218,7 @@ export function Attendance({ a, records, overtimeMinutes }) {
                 </tr>
               );
             })}
-            {records.length === 0 && <tr><td colSpan={5} className="px-5 py-8 text-center text-[13px] text-[var(--color-ink-soft)]">Nothing recorded this month.</td></tr>}
+            {records.length === 0 && <tr><td colSpan={5} className="px-5 py-8 text-center text-[13px] text-[var(--color-ink-soft)]">No check-ins recorded this month.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -227,6 +227,15 @@ export function Attendance({ a, records, overtimeMinutes }) {
 }
 
 // ── Performance ────────────────────────────────────────────────────
+function Nothing({ children, to, cta }) {
+  return (
+    <div className="py-4">
+      <p className="text-[13px] text-[var(--color-ink-soft)]">{children}</p>
+      {to && <Link to={to} className={`${linkish} mt-2`}>{cta} <ArrowRight size={14} /></Link>}
+    </div>
+  );
+}
+
 export function Performance({ perf, username }) {
   const ratings = perf.reviews?.find((r) => r.ratings)?.ratings || null;
   const scored = perf.reviews?.filter((r) => typeof r.score === 'number') || [];
@@ -234,7 +243,11 @@ export function Performance({ perf, username }) {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <div className={`${CARD} p-5`}>
         <CardHead title="Performance summary" />
-        {perf.averageReview == null ? <Empty>No review has been scored yet.</Empty> : (
+        {perf.averageReview == null ? (
+          <Nothing to={`/performance/${username}`} cta="Record a review">
+            No review has been scored for this person yet. Reviews are written in Performance, and this fills in as soon as one exists.
+          </Nothing>
+        ) : (
           <>
             <p className="text-[34px] font-semibold leading-none text-[var(--color-ink)]">
               {perf.averageReview}<span className="text-[16px] font-normal text-[var(--color-ink-faint)]"> / 5</span>
@@ -262,13 +275,21 @@ export function Performance({ perf, username }) {
               pct={Math.min(100, Math.round(((perf.sales.actual || 0) / perf.sales.target) * 100))} colour="var(--color-stage-new)" />
           ) : null}
           {perf.attendancePct != null && <Bar label="Attendance" pct={perf.attendancePct} colour="var(--color-pill-probation)" />}
-          {perf.score == null && !perf.sales?.target && perf.attendancePct == null && <Empty>Nothing recorded this month.</Empty>}
+          {perf.score == null && !perf.sales?.target && perf.attendancePct == null && (
+            <Nothing to={`/performance/${username}`} cta="Open performance">
+              Nothing recorded this month — no score, no sales target and no attendance yet.
+            </Nothing>
+          )}
         </div>
         <Link to={`/performance/${username}`} className={`${linkish} mt-4`}>Open performance <ArrowRight size={14} /></Link>
       </div>
       <div className={`${CARD} p-5 lg:col-span-2`}>
         <CardHead title="Reviews" action={<Link to="/reviews" className="text-[13px] font-medium text-[var(--color-brand)] hover:underline">View all</Link>} />
-        {(!perf.reviews || perf.reviews.length === 0) && <Empty>No reviews recorded.</Empty>}
+        {(!perf.reviews || perf.reviews.length === 0) && (
+          <Nothing to="/reviews" cta="Go to Reviews and Coaching">
+            No review has been recorded. Monthly reviews are written in Reviews and Coaching and appear here.
+          </Nothing>
+        )}
         <div className="divide-y divide-[var(--color-line-soft)]">
           {perf.reviews?.map((r) => (
             <div key={r.period} className="flex items-center justify-between gap-3 py-3">
@@ -380,7 +401,11 @@ export function Notes({ notes, username }) {
           <span className="flex-1" />
           <Link to={`/performance/${username}`} className="text-[13px] font-medium text-[var(--color-brand)] hover:underline">Add note</Link>
         </div>
-        {shown.length === 0 && <Empty>Nothing written down yet.</Empty>}
+        {shown.length === 0 && (
+          <Nothing to={`/performance/${username}`} cta="Write the first note">
+            Nothing written down yet. Coaching notes, recognition and warnings all land here.
+          </Nothing>
+        )}
         <div className="space-y-2">
           {shown.map((n, i) => {
             const [bg, ink, Icon] = NOTE_TONE[n.kind] || NOTE_TONE.General;
