@@ -4877,18 +4877,57 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), (req, res) => {
     attendancePct,
   }
 
+  // Every document, with who put it there — the Documents tab groups by
+  // category and the Overview shows the newest few from the same list.
   const documents = db.read('agent-files', [])
     .filter((f) => f.agent === u.name)
     .sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''))
-    .slice(0, 5)
-    .map(({ id, name, category, mimeType, sizeBytes, uploadedAt }) => ({ id, name, category, mimeType, sizeBytes, uploadedAt }))
+    .map(({ id, name, category, mimeType, sizeBytes, uploadedAt, uploadedBy }) => ({ id, name, category: category || 'other', mimeType, sizeBytes, uploadedAt, uploadedBy: uploadedBy || '' }))
 
+  // The month's attendance, day by day, so the calendar and the record list
+  // read from one place. Overtime is time past the scheduled day, never a
+  // guess: no check-out means no overtime, not an assumed one.
+  const records = mine
+    .slice()
+    .sort((x, y) => (y.date || '').localeCompare(x.date || ''))
+    .map((r) => {
+      const worked = r.checkIn && r.checkOut ? Math.max(0, (Date.parse(r.checkOut) - Date.parse(r.checkIn)) / 60000) : null
+      return {
+        date: r.date,
+        checkIn: r.checkIn || null,
+        checkOut: r.checkOut || null,
+        late: !!r.late,
+        status: r.status || (r.checkIn ? (r.late ? 'late' : 'present') : 'absent'),
+        workedMinutes: worked == null ? null : Math.round(worked),
+      }
+    })
+  const overtimeMinutes = records.reduce((sum, r) => sum + Math.max(0, (r.workedMinutes || 0) - 8 * 60), 0)
+
+  // Reviews and the ratings inside them, newest first.
+  const reviewsAll = (db.read('reviews', {})[u.name] || [])
+    .slice()
+    .sort((x, y) => String(y.period || '').localeCompare(String(x.period || '')))
+    .map((r) => ({ period: r.period, score: r.score ?? null, status: r.status || '', ratings: r.ratings || null, notes: r.notes || '', at: r.completedAt || r.createdAt || null }))
+  const scored = reviewsAll.filter((r) => typeof r.score === 'number')
+  const averageReview = scored.length ? Math.round((scored.reduce((a, b) => a + b.score, 0) / scored.length) * 10) / 10 : null
+
+  // Notes are everything written ABOUT this person: coaching, and warnings —
+  // which belong on the record, not in a separate directory.
   const notes = [
     ...db.read('coaching', [])
       .filter((c) => c.targetUsername === u.username)
-      .map((c) => ({ kind: 'Coaching', text: c.notes || c.topic || '', by: c.byName || c.by || '', at: c.datetime || c.createdAt })),
-    ...(profile.notes ? [{ kind: 'Note', text: profile.notes, by: '', at: profile.notesAt || null }] : []),
-  ].sort((a, b) => String(b.at || '').localeCompare(String(a.at || ''))).slice(0, 5)
+      .map((c) => ({
+        kind: c.type === 'praise' ? 'Recognition' : 'Coaching',
+        title: c.title || '',
+        text: c.note || c.notes || '',
+        by: c.byName || c.by || '',
+        at: c.datetime || c.createdAt,
+      })),
+    ...db.read('warnings', [])
+      .filter((w) => w.agent === u.name)
+      .map((w) => ({ kind: 'Concern', title: `${w.type} warning`, text: w.reason || '', by: w.by || '', at: w.date || w.createdAt })),
+    ...(profile.notes ? [{ kind: 'General', title: '', text: profile.notes, by: '', at: profile.notesAt || null }] : []),
+  ].sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
 
   res.json({
     employee: {
@@ -4926,10 +4965,19 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), (req, res) => {
       avgCheckIn,
       month,
     },
-    performance,
+    performance: { ...performance, averageReview, reviews: reviewsAll.slice(0, 6) },
     documents,
     notes,
-    history: (u.history || []).slice().reverse().slice(0, 20),
+    attendanceRecords: records,
+    overtimeMinutes,
+    contract: {
+      type: u.contractEnd ? 'Fixed term' : u.contractor ? 'Contractor' : 'Permanent',
+      start: u.joined || null,
+      end: u.contractEnd || null,
+      noticePeriod: profile.noticePeriod || '',
+      document: documents.find((f) => f.category === 'contract') || null,
+    },
+    history: (u.history || []).slice().reverse(),
   })
 })
 

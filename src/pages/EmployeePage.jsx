@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { api, getToken } from '../lib/api.js';
 import { payByName } from '../lib/pay.js';
+import { JobPay, Attendance, Performance, Documents, Notes, History } from './employee/tabs.jsx';
 
 // One employee, in the design Adama sent (20 Aug): who they are, the four
 // facts that matter across the top, then Job, Salary, Quick actions,
@@ -60,6 +61,27 @@ export default function EmployeePage() {
   const [pay, setPay] = useState(null);
   const [tab, setTab] = useState('Overview');
   const [roster, setRoster] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  async function uploadDocument(file) {
+    if (!file || !d?.employee) return;
+    setUploading(true);
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result).split(',').pop());
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      await api('/agent-files', { method: 'POST', body: { agent: d.employee.name, name: file.name, mimeType: file.type, base64, category: 'document' } });
+      const fresh = await api(`/hr/employee/${username}`);
+      setD(fresh);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   useEffect(() => {
     setD(null);
@@ -300,30 +322,13 @@ export default function EmployeePage() {
         </div>
       )}
 
-      {tab !== 'Overview' && (
-        <div className={`${CARD} p-5`}>
-          {tab === 'History' ? (
-            <ol className="space-y-3">
-              {d.history.map((h, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-line-control)]" />
-                  <span>
-                    <span className="block text-[13px] text-[var(--color-ink)]">{h.event}</span>
-                    <span className="block text-[12px] text-[var(--color-ink-faint)]">{day(h.date)}</span>
-                  </span>
-                </li>
-              ))}
-              {d.history.length === 0 && <p className="text-[13px] text-[var(--color-ink-soft)]">Nothing recorded.</p>}
-            </ol>
-          ) : (
-            <p className="py-2 text-[13px] text-[var(--color-ink-soft)]">
-              {tab} lives on its own page.{' '}
-              <Link to={tab === 'Documents' ? '/documents' : tab === 'Attendance' ? '/attendance' : tab === 'Notes' ? `/performance/${e.username}` : tab === 'Job & pay' ? '/payroll' : `/performance/${e.username}`}
-                className="font-medium text-[var(--color-brand)] hover:underline">Open {tab.toLowerCase()}</Link>
-            </p>
-          )}
-        </div>
-      )}
+      {tab === 'Job & pay' && <JobPay e={e} pay={pay} contract={d.contract} />}
+      {tab === 'Attendance' && <Attendance a={a} records={d.attendanceRecords} overtimeMinutes={d.overtimeMinutes} />}
+      {tab === 'Performance' && <Performance perf={d.performance} username={e.username} />}
+      {tab === 'Documents' && <Documents documents={d.documents} onUpload={uploadDocument} uploading={uploading} />}
+      {tab === 'Notes' && <Notes notes={d.notes} username={e.username} />}
+      {tab === 'History' && <History history={d.history} />}
+
     </div>
   );
 }
