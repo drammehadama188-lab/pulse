@@ -71,7 +71,7 @@ For finding, comparing and processing records.
   a miniature detail page.
 - **Row click** opens the record. One obvious row action may be visible;
   everything else goes under `•••`.
-- **Pagination** — default 25, options 10 / 25 / 50. One component, one look.
+- **Pagination** — see below. In Pulse: default 25, options 10 / 25 / 50.
 
 ### Record pages
 
@@ -156,17 +156,24 @@ Never reduce spacing just to fit more on screen.
 
 ## Typography
 
+**13px is the platform's standard body token.** Do not move the platform to
+14–15px body text.
+
 | Role | Size / weight |
 | --- | --- |
 | Page title | 28–32px semibold |
 | Section heading | 16–18px semibold |
-| Card metric | 26–32px semibold |
-| Body | 14–15px |
-| Secondary | 12–14px |
-| Label | 12–13px medium |
+| Large metric | 26–32px semibold |
+| Body — the standard | 13px |
+| UI labels and table content | 13px |
+| Emphasised body | 14px, only where hierarchy requires it |
+| Secondary / metadata | 12px |
 
 Hierarchy comes from size and weight. Do not make everything bold. Secondary
 information recedes.
+
+Typography consistency means a shared hierarchy and shared tokens — not every
+text element at the same size.
 
 ---
 
@@ -248,6 +255,23 @@ every screen looks urgent and none of it means anything.
 
 Actions appear where they are naturally needed, and nowhere else. The question
 is always: what is the most likely next action from this screen?
+
+---
+
+## Pagination
+
+The behaviour is the same everywhere; the row count depends on the product and
+the space available.
+
+- **Pulse operational lists** — default 25, allow 10 / 25 / 50 where appropriate.
+- **Admin** — default 10, unless the page has an established contextual rule.
+- **Stretched / fill-height panels** — work the visible rows out from the
+  vertical space available, rather than forcing a fixed default.
+
+Consistency applies to the controls, their placement, the page-size selector,
+the interaction and the behaviour. It does **not** require every list to show the
+same number of rows. Never change a page's established pagination just to make
+its number match another product.
 
 ---
 

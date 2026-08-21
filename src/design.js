@@ -18,13 +18,17 @@ export const space = {
 };
 
 // Size and weight make the hierarchy. Nothing is bold by default.
+// 🔒 13px is the platform's standard body token (Adama, 21 Aug). Do NOT move
+// the platform to 14–15px body text. Consistency here means a shared hierarchy,
+// not every element at the same size.
 export const type = {
-  pageTitle: { size: 30, weight: 600 },
-  sectionHeading: { size: 17, weight: 600 },
-  metric: { size: 28, weight: 600 },
-  body: { size: 14.5, weight: 400 },
-  secondary: { size: 13, weight: 400 },
-  label: { size: 12.5, weight: 500 },
+  pageTitle: { size: 30, weight: 600 },      // 28–32
+  sectionHeading: { size: 17, weight: 600 }, // 16–18
+  metric: { size: 28, weight: 600 },         // 26–32
+  body: { size: 13, weight: 400 },           // 🔒 the standard
+  emphasis: { size: 14, weight: 500 },       // only where hierarchy needs it
+  label: { size: 13, weight: 500 },          // UI labels and table content
+  secondary: { size: 12, weight: 400 },      // metadata
 };
 
 // Operational screens may be dense; record and management screens breathe.
@@ -37,11 +41,16 @@ export const density = {
 // HOW A LIST ENDS — one pattern everywhere: the range being shown, the page
 // buttons, and the rows-per-page choice. A list that scrolls forever never
 // tells you how much there is.
+// 🔒 The CONTROLS are identical across the platform — placement, the page-size
+// selector, the interaction. The NUMBER is not: Pulse operational lists default
+// to 25, admin to 10, and a stretched panel works its own out from the height it
+// was given. Never change a page's established count just to match the other
+// product.
 export const pageEnding = {
-  rows: 25,                 // the default on every list
+  rows: 25,                 // Pulse operational lists
   options: [10, 25, 50],    // what a person may switch to
   cards: 12,                // a grid of cards pages at twelve
-  panel: 8,                 // a side panel shows this many, then pages
+  panel: 8,                 // a side panel's FLOOR — fill the height where there is height to fill
 };
 
 // A dashboard leads with 3–5 metrics, never a wall of them.
