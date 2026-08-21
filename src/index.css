@@ -38,14 +38,19 @@
   --color-sidebar-tile: rgba(255, 255, 255, 0.045);
 
   /* Neutral surfaces — clean white + cool grey (founder-style, no green) */
-  --color-paper: #f2f4f8;
+  --color-paper: #f7f8fc;
   --color-surface: #ffffff;
   --color-ink: #111827;
   --color-ink-soft: #525b6b;
   --color-ink-faint: #7c8494;
-  --color-line: #eaecf1;
-  --color-line-soft: #f1f3f7;
-  --color-fill: #f4f5f8;
+  --color-line: rgba(15, 23, 42, 0.09);
+  --color-line-soft: rgba(15, 23, 42, 0.05);
+  --color-fill: #f4f6fb;
+
+  /* Table chrome: a header a shade off white, and a row that answers the
+     mouse with the faintest blue rather than grey. */
+  --color-table-head: #fafbfd;
+  --color-row-hover: #f8faff;
 
   /* Status (soft, friendly) */
   --color-good: #059669;
@@ -80,7 +85,7 @@
 
   /* Depth is carried by the border and by space, not by shadow. Only things
      that genuinely float (modals, menus) get --shadow-lift. */
-  --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-soft: 0 2px 8px rgba(15, 23, 42, 0.035);
   --shadow-lift: 0 8px 24px rgba(16, 24, 40, 0.10);
 }
 

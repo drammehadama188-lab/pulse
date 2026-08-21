@@ -16,7 +16,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 // cannot disagree. 🔒 The payroll tile only exists if the server sent it; pay
 // is decided there, never hidden here.
 
-const CARD = 'bg-[var(--color-surface)] border border-[var(--color-line)] rounded-[8px]';
+const CARD = 'card';
 const time = (iso) => {
   const d = new Date(iso || '');
   return isNaN(d) ? '—' : d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -53,7 +53,7 @@ function Tile({ icon: Icon, label, value, sub, dot, tint, ink, to }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[12.5px] font-medium text-[var(--color-ink-soft)]">{label}</span>
-        <span className="mt-1 block text-[24px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
+        <span className="mt-1 block text-[26px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
         {sub && (
           <span className="mt-1 flex items-center gap-1.5 text-[11.5px] text-[var(--color-ink-faint)]">
             {dot && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: dot }} />}
@@ -163,7 +163,7 @@ export default function HrDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
-                <tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
+                <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
                   <th className="py-2 pr-3 font-semibold">Employee</th>
                   <th className="py-2 pr-3 font-semibold">Role</th>
                   <th className="py-2 pr-3 font-semibold">Status</th>
@@ -172,7 +172,7 @@ export default function HrDashboard() {
               </thead>
               <tbody>
                 {d.today.people.map((p) => (
-                  <tr key={p.username} className="border-b border-[var(--color-line-soft)] last:border-0">
+                  <tr key={p.username} className="border-b border-[var(--color-line-soft)] transition-colors last:border-0 hover:bg-[var(--color-row-hover)]">
                     <td className="py-2 pr-3">
                       <span className="flex items-center gap-2.5">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[11px] font-semibold text-[var(--color-ink-soft)]">

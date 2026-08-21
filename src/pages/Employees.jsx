@@ -13,7 +13,7 @@ import { api } from '../lib/api.js';
 // 🔒 This page never shows pay, so it is fed by an endpoint that never sends
 // it. The salary-carrying roster stays behind the payroll screens.
 
-const CARD = 'bg-[var(--color-surface)] border border-[var(--color-line)] rounded-[8px]';
+const CARD = 'card';
 const STATUS = {
   active: ['Active', 'var(--color-good-bg)', 'var(--color-good)'],
   probation: ['Probation', 'var(--color-stage-screening-bg)', 'var(--color-stage-screening)'],
@@ -34,12 +34,12 @@ function Tile({ icon: Icon, value, label, sub, tint, ink, onClick, on }) {
   return (
     <Tag {...(onClick ? { onClick, type: 'button' } : {})}
       className={`${CARD} flex w-full items-start gap-3 p-[18px] text-left transition-colors ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''} ${on ? 'border-[var(--color-brand)]' : ''}`}>
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px]" style={{ background: tint, color: ink }}>
-        <Icon size={20} strokeWidth={2} />
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[11px]" style={{ background: tint, color: ink }}>
+        <Icon size={20} strokeWidth={1.9} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[24px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
-        <span className="mt-1.5 block text-[13px] font-medium text-[var(--color-ink-soft)]">{label}</span>
+        <span className="block text-[28px] font-semibold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
+        <span className="mt-2 block text-[13.5px] font-medium text-[var(--color-ink-soft)]">{label}</span>
         <span className="mt-1 block text-[12px] text-[var(--color-ink-faint)]">{sub}</span>
       </span>
     </Tag>
@@ -110,7 +110,9 @@ export default function Employees() {
     URL.revokeObjectURL(url);
   }
 
-  const field = 'rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[13px] text-[var(--color-ink-soft)]';
+  // 🔒 Blue is rationed: the primary button, the live tab, the active nav row
+  // and a real focus. A resting filter is grey.
+  const field = 'rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[13px] text-[var(--color-ink-soft)] focus:border-[var(--color-ink-faint)] focus:outline-none';
   const btn = 'inline-flex items-center gap-2 rounded-[8px] px-4 py-2.5 text-[13px] font-semibold transition-colors';
   const light = `${btn} border border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-fill)]`;
 
@@ -139,7 +141,7 @@ export default function Employees() {
       </div>
 
       <div className="mb-4 flex items-center gap-1 border-b border-[var(--color-line)]">
-        {[['employees', `Employees (${c.total})`], ['contracts', 'Contracts'], ['past', `Past employees (${data.past.length})`]].map(([k, label]) => (
+        {[['employees', 'Current'], ['contracts', 'Contracts'], ['past', `Past employees (${data.past.length})`]].map(([k, label]) => (
           <button key={k} onClick={() => setView(k)}
             className={`-mb-px border-b-2 px-3.5 py-2.5 text-[13px] font-semibold ${view === k ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>
             {label}
@@ -208,8 +210,8 @@ export default function Employees() {
       <div className={`${CARD} mt-4 overflow-x-auto`}>
         <table className="w-full text-[13px]">
           <thead>
-            <tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
-              <th className="w-10 px-4 py-3">
+            <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
+              <th className="w-10 rounded-tl-[8px] px-4 py-3">
                 <input type="checkbox" checked={allShownPicked} onChange={togglePage} className="accent-[var(--color-brand)]" />
               </th>
               <th className="px-4 py-3 font-semibold">Employee</th>
@@ -225,29 +227,45 @@ export default function Employees() {
             {shown.map((e) => {
               const [label, tint, ink] = STATUS[e.status] || [e.status, 'var(--color-fill)', 'var(--color-ink-soft)'];
               return (
-                <tr key={e.username} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-fill)]">
-                  <td className="px-4 py-3.5">
+                <tr key={e.username} className="border-b border-[var(--color-line-soft)] last:border-0 transition-colors hover:bg-[var(--color-row-hover)]">
+                  <td className="px-4 py-4">
                     <input type="checkbox" checked={picked.has(e.username)} onChange={() => toggleOne(e.username)} className="accent-[var(--color-brand)]" />
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-4 py-4">
                     <Link to={profileHref(e.name)} className="flex items-center gap-2.5">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[12px] font-semibold text-[var(--color-ink-soft)]">{initials(e.name)}</span>
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[12.5px] font-semibold text-[var(--color-ink-soft)]">{initials(e.name)}</span>
                       <span className="min-w-0">
-                        <span className="block truncate font-semibold text-[var(--color-ink)]">{e.name}</span>
+                        <span className="block truncate text-[14px] font-semibold text-[var(--color-ink)]">{e.name}</span>
                         <span className="mt-0.5 block truncate text-[12px] text-[var(--color-ink-faint)]">{e.email || '—'}</span>
                         {e.phone && <span className="block truncate text-[12px] text-[var(--color-ink-faint)]">{e.phone}</span>}
                       </span>
                     </Link>
                   </td>
-                  <td className="px-4 py-3.5 text-[var(--color-ink-soft)]"><span className="block max-w-[180px]">{e.title || '—'}</span></td>
-                  <td className="px-4 py-3.5 text-[var(--color-ink-soft)]">{e.department || '—'}</td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-4 py-4">
+                    <span className="block max-w-[200px] text-[13.5px] text-[var(--color-ink)]">{e.title || '—'}</span>
+                    <span className="mt-0.5 block text-[12px] text-[var(--color-ink-faint)]">{e.department || '—'}</span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className="block text-[13.5px] text-[var(--color-ink-soft)]">{e.employment}</span>
+                    <span className="mt-0.5 block text-[12px] text-[var(--color-ink-faint)]">{e.employmentNote}</span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-4 text-[13.5px] text-[var(--color-ink-soft)]">{day(e.startDate)}</td>
+                  {/* What HR has to do about this person next. */}
+                  <td className="whitespace-nowrap px-4 py-4">
+                    {e.milestone ? (
+                      <>
+                        <span className="block text-[13.5px] text-[var(--color-ink)]">{e.milestone.label}</span>
+                        <span className={`mt-0.5 block text-[12px] ${e.milestone.days <= 30 && e.milestone.label !== 'Annual review' ? 'font-semibold text-[var(--color-stage-out)]' : 'text-[var(--color-ink-faint)]'}`}>
+                          {day(e.milestone.date)} · {e.milestone.days < 0 ? `${Math.abs(e.milestone.days)} days ago` : `${e.milestone.days} days`}
+                        </span>
+                      </>
+                    ) : <span className="text-[var(--color-ink-faint)]">—</span>}
+                  </td>
+                  <td className="px-4 py-4">
                     <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ background: tint, color: ink }}>
                       <span className="h-1.5 w-1.5 rounded-full bg-current" /> {label}
                     </span>
                   </td>
-                  <td className="px-4 py-3.5 text-[var(--color-ink-soft)]">{e.employment}</td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-[var(--color-ink-soft)]">{day(e.startDate)}</td>
                   <td className="relative px-4 py-2.5">
                     <button onClick={() => setMenu(menu === e.username ? null : e.username)}
                       className="rounded-[6px] p-1 text-[var(--color-ink-faint)] hover:bg-[var(--color-fill)] hover:text-[var(--color-ink)]">
@@ -313,19 +331,19 @@ export default function Employees() {
                 const [label, tint, ink] = STATUS[e.status] || [e.status, 'var(--color-fill)', 'var(--color-ink-soft)'];
                 const left = e.contractEnd ? e.milestone?.label === 'Contract ends' ? e.milestone.days : null : null;
                 return (
-                  <tr key={e.username} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-fill)]">
-                    <td className="px-4 py-3.5">
+                  <tr key={e.username} className="border-b border-[var(--color-line-soft)] last:border-0 transition-colors hover:bg-[var(--color-row-hover)]">
+                    <td className="px-4 py-4">
                       <Link to={profileHref(e.name)} className="font-semibold text-[var(--color-ink)] hover:underline">{e.name}</Link>
                       <span className="block text-[12px] text-[var(--color-ink-faint)]">{e.title || '—'}</span>
                     </td>
-                    <td className="px-4 py-3.5 text-[var(--color-ink-soft)]">{e.employment}<span className="block text-[12px] text-[var(--color-ink-faint)]">{e.employmentNote}</span></td>
-                    <td className="whitespace-nowrap px-4 py-3.5 text-[var(--color-ink-soft)]">{day(e.startDate)}</td>
-                    <td className="whitespace-nowrap px-4 py-3.5 text-[var(--color-ink-soft)]">{e.contractEnd ? day(e.contractEnd) : 'No end date'}</td>
-                    <td className="whitespace-nowrap px-4 py-3.5">
+                    <td className="px-4 py-4 text-[var(--color-ink-soft)]">{e.employment}<span className="block text-[12px] text-[var(--color-ink-faint)]">{e.employmentNote}</span></td>
+                    <td className="whitespace-nowrap px-4 py-4 text-[var(--color-ink-soft)]">{day(e.startDate)}</td>
+                    <td className="whitespace-nowrap px-4 py-4 text-[var(--color-ink-soft)]">{e.contractEnd ? day(e.contractEnd) : 'No end date'}</td>
+                    <td className="whitespace-nowrap px-4 py-4">
                       {left == null ? <span className="text-[var(--color-ink-faint)]">—</span>
                         : <span className={left <= 60 ? 'font-semibold text-[var(--color-stage-out)]' : 'text-[var(--color-ink-soft)]'}>{left} days</span>}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-4">
                       <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ background: tint, color: ink }}>
                         <span className="h-1.5 w-1.5 rounded-full bg-current" /> {label}
                       </span>
@@ -351,13 +369,13 @@ export default function Employees() {
             </thead>
             <tbody>
               {data.past.map((p) => (
-                <tr key={p.username || p.name} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-fill)]">
-                  <td className="px-4 py-3.5 font-semibold text-[var(--color-ink)]">{p.name}</td>
-                  <td className="px-4 py-3.5 text-[var(--color-ink-soft)]">{p.role || '—'}<span className="block text-[12px] text-[var(--color-ink-faint)]">{p.department || ''}</span></td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-[var(--color-ink-soft)]">{day(p.joined)}</td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-[var(--color-ink-soft)]">{day(p.left)}</td>
-                  <td className="px-4 py-3.5 text-[var(--color-ink-soft)]">{p.reason}</td>
-                  <td className="px-4 py-3.5 text-right">
+                <tr key={p.username || p.name} className="border-b border-[var(--color-line-soft)] last:border-0 transition-colors hover:bg-[var(--color-row-hover)]">
+                  <td className="px-4 py-4 font-semibold text-[var(--color-ink)]">{p.name}</td>
+                  <td className="px-4 py-4 text-[var(--color-ink-soft)]">{p.role || '—'}<span className="block text-[12px] text-[var(--color-ink-faint)]">{p.department || ''}</span></td>
+                  <td className="whitespace-nowrap px-4 py-4 text-[var(--color-ink-soft)]">{day(p.joined)}</td>
+                  <td className="whitespace-nowrap px-4 py-4 text-[var(--color-ink-soft)]">{day(p.left)}</td>
+                  <td className="px-4 py-4 text-[var(--color-ink-soft)]">{p.reason}</td>
+                  <td className="px-4 py-4 text-right">
                     <Link to={`/past/${String(p.name).toLowerCase().replace(/\s+/g, '-')}`} className="text-[12.5px] font-semibold text-[var(--color-brand)] hover:underline">Records</Link>
                   </td>
                 </tr>
