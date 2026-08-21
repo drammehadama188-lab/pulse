@@ -22,30 +22,31 @@ const mgr = (u) => has(u, 'hr')
 // management sections gate on powers so a plain staffer only sees Dashboard +
 // Personal; the CEO (all powers) sees the full control centre.
 export const NAV = [
-  { id: 'dashboard', to: '/', label: 'Dashboard', icon: LayoutDashboard, group: null, show: () => true },
+  // 20 Aug 2026 — regrouped to the design Adama sent: Overview, People,
+  // Performance, Time & requests, Payroll, Company, Analytics. Three pages the
+  // mock did not draw are kept in the nearest section rather than dropped:
+  // Staff (People), KPI Targets (Performance) and Team Workday (Time).
+  { id: 'dashboard', to: '/', label: 'Dashboard', icon: LayoutDashboard, group: 'Overview', show: () => true },
 
-  // PEOPLE — the roster, performance and contracts (management view).
-  // "Employees & Records" folds the old standalone "Employee Records" (warnings)
-  // in as a tab (24 Jun 2026, Adama) so there's no duplicate nav item.
-  { id: 'people', to: '/people', label: 'Employees & Records', icon: Users, group: 'People', show: mgr },
-  { id: 'performance', to: '/performance', label: 'Performance', icon: TrendingUp, group: 'People', show: mgr },
+  // PEOPLE — the roster, the day, and who is coming in.
+  { id: 'people', to: '/people', label: 'Employees', icon: Users, group: 'People', show: mgr },
   { id: 'attendance-mgr', to: '/attendance', label: 'Attendance', icon: Clock, group: 'People', show: mgr },
   { id: 'recruitment', to: '/recruitment', label: 'Recruitment', icon: UserPlus, group: 'People', show: mgr },
   { id: 'staff', to: '/team', label: 'Staff', icon: ShieldCheck, group: 'People', show: (u) => has(u, 'staffadmin') },
 
-  // MANAGEMENT — goals, incoming requests, the employee record
+  // PERFORMANCE — how people are doing, and what they are measured against.
+  { id: 'performance', to: '/performance', label: 'Performance', icon: TrendingUp, group: 'Performance', show: mgr },
+  { id: 'reviews', to: '/reviews', label: 'Reviews & Coaching', icon: ShieldAlert, group: 'Performance', show: mgr },
   // KPI Targets = where the company's goals are SET (CEO-only; Adama 3 Jul —
   // "Pulse should be responsible for changing the goals and it reflects in
   // admin"). Scorecards + Admin's goal numbers all read from it.
-  { id: 'kpi-targets', to: '/kpi-targets', label: 'KPI Targets', icon: Target, group: 'Management', show: isOwner },
-  { id: 'reviews', to: '/reviews', label: 'Reviews & Warnings', icon: ShieldAlert, group: 'Management', show: mgr },
+  { id: 'kpi-targets', to: '/kpi-targets', label: 'KPI Targets', icon: Target, group: 'Performance', show: isOwner },
+
+  // TIME & REQUESTS
   // Hidden for a team lead whose approvals stay inside their own team — Team
   // Requests already covers those, so this would be a duplicate page.
-  { id: 'requests', to: '/requests', label: 'Requests', icon: ClipboardCheck, group: 'Management', show: (u) => has(u, 'approvals') && !(u?.isTeamLead && u?.approvalsBeyondTeam === false) },
-  // Reports composes server-side from whichever powers the person holds.
-  { id: 'workday-monitor', to: '/workday-monitor', label: 'Team Workday', icon: Target, group: 'Management', show: mgr },
-  { id: 'reports', to: '/reports', label: 'Reports', icon: BarChart3, group: 'Management', show: (u) => ['team', 'approvals', 'payroll', 'hr'].some((p) => has(u, p)) },
-  // 'records' (Employee Records / warnings) merged into "Employees & Records" tab.
+  { id: 'requests', to: '/requests', label: 'Requests', icon: ClipboardCheck, group: 'Time & requests', show: (u) => has(u, 'approvals') && !(u?.isTeamLead && u?.approvalsBeyondTeam === false) },
+  { id: 'workday-monitor', to: '/workday-monitor', label: 'Team Workday', icon: Target, group: 'Time & requests', show: mgr },
 
   // PAYROLL
   { id: 'payroll', to: '/payroll', label: 'Payroll', icon: Wallet, group: 'Payroll', show: (u) => has(u, 'payroll') },
@@ -55,10 +56,13 @@ export const NAV = [
   { id: 'benefits', to: '/pay', label: 'Payslips & Benefits', icon: Gift, group: 'Payroll', show: (u) => has(u, 'payroll') },
 
   // COMPANY
-  // Tracker Guide — the product taught to staff (Adama 19 Aug); everyone sees it.
-  { id: 'tracker-guide', to: '/tracker-guide', label: 'Tracker Guide', icon: GraduationCap, group: 'Company', show: () => true },
   { id: 'policies', to: '/policies', label: 'Policies', icon: BookOpen, group: 'Company', show: mgr },
   { id: 'documents', to: '/documents', label: 'Documents', icon: FolderOpen, group: 'Company', show: mgr },
+  // Tracker Guide — the product taught to staff (Adama 19 Aug); everyone sees it.
+  { id: 'tracker-guide', to: '/tracker-guide', label: 'Tracker Guide', icon: GraduationCap, group: 'Company', show: () => true },
+
+  // ANALYTICS — Reports composes server-side from whichever powers the person holds.
+  { id: 'reports', to: '/reports', label: 'Reports', icon: BarChart3, group: 'Analytics', show: (u) => ['team', 'approvals', 'payroll', 'hr'].some((p) => has(u, p)) },
 
   // MY TEAM — a team lead's scoped workspace over the people they manage (NOT the
   // whole company). Gated on isTeamLead (server-computed); pages re-check scope.
@@ -82,7 +86,7 @@ export const NAV = [
 ]
 
 // Section order for the grouped sidebar.
-const GROUP_ORDER = ['People', 'Management', 'My work', 'My team', 'Payroll', 'Pay', 'Company', 'Personal']
+const GROUP_ORDER = ['Overview', 'People', 'Performance', 'Time & requests', 'My work', 'My team', 'Payroll', 'Pay', 'Company', 'Analytics', 'Personal']
 
 export const MORE = { key: 'more', label: 'More', icon: Menu }
 
@@ -98,6 +102,8 @@ export function navFor(user) {
 // Empty sections are dropped so headers never show above nothing.
 export function groupedNavFor(user) {
   const visible = navFor(user)
+  // Dashboard lives under its own "Overview" heading in the new design, so
+  // there is no ungrouped row above the sections any more.
   const top = visible.filter((i) => !i.group)
   const sections = GROUP_ORDER.map((label) => ({
     label,

@@ -4507,6 +4507,175 @@ app.post('/api/applicants/import', auth, requireSub('hr', 'records'), notViewAs,
   res.json({ added: added.length, duplicates, noPhone, rows: rows.length - 1, headers: headers.filter(Boolean), reason })
 })
 
+// ---------- HR dashboard (Adama 20 Aug, the new design) ----------
+// One call assembles the landing page: headcount, who is in today, what needs
+// a decision, how the team is doing, who is in probation or coaching, and what
+// just happened. Every figure is read from the same stores the detail pages
+// use, so the dashboard cannot disagree with the page it links to.
+//
+// 🔒 PAY IS GATED SEPARATELY. The payroll tile is only computed for a caller
+// who holds the payroll power; everyone else gets null and the tile does not
+// render. Never send a salary figure to a browser that is not allowed it.
+function hrRoster() {
+  return seedUsers().filter((u) => !isArchived(u) && u.username !== CEO)
+}
+const daysUntil = (iso) => (iso ? Math.ceil((Date.parse(iso) - Date.now()) / 86400000) : null)
+
+app.get('/api/hr/dashboard', auth, requirePower('hr'), (req, res) => {
+  const today = todayKey()
+  const roster = hrRoster()
+  const attendance = db.read('attendance', []).filter((a) => a.date === today)
+  const byUser = Object.fromEntries(attendance.map((a) => [a.username, a]))
+
+  // Who is in. A contractor keeps no schedule, so they are not counted absent.
+  const scheduled = roster.filter((u) => !u.contractor)
+  const people = scheduled.map((u) => {
+    const rec = byUser[u.username]
+    return {
+      username: u.username,
+      name: u.name,
+      title: u.title || '',
+      department: u.department || '',
+      present: !!rec?.checkIn,
+      startTime: rec?.checkIn || null,
+      status: u.status || 'active',
+    }
+  })
+  const present = people.filter((p) => p.present).length
+
+  // What needs a decision, newest concern first. Each row carries where to go.
+  const attention = []
+  for (const u of roster) {
+    const probLeft = daysUntil(u.probationEnd)
+    if (probLeft != null && probLeft <= 30) {
+      attention.push({
+        kind: 'Probation',
+        line: probLeft < 0
+          ? `${u.name}'s probation ended ${Math.abs(probLeft)} days ago`
+          : `${u.name} probation decision due in ${probLeft} days`,
+        to: `/people?person=${encodeURIComponent(u.name)}`,
+        cta: 'Review employee',
+        urgency: probLeft,
+      })
+    }
+    const contractLeft = daysUntil(u.contractEnd)
+    if (contractLeft != null && contractLeft <= 30) {
+      attention.push({
+        kind: 'Contract',
+        line: contractLeft < 0
+          ? `${u.name}'s contract expired ${Math.abs(contractLeft)} days ago`
+          : `${u.name}'s contract expires in ${contractLeft} days`,
+        to: `/people?person=${encodeURIComponent(u.name)}`,
+        cta: 'Review contract',
+        urgency: contractLeft,
+      })
+    }
+  }
+  const pendingLeave = db.read('leave', []).filter((l) => l.status === 'pending').length
+  if (pendingLeave) {
+    attention.push({
+      kind: 'Request',
+      line: `${pendingLeave} leave request${pendingLeave > 1 ? 's' : ''} awaiting approval`,
+      to: '/requests',
+      cta: 'Review request',
+      urgency: 0,
+    })
+  }
+  // Lateness this month, counted from the check-in against the person's start.
+  const monthPrefix = today.slice(0, 7)
+  const lateBy = {}
+  for (const a of db.read('attendance', [])) {
+    if (!a.date?.startsWith(monthPrefix) || !a.checkIn || !a.late) continue
+    lateBy[a.name || a.username] = (lateBy[a.name || a.username] || 0) + 1
+  }
+  for (const [name, times] of Object.entries(lateBy)) {
+    if (times < 3) continue
+    attention.push({
+      kind: 'Attendance',
+      line: `${name} has been late ${times} times this month`,
+      to: '/attendance',
+      cta: 'Review attendance',
+      urgency: 1,
+    })
+  }
+  attention.sort((a, b) => a.urgency - b.urgency)
+
+  // Probation and coaching, the two things a person is actively being taken
+  // through. Coaching entries are the recent ones only.
+  const development = []
+  for (const u of roster) {
+    const left = daysUntil(u.probationEnd)
+    if (left == null || left < -30) continue
+    const months = Number(u.probationMonths) || 3
+    const total = months * 30
+    development.push({
+      name: u.name,
+      title: u.title || '',
+      note: `Probation · ${left < 0 ? 'decision overdue' : `${left} days remaining`}`,
+      progress: Math.max(0, Math.min(100, Math.round(((total - Math.max(0, left)) / total) * 100))),
+      due: u.probationEnd,
+      to: `/people?person=${encodeURIComponent(u.name)}`,
+      cta: 'Review',
+    })
+  }
+  const coaching = db.read('coaching', [])
+    .slice()
+    .sort((a, b) => ((a.datetime || a.createdAt) < (b.datetime || b.createdAt) ? 1 : -1))
+    .slice(0, 3)
+  for (const c of coaching) {
+    const u = roster.find((x) => x.username === c.targetUsername)
+    if (!u) continue
+    development.push({
+      name: u.name,
+      title: u.title || '',
+      note: c.topic ? `Coaching · ${c.topic}` : 'Coaching',
+      progress: null,
+      due: c.datetime || c.createdAt,
+      to: `/performance/${u.username}`,
+      cta: 'View',
+    })
+  }
+
+  // What happened, from the records themselves rather than a separate log.
+  const activity = []
+  for (const a of attendance) {
+    if (a.checkIn) activity.push({ at: a.checkIn, line: `${a.name || a.username} clocked in` })
+  }
+  for (const l of db.read('leave', [])) {
+    if (l.decidedAt) activity.push({ at: l.decidedAt, line: `Leave request ${l.status} for ${l.name || l.username}` })
+  }
+  for (const w of db.read('warnings', [])) {
+    if (w.createdAt) activity.push({ at: w.createdAt, line: `Warning recorded for ${w.name || w.agent || 'a staff member'}` })
+  }
+  for (const c of db.read('coaching', [])) {
+    if (c.createdAt) activity.push({ at: c.createdAt, line: `Coaching logged for ${c.targetName || c.targetUsername}` })
+  }
+  activity.sort((x, y) => (x.at < y.at ? 1 : -1))
+
+  // 🔒 Pay only for a payroll holder.
+  let payroll = null
+  if (canSub(req.realUser, 'payroll', 'run') || can(req.realUser, 'payroll')) {
+    const base = roster.reduce((sum, u) => {
+      const own = Number(u.salary) || Number(u.pay?.base) || 0
+      const legacy = Number(rosterPay[u.name]?.total) || 0
+      return sum + (own || legacy)
+    }, 0)
+    payroll = { base, period: monthPrefix }
+  }
+
+  res.json({
+    headcount: { total: roster.length, active: roster.filter((u) => (u.status || 'active') === 'active').length },
+    today: { present, absent: scheduled.length - present, people: people.sort((a, b) => Number(b.present) - Number(a.present)) },
+    payroll,
+    attention: attention.slice(0, 6),
+    attentionCount: attention.length,
+    probation: roster.filter((u) => daysUntil(u.probationEnd) != null && daysUntil(u.probationEnd) >= 0).length,
+    development: development.slice(0, 4),
+    activity: activity.slice(0, 6),
+    asOf: new Date().toISOString(),
+  })
+})
+
 // ---------- recruitment: positions ----------
 // A position is the job being hired for. Applicants attach to one, so "how is
 // the Sales Agent round going" is a question the system can answer instead of

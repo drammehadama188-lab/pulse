@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext.jsx'
 import Home from './Home.jsx'
-import HRTeam from './departments/HRTeam.jsx'
+import HrDashboard from './HrDashboard.jsx'
 
 // The landing page is role-aware:
 //  • CEO / anyone with the 'hr' power → the HR control-centre overview
@@ -13,7 +13,11 @@ import HRTeam from './departments/HRTeam.jsx'
 export default function Dashboard() {
   const { hasPower } = useAuth()
   if (hasPower('hr')) {
-    return <HRTeam only={['dashboard']} title="Dashboard" subtitle="Your team at a glance" />
+    // 20 Aug 2026: the HR landing is its own page now, in the design Adama
+    // sent — five tiles, what needs a decision, who is in today, development
+    // and activity. It reads one endpoint instead of mounting a slice of the
+    // Employees page.
+    return <HrDashboard />
   }
   return <Home />
 }
