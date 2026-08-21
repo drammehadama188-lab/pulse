@@ -27,6 +27,7 @@ import ChangePassword from './pages/ChangePassword.jsx'
 import Approvals from './pages/manager/Approvals.jsx'
 import Team from './pages/manager/Team.jsx'
 import HRTeam from './pages/departments/HRTeam.jsx'
+import Employees from './pages/Employees.jsx'
 import EmployeeProfile from './pages/EmployeeProfile.jsx'
 import RecruitmentLayout from './pages/recruitment/RecruitmentLayout.jsx'
 import RecruitmentDashboard from './pages/recruitment/Dashboard.jsx'
@@ -50,6 +51,13 @@ import DepartmentShell from './pages/departments/DepartmentShell.jsx'
 import Policies from './pages/departments/Policies.jsx'
 import MyDocuments from './pages/MyDocuments.jsx'
 import { Target, BookOpen, FolderOpen } from 'lucide-react'
+
+// /people shows the roster; ?tab= opens the record pages behind it.
+function PeoplePage() {
+  const tab = new URLSearchParams(useLocation().search).get('tab')
+  if (!tab || tab === 'roster') return <Employees />
+  return <HRTeam only={['roster', 'contracts', 'past', 'warnings']} title="Employees & Records" subtitle="Your team — roster, past staff and records" />
+}
 
 function FullScreenLoader() {
   return (
@@ -114,7 +122,10 @@ export default function App() {
             new ones (Goals & Reviews, Benefits, Policies, Documents) render a
             clean "being set up" shell to be filled in Phase 2. */}
         {/* PEOPLE */}
-        <Route path="/people" element={<RequireAuth power="hr"><HRTeam only={['roster', 'contracts', 'past', 'warnings']} title="Employees & Records" subtitle="Your team — roster, past staff and records" /></RequireAuth>} />
+        {/* Employees is the new roster page (Adama 20 Aug). The record pages
+            behind it — contracts, past staff, warnings — are the same page
+            they always were and open on ?tab=. */}
+        <Route path="/people" element={<RequireAuth power="hr"><PeoplePage /></RequireAuth>} />
         <Route path="/performance" element={<RequireAuth power="hr"><Performance /></RequireAuth>} />
         <Route path="/performance/:slug" element={<RequireAuth power="hr"><PerformancePerson /></RequireAuth>} />
         <Route path="/past/:slug" element={<RequireAuth power="hr"><PastStaffProfile /></RequireAuth>} />

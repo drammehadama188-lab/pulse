@@ -4715,6 +4715,60 @@ app.get('/api/hr/dashboard', auth, requirePower('hr'), (req, res) => {
   })
 })
 
+// ---------- the Employees list (Adama 20 Aug, the new design) ----------
+// Exactly what the page shows and nothing more. 🔒 NO PAY: the roster endpoint
+// next door carries salary for the payroll screens, and this one deliberately
+// does not — a page that never displays a figure should never receive one.
+app.get('/api/hr/employees', auth, requirePower('hr'), (req, res) => {
+  const today = todayKey()
+  const leave = db.read('leave', [])
+  const onLeaveToday = new Set(
+    leave
+      .filter((l) => l.status === 'approved' && (l.from || '') <= today && today <= (l.to || l.from || ''))
+      .map((l) => l.username),
+  )
+  const employees = seedUsers()
+    .filter((u) => !isArchived(u) && u.username !== CEO)
+    .map((u) => {
+      const probation = u.probationEnd && Date.parse(u.probationEnd) >= Date.now()
+      const status = (u.status && u.status !== 'active' && u.status) // maternity, suspended, whatever HR set
+        || (u.suspended && 'inactive')
+        || (onLeaveToday.has(u.username) && 'leave')
+        || (probation && 'probation')
+        || 'active'
+      return {
+        username: u.username,
+        name: u.name,
+        // The work address is the one colleagues use; a personal address is
+        // not the company's to put on a list.
+        email: u.email || '',
+        phone: u.phone || '',
+        title: u.title || '',
+        department: u.department || '',
+        status,
+        employment: u.contractor ? 'Contractor' : u.contractEnd ? 'Contract' : 'Full-time',
+        startDate: u.joined || null,
+        probationEnd: u.probationEnd || null,
+        contractEnd: u.contractEnd || null,
+      }
+    })
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  const count = (s) => employees.filter((e) => e.status === s).length
+  res.json({
+    employees,
+    counts: {
+      total: employees.length,
+      active: count('active'),
+      leave: count('leave'),
+      probation: count('probation'),
+      inactive: employees.length - count('active') - count('leave') - count('probation'),
+    },
+    departments: [...new Set(employees.map((e) => e.department).filter(Boolean))].sort(),
+    employmentTypes: [...new Set(employees.map((e) => e.employment))].sort(),
+  })
+})
+
 // ---------- recruitment: positions ----------
 // A position is the job being hired for. Applicants attach to one, so "how is
 // the Sales Agent round going" is a question the system can answer instead of
