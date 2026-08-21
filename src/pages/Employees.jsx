@@ -15,10 +15,10 @@ import { api } from '../lib/api.js';
 
 const CARD = 'card';
 const STATUS = {
-  active: ['Active', 'var(--color-good-bg)', 'var(--color-good)'],
-  probation: ['Probation', 'var(--color-stage-screening-bg)', 'var(--color-stage-screening)'],
-  leave: ['On leave', 'var(--color-stage-interview-bg)', 'var(--color-stage-interview)'],
-  inactive: ['Inactive', 'var(--color-stage-out-bg)', 'var(--color-stage-out)'],
+  active: ['Active', 'var(--color-pill-active-bg)', 'var(--color-pill-active)'],
+  probation: ['Probation', 'var(--color-pill-probation-bg)', 'var(--color-pill-probation)'],
+  leave: ['On leave', 'var(--color-pill-leave-bg)', 'var(--color-pill-leave)'],
+  inactive: ['Inactive', 'var(--color-pill-inactive-bg)', 'var(--color-pill-inactive)'],
 };
 const PAGE_SIZES = [10, 25, 50];
 const initials = (n) => (n || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -33,14 +33,14 @@ function Tile({ icon: Icon, value, label, sub, tint, ink, onClick, on }) {
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag {...(onClick ? { onClick, type: 'button' } : {})}
-      className={`${CARD} flex min-h-[118px] w-full items-start gap-4 p-6 text-left transition-colors ${onClick ? 'hover:border-[var(--color-ink-faint)]' : ''} ${on ? 'border-[var(--color-brand)]' : ''}`}>
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px]" style={{ background: tint, color: ink }}>
-        <Icon size={21} strokeWidth={1.9} />
+      className={`${CARD} flex min-h-[122px] w-full items-start gap-4 p-5 text-left transition-colors ${onClick ? 'hover:border-[var(--color-line-control)]' : ''} ${on ? 'border-[var(--color-brand-soft)]' : ''}`}>
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px]" style={{ background: tint, color: ink }}>
+        <Icon size={20} strokeWidth={1.8} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[28px] font-bold leading-none tracking-[-0.02em] text-[var(--color-ink)]">{value}</span>
-        <span className="mt-2.5 block text-[14px] font-medium text-[var(--color-ink-soft)]">{label}</span>
-        <span className="mt-1.5 block text-[13px] text-[var(--color-ink-faint)]">{sub}</span>
+        <span className="block text-[28px] font-semibold leading-none tracking-[-0.4px] text-[var(--color-ink)]">{value}</span>
+        <span className="mt-2.5 block text-[13.5px] font-medium text-[var(--color-ink-soft)]">{label}</span>
+        <span className="mt-1 block text-[12px] text-[var(--color-ink-faint)]">{sub}</span>
       </span>
     </Tag>
   );
@@ -112,9 +112,9 @@ export default function Employees() {
 
   // 🔒 Blue is rationed: the primary button, the live tab, the active nav row
   // and a real focus. A resting filter is grey.
-  const field = 'rounded-[10px] border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-[14px] text-[var(--color-ink-soft)] focus:border-[var(--color-ink-faint)] focus:outline-none';
-  const btn = 'inline-flex items-center gap-2 rounded-[10px] px-4 py-3 text-[13.5px] font-semibold transition-colors';
-  const light = `${btn} border border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-fill)]`;
+  const field = 'field';
+  const btn = 'inline-flex items-center gap-2 transition-colors';
+  const light = `${btn} btn-secondary hover:bg-[var(--color-soft)]`;
 
   if (error) return <p className="text-[13px] text-[var(--color-stage-out)]">{error}</p>;
   if (!data) return <p className="text-[13px] text-[var(--color-ink-soft)]">Loading…</p>;
@@ -135,7 +135,7 @@ export default function Employees() {
               where you add one person, so the other two buttons are the honest
               pair: take the list out, or add somebody. */}
           <button onClick={() => exportCsv(false)} className={light}><Download size={15} /> Export</button>
-          <Link to="/people?tab=roster" className={`${btn} bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-600)]`}>
+          <Link to="/people?tab=roster" className={`${btn} btn-primary hover:bg-[var(--color-brand-600)]`}>
             <Plus size={15} /> Add employee
           </Link>
         </div>
@@ -212,16 +212,16 @@ export default function Employees() {
         <table className="w-full text-[13px]">
           <thead>
             <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[13px] font-normal text-[var(--color-ink-faint)]">
-              <th className="w-12 rounded-tl-[8px] px-5 py-3.5">
+              <th className="h-[46px] w-12 rounded-tl-[10px] px-5">
                 <input type="checkbox" checked={allShownPicked} onChange={togglePage} className="accent-[var(--color-brand)]" />
               </th>
-              <th className="px-5 py-3.5 font-normal">Employee</th>
-              <th className="px-5 py-3.5 font-normal">Role &amp; department</th>
-              <th className="px-5 py-3.5 font-normal">Employment</th>
-              <th className="px-5 py-3.5 font-normal">Started</th>
-              <th className="px-5 py-3.5 font-normal">Next HR milestone</th>
-              <th className="px-5 py-3.5 font-normal">Status</th>
-              <th className="px-5 py-3.5 text-right font-normal">Actions</th>
+              <th className="h-[46px] px-5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Employee</th>
+              <th className="h-[46px] px-5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Role &amp; department</th>
+              <th className="h-[46px] px-5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Employment</th>
+              <th className="h-[46px] px-5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Started</th>
+              <th className="h-[46px] px-5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Next HR milestone</th>
+              <th className="h-[46px] px-5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Status</th>
+              <th className="h-[46px] px-5 text-right text-[11.5px] font-medium text-[var(--color-ink-faint)]">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -229,40 +229,40 @@ export default function Employees() {
               const [label, tint, ink] = STATUS[e.status] || [e.status, 'var(--color-fill)', 'var(--color-ink-soft)'];
               return (
                 <tr key={e.username} className="border-b border-[var(--color-line-soft)] last:border-0 transition-colors hover:bg-[var(--color-row-hover)]">
-                  <td className="px-5 py-5">
+                  <td className="h-[72px] px-5 py-4">
                     <input type="checkbox" checked={picked.has(e.username)} onChange={() => toggleOne(e.username)} className="accent-[var(--color-brand)]" />
                   </td>
-                  <td className="px-5 py-5">
+                  <td className="h-[72px] px-5 py-4">
                     <Link to={profileHref(e.name)} className="flex items-center gap-2.5">
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[13px] font-semibold text-[var(--color-ink-soft)]">{initials(e.name)}</span>
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f2f4f8] text-[12.5px] font-semibold text-[#647086]">{initials(e.name)}</span>
                       <span className="min-w-0">
                         <span className="block truncate text-[14px] font-semibold text-[var(--color-ink)]">{e.name}</span>
-                        <span className="mt-1 block truncate text-[13px] text-[var(--color-ink-faint)]">{e.email || '—'}</span>
-                        {e.phone && <span className="block truncate text-[13px] text-[var(--color-ink-faint)]">{e.phone}</span>}
+                        <span className="mt-1 block truncate text-[12px] text-[var(--color-ink-faint)]">{e.email || '—'}</span>
+                        {e.phone && <span className="block truncate text-[12px] text-[var(--color-ink-faint)]">{e.phone}</span>}
                       </span>
                     </Link>
                   </td>
-                  <td className="px-5 py-5">
-                    <span className="block max-w-[200px] text-[14px] text-[var(--color-ink)]">{e.title || '—'}</span>
-                    <span className="mt-1 block text-[13px] text-[var(--color-ink-faint)]">{e.department || '—'}</span>
+                  <td className="h-[72px] px-5 py-4">
+                    <span className="block max-w-[200px] text-[13px] text-[var(--color-ink-soft)]">{e.title || '—'}</span>
+                    <span className="mt-1 block text-[12px] text-[var(--color-ink-faint)]">{e.department || '—'}</span>
                   </td>
-                  <td className="px-5 py-5 text-[14px] text-[var(--color-ink-soft)]">
+                  <td className="h-[72px] px-5 py-4 text-[13px] text-[var(--color-ink-soft)]">
                     {e.employment}
                     {e.employmentNote && <span className="text-[var(--color-ink-faint)]"> · {e.employmentNote}</span>}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-5 text-[14px] text-[var(--color-ink-soft)]">{day(e.startDate)}</td>
+                  <td className="h-[72px] whitespace-nowrap px-5 py-4 text-[13px] text-[var(--color-ink-soft)]">{day(e.startDate)}</td>
                   {/* What HR has to do about this person next. */}
-                  <td className="whitespace-nowrap px-5 py-5">
+                  <td className="h-[72px] whitespace-nowrap px-5 py-4">
                     {e.milestone ? (
                       <>
-                        <span className="block text-[14px] text-[var(--color-ink-soft)]">{e.milestone.label}</span>
+                        <span className="block text-[13px] text-[var(--color-ink-soft)]">{e.milestone.label}</span>
                         <span className={`mt-0.5 block text-[12px] ${e.milestone.days <= 30 && e.milestone.label !== 'Annual review' ? 'font-semibold text-[var(--color-stage-out)]' : 'text-[var(--color-ink-faint)]'}`}>
                           {day(e.milestone.date)} · {e.milestone.days < 0 ? `${Math.abs(e.milestone.days)} days ago` : `${e.milestone.days} days`}
                         </span>
                       </>
                     ) : <span className="text-[var(--color-ink-faint)]">—</span>}
                   </td>
-                  <td className="px-5 py-5">
+                  <td className="h-[72px] px-5 py-4">
                     <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ background: tint, color: ink }}>
                       <span className="h-1.5 w-1.5 rounded-full bg-current" /> {label}
                     </span>
@@ -333,19 +333,19 @@ export default function Employees() {
                 const left = e.contractEnd ? e.milestone?.label === 'Contract ends' ? e.milestone.days : null : null;
                 return (
                   <tr key={e.username} className="border-b border-[var(--color-line-soft)] last:border-0 transition-colors hover:bg-[var(--color-row-hover)]">
-                    <td className="px-5 py-5">
+                    <td className="h-[72px] px-5 py-4">
                       <Link to={profileHref(e.name)} className="font-semibold text-[var(--color-ink)] hover:underline">{e.name}</Link>
                       <span className="block text-[12px] text-[var(--color-ink-faint)]">{e.title || '—'}</span>
                     </td>
-                    <td className="px-5 py-5 text-[var(--color-ink-soft)]">{e.employment}<span className="block text-[12px] text-[var(--color-ink-faint)]">{e.employmentNote}</span></td>
-                    <td className="whitespace-nowrap px-5 py-5 text-[var(--color-ink-soft)]">{day(e.startDate)}</td>
-                    <td className="whitespace-nowrap px-5 py-5 text-[var(--color-ink-soft)]">{e.contractEnd ? day(e.contractEnd) : 'No end date'}</td>
-                    <td className="whitespace-nowrap px-5 py-5">
+                    <td className="h-[72px] px-5 py-4 text-[var(--color-ink-soft)]">{e.employment}<span className="block text-[12px] text-[var(--color-ink-faint)]">{e.employmentNote}</span></td>
+                    <td className="h-[72px] whitespace-nowrap px-5 py-4 text-[var(--color-ink-soft)]">{day(e.startDate)}</td>
+                    <td className="h-[72px] whitespace-nowrap px-5 py-4 text-[var(--color-ink-soft)]">{e.contractEnd ? day(e.contractEnd) : 'No end date'}</td>
+                    <td className="h-[72px] whitespace-nowrap px-5 py-4">
                       {left == null ? <span className="text-[var(--color-ink-faint)]">—</span>
                         : <span className={left <= 60 ? 'font-semibold text-[var(--color-stage-out)]' : 'text-[var(--color-ink-soft)]'}>{left} days</span>}
                     </td>
-                    <td className="px-5 py-5">
-                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ background: tint, color: ink }}>
+                    <td className="h-[72px] px-5 py-4">
+                      <span className="inline-flex h-[25px] items-center gap-1.5 rounded-full px-2.5 text-[12px] font-medium" style={{ background: tint, color: ink }}>
                         <span className="h-1.5 w-1.5 rounded-full bg-current" /> {label}
                       </span>
                     </td>
@@ -371,12 +371,12 @@ export default function Employees() {
             <tbody>
               {data.past.map((p) => (
                 <tr key={p.username || p.name} className="border-b border-[var(--color-line-soft)] last:border-0 transition-colors hover:bg-[var(--color-row-hover)]">
-                  <td className="px-5 py-5 font-semibold text-[var(--color-ink)]">{p.name}</td>
-                  <td className="px-5 py-5 text-[var(--color-ink-soft)]">{p.role || '—'}<span className="block text-[12px] text-[var(--color-ink-faint)]">{p.department || ''}</span></td>
-                  <td className="whitespace-nowrap px-5 py-5 text-[var(--color-ink-soft)]">{day(p.joined)}</td>
-                  <td className="whitespace-nowrap px-5 py-5 text-[var(--color-ink-soft)]">{day(p.left)}</td>
-                  <td className="px-5 py-5 text-[var(--color-ink-soft)]">{p.reason}</td>
-                  <td className="px-5 py-5 text-right">
+                  <td className="h-[72px] px-5 py-4 font-semibold text-[var(--color-ink)]">{p.name}</td>
+                  <td className="h-[72px] px-5 py-4 text-[var(--color-ink-soft)]">{p.role || '—'}<span className="block text-[12px] text-[var(--color-ink-faint)]">{p.department || ''}</span></td>
+                  <td className="h-[72px] whitespace-nowrap px-5 py-4 text-[var(--color-ink-soft)]">{day(p.joined)}</td>
+                  <td className="h-[72px] whitespace-nowrap px-5 py-4 text-[var(--color-ink-soft)]">{day(p.left)}</td>
+                  <td className="h-[72px] px-5 py-4 text-[var(--color-ink-soft)]">{p.reason}</td>
+                  <td className="h-[72px] px-5 py-4 text-right">
                     <Link to={`/past/${String(p.name).toLowerCase().replace(/\s+/g, '-')}`} className="text-[12.5px] font-semibold text-[var(--color-brand)] hover:underline">Records</Link>
                   </td>
                 </tr>

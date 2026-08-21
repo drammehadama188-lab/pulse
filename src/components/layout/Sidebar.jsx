@@ -27,7 +27,7 @@ function NavRow({ item, soon = false }) {
         `group flex items-center gap-2.5 whitespace-nowrap rounded-[8px] px-3 py-2.5 text-[13px] transition-colors ${
           isActive
             ? 'bg-[var(--color-brand)] font-medium text-white'
-            : 'font-normal text-[var(--color-sidebar-ink)] hover:bg-white/[0.06] hover:text-white'
+            : 'font-normal text-[var(--color-sidebar-ink)] hover:bg-white/[0.05] hover:text-[var(--color-sidebar-ink-hover)]'
         }`
       }
     >
@@ -58,8 +58,8 @@ export function Sidebar() {
 
   return (
     <aside
-      className="hidden w-[228px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-sidebar-edge)] px-4 py-5 md:flex"
-      style={{ background: 'linear-gradient(180deg, var(--color-sidebar) 0%, var(--color-sidebar-2) 100%)' }}
+      className="hidden w-[220px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-sidebar-edge)] px-4 py-5 md:flex"
+      style={{ background: 'var(--color-sidebar)' }}
     >
       <div className="px-2">
         <Brand onDark />

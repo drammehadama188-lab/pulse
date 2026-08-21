@@ -5,89 +5,103 @@
    Light, soft, rounded, friendly. Brand = Pulse flame crimson on mint.
    ============================================================ */
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  /* ============================================================
+     Pulse — the visual rules Adama set out on 20 Aug 2026.
+     Illuminated, not decorated: light and tone make the hierarchy,
+     borders and bold do not. Every value below is his.
+     ============================================================ */
+  --font-sans: "Inter", "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
 
-  /* Brand — blue is the interface accent (Adama picked the mockup's chrome,
-     20 Aug 2026): primary buttons, active nav, links, focus. Damia red stays
-     the company's mark and lives on in --color-damia for the logo. */
+  /* Surfaces — the page is almost white, so a white card barely lifts off it */
+  --color-paper: #f8f9fc;
+  --color-surface: #ffffff;
+  --color-soft: #fbfcfe;
+  --color-fill: #f2f4f8;
+
+  /* Text — five steps, and 🔒 never pure black */
+  --color-ink: #172033;
+  --color-ink-soft: #596579;
+  --color-ink-faint: #8993a5;
+  --color-ink-muted: #a7afbd;
+  --color-ink-ghost: #c3c9d3;
+
+  /* Blue is rationed: primary buttons, active nav, selected tabs, links,
+     focus. Never ordinary information. */
   --color-brand: #2563eb;
   --color-brand-600: #1d4ed8;
   --color-brand-700: #1e40af;
-  --color-brand-50: #eff5ff;
-  --color-brand-100: #dbe7fe;
+  --color-brand-soft: #3478f6;
+  --color-brand-50: #eaf2ff;
+  --color-brand-100: #f4f8ff;
   --color-damia: #d6294f;
 
-  /* Soft accent surfaces — the logo tile and quiet highlights. Blue, like
-     everything else that identifies Pulse. */
-  --color-mint: #eff5ff;
-  --color-mint-tile: #dbe7fe;
-  --color-mint-deep: #1d4ed8;
+  /* Borders — tonal difference does the work; these are almost invisible */
+  --color-line: rgba(23, 32, 51, 0.06);
+  --color-line-soft: rgba(23, 32, 51, 0.05);
+  --color-line-control: rgba(23, 32, 51, 0.09);
+  --color-card-line: rgba(23, 32, 51, 0.055);
 
-  /* The rail is dark again (Adama, 20 Aug: the white one was "high and
-     boring"), lifted from admin's Midnight Slate so the two products feel
-     like one company. Near-black navy ground, neutral slate hairlines, the
-     active row a blue wash with a blue icon. Content stays light. */
-  --color-sidebar: #0c1424;
-  --color-sidebar-2: #0a101e;
-  --color-sidebar-edge: rgba(148, 163, 184, 0.15);
-  --color-sidebar-ink: rgba(163, 180, 204, 0.62);
-  --color-sidebar-ink-faint: rgba(155, 172, 196, 0.38);
+  /* Table chrome */
+  --color-table-head: #fbfcfe;
+  --color-row-hover: #f8faff;
+
+  /* Sidebar */
+  --color-sidebar: #081426;
+  --color-sidebar-2: #081426;
+  --color-sidebar-edge: rgba(148, 163, 184, 0.12);
+  --color-sidebar-ink: #94a3b8;
+  --color-sidebar-ink-hover: #dce5f2;
+  --color-sidebar-ink-faint: #718096;
   --color-sidebar-ink-active: #ffffff;
-  --color-sidebar-active: rgba(59, 130, 246, 0.18);
-  --color-sidebar-icon: #3b82f6;
+  --color-sidebar-active: #2563eb;
+  --color-sidebar-icon: #ffffff;
   --color-sidebar-tile: rgba(255, 255, 255, 0.045);
 
-  /* Neutral surfaces — clean white + cool grey (founder-style, no green) */
-  --color-paper: #f9fafc;
-  --color-surface: #ffffff;
-  --color-ink: #0f172a;
-  --color-ink-soft: #475569;
-  --color-ink-faint: #94a3b8;
-  --color-ink-ghost: #cbd5e1;
-  --color-line: rgba(15, 23, 42, 0.06);
-  --color-line-soft: rgba(15, 23, 42, 0.04);
-  --color-fill: #f4f6fb;
+  /* Soft icon tiles — the tile is barely tinted, the icon carries the colour */
+  --color-stage-new: #3478f6;
+  --color-stage-new-bg: #eef4ff;
+  --color-stage-short: #18a66a;
+  --color-stage-short-bg: #ecf9f3;
+  --color-stage-screening: #7c4dff;
+  --color-stage-screening-bg: #f3eeff;
+  --color-stage-interview: #f59e42;
+  --color-stage-interview-bg: #fff5e8;
+  --color-stage-offer: #25a7c7;
+  --color-stage-offer-bg: #eaf8fc;
+  --color-stage-hired: #169b62;
+  --color-stage-hired-bg: #eaf8f1;
+  --color-stage-out: #ef5361;
+  --color-stage-out-bg: #fff0f1;
 
-  /* Table chrome: a header a shade off white, and a row that answers the
-     mouse with the faintest blue rather than grey. */
-  --color-table-head: #fcfdfe;
-  --color-row-hover: #f7f9ff;
+  /* Status pills */
+  --color-pill-active-bg: #eaf8f1;
+  --color-pill-active: #169b62;
+  --color-pill-probation-bg: #f2ebff;
+  --color-pill-probation: #7547e8;
+  --color-pill-leave-bg: #fff4e5;
+  --color-pill-leave: #d98218;
+  --color-pill-inactive-bg: #f1f3f6;
+  --color-pill-inactive: #6f7785;
 
-  /* Status (soft, friendly) */
-  --color-good: #059669;
-  --color-good-bg: #e6f6f0;
-  --color-warn: #d98a23;
-  --color-warn-bg: #fbf0dd;
-  --color-rest: #6f5bd6;
-  --color-rest-bg: #efecfb;
-  --color-bad: #e0483a;
-  --color-bad-bg: #fbe9e6;
+  --color-good: #169b62;
+  --color-good-bg: #eaf8f1;
+  --color-warn: #d98218;
+  --color-warn-bg: #fff4e5;
+  --color-bad: #dc4755;
+  --color-bad-bg: #fff0f1;
+  --color-rest: #7547e8;
+  --color-rest-bg: #f2ebff;
+  --color-mint: #eaf2ff;
+  --color-mint-tile: #eef4ff;
+  --color-mint-deep: #2563eb;
 
-  /* Pipeline status — ONE colour per stage across the whole product, soft not
-     saturated. Red is kept for rejection only, so it still means something. */
-  --color-stage-new: #2563eb;
-  --color-stage-new-bg: color-mix(in srgb, #2563eb 9%, #fff);
-  --color-stage-screening: #7c3aed;
-  --color-stage-screening-bg: color-mix(in srgb, #7c3aed 9%, #fff);
-  --color-stage-interview: #d97706;
-  --color-stage-interview-bg: color-mix(in srgb, #d97706 10%, #fff);
-  --color-stage-short: #059669;
-  --color-stage-short-bg: color-mix(in srgb, #059669 9%, #fff);
-  --color-stage-offer: #0891b2;
-  --color-stage-offer-bg: color-mix(in srgb, #0891b2 9%, #fff);
-  --color-stage-hired: #047857;
-  --color-stage-hired-bg: color-mix(in srgb, #047857 9%, #fff);
-  --color-stage-out: #dc2626;
-  --color-stage-out-bg: color-mix(in srgb, #dc2626 8%, #fff);
-
-  /* Radii — 12px on cards, 10px inside them (Adama's spec, 20 Aug 2026) */
-  --radius-card: 8px;
+  /* Radius: 6 controls · 8 buttons and inputs · 10 cards and tables */
+  --radius-card: 10px;
   --radius-lg: 8px;
 
-  /* Depth is carried by the border and by space, not by shadow. Only things
-     that genuinely float (modals, menus) get --shadow-lift. */
-  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
-  --shadow-lift: 0 8px 24px rgba(16, 24, 40, 0.10);
+  /* 🔒 If the shadow is noticed, it is too strong. */
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.018), 0 4px 12px rgba(15, 23, 42, 0.025);
+  --shadow-lift: 0 6px 20px rgba(15, 23, 42, 0.09);
 }
 
 * {
@@ -164,6 +178,107 @@ body {
   outline: none;
   box-shadow: 0 0 0 3px var(--color-brand-100);
   border-color: var(--color-brand);
+}
+
+
+/* A card is lifted by light, not outlined by a border. */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-card-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  transition: border-color 0.2s ease;
+}
+.card-quiet {
+  border-color: var(--color-line-soft);
+  box-shadow: none;
+}
+
+/* Type. 🔒 700 almost never; raise weight only when position, whitespace,
+   size and colour have already been used. */
+.t-page {
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--color-ink);
+}
+.t-card {
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.t-stat {
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--color-ink);
+}
+.t-body {
+  font-size: 13px;
+  line-height: 19px;
+  font-weight: 400;
+  color: var(--color-ink-soft);
+}
+.t-support {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+  color: var(--color-ink-faint);
+}
+.t-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-ink-soft);
+}
+
+/* Inputs and buttons, at the heights he specified. */
+.field {
+  height: 42px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-control);
+  border-radius: 8px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-ink-soft);
+}
+.field::placeholder {
+  color: #a1aaba;
+}
+.field:focus {
+  outline: none;
+  border-color: var(--color-brand-soft);
+  box-shadow: 0 0 0 3px rgba(52, 120, 246, 0.08);
+}
+.btn-primary {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 8px;
+  background: var(--color-brand);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 2px 5px rgba(37, 99, 235, 0.12);
+}
+.btn-secondary {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border: 1px solid var(--color-line-control);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Reusable focus ring */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(52, 120, 246, 0.08);
+  border-color: var(--color-brand-soft);
 }
 
 @keyframes rise {
