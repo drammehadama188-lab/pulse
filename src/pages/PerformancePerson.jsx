@@ -15,10 +15,28 @@ import {
 
 const TABS = [['overview', 'Overview'], ['kpis', 'KPIs'], ['trend', 'Trend'], ['reviews', 'Reviews']]
 
-export default function PerformancePerson() {
+// `embeddedFor` renders this inside an employee's record: same page, same
+// numbers, minus its own back link and name header.
+export default function PerformancePerson({ embeddedFor = null }) {
   const { slug } = useParams()
   const navigate = useNavigate()
-  const person = useMemo(() => team.find((t) => slugify(t.name) === slug), [slug])
+  // Embedded in a record, the person comes with it. Standalone, look in the
+  // static roster first and then ASK THE SERVER — anyone created in Pulse is
+  // not in that file, and used to land on "Employee not found" here.
+  const [fetched, setFetched] = useState(null)
+  const person = useMemo(
+    () => embeddedFor || team.find((t) => slugify(t.name) === slug) || fetched,
+    [slug, embeddedFor, fetched],
+  )
+  useEffect(() => {
+    if (embeddedFor || team.find((t) => slugify(t.name) === slug)) return
+    api('/hr/employees')
+      .then((d) => {
+        const found = (d.employees || []).find((e) => slugify(e.name) === slug || e.username === slug)
+        if (found) setFetched({ name: found.name, role: found.title, type: found.department, target: 0, status: found.status })
+      })
+      .catch(() => {})
+  }, [slug, embeddedFor])
 
   const [tab, setTab] = useState('overview')
   const [period, setPeriod] = useState(defaultPeriod)
@@ -87,11 +105,17 @@ export default function PerformancePerson() {
   function reloadReviews() { api(`/reviews?name=${encodeURIComponent(person.name)}`).then((d) => setReviews(d.reviews || [])).catch(() => {}) }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 pb-16">
-      <button onClick={() => navigate('/performance')} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><ArrowLeft size={16} /> Back to Performance</button>
+    <div className={embeddedFor ? 'space-y-4' : 'mx-auto max-w-5xl space-y-4 pb-16'}>
+      {!embeddedFor && (
+        <button onClick={() => navigate('/performance')} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><ArrowLeft size={16} /> Back to Performance</button>
+      )}
 
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-[var(--color-line)] bg-white p-5">
+      {/* Header — the record shows who this is, so embedded keeps only the
+          period switcher. */}
+      <div className={embeddedFor
+        ? 'flex flex-wrap items-center justify-end gap-4'
+        : 'flex flex-wrap items-start justify-between gap-4 rounded-lg border border-[var(--color-line)] bg-white p-5'}>
+        {!embeddedFor && (
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-[18px] font-semibold text-white">{initials}</div>
           <div>
@@ -100,6 +124,7 @@ export default function PerformancePerson() {
             <button onClick={() => navigate(`/agents/${slugify(person.name)}`)} className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><ExternalLink size={12} /> Full employee profile</button>
           </div>
         </div>
+        )}
         {/* Period switcher */}
         <PeriodPicker value={period} onChange={setPeriod} />
       </div>

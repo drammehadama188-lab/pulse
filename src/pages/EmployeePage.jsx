@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { api, getToken } from '../lib/api.js';
 import { payByName } from '../lib/pay.js';
-import { JobPay, Attendance, Performance, Documents, Notes, History } from './employee/tabs.jsx';
+import { JobPay, Attendance, Documents, Notes, History } from './employee/tabs.jsx';
+import PerformancePerson from './PerformancePerson.jsx';
 
 // One employee, in the design Adama sent (20 Aug): who they are, the four
 // facts that matter across the top, then Job, Salary, Quick actions,
@@ -324,7 +325,11 @@ export default function EmployeePage() {
 
       {tab === 'Job & pay' && <JobPay e={e} pay={pay} contract={d.contract} />}
       {tab === 'Attendance' && <Attendance a={a} records={d.attendanceRecords} overtimeMinutes={d.overtimeMinutes} />}
-      {tab === 'Performance' && <Performance person={e} username={e.username} />}
+      {/* 🔒 One implementation: this is the Performance page itself, embedded,
+          so the record cannot show a different number from it. */}
+      {tab === 'Performance' && (
+        <PerformancePerson embeddedFor={{ name: e.name, role: e.title, type: e.department, target: 0, status: e.status }} />
+      )}
       {tab === 'Documents' && <Documents documents={d.documents} onUpload={uploadDocument} uploading={uploading} />}
       {tab === 'Notes' && <Notes notes={d.notes} username={e.username} />}
       {tab === 'History' && <History history={d.history} />}

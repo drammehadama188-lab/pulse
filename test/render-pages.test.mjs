@@ -69,7 +69,6 @@ const cases = [
   ['JobPay without pay', React.createElement(tabs.JobPay, { e: person, pay: null, contract: { type: 'Permanent', start: null, end: null, noticePeriod: '', document: null } })],
   ['Attendance', React.createElement(tabs.Attendance, { a: attendance, records, overtimeMinutes: 55 })],
   ['Attendance empty', React.createElement(tabs.Attendance, { a: { ...attendance, present: 0 }, records: [], overtimeMinutes: 0 })],
-  ['Performance', React.createElement(tabs.Performance, { person, username: 'kaddy' })],
   ['Documents', React.createElement(tabs.Documents, { documents: [{ id: '1', name: 'Contract.pdf', category: 'contract', sizeBytes: 2048, uploadedAt: '2026-01-05', uploadedBy: 'Adama' }], onUpload() {}, uploading: false })],
   ['Documents empty', React.createElement(tabs.Documents, { documents: [], onUpload() {}, uploading: false })],
   ['Notes', React.createElement(tabs.Notes, { notes: [{ kind: 'Coaching', title: 'Call quality', text: 'Good', by: 'Adama', at: '2026-08-01' }], username: 'kaddy' })],
