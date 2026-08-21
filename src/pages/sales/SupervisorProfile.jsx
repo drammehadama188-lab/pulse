@@ -73,7 +73,7 @@ export default function SupervisorProfile({ supervisor }) {
   // payroll-gated endpoint. Same figures for authorized viewers (Adama/payroll);
   // others get no pay, exactly as intended — cost was never meant to be public.
   const [pay, setPay] = useState(null);
-  useEffect(() => { if (supervisor) payByName().then((m) => setPay(m[supervisor.name] || null)).catch(() => {}); }, [supervisor?.name]);
+  useEffect(() => { if (supervisor) payByName().then((m) => setPay(m[supervisor?.name] || null)).catch(() => {}); }, [supervisor?.name]);
   const [crmTrackers, setCrmTrackers] = useState([]);
   const [feedback, setFeedback] = useState([]);
   const [newNote, setNewNote] = useState('');
@@ -96,8 +96,8 @@ export default function SupervisorProfile({ supervisor }) {
     if (!supervisor) return;
     // Pulse has no live CRM — sales numbers come from the roster (team.js).
     setCrmTrackers(teamTrackers());
-    authFetch(`/api/feedback?agent=${encodeURIComponent(supervisor.name)}`).then(r => r.json()).then(d => setFeedback(d.notes || [])).catch(() => setFeedback([]));
-    authFetch(`/api/decisions?agent=${encodeURIComponent(supervisor.name)}`).then(r => r.json()).then(d => {
+    authFetch(`/api/feedback?agent=${encodeURIComponent(supervisor?.name)}`).then(r => r.json()).then(d => setFeedback(d.notes || [])).catch(() => setFeedback([]));
+    authFetch(`/api/decisions?agent=${encodeURIComponent(supervisor?.name)}`).then(r => r.json()).then(d => {
       if (d.current) {
         setDecision(d.current);
         setPickedDecision(d.current.decision);
@@ -113,10 +113,10 @@ export default function SupervisorProfile({ supervisor }) {
   // Direct reports — for sales supervisor: all sales agents + trainees, non-supervisors, not on leave
   const directReports = useMemo(() => team.filter(t =>
     (t.type === 'Sales' || t.type === 'Training') &&
-    t.name !== supervisor.name &&
+    t.name !== supervisor?.name &&
     !(t.role || '').toLowerCase().includes('supervisor') &&
     t.status !== 'maternity'
-  ), [supervisor.name]);
+  ), [supervisor?.name]);
 
   // Selected period drives all team stats. "Previous period" is one period back of the same length.
   const { start: rangeStart, end: rangeEnd } = rangeBounds(rangeKey, customRange.from, customRange.to);
@@ -195,26 +195,26 @@ export default function SupervisorProfile({ supervisor }) {
 
   // Supervisor's own sales — for selected period
   const supervisorPersonalSales = (crmTrackers || []).filter(tr => {
-    if (!matchesAgent(tr.If_Agent_Name, supervisor.name)) return false;
+    if (!matchesAgent(tr.If_Agent_Name, supervisor?.name)) return false;
     const d = new Date(tr.Subscription_Start || tr.Created_Time);
     return d >= rangeStart && d <= rangeEnd;
   });
   const personalRevenue = supervisorPersonalSales.reduce((s, t) => s + (parseFloat(t.Amount_Paid) || 0), 0);
-  const personalMonthlyTarget = supervisor.target || 5;
+  const personalMonthlyTarget = supervisor?.target || 5;
   const personalRangeDays = Math.max(1, Math.ceil(rangeMs / 86400000));
   const personalTarget = rangeKey === 'last_year' ? personalMonthlyTarget * 12 : Math.max(1, Math.round(personalMonthlyTarget * (personalRangeDays / 30)));
   // Pay now comes from the payroll-gated `pay` fetch (Adama-approved 15 Jul fix);
   // identical base/commission figures, just no longer read from the public bundle.
   const cost = (pay?.base || 0) + (pay?.commission || 0);
 
-  const initials = supervisor.name.split(' ').map(w => w[0]).slice(0, 2).join('');
+  const initials = supervisor?.name.split(' ').map(w => w[0]).slice(0, 2).join('');
 
   async function addFeedback() {
     const text = newNote.trim();
     if (!text) return;
     try {
       const res = await authFetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent: supervisor.name, text }) }).then(r => r.json());
+        body: JSON.stringify({ agent: supervisor?.name, text }) }).then(r => r.json());
       if (res.note) setFeedback(prev => [res.note, ...prev]);
       setNewNote('');
     } catch(e) {}
@@ -228,7 +228,7 @@ export default function SupervisorProfile({ supervisor }) {
     if (!pickedDecision) return;
     try {
       const res = await authFetch('/api/decisions', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent: supervisor.name, decision: pickedDecision, reason: decisionReason }) }).then(r => r.json());
+        body: JSON.stringify({ agent: supervisor?.name, decision: pickedDecision, reason: decisionReason }) }).then(r => r.json());
       if (res.decision) {
         if (decision) setDecisionHistory(prev => [decision, ...prev]);
         setDecision(res.decision);
@@ -238,8 +238,11 @@ export default function SupervisorProfile({ supervisor }) {
     } catch(e) {}
   }
 
-  return (
-    <div>
+  // Rendered with no supervisor — say so rather than crashing on .name. The
+  // effects already guard; the body did not.
+  if (!supervisor) return <p className="p-6 text-[13px] text-[var(--color-ink-soft)]">No supervisor selected.</p>;
+
+  return (    <div>
       <button onClick={() => navigate('/sales')} className="flex items-center gap-2 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6">
         <ArrowLeft size={14} /> Back to Sales
       </button>

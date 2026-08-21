@@ -26,6 +26,17 @@ const hhmm = (iso) => {
 const dur = (min) => (min == null ? '—' : `${Math.floor(min / 60)}h ${String(Math.round(min % 60)).padStart(2, '0')}m`);
 const linkish = 'inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-brand)] hover:underline';
 const Empty = ({ children }) => <p className="py-4 text-[13px] text-[var(--color-ink-soft)]">{children}</p>;
+// An empty card says WHY it is empty and where to go, rather than sitting
+// there looking broken. Kept beside Empty so a later edit to one section
+// cannot delete it — which is exactly how it got lost once.
+function Nothing({ children, to, cta }) {
+  return (
+    <div className="py-4">
+      <p className="text-[13px] text-[var(--color-ink-soft)]">{children}</p>
+      {to && <Link to={to} className={`${linkish} mt-2`}>{cta} <ArrowRight size={14} /></Link>}
+    </div>
+  );
+}
 
 export const CardHead = ({ title, action }) => (
   <div className="mb-3 flex items-center justify-between gap-3">
