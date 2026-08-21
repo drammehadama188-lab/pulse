@@ -4519,7 +4519,13 @@ app.post('/api/applicants/import', auth, requireSub('hr', 'records'), notViewAs,
 function hrRoster() {
   return seedUsers().filter((u) => !isArchived(u) && u.username !== CEO)
 }
-const daysUntil = (iso) => (iso ? Math.ceil((Date.parse(iso) - Date.now()) / 86400000) : null)
+const dayDiff = (iso) => {
+  if (!iso) return null
+  const to = Date.parse(`${String(iso).slice(0, 10)}T00:00:00Z`)
+  const from = Date.parse(`${todayKey()}T00:00:00Z`)
+  return Number.isNaN(to) ? null : Math.round((to - from) / 86400000)
+}
+const daysUntil = (iso) => dayDiff(iso)
 
 app.get('/api/hr/dashboard', auth, requirePower('hr'), (req, res) => {
   const today = todayKey()
@@ -4727,6 +4733,25 @@ app.get('/api/hr/employees', auth, requirePower('hr'), (req, res) => {
       .filter((l) => l.status === 'approved' && (l.from || '') <= today && today <= (l.to || l.from || ''))
       .map((l) => l.username),
   )
+  // The next thing HR has to DO about this person. Probation first because it
+  // has a deadline and a decision; then the contract; otherwise the yearly
+  // review, which falls on the anniversary of the day they started.
+  // 🔒 Nothing is invented: a person with no start date simply has no
+  // milestone rather than a made-up one.
+  const milestoneFor = (u) => {
+    const days = dayDiff;
+    if (u.probationEnd && days(u.probationEnd) >= -30) return { label: 'Probation review', date: u.probationEnd, days: days(u.probationEnd) };
+    if (u.contractEnd && days(u.contractEnd) >= -30) return { label: 'Contract ends', date: u.contractEnd, days: days(u.contractEnd) };
+    if (!u.joined) return null;
+    const start = new Date(u.joined);
+    if (isNaN(start)) return null;
+    const next = new Date(start);
+    next.setFullYear(new Date().getFullYear());
+    if (next < new Date()) next.setFullYear(next.getFullYear() + 1);
+    const iso = next.toISOString().slice(0, 10);
+    return { label: 'Annual review', date: iso, days: days(iso) };
+  };
+
   const employees = seedUsers()
     .filter((u) => !isArchived(u) && u.username !== CEO)
     .map((u) => {
@@ -4747,23 +4772,56 @@ app.get('/api/hr/employees', auth, requirePower('hr'), (req, res) => {
         department: u.department || '',
         status,
         employment: u.contractor ? 'Contractor' : u.contractEnd ? 'Contract' : 'Full-time',
+        // The second line under employment: what the arrangement IS, rather
+        // than repeating the status chip.
+        employmentNote: probation ? 'Probation' : u.contractEnd ? 'Fixed term' : u.contractor ? 'No schedule' : 'Permanent',
         startDate: u.joined || null,
         probationEnd: u.probationEnd || null,
         contractEnd: u.contractEnd || null,
+        milestone: milestoneFor(u),
       }
     })
     .sort((a, b) => a.name.localeCompare(b.name))
 
   const count = (s) => employees.filter((e) => e.status === s).length
+  // A contract inside two months is a conversation that has to start; a
+  // milestone inside one is a decision that is already late if ignored.
+  const contractSoon = employees.filter((e) => e.contractEnd && e.milestone?.label === 'Contract ends' && e.milestone.days <= 60).length
+  const actionDue = employees.filter((e) => e.milestone && e.milestone.days <= 30 && e.milestone.label !== 'Annual review')
+  // Who left, so the page can show them without a second endpoint and a
+  // second set of permissions.
+  const past = seedUsers()
+    .filter(isArchived)
+    .map((u) => ({
+      username: u.username,
+      name: u.name,
+      role: u.title || '',
+      department: u.department || '',
+      joined: u.joined || null,
+      left: u.archivedAt ? u.archivedAt.slice(0, 10) : null,
+      reason: u.archivedReason || 'Left the team',
+    }))
+    .sort((a, b) => String(b.left || '').localeCompare(String(a.left || '')))
+
   res.json({
     employees,
+    past,
     counts: {
       total: employees.length,
       active: count('active'),
       leave: count('leave'),
       probation: count('probation'),
       inactive: employees.length - count('active') - count('leave') - count('probation'),
+      contractSoon,
+      actionDue: actionDue.length,
     },
+    nextAction: actionDue.sort((a, b) => a.milestone.days - b.milestone.days)[0]
+      ? {
+        name: actionDue[0].name,
+        label: actionDue[0].milestone.label,
+        days: actionDue[0].milestone.days,
+      }
+      : null,
     departments: [...new Set(employees.map((e) => e.department).filter(Boolean))].sort(),
     employmentTypes: [...new Set(employees.map((e) => e.employment))].sort(),
   })

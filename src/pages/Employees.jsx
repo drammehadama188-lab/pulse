@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, CheckCircle2, Clock, GraduationCap, UserX, Upload, Download, Plus,
-  Search, MoreVertical, ChevronLeft, ChevronRight, Filter,
+  Search, MoreVertical, ChevronLeft, ChevronRight, Filter, AlertTriangle, FileClock,
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 
@@ -60,9 +60,11 @@ export default function Employees() {
   const [moreFilters, setMoreFilters] = useState(false);
   const [joinedFrom, setJoinedFrom] = useState('');
   const [joinedTo, setJoinedTo] = useState('');
+  const [milestoneOnly, setMilestoneOnly] = useState('');
+  const [view, setView] = useState('employees');
 
   useEffect(() => { api('/hr/employees').then(setData).catch((e) => setError(e.message)); }, []);
-  useEffect(() => { setPage(1); }, [query, dept, status, employment, pageSize]);
+  useEffect(() => { setPage(1); }, [query, dept, status, employment, pageSize, milestoneOnly, view]);
 
   const rows = useMemo(() => {
     const list = data?.employees || [];
@@ -74,9 +76,11 @@ export default function Employees() {
       if (q && !`${e.name} ${e.email} ${e.phone} ${e.title}`.toLowerCase().includes(q)) return false;
       if (joinedFrom && (!e.startDate || e.startDate < joinedFrom)) return false;
       if (joinedTo && (!e.startDate || e.startDate > joinedTo)) return false;
+      if (milestoneOnly === 'due' && !(e.milestone && e.milestone.days <= 30 && e.milestone.label !== 'Annual review')) return false;
+      if (milestoneOnly === 'contract' && !(e.milestone?.label === 'Contract ends' && e.milestone.days <= 60)) return false;
       return true;
     });
-  }, [data, query, dept, status, employment, joinedFrom, joinedTo]);
+  }, [data, query, dept, status, employment, joinedFrom, joinedTo, milestoneOnly]);
 
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   const shown = rows.slice((page - 1) * pageSize, page * pageSize);
@@ -134,19 +138,31 @@ export default function Employees() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
-        <Tile icon={Users} value={c.total} label="Total employees" sub={`${c.active} active`}
-          tint="var(--color-stage-new-bg)" ink="var(--color-stage-new)" on={!status} onClick={() => setStatus('')} />
-        <Tile icon={CheckCircle2} value={c.active} label="Active" sub={pctOf(c.active, c.total)}
-          tint="var(--color-good-bg)" ink="var(--color-good)" on={status === 'active'} onClick={() => setStatus(status === 'active' ? '' : 'active')} />
-        <Tile icon={Clock} value={c.leave} label="On leave" sub={pctOf(c.leave, c.total)}
-          tint="var(--color-stage-interview-bg)" ink="var(--color-stage-interview)" on={status === 'leave'} onClick={() => setStatus(status === 'leave' ? '' : 'leave')} />
-        <Tile icon={GraduationCap} value={c.probation} label="In probation" sub={pctOf(c.probation, c.total)}
-          tint="var(--color-stage-screening-bg)" ink="var(--color-stage-screening)" on={status === 'probation'} onClick={() => setStatus(status === 'probation' ? '' : 'probation')} />
-        <Tile icon={UserX} value={c.inactive} label="Inactive" sub={pctOf(c.inactive, c.total)}
-          tint="var(--color-stage-out-bg)" ink="var(--color-stage-out)" on={status === 'inactive'} onClick={() => setStatus(status === 'inactive' ? '' : 'inactive')} />
+      <div className="mb-4 flex items-center gap-1 border-b border-[var(--color-line)]">
+        {[['employees', `Employees (${c.total})`], ['contracts', 'Contracts'], ['past', `Past employees (${data.past.length})`]].map(([k, label]) => (
+          <button key={k} onClick={() => setView(k)}
+            className={`-mb-px border-b-2 px-3.5 py-2.5 text-[13px] font-semibold ${view === k ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>
+            {label}
+          </button>
+        ))}
       </div>
 
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
+        <Tile icon={Users} value={c.total} label="Employees" sub={`${c.active} active`}
+          tint="var(--color-stage-new-bg)" ink="var(--color-stage-new)" on={!status && !view} onClick={() => setStatus('')} />
+        <Tile icon={GraduationCap} value={c.probation} label="In probation" sub={c.probation ? 'Decision ahead' : 'Nobody on probation'}
+          tint="var(--color-stage-screening-bg)" ink="var(--color-stage-screening)" on={status === 'probation'} onClick={() => setStatus(status === 'probation' ? '' : 'probation')} />
+        <Tile icon={Clock} value={c.leave} label="On leave" sub={c.leave ? 'Away today' : 'Everybody in'}
+          tint="var(--color-stage-interview-bg)" ink="var(--color-stage-interview)" on={status === 'leave'} onClick={() => setStatus(status === 'leave' ? '' : 'leave')} />
+        <Tile icon={FileClock} value={c.contractSoon} label="Contract ending" sub={c.contractSoon ? 'Within 60 days' : 'None inside 60 days'}
+          tint="var(--color-stage-offer-bg)" ink="var(--color-stage-offer)" on={milestoneOnly === 'contract'} onClick={() => setMilestoneOnly(milestoneOnly === 'contract' ? '' : 'contract')} />
+        {/* The operational one: what HR has to decide, and who is next. */}
+        <Tile icon={AlertTriangle} value={c.actionDue} label="HR action due"
+          sub={data.nextAction ? `${data.nextAction.name.split(' ')[0]} · ${data.nextAction.label.toLowerCase()} in ${data.nextAction.days} days` : 'Nothing inside 30 days'}
+          tint="var(--color-stage-out-bg)" ink="var(--color-stage-out)" on={milestoneOnly === 'due'} onClick={() => setMilestoneOnly(milestoneOnly === 'due' ? '' : 'due')} />
+      </div>
+
+      {view !== 'past' && (
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="relative min-w-[240px] flex-1">
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)]" />
@@ -170,6 +186,7 @@ export default function Employees() {
           <Filter size={15} /> Filters{joinedFrom || joinedTo ? ' · 1' : ''}
         </button>
       </div>
+      )}
 
       {moreFilters && (
         <div className={`${CARD} mt-3 flex flex-wrap items-end gap-3 p-3.5`}>
@@ -187,6 +204,7 @@ export default function Employees() {
         </div>
       )}
 
+      {view === 'employees' && (
       <div className={`${CARD} mt-4 overflow-x-auto`}>
         <table className="w-full text-[13px]">
           <thead>
@@ -195,11 +213,11 @@ export default function Employees() {
                 <input type="checkbox" checked={allShownPicked} onChange={togglePage} className="accent-[var(--color-brand)]" />
               </th>
               <th className="px-4 py-3 font-semibold">Employee</th>
-              <th className="px-4 py-3 font-semibold">Role</th>
-              <th className="px-4 py-3 font-semibold">Department</th>
+              <th className="px-4 py-3 font-semibold">Role &amp; department</th>
+              <th className="px-4 py-3 font-semibold">Employment</th>
+              <th className="px-4 py-3 font-semibold">Started</th>
+              <th className="px-4 py-3 font-semibold">Next HR milestone</th>
               <th className="px-4 py-3 font-semibold">Status</th>
-              <th className="px-4 py-3 font-semibold">Employment type</th>
-              <th className="px-4 py-3 font-semibold">Start date</th>
               <th className="px-4 py-3 text-right font-semibold">Actions</th>
             </tr>
           </thead>
@@ -278,6 +296,77 @@ export default function Employees() {
           </span>
         </div>
       </div>
+      )}
+
+      {view === 'contracts' && (
+        <div className={`${CARD} mt-4 overflow-x-auto`}>
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
+                {['Employee', 'Contract type', 'Started', 'Ends', 'Days remaining', 'Status'].map((h) => (
+                  <th key={h} className="px-4 py-3 font-semibold">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((e) => {
+                const [label, tint, ink] = STATUS[e.status] || [e.status, 'var(--color-fill)', 'var(--color-ink-soft)'];
+                const left = e.contractEnd ? e.milestone?.label === 'Contract ends' ? e.milestone.days : null : null;
+                return (
+                  <tr key={e.username} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-fill)]">
+                    <td className="px-4 py-3.5">
+                      <Link to={profileHref(e.name)} className="font-semibold text-[var(--color-ink)] hover:underline">{e.name}</Link>
+                      <span className="block text-[12px] text-[var(--color-ink-faint)]">{e.title || '—'}</span>
+                    </td>
+                    <td className="px-4 py-3.5 text-[var(--color-ink-soft)]">{e.employment}<span className="block text-[12px] text-[var(--color-ink-faint)]">{e.employmentNote}</span></td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-[var(--color-ink-soft)]">{day(e.startDate)}</td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-[var(--color-ink-soft)]">{e.contractEnd ? day(e.contractEnd) : 'No end date'}</td>
+                    <td className="whitespace-nowrap px-4 py-3.5">
+                      {left == null ? <span className="text-[var(--color-ink-faint)]">—</span>
+                        : <span className={left <= 60 ? 'font-semibold text-[var(--color-stage-out)]' : 'text-[var(--color-ink-soft)]'}>{left} days</span>}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ background: tint, color: ink }}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" /> {label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {rows.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-[13px] text-[var(--color-ink-soft)]">Nobody matches those filters.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {view === 'past' && (
+        <div className={`${CARD} mt-4 overflow-x-auto`}>
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b border-[var(--color-line-soft)] text-left text-[11px] uppercase tracking-wider text-[var(--color-ink-faint)]">
+                {['Employee', 'Former role', 'Joined', 'Left', 'Reason', ''].map((h, i) => (
+                  <th key={i} className="px-4 py-3 font-semibold">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.past.map((p) => (
+                <tr key={p.username || p.name} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-fill)]">
+                  <td className="px-4 py-3.5 font-semibold text-[var(--color-ink)]">{p.name}</td>
+                  <td className="px-4 py-3.5 text-[var(--color-ink-soft)]">{p.role || '—'}<span className="block text-[12px] text-[var(--color-ink-faint)]">{p.department || ''}</span></td>
+                  <td className="whitespace-nowrap px-4 py-3.5 text-[var(--color-ink-soft)]">{day(p.joined)}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 text-[var(--color-ink-soft)]">{day(p.left)}</td>
+                  <td className="px-4 py-3.5 text-[var(--color-ink-soft)]">{p.reason}</td>
+                  <td className="px-4 py-3.5 text-right">
+                    <Link to={`/past/${String(p.name).toLowerCase().replace(/\s+/g, '-')}`} className="text-[12.5px] font-semibold text-[var(--color-brand)] hover:underline">Records</Link>
+                  </td>
+                </tr>
+              ))}
+              {data.past.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-[13px] text-[var(--color-ink-soft)]">Nobody has left.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {picked.size > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-[var(--color-surface)]/95 backdrop-blur md:pl-[228px]">
@@ -290,13 +379,8 @@ export default function Employees() {
         </div>
       )}
 
-      {/* The rest of the employee record — contracts, past staff, warnings —
-          is still the page it always was; this is the roster in front of it. */}
-      <div className="mt-3 flex flex-wrap gap-4 text-[12.5px]">
-        {[['Contracts', '/people?tab=contracts'], ['Past staff', '/people?tab=past'], ['Warnings & records', '/people?tab=warnings']].map(([label, to]) => (
-          <Link key={label} to={to} className="font-semibold text-[var(--color-brand)] hover:underline">{label}</Link>
-        ))}
-      </div>
+      {/* Warnings are not a directory: a warning belongs to a person's record
+          and to Reviews & Coaching, which is where it is written and read. */}
     </div>
   );
 }
