@@ -8,7 +8,7 @@
     "server": "node server.js",
     "start": "node server.js & vite",
     "build": "vite build",
-    "postbuild": "node test/no-pay-in-bundle.test.mjs",
+    "postbuild": "node test/no-pay-in-bundle.test.mjs && (node test/design-rules.test.mjs || true)",
     "preview": "vite preview",
     "test": "node test/no-pay-in-bundle.test.mjs && node test/auth-coverage.test.mjs && node test/design-rules.test.mjs"
   },
