@@ -42,8 +42,8 @@ export default function ChangePassword() {
   return (
     <div className="mx-auto max-w-md">
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--color-brand-bg,#fdecef)]">
-          <KeyRound size={20} className="text-[var(--color-brand,#d6294f)]" />
+        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--color-brand-50)]">
+          <KeyRound size={20} className="text-[var(--color-brand)]" />
         </div>
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight text-[var(--color-ink)]">

@@ -346,7 +346,7 @@ function BigTrend({ series }) {
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: 240 }}>
-        {[0, 0.5, 1].map((g) => { const yy = padY + g * (H - padY * 2); return <line key={g} x1={padX} x2={W - padX} y1={yy} y2={yy} stroke="#eef0f4" strokeWidth="1" /> })}
+        {[0, 0.5, 1].map((g) => { const yy = padY + g * (H - padY * 2); return <line key={g} x1={padX} x2={W - padX} y1={yy} y2={yy} stroke="var(--color-line-soft)" strokeWidth="1" /> })}
         <path d={area} fill="rgba(214,41,79,0.08)" />
         <path d={d} fill="none" stroke="var(--color-brand)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         {series.map((s, i) => <g key={i}><circle cx={x(i)} cy={y(s.v)} r="4" fill="var(--color-brand)" /><text x={x(i)} y={y(s.v) - 10} textAnchor="middle" className="fill-[var(--color-ink-soft)] text-[12px] font-semibold">{s.v}</text><text x={x(i)} y={H - 6} textAnchor="middle" className="fill-[var(--color-ink-faint)] text-[11px]">{MONTH_NAMES[Number(String(s.period).split('-')[1]) - 1]}</text></g>)}

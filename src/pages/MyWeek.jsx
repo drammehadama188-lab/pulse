@@ -279,7 +279,7 @@ export function PlanArea({ items, canAct, canTick, focusKey, date, cap, placehol
               >
                 <span className={`text-[13px] font-medium ${it.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>{it.title}</span>
                 {it.byAdama ? <span className="ml-2 rounded-full bg-[var(--color-brand-50)] px-1.5 py-0.5 text-[11.5px] font-medium text-[var(--color-brand)]">from Adama</span> : null}
-                {it.carried ? <span className="ml-2 rounded-full bg-[var(--color-bad-bg,#fef2f2)] px-1.5 py-0.5 text-[11.5px] font-medium text-[var(--color-bad)]">from yesterday</span> : null}
+                {it.carried ? <span className="ml-2 rounded-full bg-[var(--color-bad-bg)] px-1.5 py-0.5 text-[11.5px] font-medium text-[var(--color-bad)]">from yesterday</span> : null}
               </span>
             )}
             {canAct && editing !== it.id && !it.byAdama && (

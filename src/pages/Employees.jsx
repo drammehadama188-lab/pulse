@@ -234,7 +234,7 @@ export default function Employees() {
                   </td>
                   <td className="h-[72px] px-5 py-4">
                     <Link to={profileHref(e)} className="flex items-center gap-2.5">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f2f4f8] text-[12.5px] font-semibold text-[#647086]">{initials(e.name)}</span>
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[12.5px] font-semibold text-[var(--color-ink-soft)]">{initials(e.name)}</span>
                       <span className="min-w-0">
                         <span className="block truncate text-[13px] font-semibold text-[var(--color-ink)]">{e.name}</span>
                         <span className="mt-1 block truncate text-[12px] text-[var(--color-ink-faint)]">{e.email || '—'}</span>

@@ -131,7 +131,7 @@ export default function EmployeePage() {
       {/* who they are, and the four facts worth knowing before anything else */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-6">
         <div className="flex items-start gap-4">
-          <span className="flex h-[88px] w-[88px] shrink-0 items-center justify-center rounded-full bg-[#f2f4f8] text-[24px] font-semibold text-[#647086]">{initials}</span>
+          <span className="flex h-[88px] w-[88px] shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[24px] font-semibold text-[var(--color-ink-soft)]">{initials}</span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="t-page">{e.name}</h1>

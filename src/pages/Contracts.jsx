@@ -48,7 +48,7 @@ function recommend(t, score) {
 function StatCard({ label, value, tone }) {
   const c = {
     good: 'text-[var(--color-good)]', warn: 'text-[var(--color-warn)]', bad: 'text-[var(--color-bad)]',
-    blue: 'text-[#1d4ed8]', rest: 'text-[var(--color-rest)]', ink: 'text-[var(--color-ink)]',
+    blue: 'text-[var(--color-brand)]', rest: 'text-[var(--color-rest)]', ink: 'text-[var(--color-ink)]',
   }[tone || 'ink']
   return (
     <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
