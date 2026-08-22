@@ -7,10 +7,24 @@ The values are mirrored in code so they can be checked, not just remembered:
 
 - Colour, surface, radius and shadow — `src/index.css` (`@theme`)
 - Spacing, type, density, pagination — `src/design.js`
-- The pieces the rules require — `src/components/ui/`
+- The pieces the rules require — `src/components/ui/` (`Pager`, `EmptyState`,
+  `Skeleton`) and the kit in `src/components/ui.jsx`
 
-Run `npm run design-check` before a deploy. It fails on the violations it can
-see (a page inventing its own pagination, a raw colour, a bare "No data").
+**`test/design-rules.test.mjs` runs inside `npm run build`, and the build is what
+deploys — so a page that breaks a checkable rule does not ship.** It currently
+fails on: a page inventing its own pagination · a bare "No data." · a hex colour
+or a Tailwind palette class in a page · a broken token class · a full-page
+spinner · page sections closer than 24px · a spacing step that does not exist ·
+and the visual rules (no 700 weight, no 14px body, no 12px card radius, no heavy
+shadow, no pure black). Admin has its own copy of the same idea in
+`~/damia/admin-damia-tracker/test/design-rules.test.mjs`.
+
+The rest of this book is judgement a script cannot make. Read it before designing
+a page; the checklist under "Before shipping a page" is how you answer for it.
+
+🔒 If a page cannot follow a rule, change the PAGE — or raise it with Adama and
+change the RULE. Never weaken the check to make a page pass, and never start a
+second rulebook.
 
 ---
 
