@@ -251,6 +251,93 @@ every screen looks urgent and none of it means anything.
 
 ---
 
+## Side rails
+
+A right rail is not the default. A list page normally has none — it steals width
+from the thing the page exists to show.
+
+A record page may have one **only when it carries context worth keeping on
+screen the whole time**: upcoming HR actions, account alerts, the exceptions on
+this record, the two or three likely next actions. If it is only a second place
+to put facts, it is not earning its width; put them in the summary band or a tab.
+
+A drawer is not a rail. A drawer opens for one task and closes.
+
+---
+
+## Quick editing
+
+Change a small thing where it is shown. A status, a date, an attendance mark —
+these are one click on the cell and a short menu, not a journey.
+
+**Wrong:** click the employee → leave the page → find Attendance → edit → come
+back.
+**Right:** click the attendance cell → pick the status → done.
+
+Navigation is a cost. Spend it on real work, not on toggling a value.
+
+---
+
+## HR records
+
+The employee record is the single source of truth for a person:
+
+```
+Overview · Job & Pay · Attendance · Performance · Documents · Notes · History
+```
+
+🔒 **An employee's name always opens their record.** It is never wired to an
+attendance edit or any other in-place action — a name means "show me this
+person". The attendance cell carries the attendance action.
+
+---
+
+## Performance
+
+Performance is not one invented score. Keep these apart, because they answer
+different questions: targets, actual results, KPIs, trend, reviews, feedback,
+coaching, development.
+
+Every KPI carries: **KPI · target · actual · progress · status · trend.**
+
+🔒 **Status must account for the period elapsed.** An annual target is not
+"behind" in February because the year's total has not been reached. Judge
+against the share of the period that has passed, or say nothing.
+
+---
+
+## Attendance
+
+**Schedule is what should happen. Attendance is what did.** Keep them separate —
+merging them loses the difference between an absence and a day off.
+
+Statuses: Working · Worked · Late · Absent · Annual leave · Sick · Excused ·
+Off · Not started.
+
+Approved leave updates attendance by itself. Nobody records it twice.
+
+---
+
+## Before shipping a page
+
+Answer every one of these. The last one is a veto.
+
+- Does the page have ONE clear job, and is it the right page type?
+- Is anything here already shown somewhere else?
+- Is there one obvious primary action?
+- Is colour carrying meaning, are normal states calm, are exceptions visible?
+- Body 13px, spacing on the 8px scale, cards soft rather than boxed?
+- Search → filters → chips → date → reset, with page actions kept out of that bar?
+- Does clicking a record open its canonical page?
+- Are empty, loading and error states designed — not "No data" and a spinner?
+- Is the user typing something the system already knows?
+- Should this action be updating another module automatically?
+- **Is this genuinely easier to use than the page it replaces?**
+
+If the last answer is no, it does not ship.
+
+---
+
 ## Actions
 
 Actions appear where they are naturally needed, and nowhere else. The question
