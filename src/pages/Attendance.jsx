@@ -386,7 +386,7 @@ function WeekSchedule({ people, days, today, onCellClick }) {
                     <div key={k} className={`p-1.5 ${isToday ? 'bg-[var(--color-good-bg)]/50 border-x-2 border-[var(--color-good)]' : weekendK ? 'border-l border-[var(--color-line-soft)] bg-[var(--color-fill)]/50' : 'border-l border-[var(--color-line-soft)]'}`}>
                       <button
                         disabled={!clickable}
-                        onClick={() => onCellClick?.(p, k, cell || { status: 'off' })}
+                        onClick={(e) => onCellClick?.(p, k, cell || { status: 'off' }, e.currentTarget.getBoundingClientRect())}
                         title={`${p.name} · ${new Date(`${k}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}`}
                         className={`block h-full w-full text-left ${clickable ? 'cursor-pointer' : 'cursor-default'}`}
                       >
@@ -448,6 +448,91 @@ const STATUS_OPTIONS = [
   { key: 'clear', label: 'Clear · no record (undo)' },
 ]
 const hhmm = (iso) => (iso ? iso.slice(11, 16) : '')
+
+// Marking a day off used to be: click the cell, read a modal, choose a radio,
+// press Save. Four steps for one word. The statuses that need nothing else
+// typed now save on one click, right at the cell (Adama 21 Aug — quick editing:
+// change a small thing where it is shown). Worked still opens the full sheet,
+// because it needs times; the note field lives there too.
+const QUICK_STATUSES = [
+  { key: 'off', label: 'Off (excused)', tone: 'var(--color-ink-soft)' },
+  { key: 'sick', label: 'Sick', tone: 'var(--color-warn)' },
+  { key: 'leave', label: 'Annual leave', tone: 'var(--color-brand)' },
+]
+
+function QuickStatusMenu({ person, dateKey, cell, anchorRect, onClose, onSaved, onOpenFull }) {
+  const [busy, setBusy] = useState(null)
+  const [err, setErr] = useState(null)
+
+  useEffect(() => {
+    const away = (e) => { if (!e.target.closest('[data-quickmenu]')) onClose() }
+    const esc = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
+  }, [onClose])
+
+  async function mark(status) {
+    setBusy(status)
+    setErr(null)
+    try {
+      await api('/attendance/day', { method: 'PUT', body: { username: person.username, date: dateKey, status, note: '' } })
+      onSaved()
+    } catch (e) {
+      // Inline, at the menu — a toast would vanish before it was read, and the
+      // person would not know whether the day changed.
+      setErr(e.message)
+      setBusy(null)
+    }
+  }
+
+  // Anchored to the cell, kept inside the window.
+  const top = Math.min(anchorRect.bottom + 6, window.innerHeight - 250)
+  const left = Math.min(anchorRect.left, window.innerWidth - 232)
+  return (
+    <div
+      data-quickmenu
+      style={{ position: 'fixed', top, left, zIndex: 60, width: 216 }}
+      className="rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-card)]"
+    >
+      <p className="px-2.5 pb-1.5 pt-1 text-[11.5px] text-[var(--color-ink-faint)]">
+        {person.name.split(' ')[0]} · {new Date(`${dateKey}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}
+      </p>
+      {QUICK_STATUSES.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          disabled={!!busy}
+          onClick={() => mark(o.key)}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-[var(--color-ink)] hover:bg-[var(--color-fill)] disabled:opacity-50"
+        >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: o.tone }} />
+          {o.label}
+          {busy === o.key && <Spinner size={13} className="ml-auto" />}
+        </button>
+      ))}
+      <div className="my-1 h-px bg-[var(--color-line-soft)]" />
+      <button
+        type="button"
+        onClick={onOpenFull}
+        className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-[13px] text-[var(--color-ink)] hover:bg-[var(--color-fill)]"
+      >
+        Worked, or add a note…
+      </button>
+      {cell?.status && cell.status !== 'off' && (
+        <button
+          type="button"
+          disabled={!!busy}
+          onClick={() => mark('clear')}
+          className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-[13px] text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)] disabled:opacity-50"
+        >
+          Clear the record
+        </button>
+      )}
+      {err && <p className="px-2.5 py-1.5 text-[11.5px] text-[var(--color-bad)]">{err}</p>}
+    </div>
+  )
+}
 
 function DayDetailModal({ person, dateKey, cell, onClose, onSaved }) {
   const known = ['worked', 'off', 'sick', 'leave']
@@ -698,6 +783,8 @@ function ManagerHours() {
   const [editorOpen, setEditorOpen] = useState(false)
   const [filter, setFilter] = useState('all')
   const [detail, setDetail] = useState(null) // { person, dateKey, cell }
+  // The one-click menu at the cell; the modal above is the long way round.
+  const [quick, setQuick] = useState(null) // { person, dateKey, cell, rect }
 
   const people = w.data?.people || []
   const today = w.data?.today
@@ -755,7 +842,7 @@ function ManagerHours() {
             people={shown}
             days={w.data.days}
             today={w.data.today}
-            onCellClick={(person, dateKey, cell) => setDetail({ person, dateKey, cell })}
+            onCellClick={(person, dateKey, cell, rect) => setQuick({ person, dateKey, cell, rect })}
           />
         )}
       </div>
@@ -765,6 +852,17 @@ function ManagerHours() {
           people={people}
           onClose={() => setEditorOpen(false)}
           onSaved={(gotoDate) => { setEditorOpen(false); gotoDate ? w.go(gotoDate) : w.reload() }}
+        />
+      )}
+      {quick && (
+        <QuickStatusMenu
+          person={quick.person}
+          dateKey={quick.dateKey}
+          cell={quick.cell}
+          anchorRect={quick.rect}
+          onClose={() => setQuick(null)}
+          onSaved={() => { setQuick(null); w.reload() }}
+          onOpenFull={() => { setDetail({ person: quick.person, dateKey: quick.dateKey, cell: quick.cell }); setQuick(null) }}
         />
       )}
       {detail && (
