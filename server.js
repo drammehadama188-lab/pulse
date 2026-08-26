@@ -1195,6 +1195,18 @@ const KPI_CATALOG = {
     { key: 'team-online', label: 'Trackers online', kind: 'percent', unit: '%', target: 75, weight: 0 },
     { key: 'team-reviews', label: 'Five-star reviews (team)', kind: 'count', unit: 'reviews', target: null, weight: 0 },
   ] },
+  // Adama 26 Aug — Yafatou's role. Equal weights on purpose: the same day he
+  // had the Weight column removed from the KPI Targets page ("weight ...
+  // confuses me"), so no KPI here silently outranks another.
+  'assistant-manager': { role: 'Assistant Manager', kpis: [
+    { key: 'cases', label: 'Case resolution', kind: 'percent', unit: '%', target: 85, weight: 10 },
+    { key: 'renewal', label: 'Customer renewal rate', kind: 'percent', unit: '% of renewals due', target: 85, weight: 10 },
+    { key: 'install', label: 'Installations completed within 3 days', kind: 'percent', unit: '%', target: 95, weight: 10 },
+    { key: 'offline-review', label: 'Offline devices reviewed', kind: 'percent', unit: '%', target: 90, weight: 10 },
+    { key: 'stock', label: 'Stock accountability', kind: 'percent', unit: '%', target: 100, weight: 10 },
+    { key: 'team-attendance', label: 'Team attendance', kind: 'percent', unit: '%', target: 90, weight: 10 },
+    { key: 'team-sales', label: 'Team tracker sales', kind: 'count', unit: 'sales', target: 12, weight: 10 },
+  ] },
 }
 // Custom KPIs the CEO added on top of the catalog (Adama 3 Jul: "I should be
 // able to add a KPI if I want and it recalculates the weight"). Stored in

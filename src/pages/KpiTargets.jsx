@@ -139,14 +139,17 @@ export default function KpiTargets() {
               <Plus size={15} className="mr-1" /> Add KPI
             </Button>
           </div>
-          <p className="mt-1 text-[11.5px] text-[var(--color-ink-faint)]">Weights auto-balance to total 100% — add or reweight a KPI and the others scale around it.</p>
+          {/* The Weight column is GONE from this page (Adama 26 Aug: "remove
+              weight that confuses me from all of them"). Weights still exist
+              server-side and still score — the page just stops asking the CEO
+              to think in percentages. Parked KPIs keep a plain "not scored
+              yet" tag so the one distinction that matters survives. */}
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="text-left text-[11.5px] text-[var(--color-ink-faint)]">
                   <th className="pb-2 pr-4">KPI</th>
                   <th className="pb-2 pr-4">Target · {ymLabel(data.month)}</th>
-                  <th className="pb-2 pr-4">Weight</th>
                   <th className="pb-2 pr-4"></th>
                   <th className="pb-2"></th>
                 </tr>
@@ -159,11 +162,9 @@ export default function KpiTargets() {
                       {k.target == null ? <span className="text-[var(--color-ink-faint)] font-normal">not set</span> : `${k.target}${k.unit === '%' ? '%' : ''}`}
                       {k.unit && k.unit !== '%' && k.target != null && <span className="ml-1 text-[11.5px] font-normal text-[var(--color-ink-faint)]">{k.unit}</span>}
                     </td>
-                    <td className="py-2.5 pr-4 text-[var(--color-ink-soft)]">
-                      {k.weight}% {k.weight === 0 && <span className="text-[11.5px] text-[var(--color-ink-faint)]">(shown, not scored)</span>}
-                    </td>
                     <td className="py-2.5 pr-4">
                       <span className="inline-flex items-center gap-2">
+                        {k.weight === 0 && <Pill tone="neutral" dot>not scored yet</Pill>}
                         {k.custom && <Pill tone="warn" dot>custom</Pill>}
                         {k.setFrom && <Pill tone="brand" dot>set from {ymLabel(k.setFrom)}</Pill>}
                       </span>
@@ -206,8 +207,6 @@ export default function KpiTargets() {
                   <span className="font-medium text-[var(--color-ink)]">{kpiName(e.role, e.kpi)}</span>
                   <span className="text-[var(--color-ink-soft)]">
                     {e.target != null && <>target → <strong>{e.target}</strong></>}
-                    {e.target != null && e.weight != null && ' · '}
-                    {e.weight != null && <>weight → <strong>{e.weight}%</strong></>}
                   </span>
                   <Pill tone={upcoming ? 'good' : 'neutral'} dot>{upcoming ? `from ${ymLabel(e.effectiveFrom)}` : `since ${ymLabel(e.effectiveFrom)}`}</Pill>
                   <span className="ml-auto text-[11.5px] text-[var(--color-ink-faint)]">by {e.setBy}</span>
@@ -236,7 +235,10 @@ export default function KpiTargets() {
               <Field label="What is measured">
                 <Input value={addFor.label} placeholder="e.g. Customer visits" onChange={(e) => setAddFor({ ...addFor, label: e.target.value })} />
               </Field>
-              <div className="grid grid-cols-3 gap-3">
+              {/* Weight input removed with the column (Adama 26 Aug) — a new
+                  KPI takes the default share and the others rebalance; the
+                  CEO never has to think in percentages. */}
+              <div className="grid grid-cols-2 gap-3">
                 <Field label="Type">
                   <Select value={addFor.kind} onChange={(e) => setAddFor({ ...addFor, kind: e.target.value })}>
                     <option value="percent">Percent</option>
@@ -246,15 +248,11 @@ export default function KpiTargets() {
                 <Field label={addFor.kind === 'percent' ? 'Target (%)' : 'Target (count)'}>
                   <Input type="number" min="0" value={addFor.target} onChange={(e) => setAddFor({ ...addFor, target: e.target.value })} />
                 </Field>
-                <Field label="Weight (%)">
-                  <Input type="number" min="0" max="90" value={addFor.weight} onChange={(e) => setAddFor({ ...addFor, weight: e.target.value })} />
-                </Field>
               </div>
               <Field label="Takes effect from">
                 <Input type="month" min={thisYm()} value={addFor.effectiveFrom} onChange={(e) => setAddFor({ ...addFor, effectiveFrom: e.target.value })} />
               </Field>
               <p className="text-[11.5px] text-[var(--color-ink-soft)]">
-                The new KPI takes {addFor.weight || '—'}% of the score; the role's other KPIs scale down around it so everything still totals 100%.
                 It shows on scorecards as unmeasured until a data feed exists — nothing is ever faked.
               </p>
               {err && <div className="rounded-lg bg-[var(--color-bad-bg)] px-3 py-2 text-[13px] text-[var(--color-bad)]">{err}</div>}
@@ -276,14 +274,13 @@ export default function KpiTargets() {
               <h2 className="text-[15px] font-semibold text-[var(--color-ink)]">Change: {draft.label}</h2>
             </div>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={`Target${draft.unit === '%' ? ' (%)' : draft.unit ? ` (${draft.unit})` : ''}`}>
-                  <Input type="number" min="0" value={draft.target} onChange={(e) => setDraft({ ...draft, target: e.target.value })} />
-                </Field>
-                <Field label="Weight (%)">
-                  <Input type="number" min="0" max="100" value={draft.weight} onChange={(e) => setDraft({ ...draft, weight: e.target.value })} />
-                </Field>
-              </div>
+              {/* Weight input removed with the column (Adama 26 Aug). The
+                  draft still CARRIES the current weight and saveDraft still
+                  sends it: an entry with weight null would fall back to the
+                  catalog weight and silently undo any earlier reweight. */}
+              <Field label={`Target${draft.unit === '%' ? ' (%)' : draft.unit ? ` (${draft.unit})` : ''}`}>
+                <Input type="number" min="0" value={draft.target} onChange={(e) => setDraft({ ...draft, target: e.target.value })} />
+              </Field>
               <Field label="Takes effect from">
                 <Input type="month" min={thisYm()} value={draft.effectiveFrom} onChange={(e) => setDraft({ ...draft, effectiveFrom: e.target.value })} />
               </Field>
