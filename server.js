@@ -3201,11 +3201,17 @@ function attendanceMonth(username, month) {
   const todayK = todayKey()
   const attAll = db.read('attendance', []).filter((a) => a.username === username)
   const leaveAll = db.read('leave', [])
-  const schedule = db.read('schedules', {})[username] || DEFAULT_WEEK
+  // 🔴 A stored schedule is an ARRAY of dated versions ([{from, days}]), not
+  // a weekday map — indexing it by day-of-week silently returns entry 0 for
+  // Sunday and undefined for every other day, which read as "works Sundays
+  // only" and printed a 325% attendance rate (Adama, 27 Aug). effectiveWeek
+  // is the only correct way to resolve one.
+  const stored = db.read('schedules', {})[username]
 
   const cells = days.map((date) => {
     const attendance = attAll.find((a) => a.date === date) || null
     const leave = leaveOnDate(leaveAll, username, date)
+    const schedule = effectiveWeek(stored, date)
     const shift = schedule[dowOfKey(date)] || null
     const status = dayStatus({ schedule, attendance, leave }, date, todayK)
     const startMin = shift ? HHMM_MIN(shift.start) : null
@@ -3309,11 +3315,14 @@ app.get('/api/attendance/month', auth, (req, res) => {
     : seedUsers().filter((u) => u.username === req.user.username)
 
   const people = roster.map((u) => {
-    const schedule = schedules[u.username] || DEFAULT_WEEK
+    const stored = schedules[u.username]
     const byDate = {}
     for (const k of days) {
       const attendance = attAll.find((a) => a.username === u.username && a.date === k) || null
       const leave = leaveOnDate(leaveAll, u.username, k)
+      // Resolved per DATE: a schedule is a list of dated versions, and the
+      // one in force can change mid-month.
+      const schedule = effectiveWeek(stored, k)
       byDate[k] = {
         status: dayStatus({ schedule, attendance, leave }, k, todayK),
         checkIn: attendance?.checkIn || null,
@@ -3351,7 +3360,7 @@ app.put('/api/attendance/day', auth, requireSub('team', 'schedules'), notViewAs,
   if (status === 'clear') {
     // undo — leave nothing for this date
   } else if (status === 'worked') {
-    const sched = (db.read('schedules', {})[username] || DEFAULT_WEEK)[dowOfKey(date)] || { start: '09:00', end: '17:00' }
+    const sched = effectiveWeek(db.read('schedules', {})[username], date)[dowOfKey(date)] || { start: '09:00', end: '17:00' }
     const inHHMM = HHMM.test(checkIn || '') ? checkIn : sched.start
     const outHHMM = HHMM.test(checkOut || '') ? checkOut : sched.end
     const [ih, im] = inHHMM.split(':').map(Number)

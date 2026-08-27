@@ -7,6 +7,7 @@ import {
 import { api, getToken } from '../../lib/api.js';
 import { timeShort } from '../../lib/format.js';
 import EmptyState from '../../components/ui/EmptyState.jsx';
+import Pager, { usePager } from '../../components/ui/Pager.jsx';
 
 // The tabs of an employee's record. Each shows what Pulse actually holds and
 // says so plainly when it holds nothing — an empty month is not a zero.
@@ -68,6 +69,10 @@ const CELL = {
   today: ['Not started', 'var(--color-ink-soft)', 'transparent'],
   future: ['Scheduled', 'var(--color-ink-faint)', 'transparent'],
 };
+const FILTERS = [
+  ['all', 'All'], ['present', 'Present'], ['late', 'Late'],
+  ['absent', 'Absent'], ['leave', 'Leave'], ['review', 'Needs review'],
+];
 const hhmm = (iso) => (iso ? String(iso).slice(11, 16) : null);
 const shiftLabel = (s) => (s ? `${s.start}–${s.end}` : '—');
 const hoursLabel = (min) => `${Math.floor((min || 0) / 60)}h ${String(Math.round((min || 0) % 60)).padStart(2, '0')}m`;
@@ -108,13 +113,14 @@ export function Attendance({ username }) {
   return <AttendanceMonth d={d} error={error} month={month} onMonth={setMonth} />;
 }
 
-// Adama's 27 Aug mockup: the month in four numbers, anything that needs a
-// decision called out, the last working days at a glance, and a way through
-// to the full record. 🔒 The full month grid and the day-by-day table live on
-// the Attendance page — this tab answers "is this person turning up", not
-// "let me audit every day", and correcting a day happens where the day
-// editor is.
+// The month in four numbers, anything that needs a decision called out, the
+// last working days at a glance, and THE FULL RECORD underneath — Adama
+// 27 Aug: "the attendance full record should be here with date filters, i do
+// not have to go to another page to see this." The month arrows filter by
+// date, the chips by what happened, and Review jumps to the records that
+// cannot be trusted rather than leaving the page.
 export function AttendanceMonth({ d, error, month, onMonth }) {
+  const [filter, setFilter] = useState('all');
   const shift = (n) => {
     const x = new Date(`${month}-01T00:00:00Z`);
     x.setUTCMonth(x.getUTCMonth() + n);
@@ -123,12 +129,29 @@ export function AttendanceMonth({ d, error, month, onMonth }) {
   const monthLabel = new Date(`${month}-01T00:00:00Z`)
     .toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
+  // Days that have actually happened, newest first. Rest days stay out of
+  // the record — a row saying "Off" is not a record of anything.
+  const rows = useMemo(() => {
+    const days = (d?.days || []).filter((x) => x.date <= (d?.today || '') && x.date >= (d?.attendanceStart || '') && (x.scheduled || x.checkIn || x.leaveType));
+    const keep = {
+      all: () => true,
+      present: (x) => x.status === 'worked' || x.status === 'late',
+      late: (x) => x.status === 'late',
+      absent: (x) => x.status === 'absent',
+      leave: (x) => x.status === 'leave' || x.status === 'sick',
+      review: (x) => x.missingCheckout,
+    }[filter] || (() => true);
+    return days.filter(keep).sort((x, y) => y.date.localeCompare(x.date));
+  }, [d, filter]);
   // The last stretch of real working days — the days a manager actually asks
   // about. Rest days are skipped: a row of "Off" cards says nothing.
   const recent = useMemo(() => {
     const days = (d?.days || []).filter((x) => x.scheduled && x.date <= (d?.today || '') && x.date >= (d?.attendanceStart || ''));
     return days.slice(-7);
   }, [d]);
+  const pager = usePager(rows);
+  const { reset } = pager;
+  useEffect(() => { reset(); }, [filter, month, reset]);
 
   if (error) return <p className="py-4 text-[13px] text-[var(--color-stage-out)]">{error}</p>;
   const s = d?.summary;
@@ -181,7 +204,7 @@ export function AttendanceMonth({ d, error, month, onMonth }) {
           <span className="text-[12.5px] text-[var(--color-ink-soft)]">
             clocked in without a clock-out, so the hours cannot be counted
           </span>
-          <Link to="/attendance" className={`${linkish} ml-auto`}>Review <ArrowRight size={14} /></Link>
+          <button onClick={() => setFilter('review')} className={`${linkish} ml-auto`}>Review <ArrowRight size={14} /></button>
         </div>
       )}
 
@@ -219,9 +242,74 @@ export function AttendanceMonth({ d, error, month, onMonth }) {
             })}
           </div>
         )}
-        <Link to="/attendance" className={`${linkish} mt-4`}>
-          View full attendance records <ArrowRight size={14} />
-        </Link>
+      </div>
+
+      {/* THE FULL RECORD, here (Adama 27 Aug: "i do not have to go to another
+          page to see this"). The month arrows above filter by date; the chips
+          filter by what happened. */}
+      <div className={CARD}>
+        <div className="flex flex-wrap items-center justify-between gap-3 p-5 pb-3">
+          <h3 className="t-card">Attendance records</h3>
+          <span className="flex flex-wrap gap-1.5">
+            {FILTERS.map(([k, label]) => (
+              <button key={k} onClick={() => setFilter(k)}
+                className={`h-7 rounded-[8px] px-3 text-[12px] font-medium ${filter === k
+                  ? 'bg-[var(--color-brand)] text-white'
+                  : 'border border-[var(--color-line-control)] text-[var(--color-ink-soft)]'}`}>
+                {label}
+              </button>
+            ))}
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
+                {['Date', 'Schedule', 'Clock in', 'Clock out', 'Worked', 'Status'].map((h) => (
+                  <th key={h} className="h-[46px] px-5">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {pager.slice.map((r) => {
+                const meta = CELL[r.status] || CELL.absent;
+                const label = r.missingCheckout ? 'Missing checkout'
+                  : r.status === 'leave' ? (r.leaveType || 'On leave') : meta[0];
+                const ink = r.missingCheckout ? 'var(--color-stage-out)' : meta[1];
+                const wash = r.missingCheckout ? 'var(--color-stage-out-bg)' : meta[2];
+                return (
+                  <tr key={r.date} className="border-b border-[var(--color-line-soft)] last:border-0">
+                    <td className="whitespace-nowrap px-5 py-4 text-[var(--color-ink)]">{day(r.date)}</td>
+                    <td className="whitespace-nowrap px-5 py-4 text-[var(--color-ink-soft)]">{shiftLabel(r.scheduled)}</td>
+                    <td className="px-5 py-4 text-[var(--color-ink-soft)]">{hhmm(r.checkIn) || '—'}</td>
+                    <td className="px-5 py-4 text-[var(--color-ink-soft)]">{hhmm(r.checkOut) || '—'}</td>
+                    <td className="px-5 py-4 text-[var(--color-ink-soft)]">{r.workedMinutes == null ? '—' : hoursLabel(r.workedMinutes)}</td>
+                    <td className="px-5 py-4">
+                      <span className="inline-flex items-center rounded-[6px] px-2 py-1 text-[12px] font-medium"
+                        style={{ color: ink, background: wash === 'transparent' ? 'var(--color-fill)' : wash }}>
+                        {label}
+                      </span>
+                      {r.fixedByName && (
+                        <span className="mt-1 block text-[11px] text-[var(--color-ink-faint)]">Fixed by {r.fixedByName}</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {d && rows.length === 0 && (
+                <tr><td colSpan={6}>
+                  <EmptyState
+                    title={filter === 'all' ? 'Nothing recorded this month' : 'Nothing in this filter'}
+                    line={filter === 'all'
+                      ? 'Days appear here from the first scheduled day of the month. Use the arrows above to look at another month.'
+                      : 'Try another filter, or All to see the whole month.'}
+                  />
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pager {...pager.props} noun="days" />
       </div>
     </div>
   );
