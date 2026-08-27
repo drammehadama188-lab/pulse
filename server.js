@@ -1444,9 +1444,8 @@ function teamMemberCard(u, ctx) {
   // KPIs (cases/installation/stock) that come from the Admin feed — never a sales
   // goal. So a CS person never shows "X short of the sales goal".
   const salesRec = u.department === 'Sales' ? (ctx.sales[u.name] || null) : null
-  const m = salesRec?.months?.[ctx.CUR]
   const sales = salesRec
-    ? { actual: m && !m.pending ? (m.sales ?? null) : null, target: salesRec.monthlyTarget ?? null }
+    ? { actual: salesActualFrom(ctx.salesTally, u.name, ctx.CUR), target: salesRec.monthlyTarget ?? null }
     : null
   const score = profile.performanceScore === '' || profile.performanceScore == null ? null : Number(profile.performanceScore)
   let status = 'not-in'
@@ -1469,7 +1468,7 @@ function teamMemberCard(u, ctx) {
   }
 }
 
-app.get('/api/team/overview', auth, (req, res) => {
+app.get('/api/team/overview', auth, async (req, res) => {
   const lead = findUser(req.user.username)
   const members = teamMembersFor(lead)
   if (!members.length) return res.status(403).json({ error: 'not-a-team-lead' })
@@ -1482,6 +1481,8 @@ app.get('/api/team/overview', auth, (req, res) => {
     profiles: db.read('profiles', {}),
     reviews: db.read('reviews', {}),
     sales: db.read('agent-sales', {}),
+    // One request for the whole team, not one per card.
+    salesTally: await salesTallyFor(CUR),
     coaching: db.read('coaching', []),
   }
   const cards = members.map((u) => teamMemberCard(u, ctx))
@@ -1544,14 +1545,13 @@ app.get('/api/team/overview', auth, (req, res) => {
 // A single team member's detail for the lead: KPI scorecard (so they know WHAT
 // to coach on), attendance/sales snapshot, and full coaching history. Uses the
 // viewed user (works under view-as for reads). 403 if not the lead's member.
-app.get('/api/team/member/:username', auth, (req, res) => {
+app.get('/api/team/member/:username', auth, async (req, res) => {
   const lead = findUser(req.user.username)
   const member = teamMembersFor(lead).find((m) => m.username === String(req.params.username).toLowerCase())
   if (!member) return res.status(403).json({ error: 'not-your-team-member' })
   const CUR = todayKey().slice(0, 7)
   const salesRec = member.department === 'Sales' ? (db.read('agent-sales', {})[member.name] || null) : null
-  const mm = salesRec?.months?.[CUR]
-  const salesActual = mm && !mm.pending ? (mm.sales ?? null) : null
+  const salesActual = salesRec ? await salesActualFor(member.name, CUR) : null
   const profile = (db.read('profiles', {}))[member.name] || {}
   const coachingAll = db.read('coaching', [])
   const history = coachingAll
@@ -2907,7 +2907,7 @@ app.put('/api/schedules/:username', auth, requireSub('team', 'schedules'), notVi
 // The month's story: who came to work (and who didn't, with the exact days),
 // coaching word-for-word, who's doing what (sales/review/warnings), leave and
 // payroll cost. Sections compose from the VIEWED user's powers + named scopes.
-app.get('/api/reports/month', auth, (req, res) => {
+app.get('/api/reports/month', auth, async (req, res) => {
   const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : todayKey().slice(0, 7)
   const days = monthKeys(month)
   const todayK = todayKey()
@@ -2973,6 +2973,19 @@ app.get('/api/reports/month', auth, (req, res) => {
   if (canSub(u, 'hr', 'performance')) {
     const names = hrNamesSet(u)
     const salesAll = db.read('agent-sales', {})
+    const salesTally = await salesTallyFor(month)
+    // This list is every person in scope, not just sellers. A zero has to mean
+    // "sold nothing", so only a seller gets one — an office cleaner gets no
+    // number at all. Anyone who DID close something is shown regardless of
+    // department, because admin says they closed it.
+    const deptOf = (name) => seedUsers().find((x) => x.name === name)?.department || ''
+    const salesHere = (name) => {
+      if (month < SALES_ADMIN_FROM) return salesFromSheet(name, month)
+      if (!salesTally) return null
+      const won = salesTally.get(name)
+      if (won !== undefined) return won
+      return deptOf(name) === 'Sales' ? 0 : null
+    }
     const reviewsAll = db.read('reviews', {})
     const warnAll = db.read('warnings', [])
     const coach = db.read('coaching', [])
@@ -2984,8 +2997,10 @@ app.get('/api/reports/month', auth, (req, res) => {
       const coachingCount = coach.filter((c) => c.targetUsername === un && ((c.datetime || c.createdAt) || '').slice(0, 7) === month).length
       return {
         name,
-        sales: m ? m.sales : null,
-        revenue: m ? m.revenue : null,
+        sales: salesHere(name),
+        // Admin's feed carries the count, not the money — a sheet month keeps
+        // its revenue, an admin month shows none rather than a stale figure.
+        revenue: month < SALES_ADMIN_FROM && m ? m.revenue : null,
         customers: m?.customers || [],
         reviewScore: rev?.score ?? null,
         reviewStatus: rev?.status || null,
@@ -4731,7 +4746,7 @@ const dayDiff = (iso) => {
 }
 const daysUntil = (iso) => dayDiff(iso)
 
-app.get('/api/hr/dashboard', auth, requirePower('hr'), (req, res) => {
+app.get('/api/hr/dashboard', auth, requirePower('hr'), async (req, res) => {
   const today = todayKey()
   const roster = hrRoster()
   const attendance = db.read('attendance', []).filter((a) => a.date === today)
@@ -4872,11 +4887,12 @@ app.get('/api/hr/dashboard', auth, requirePower('hr'), (req, res) => {
   const salesPeople = roster.filter((u) => u.department === 'Sales')
   let sold = 0
   let target = 0
+  const salesTally = await salesTallyFor(monthPrefix)
   for (const u of salesPeople) {
     const rec = salesStore[u.name]
-    const month = rec?.months?.[monthPrefix]
-    if (rec?.monthlyTarget) target += Number(rec.monthlyTarget) || 0
-    if (month && !month.pending) sold += Number(month.sales) || 0
+    if (!rec) continue
+    if (rec.monthlyTarget) target += Number(rec.monthlyTarget) || 0
+    sold += Number(salesActualFrom(salesTally, u.name, monthPrefix)) || 0
   }
   if (target > 0) {
     performance.push({
@@ -5036,7 +5052,7 @@ app.get('/api/hr/employees', auth, requirePower('hr'), (req, res) => {
 // created in Pulse are not in that list, so their profile used to be
 // unreachable. 🔒 No pay here: the salary card reads the payroll-gated
 // endpoint separately, so a viewer without that power receives no figure at all.
-app.get('/api/hr/employee/:username', auth, requirePower('hr'), (req, res) => {
+app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res) => {
   const u = findUser(req.params.username)
   if (!u || isArchived(u)) return res.status(404).json({ error: 'not found' })
 
@@ -5073,11 +5089,13 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), (req, res) => {
   // Performance: the manager-entered score, and sales against target where the
   // person carries one. 🔒 Nothing is computed from a formula nobody agreed to.
   const salesRec = u.department === 'Sales' ? db.read('agent-sales', {})[u.name] : null
-  const monthSales = salesRec?.months?.[month]
+  // Whose sale a sale is comes from admin — see salesActualFor. The sheet
+  // record still carries the monthly target.
+  const salesActual = salesRec ? await salesActualFor(u.name, month) : null
   const attendancePct = workingDays > 0 ? Math.round((present / workingDays) * 100) : null
   const performance = {
     score: profile.performanceScore === '' || profile.performanceScore == null ? null : Number(profile.performanceScore),
-    sales: salesRec ? { actual: monthSales && !monthSales.pending ? (monthSales.sales ?? null) : null, target: salesRec.monthlyTarget ?? null } : null,
+    sales: salesRec ? { actual: salesActual, target: salesRec.monthlyTarget ?? null } : null,
     attendancePct,
   }
 
@@ -5752,16 +5770,44 @@ app.get('/api/my/record', auth, (req, res) => {
 // truth from Jul 2026 (agents mark deals Won there). Needs ADMIN_SYNC_URL +
 // PULSE_SYNC_KEY in .env; unset/unreachable → null, shown as "Connecting to Admin".
 const SALES_ADMIN_FROM = '2026-07'
+
+// 🔒 ONE rule for how many sales a person has in a month. Every page that shows
+// the number goes through here (Adama 27 Aug, on a customer closed by Kaddy that
+// her record counted as zero: "read admin, when a deal is closed it's attributed
+// to a person, pick that").
+//
+// ADMIN is the source from SALES_ADMIN_FROM on, and admin's ledger credits
+// whoever CLOSED the deal — the "Closed by" line on the customer record — never
+// the account manager. Months BEFORE that keep the imported sheet exactly as it
+// stands: nothing already recorded is rewritten ("do not change the records from
+// before").
+//
+// null means "cannot say" — admin unreachable, or the sheet has no entry. It is
+// never flattened to 0, because a zero reads as a person who sold nothing.
+function salesFromSheet(name, month) {
+  const m = db.read('agent-sales', {})[name]?.months?.[month]
+  return m && !m.pending ? (m.sales ?? null) : null
+}
+// The whole month in ONE request, for pages that show a team rather than one
+// person. Map of name → sales closed; null when admin could not be reached.
+async function salesTallyFor(month) {
+  if (month < SALES_ADMIN_FROM) return null
+  const feed = await fetchAdminFeed(`/api/integrations/pulse/sales?month=${month}`)
+  if (!feed) return null
+  return new Map((feed.agents || []).map((r) => [r.name, Number(r.won) || 0]))
+}
+// One person out of a tally you already hold — so a team page makes one request
+// instead of one per head.
+function salesActualFrom(tally, name, month) {
+  if (month < SALES_ADMIN_FROM) return salesFromSheet(name, month)
+  return tally ? (tally.get(name) ?? 0) : null
+}
+async function salesActualFor(name, month) {
+  return salesActualFrom(await salesTallyFor(month), name, month)
+}
 async function fetchAdminWonCount(name, month) {
-  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
-  if (!base || !key) return null
-  try {
-    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/sales?month=${month}`, { headers: { 'x-pulse-key': key } })
-    if (!resp.ok) return null
-    const data = await resp.json()
-    const row = (data.agents || []).find((a) => a.name === name)
-    return row ? Number(row.won) || 0 : 0
-  } catch { return null }
+  const tally = await salesTallyFor(month)
+  return tally ? (tally.get(name) ?? 0) : null
 }
 // The percent helpers return the WHOLE row (Adama 4 Jul: "I like to see
 // numbers, not only percentage") — the scorecard shows the % plus the real
