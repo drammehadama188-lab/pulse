@@ -85,6 +85,25 @@ export default function Employees() {
   const pager = usePager(rows);
   const shown = pager.slice;
 
+  // The tiles are five views of ONE list, so only one is ever on. They used to
+  // stack — "HR action due" plus "On leave" left an empty table, and the
+  // Employees tile could not undo it because all it did was clear the status
+  // (which was already clear), so clicking it did nothing at all (Adama 27 Aug).
+  const filtered = !!(status || milestoneOnly || dept || employment || query || joinedFrom || joinedTo);
+  // Its number is the whole roster, so clicking it has to produce the whole
+  // roster — every filter goes, not just the tile ones.
+  const showEveryone = () => {
+    setStatus('');
+    setMilestoneOnly('');
+    setDept('');
+    setEmployment('');
+    setQuery('');
+    setJoinedFrom('');
+    setJoinedTo('');
+  };
+  const pickStatus = (s0) => { setMilestoneOnly(''); setStatus(status === s0 ? '' : s0); };
+  const pickMilestone = (m) => { setStatus(''); setMilestoneOnly(milestoneOnly === m ? '' : m); };
+
   const allShownPicked = shown.length > 0 && shown.every((e) => picked.has(e.username));
   const togglePage = () => setPicked((p) => {
     const n = new Set(p);
@@ -150,20 +169,24 @@ export default function Employees() {
         ))}
       </div>
 
+      {/* Past employees is its own list — these five count who is still here,
+          so on that tab they would filter nothing and read as broken. */}
+      {view !== 'past' && (
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
         <Tile icon={Users} value={c.total} label="Employees" sub={`${c.active} active`}
-          tint="var(--color-stage-new-bg)" ink="var(--color-stage-new)" on={!status && !view} onClick={() => setStatus('')} />
+          tint="var(--color-stage-new-bg)" ink="var(--color-stage-new)" on={!filtered} onClick={showEveryone} />
         <Tile icon={GraduationCap} value={c.probation} label="In probation" sub={c.probation ? 'Decision ahead' : 'Nobody on probation'}
-          tint="var(--color-stage-screening-bg)" ink="var(--color-stage-screening)" on={status === 'probation'} onClick={() => setStatus(status === 'probation' ? '' : 'probation')} />
+          tint="var(--color-stage-screening-bg)" ink="var(--color-stage-screening)" on={status === 'probation'} onClick={() => pickStatus('probation')} />
         <Tile icon={Clock} value={c.leave} label="On leave" sub={c.leave ? 'Away today' : 'Everybody in'}
-          tint="var(--color-stage-interview-bg)" ink="var(--color-stage-interview)" on={status === 'leave'} onClick={() => setStatus(status === 'leave' ? '' : 'leave')} />
+          tint="var(--color-stage-interview-bg)" ink="var(--color-stage-interview)" on={status === 'leave'} onClick={() => pickStatus('leave')} />
         <Tile icon={FileClock} value={c.contractSoon} label="Contract ending" sub={c.contractSoon ? 'Within 60 days' : 'None inside 60 days'}
-          tint="var(--color-stage-offer-bg)" ink="var(--color-stage-offer)" on={milestoneOnly === 'contract'} onClick={() => setMilestoneOnly(milestoneOnly === 'contract' ? '' : 'contract')} />
+          tint="var(--color-stage-offer-bg)" ink="var(--color-stage-offer)" on={milestoneOnly === 'contract'} onClick={() => pickMilestone('contract')} />
         {/* The operational one: what HR has to decide, and who is next. */}
         <Tile icon={AlertTriangle} value={c.actionDue} label="HR action due"
           sub={data.nextAction ? `${data.nextAction.name.split(' ')[0]} · ${data.nextAction.label.toLowerCase()} in ${data.nextAction.days} days` : 'Nothing inside 30 days'}
-          tint="var(--color-stage-out-bg)" ink="var(--color-stage-out)" on={milestoneOnly === 'due'} onClick={() => setMilestoneOnly(milestoneOnly === 'due' ? '' : 'due')} />
+          tint="var(--color-stage-out-bg)" ink="var(--color-stage-out)" on={milestoneOnly === 'due'} onClick={() => pickMilestone('due')} />
       </div>
+      )}
 
       {view !== 'past' && (
       <div className="mt-6 flex flex-wrap items-center gap-3">
