@@ -87,13 +87,59 @@ const attMonth = {
   },
 };
 const noop = () => {};
+// The record's own tabs (Overview, Job & pay, Performance) live in
+// EmployeePage.jsx and are exported purely so they can be rendered here with
+// data — Overview is the tab that opens by default, so a crash in it is a
+// blank record, which is the exact bug this file exists to catch.
+const attendanceSummary = {
+  workingDays: 19, present: 13, absent: 3, late: 2, leave: 3,
+  hours: 83, minutes: 10, ratePct: 68, missingCheckouts: 1,
+  overtimeMinutes: 341, avgCheckIn: '08:07', month: '2026-08',
+};
+const record = {
+  employee: { ...person, status: 'active', employeeId: 'EMP-KAD', location: 'Kairaba Avenue', dob: '1996-02-04', gender: 'Female', maritalStatus: 'Single', nationality: 'Gambian', emergencyContact: 'A. Bojang', emergencyPhone: '+220 700 1111' },
+  attendance: attendanceSummary,
+  performance: { score: 72, sales: { actual: 1, target: 5 }, attendancePct: 68, averageReview: 4.2, reviews: [{ period: '2026-07', score: 4.2, status: 'done', ratings: null, notes: '', at: '2026-07-31' }] },
+  scorecard: { role: 'Sales agent', kpis: [
+    { key: 'sales', label: 'Tracker sales', kind: 'count', unit: 'sales', target: 5, weight: 40, actual: 1 },
+    { key: 'online', label: 'Trackers online', kind: 'percent', unit: '%', target: 75, weight: 20, actual: null },
+    { key: 'attendance', label: 'Attendance', kind: 'percent', unit: '%', target: 90, weight: 0, actual: 68 },
+  ] },
+  attention: [
+    { tone: 'bad', title: '1 attendance record needs review', detail: 'Clocked in with no clock-out.', action: 'Review attendance', tab: 'Attendance' },
+    { tone: 'warn', title: 'Sales behind pace', detail: '1 of 5 with 4 days left.', action: 'Open performance', tab: 'Performance' },
+  ],
+  documents: [], notes: [{ kind: 'Coaching', title: 'Call quality', text: 'Good', by: 'Adama', at: '2026-08-01' }],
+  contract: { type: 'Permanent', start: '2025-03-12', end: null, noticePeriod: '1 month', document: null },
+  history: [{ date: '2026-08-27', event: 'Profile updated' }],
+};
+const emptyRecord = {
+  ...record,
+  attendance: { ...attendanceSummary, present: 0, absent: 0, late: 0, leave: 0, hours: 0, minutes: 0, ratePct: null, missingCheckouts: 0, workingDays: 0 },
+  performance: { score: null, sales: null, attendancePct: null, averageReview: null, reviews: [] },
+  scorecard: { role: 'Sales agent', kpis: [] },
+  attention: [], notes: [], history: [],
+};
+const payFixture = { base: 6500, transport: 1000, commission: 4500 };
+const rec = await vite.ssrLoadModule('/src/pages/EmployeePage.jsx');
+const recTab = (Comp, extra = {}) => React.createElement(Comp, {
+  d: record, e: record.employee, a: record.attendance, sales: record.performance.sales,
+  pay: payFixture, netPay: 12000, statusLabel: 'Active', statusInk: 'var(--color-pill-active)',
+  onTab: noop, canEdit: true, onSave: noop, roster: [], departments: ['Sales'],
+  canMoveDepartment: true, ...extra,
+});
 const cases = [
-  ['JobPay', React.createElement(tabs.JobPay, { e: person, pay: { base: 6500, transport: 1000, commission: 0 }, contract: { type: 'Permanent', start: '2025-03-12', end: null, noticePeriod: '1 month', document: null } })],
-  ['JobPay without pay', React.createElement(tabs.JobPay, { e: person, pay: null, contract: { type: 'Permanent', start: null, end: null, noticePeriod: '', document: null } })],
-  ['Attendance', React.createElement(tabs.AttendanceMonth, { username: 'kaddy', d: attMonth, error: '', month: '2026-08', onMonth: noop, onReload: noop })],
-  ['Attendance empty', React.createElement(tabs.AttendanceMonth, { username: 'kaddy', month: '2026-08', error: '', onMonth: noop, onReload: noop, d: { ...attMonth, days: [], summary: { ...attMonth.summary, scheduledDays: 0, present: 0, late: 0, absent: 0, leave: 0, workedMinutes: 0, scheduledMinutes: 0, overtimeMinutes: 0, missingCheckouts: 0, ratePct: null, latePctOfAttended: null } } })],
-  ['Attendance loading', React.createElement(tabs.AttendanceMonth, { username: 'kaddy', d: null, error: '', month: '2026-08', onMonth: noop, onReload: noop })],
-  ['Attendance failed', React.createElement(tabs.AttendanceMonth, { username: 'kaddy', d: null, error: 'Server said no', month: '2026-08', onMonth: noop, onReload: noop })],
+  ['Overview', recTab(rec.OverviewTab)],
+  ['Overview empty', recTab(rec.OverviewTab, { d: emptyRecord, a: emptyRecord.attendance, sales: null, pay: null, netPay: null })],
+  ['Overview no pay power', recTab(rec.OverviewTab, { pay: null, netPay: null })],
+  ['Job & pay', recTab(rec.JobPayTab)],
+  ['Job & pay without pay', recTab(rec.JobPayTab, { pay: null, netPay: null })],
+  ['Performance', recTab(rec.PerformanceTab)],
+  ['Performance nothing measured', recTab(rec.PerformanceTab, { d: emptyRecord, a: emptyRecord.attendance, sales: null })],
+  ['Attendance', React.createElement(tabs.AttendanceMonth, { d: attMonth, error: '', month: '2026-08', onMonth: noop })],
+  ['Attendance empty', React.createElement(tabs.AttendanceMonth, { month: '2026-08', error: '', onMonth: noop, d: { ...attMonth, days: [], summary: { ...attMonth.summary, scheduledDays: 0, present: 0, late: 0, absent: 0, leave: 0, workedMinutes: 0, scheduledMinutes: 0, overtimeMinutes: 0, missingCheckouts: 0, ratePct: null, latePctOfAttended: null } } })],
+  ['Attendance loading', React.createElement(tabs.AttendanceMonth, { d: null, error: '', month: '2026-08', onMonth: noop })],
+  ['Attendance failed', React.createElement(tabs.AttendanceMonth, { d: null, error: 'Server said no', month: '2026-08', onMonth: noop })],
   ['Documents', React.createElement(tabs.Documents, { documents: [{ id: '1', name: 'Contract.pdf', category: 'contract', sizeBytes: 2048, uploadedAt: '2026-01-05', uploadedBy: 'Adama' }], onUpload() {}, uploading: false })],
   ['Documents empty', React.createElement(tabs.Documents, { documents: [], onUpload() {}, uploading: false })],
   ['Notes', React.createElement(tabs.Notes, { notes: [{ kind: 'Coaching', title: 'Call quality', text: 'Good', by: 'Adama', at: '2026-08-01' }], username: 'kaddy' })],

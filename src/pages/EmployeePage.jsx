@@ -2,14 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ChevronRight, ChevronLeft, Mail, Phone, MapPin, Briefcase, Building2, Clock,
-  CalendarDays, UserRound, Download, FileText, Star, MessageSquare, Plus,
-  CalendarPlus, FilePlus2, ThumbsUp, ArrowRight,
+  CalendarDays, UserRound, FileText, ArrowRight,
 } from 'lucide-react';
 import { api, getToken } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { payByName } from '../lib/pay.js';
-import { JobPay, Attendance, Documents, Notes, History } from './employee/tabs.jsx';
-import PerformancePerson from './PerformancePerson.jsx';
+import { Attendance, Documents, Notes, History } from './employee/tabs.jsx';
 import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 
 // One employee, in the design Adama sent (20 Aug): who they are, the four
@@ -57,6 +55,23 @@ const CardHead = ({ title, action }) => (
   </div>
 );
 const linkish = 'inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-brand)] hover:underline';
+// A number, and the line that says what it is measured against. The sub-line
+// carries the colour — a tile that shouts in red for a normal month teaches
+// people to stop reading it (Adama 27 Aug: the page was "dim and boring", so
+// the answer is contrast where it MEANS something, not colour everywhere).
+const TONE = {
+  good: 'var(--color-pill-active)',
+  warn: 'var(--color-pill-leave)',
+  bad: 'var(--color-stage-out)',
+  muted: 'var(--color-ink-faint)',
+};
+const Tile = ({ label, value, sub, tone = 'muted' }) => (
+  <div className={`${CARD} p-5`}>
+    <p className="text-[12.5px] text-[var(--color-ink-soft)]">{label}</p>
+    <p className="mt-2 text-[26px] font-semibold leading-none text-[var(--color-ink)]">{value}</p>
+    <p className="mt-2 text-[12px] font-medium" style={{ color: TONE[tone] }}>{sub}</p>
+  </div>
+);
 const GENDERS = ['', 'Female', 'Male'];
 const MARITAL = ['', 'Single', 'Married', 'Divorced', 'Widowed'];
 
@@ -206,6 +221,9 @@ export default function EmployeePage() {
 
   const e = d.employee;
   const a = d.attendance;
+  // 🔑 `actual: null` means admin has no count for this month — it is NOT a
+  // zero, and rendering it as one would tell Adama someone sold nothing.
+  const sales = d.performance?.sales || null;
   const [statusLabel, statusBg, statusInk] = STATUS[e.status] || STATUS.active;
   const initials = (e.name || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   const netPay = pay ? (Number(pay.base) || 0) + (Number(pay.transport) || 0) + (Number(pay.commission) || 0) : null;
@@ -250,12 +268,14 @@ export default function EmployeePage() {
           </div>
         </div>
 
+        {/* The four facts you need before reading anything else. A flat band,
+            not four boxes — the facts are the content, the card is not. */}
         <div className={`${CARD} grid min-w-[320px] flex-1 grid-cols-2 gap-y-4 p-5 sm:grid-cols-4`}>
           {[
-            ['Status', <span key="s" className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: statusInk }} />{statusLabel}</span>],
-            ['Employment type', e.employment],
             ['Reports to', e.reportsTo || '—'],
-            ['Work schedule', e.schedule],
+            ['Schedule', e.schedule],
+            ['Employment', e.employment],
+            ['Location', e.location || '—'],
           ].map(([label, value]) => (
             <div key={label} className="px-1">
               <p className="text-[12px] text-[var(--color-ink-faint)]">{label}</p>
@@ -275,167 +295,26 @@ export default function EmployeePage() {
       </div>
 
       {tab === 'Overview' && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <EditableCard title="Job information" canEdit={canEditRecord} onSave={saveRecord} rows={[
-            { label: 'Role', icon: Briefcase, key: 'title', raw: e.title, value: e.title },
-            // Only offered to a Manage-staff holder — the one row on this card
-            // that is not the HR grant's to change.
-            { label: 'Department', icon: Building2, key: canMoveDepartment ? 'department' : undefined, options: departments, raw: e.department, value: e.department },
-            // Decided by the contract actions, never typed.
-            { label: 'Employment type', icon: FileText, value: e.employment },
-            { label: 'Employee ID', icon: FileText, key: 'employeeId', raw: e.employeeId, value: e.employeeId },
-            { label: 'Start date', icon: CalendarDays, key: 'joined', type: 'date', raw: e.joined || '', value: e.joined ? day(e.joined) : '' },
-            { label: 'Work schedule', icon: Clock, key: 'schedule', raw: e.schedule, value: e.schedule },
-            { label: 'Reports to', icon: UserRound, key: 'manager', options: ['', ...roster.filter((r) => r.name !== e.name).map((r) => r.name)], raw: e.reportsTo, value: e.reportsTo },
-            { label: 'Location', icon: MapPin, key: 'location', raw: e.location, value: e.location, placeholder: 'Office, site or town' },
-          ]} />
-
-          {/* 🔒 Only rendered when the payroll endpoint actually returned a
-              figure — a viewer without that power never receives one. */}
-          <div className={`${CARD} p-5`}>
-            <CardHead title="Salary information" />
-            {pay ? (
-              <>
-                <div className="divide-y divide-[var(--color-line-soft)]">
-                  <Row label="Base salary" value={D(pay.base)} />
-                  <Row label="Allowances" value={D(pay.transport)} />
-                  <Row label="Commission" value={D(pay.commission)} />
-                </div>
-                <div className="mt-3 flex items-center justify-between border-t border-[var(--color-line)] pt-3">
-                  <span className="text-[13px] text-[var(--color-ink-faint)]">Net pay</span>
-                  <span className="text-[15px] font-semibold text-[var(--color-ink)]">{D(netPay)} <span className="text-[12px] font-normal text-[var(--color-ink-faint)]">/ month</span></span>
-                </div>
-                <Link to="/payroll" className={`${linkish} mt-3`}>View payslips and payment history <ArrowRight size={14} /></Link>
-              </>
-            ) : (
-              <p className="py-4 text-[13px] text-[var(--color-ink-soft)]">Pay is only visible to payroll holders.</p>
-            )}
-          </div>
-
-          <div className={`${CARD} p-5`}>
-            <CardHead title="Quick actions" />
-            <div className="grid grid-cols-2 gap-2.5">
-              {[
-                [Clock, 'Record attendance', '/attendance'],
-                [CalendarPlus, 'Add leave', '/requests'],
-                [MessageSquare, 'Coaching note', `/performance/${e.username}`],
-                [FilePlus2, 'Add document', '/documents'],
-              ].map(([Icon, label, to]) => (
-                <Link key={label} to={to}
-                  className="flex items-center gap-2.5 rounded-[8px] border border-[var(--color-line-control)] px-3 py-3 text-[13px] font-medium text-[var(--color-brand)] hover:bg-[var(--color-soft)]">
-                  <Icon size={15} /> {label}
-                </Link>
-              ))}
-              <Link to="/reviews" className="col-span-2 flex items-center justify-center gap-2.5 rounded-[8px] border border-[var(--color-line-control)] px-3 py-3 text-[13px] font-medium text-[var(--color-brand)] hover:bg-[var(--color-soft)]">
-                <ThumbsUp size={15} /> Request feedback
-              </Link>
-            </div>
-          </div>
-
-          <div className={`${CARD} p-5`}>
-            <CardHead title="Attendance summary" action={<span className="text-[12px] text-[var(--color-ink-faint)]">This month</span>} />
-            <div className="grid grid-cols-5 gap-2">
-              {[['Working days', a.workingDays, 'var(--color-ink)'], ['Present', a.present, 'var(--color-pill-active)'],
-                ['Absent', a.absent, 'var(--color-stage-out)'], ['Late', a.late, 'var(--color-pill-leave)'],
-                ['Leave', a.leave, 'var(--color-stage-new)']].map(([label, value, colour]) => (
-                  <div key={label} className="rounded-[8px] border border-[var(--color-line-soft)] px-2 py-3 text-center">
-                    <p className="text-[18px] font-semibold" style={{ color: colour }}>{value}</p>
-                    <p className="mt-1 text-[11.5px] text-[var(--color-ink-faint)]">{label}</p>
-                  </div>
-                ))}
-            </div>
-            <div className="mt-4 flex items-center justify-between border-t border-[var(--color-line-soft)] pt-3">
-              <span>
-                <span className="block text-[12px] text-[var(--color-ink-faint)]">Hours worked</span>
-                <span className="block text-[15px] font-semibold text-[var(--color-ink)]">{a.hours}h {a.minutes}m</span>
-              </span>
-              <span className="text-right">
-                <span className="block text-[12px] text-[var(--color-ink-faint)]">Average check-in</span>
-                <span className="block text-[15px] font-semibold text-[var(--color-ink)]">{a.avgCheckIn || '—'}</span>
-              </span>
-            </div>
-            <Link to="/attendance" className={`${linkish} mt-3`}>View full attendance <ArrowRight size={14} /></Link>
-          </div>
-
-          <div className={`${CARD} p-5`}>
-            <CardHead title="Performance overview" action={<span className="text-[12px] text-[var(--color-ink-faint)]">This month</span>} />
-            {d.performance.score == null && !d.performance.sales && d.performance.attendancePct == null ? (
-              <p className="py-4 text-[13px] text-[var(--color-ink-soft)]">Nothing recorded for this month yet.</p>
-            ) : (
-              <div className="space-y-3.5">
-                {d.performance.score != null && <Bar label="Review score" pct={d.performance.score} colour="var(--color-pill-active)" />}
-                {d.performance.sales?.target ? (
-                  <Bar label={`Sales · ${d.performance.sales.actual ?? 0} of ${d.performance.sales.target}`}
-                    pct={Math.min(100, Math.round(((d.performance.sales.actual || 0) / d.performance.sales.target) * 100))}
-                    colour="var(--color-stage-new)" />
-                ) : null}
-                {d.performance.attendancePct != null && <Bar label="Attendance" pct={d.performance.attendancePct} colour="var(--color-pill-probation)" />}
-              </div>
-            )}
-            <Link to={`/performance/${e.username}`} className={`${linkish} mt-4`}>View performance details <ArrowRight size={14} /></Link>
-          </div>
-
-          <EditableCard title="Personal information" canEdit={canEditRecord} onSave={saveRecord} rows={[
-            // Not editable: every profile, review, sale, document and warning
-            // in Pulse is filed under this name — renaming here would orphan
-            // all of them. A name change is a Manage-staff job.
-            { label: 'Full name', value: e.name },
-            { label: 'Date of birth', key: 'dob', type: 'date', raw: e.dob || '', value: e.dob ? day(e.dob) : '' },
-            { label: 'Gender', key: 'gender', options: GENDERS, raw: e.gender, value: e.gender },
-            { label: 'Marital status', key: 'maritalStatus', options: MARITAL, raw: e.maritalStatus, value: e.maritalStatus },
-            { label: 'Phone', key: 'phone', type: 'tel', raw: e.phone, value: e.phone },
-            // The work email is the login. It changes on Team & access, where
-            // the CEO grant lives.
-            { label: 'Email', value: e.email },
-            { label: 'Address', key: 'address', raw: e.address, value: e.address },
-            { label: 'Nationality', key: 'nationality', raw: e.nationality, value: e.nationality },
-            { label: 'Emergency contact', key: 'emergencyContact', raw: e.emergencyContact, value: e.emergencyContact },
-            { label: 'Emergency phone', key: 'emergencyPhone', type: 'tel', raw: e.emergencyPhone, value: e.emergencyPhone },
-          ]} />
-
-          <div className={`${CARD} p-5 xl:col-span-2`}>
-            <CardHead title="Recent documents" action={<Link to="/documents" className="text-[13px] font-medium text-[var(--color-brand)] hover:underline">View all</Link>} />
-            {d.documents.length === 0 && <p className="py-4 text-[13px] text-[var(--color-ink-soft)]">No documents on file.</p>}
-            <div className="divide-y divide-[var(--color-line-soft)]">
-              {d.documents.map((f) => (
-                <div key={f.id} className="flex items-center gap-3 py-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-[var(--color-stage-new-bg)] text-[var(--color-stage-new)]"><FileText size={15} /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-medium text-[var(--color-ink)]">{f.name}</span>
-                    <span className="block text-[12px] text-[var(--color-ink-faint)]">{Math.round((f.sizeBytes || 0) / 1024)} KB · {day(f.uploadedAt)}</span>
-                  </span>
-                  <a href={`/api/agent-files/${f.id}/download?t=${encodeURIComponent(getToken() || '')}`}
-                    className="shrink-0 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"><Download size={15} /></a>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={`${CARD} p-5`}>
-            <CardHead title="Notes" action={<Link to={`/performance/${e.username}`} className="text-[13px] font-medium text-[var(--color-brand)] hover:underline">Add note</Link>} />
-            {d.notes.length === 0 && <p className="py-4 text-[13px] text-[var(--color-ink-soft)]">Nothing written down yet.</p>}
-            <div className="space-y-3">
-              {d.notes.map((n, i) => (
-                <div key={i} className="rounded-[8px] bg-[var(--color-soft)] p-3">
-                  <p className="flex items-center gap-2 text-[12px] text-[var(--color-ink-faint)]">
-                    <Star size={12} className="text-[var(--color-pill-leave)]" /> {n.kind}{n.by ? ` · ${n.by}` : ''}{n.at ? ` · ${day(n.at)}` : ''}
-                  </p>
-                  <p className="mt-1.5 text-[13px] text-[var(--color-ink)]">{n.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <OverviewTab d={d} e={e} a={a} sales={sales} pay={pay} netPay={netPay}
+          statusLabel={statusLabel} statusInk={statusInk} onTab={setTab}
+          canEdit={canEditRecord} onSave={saveRecord} />
       )}
 
-      {tab === 'Job & pay' && <JobPay e={e} pay={pay} contract={d.contract} />}
+      {tab === 'Job & pay' && (
+        <JobPayTab e={e} d={d} pay={pay} netPay={netPay} roster={roster}
+          departments={departments} canEdit={canEditRecord}
+          canMoveDepartment={canMoveDepartment} onSave={saveRecord} />
+      )}
+
       {/* The tab owns its own month (Adama 27 Aug): it fetches the month it
           is showing, so the arrows move the DATA and not just the grid. */}
       {tab === 'Attendance' && <Attendance username={username} />}
-      {/* 🔒 One implementation: this is the Performance page itself, embedded,
-          so the record cannot show a different number from it. */}
+      {/* 🔒 The KPIs come from scorecardFor on the server — the same builder
+          My Progress and the team-member card use — so this tab cannot
+          invent its own targets. The hand-typed score is deliberately NOT
+          here (Adama 27 Aug: performance is driven by actual KPIs). */}
       {tab === 'Performance' && (
-        <PerformancePerson embeddedFor={{ name: e.name, role: e.title, type: e.department, target: 0, status: e.status }} />
+        <PerformanceTab d={d} e={e} a={a} sales={sales} />
       )}
       {tab === 'Documents' && <Documents documents={d.documents} onUpload={uploadDocument} uploading={uploading} />}
       {tab === 'Notes' && <Notes notes={d.notes} username={e.username} />}
@@ -445,15 +324,339 @@ export default function EmployeePage() {
   );
 }
 
-function Bar({ label, pct, colour }) {
+// ── Overview tab ──────────────────────────────────────────────────────
+// Exported so the tab test can render it with real data: this is the tab
+// that opens by default, and a crash here is a blank record.
+export function OverviewTab({ d, e, a, sales, pay, netPay, statusLabel, statusInk, onTab, canEdit, onSave }) {
   return (
-    <div>
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[13px] text-[var(--color-ink-soft)]">{label}</span>
-        <span className="text-[13px] font-semibold text-[var(--color-ink)]">{pct}%</span>
+
+        <div className="space-y-4">
+          <div>
+            <h2 className="t-card">Employee overview</h2>
+            <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">One connected view of work, attendance, pay and employment status.</p>
+          </div>
+
+          {/* The month in four numbers. Each carries a line saying what it is
+              measured against, so a figure is never a number on its own. */}
+          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+            <Tile
+              label="Sales this month"
+              value={sales ? (sales.actual == null ? '—' : `${sales.actual} / ${sales.target ?? '—'}`) : '—'}
+              sub={sales
+                ? (sales.actual == null
+                  ? 'not counted for this month'
+                  : sales.target ? `${Math.round((sales.actual / sales.target) * 100)}% of target` : 'no target set')
+                : 'not a sales role'}
+              tone={sales && sales.actual != null && sales.target && sales.actual >= sales.target ? 'good' : 'muted'}
+            />
+            <Tile
+              label="Attendance"
+              value={a.ratePct == null ? '—' : `${a.ratePct}%`}
+              sub={a.ratePct == null ? 'nothing recorded yet' : `${a.present} present · ${a.absent} absent`}
+              tone={a.ratePct == null ? 'muted' : a.ratePct >= 90 ? 'good' : 'warn'}
+            />
+            <Tile
+              label="Hours worked"
+              value={`${a.hours}h ${String(a.minutes).padStart(2, '0')}m`}
+              sub={a.missingCheckouts
+                ? `${a.missingCheckouts} ${a.missingCheckouts === 1 ? 'record needs' : 'records need'} review`
+                : 'recorded'}
+              tone={a.missingCheckouts ? 'bad' : 'muted'}
+            />
+            {/* 🔒 Rendered only when the payroll-gated endpoint returned a
+                figure — a viewer without that power never receives one. */}
+            <Tile
+              label={pay ? 'Current pay' : 'Pay'}
+              value={pay ? D(netPay) : '—'}
+              sub={pay ? 'base + commission' : 'payroll holders only'}
+              tone="muted"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <div className="space-y-4">
+              <div className={`${CARD} p-5`}>
+                <CardHead title="What needs attention" />
+                {d.attention.length === 0 ? (
+                  <p className="py-4 text-[13px] text-[var(--color-ink-soft)]">
+                    Nothing needs a decision on this record right now.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-[var(--color-line-soft)]">
+                    {d.attention.map((it, i) => (
+                      <div key={i} className="flex flex-wrap items-start gap-3 py-3 first:pt-0">
+                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+                          style={{ background: it.tone === 'bad' ? 'var(--color-stage-out)' : 'var(--color-pill-leave)' }} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] font-medium text-[var(--color-ink)]">{it.title}</span>
+                          <span className="mt-0.5 block text-[12.5px] text-[var(--color-ink-soft)]">{it.detail}</span>
+                        </span>
+                        <button onClick={() => onTab(it.tab)} className={linkish}>
+                          {it.action} <ArrowRight size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className={`${CARD} p-5`}>
+                <CardHead title="Recent employee activity" />
+                {d.history.length === 0 ? (
+                  <p className="py-4 text-[13px] text-[var(--color-ink-soft)]">
+                    Nothing has changed on this record yet. Edits and status changes appear here.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-[var(--color-line-soft)]">
+                    {d.history.slice(0, 5).map((h, i) => (
+                      <div key={i} className="flex items-baseline gap-4 py-2.5 first:pt-0">
+                        <span className="w-[86px] shrink-0 text-[12px] text-[var(--color-ink-faint)]">{day(h.date)}</span>
+                        <span className="min-w-0 flex-1 text-[13px] text-[var(--color-ink)]">{h.event}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {d.history.length > 5 && (
+                  <button onClick={() => onTab('History')} className={`${linkish} mt-3`}>
+                    See full history <ArrowRight size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className={`${CARD} p-5`}>
+                <CardHead title="Employment" />
+                <div className="divide-y divide-[var(--color-line-soft)]">
+                  <Row label="Role" value={e.title} />
+                  <Row label="Manager" value={e.reportsTo} />
+                  <Row label="Status" value={<span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: statusInk }} />{statusLabel}</span>} />
+                  <Row label="Employment" value={e.employment} />
+                </div>
+              </div>
+
+              <div className={`${CARD} p-5`}>
+                <CardHead title="This month at a glance" />
+                <div className="divide-y divide-[var(--color-line-soft)]">
+                  {[
+                    ['Present', `${a.present} ${a.present === 1 ? 'day' : 'days'}`, 'var(--color-pill-active)'],
+                    ['Late', a.late, 'var(--color-pill-leave)'],
+                    ['Absent', a.absent, 'var(--color-stage-out)'],
+                    ['Sales', sales ? (sales.actual == null ? '—' : sales.actual) : '—', 'var(--color-brand)'],
+                  ].map(([label, value, colour]) => (
+                    <div key={label} className="flex items-center justify-between py-2.5">
+                      <span className="text-[13px] text-[var(--color-ink-faint)]">{label}</span>
+                      <span className="text-[13px] font-semibold" style={{ color: colour }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Kept editable here: this is the profile view, and Job & pay
+                  deliberately does not repeat personal information. */}
+              <EditableCard title="Personal information" canEdit={canEdit} onSave={onSave} rows={[
+                // Not editable: every profile, review, sale, document and
+                // warning in Pulse is filed under this name — renaming here
+                // would orphan all of them. A name change is Manage-staff work.
+                { label: 'Full name', value: e.name },
+                { label: 'Date of birth', key: 'dob', type: 'date', raw: e.dob || '', value: e.dob ? day(e.dob) : '' },
+                { label: 'Gender', key: 'gender', options: GENDERS, raw: e.gender, value: e.gender },
+                { label: 'Marital status', key: 'maritalStatus', options: MARITAL, raw: e.maritalStatus, value: e.maritalStatus },
+                { label: 'Phone', key: 'phone', type: 'tel', raw: e.phone, value: e.phone },
+                // The work email is the login. It changes on Team & access,
+                // where the CEO grant lives.
+                { label: 'Email', value: e.email },
+                { label: 'Address', key: 'address', raw: e.address, value: e.address },
+                { label: 'Nationality', key: 'nationality', raw: e.nationality, value: e.nationality },
+                { label: 'Emergency contact', key: 'emergencyContact', raw: e.emergencyContact, value: e.emergencyContact },
+                { label: 'Emergency phone', key: 'emergencyPhone', type: 'tel', raw: e.emergencyPhone, value: e.emergencyPhone },
+              ]} />
+            </div>
+          </div>
+        </div>
+  );
+}
+
+
+// ── Job & pay tab ─────────────────────────────────────────────────────
+// Employment stays EDITABLE here — this is where the job facts live, and
+// losing Edit would undo the quick editing he asked for.
+export function JobPayTab({ e, d, pay, netPay, roster, departments, canEdit, canMoveDepartment, onSave }) {
+  return (
+
+        <div className="space-y-4">
+          <div>
+            <h2 className="t-card">Job &amp; pay</h2>
+            <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">Employment terms and compensation, without repeating profile information.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <EditableCard title="Employment" canEdit={canEdit} onSave={onSave} rows={[
+              { label: 'Role', icon: Briefcase, key: 'title', raw: e.title, value: e.title },
+              // Only offered to a Manage-staff holder — the one row on this
+              // card that is not the HR grant's to change.
+              { label: 'Department', icon: Building2, key: canMoveDepartment ? 'department' : undefined, options: departments, raw: e.department, value: e.department },
+              { label: 'Reports to', icon: UserRound, key: 'manager', options: ['', ...roster.filter((r) => r.name !== e.name).map((r) => r.name)], raw: e.reportsTo, value: e.reportsTo },
+              // Decided by the contract actions, never typed.
+              { label: 'Employment type', icon: FileText, value: e.employment },
+              { label: 'Work schedule', icon: Clock, key: 'schedule', raw: e.schedule, value: e.schedule },
+              { label: 'Location', icon: MapPin, key: 'location', raw: e.location, value: e.location, placeholder: 'Office, site or town' },
+              { label: 'Employee ID', icon: FileText, key: 'employeeId', raw: e.employeeId, value: e.employeeId },
+              { label: 'Start date', icon: CalendarDays, key: 'joined', type: 'date', raw: e.joined || '', value: e.joined ? day(e.joined) : '' },
+              { label: 'Contract', icon: FileText, value: `${d.contract.type}${d.contract.end ? ` · ends ${day(d.contract.end)}` : ' · no end date'}` },
+            ]} />
+            <div className="space-y-4">
+              {/* 🔒 Only rendered when the payroll endpoint actually returned
+                  a figure — a viewer without that power never receives one. */}
+              <div className={`${CARD} p-5`}>
+                <CardHead title="Compensation" />
+                {pay ? (
+                  <>
+                    <div className="divide-y divide-[var(--color-line-soft)]">
+                      <Row label="Base salary" value={`${D(pay.base)} / month`} />
+                      <Row label="Allowances" value={D(pay.transport)} />
+                      <Row label="Commission" value={D(pay.commission)} />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between border-t border-[var(--color-line)] pt-3">
+                      <span className="text-[13px] text-[var(--color-ink-faint)]">Current net pay</span>
+                      <span className="text-[15px] font-semibold text-[var(--color-ink)]">{D(netPay)} <span className="text-[12px] font-normal text-[var(--color-ink-faint)]">/ month</span></span>
+                    </div>
+                    <Link to="/payroll" className={`${linkish} mt-3`}>View payslips &amp; payment history <ArrowRight size={14} /></Link>
+                  </>
+                ) : (
+                  <p className="py-4 text-[13px] text-[var(--color-ink-soft)]">Pay is only visible to payroll holders.</p>
+                )}
+              </div>
+              <div className={`${CARD} p-5`}>
+                <CardHead title="Contract" />
+                <div className="divide-y divide-[var(--color-line-soft)]">
+                  <Row label="Type" value={d.contract.type} />
+                  <Row label="Start date" value={d.contract.start ? day(d.contract.start) : ''} />
+                  <Row label="End date" value={d.contract.end ? day(d.contract.end) : 'No end date'} />
+                  <Row label="Notice period" value={d.contract.noticePeriod} />
+                  <Row label="Document" value={d.contract.document
+                    ? <a href={`/api/agent-files/${d.contract.document.id}/download?t=${encodeURIComponent(getToken() || '')}`} className={linkish}><FileText size={14} /> {d.contract.document.name}</a>
+                    : ''} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+  );
+}
+
+// ── Performance tab ───────────────────────────────────────────────────
+// Adama 27 Aug: "performance is driven by actual KPIs — not a separate
+// manual score." So this reads the person's ROLE scorecard (the same
+// scorecardFor the server builds for My Progress and the team-member card)
+// and shows each KPI against its target.
+//
+// 🔑 A KPI with `actual: null` has no feed in Pulse yet. It is shown, named,
+// and marked "not measured yet" — never drawn as a 0% bar, which would read
+// as failing at something nobody is tracking.
+export function PerformanceTab({ d, e, a, sales }) {
+  const kpis = d.scorecard?.kpis || [];
+  const pctOf = (k) => (k.target ? Math.min(100, Math.round((k.actual / k.target) * 100)) : null);
+  const measured = kpis.filter((k) => k.actual != null);
+  const behindList = measured.filter((k) => pctOf(k) < 100);
+  const status = !measured.length
+    ? ['No KPIs measured yet', 'muted', 'nothing feeds this role yet']
+    : behindList.length === 0
+      ? ['On track', 'good', `${measured.length} of ${measured.length} KPIs at target`]
+      : ['Needs attention', 'bad', `${behindList.length} of ${measured.length} ${behindList.length === 1 ? 'KPI' : 'KPIs'} below target`];
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="t-card">Performance · this month</h2>
+        <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">
+          Driven by the KPIs set for this role, not a separate hand-typed score.
+        </p>
       </div>
-      <div className="mt-1.5 h-1.5 rounded-full bg-[var(--color-line-soft)]">
-        <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: colour }} />
+
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <div className={`${CARD} p-5`}>
+          <p className="text-[12.5px] text-[var(--color-ink-soft)]">Overall status</p>
+          <p className="mt-2 text-[19px] font-semibold leading-tight" style={{ color: TONE[status[1]] }}>{status[0]}</p>
+          <p className="mt-2 text-[12px] text-[var(--color-ink-faint)]">{status[2]}</p>
+        </div>
+        <Tile label="Sales"
+          value={sales ? (sales.actual == null ? '—' : `${sales.actual} / ${sales.target ?? '—'}`) : '—'}
+          sub={sales
+            ? (sales.actual == null ? 'not counted for this month'
+              : sales.target ? `${Math.round((sales.actual / sales.target) * 100)}% of target` : 'no target set')
+            : 'not a sales role'}
+          tone={sales && sales.actual != null && sales.target && sales.actual >= sales.target ? 'good' : 'muted'} />
+        <Tile label="Attendance"
+          value={a.ratePct == null ? '—' : `${a.ratePct}%`}
+          sub={a.ratePct == null ? 'nothing recorded yet' : a.ratePct >= 90 ? 'at target' : 'below the 90% target'}
+          tone={a.ratePct == null ? 'muted' : a.ratePct >= 90 ? 'good' : 'warn'} />
+        <Tile label="Review score"
+          value={d.performance.averageReview == null ? '—' : String(d.performance.averageReview)}
+          sub={d.performance.reviews?.length
+            ? `average of ${d.performance.reviews.length} ${d.performance.reviews.length === 1 ? 'review' : 'reviews'}`
+            : 'no reviews written yet'}
+          tone="muted" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className={`${CARD} p-5`}>
+          <CardHead title="KPI progress" action={<span className="text-[12px] text-[var(--color-ink-faint)]">{d.scorecard?.role || ''}</span>} />
+          {kpis.length === 0 ? (
+            <p className="py-4 text-[13px] text-[var(--color-ink-soft)]">
+              No KPIs are set for this role yet. They are defined on KPI Targets.
+            </p>
+          ) : (
+            <div className="divide-y divide-[var(--color-line-soft)]">
+              {kpis.map((k) => {
+                const pct = k.actual == null ? null : pctOf(k);
+                const colour = pct == null ? 'var(--color-line)'
+                  : pct >= 100 ? 'var(--color-pill-active)'
+                    : pct >= 60 ? 'var(--color-pill-leave)' : 'var(--color-stage-out)';
+                return (
+                  <div key={k.key} className="py-3 first:pt-0">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="text-[13px] font-medium text-[var(--color-ink)]">{k.label}</span>
+                      <span className="text-[12.5px] text-[var(--color-ink-soft)]">
+                        {k.actual == null
+                          ? <span className="text-[var(--color-ink-faint)]">not measured yet</span>
+                          : <>{k.actual}{k.kind === 'percent' ? '%' : ''} <span className="text-[var(--color-ink-faint)]">of {k.target}{k.kind === 'percent' ? '%' : ''}</span></>}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1.5 rounded-full bg-[var(--color-line-soft)]">
+                      {pct != null && <div className="h-full rounded-full" style={{ width: `${Math.max(2, pct)}%`, background: colour }} />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className={`${CARD} p-5`}>
+          <CardHead title="Manager coaching" />
+          {behindList.length > 0 && (
+            <>
+              <p className="text-[12px] text-[var(--color-ink-faint)]">Recommended focus</p>
+              <p className="mt-1 text-[13px] font-medium text-[var(--color-ink)]">
+                {behindList.map((k) => k.label).join(', ')}.
+              </p>
+            </>
+          )}
+          <p className={`text-[12px] text-[var(--color-ink-faint)] ${behindList.length > 0 ? 'mt-4' : ''}`}>Last note</p>
+          {d.notes.length === 0 ? (
+            <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">No coaching note yet.</p>
+          ) : (
+            <>
+              <p className="mt-1 text-[13px] text-[var(--color-ink)]">{d.notes[0].text}</p>
+              <p className="mt-1 text-[12px] text-[var(--color-ink-faint)]">
+                {d.notes[0].by}{d.notes[0].at ? ` · ${day(d.notes[0].at)}` : ''}
+              </p>
+            </>
+          )}
+          <Link to={`/performance/${e.username}`} className={`${linkish} mt-4`}>
+            Add coaching note <ArrowRight size={14} />
+          </Link>
+        </div>
       </div>
     </div>
   );

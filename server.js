@@ -5063,21 +5063,16 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
   const mine = attAll.filter((a) => a.date?.startsWith(month))
   const leaveAll = db.read('leave', []).filter((l) => l.username === u.username)
 
-  // Attendance for the month, counted the way the attendance page counts it:
-  // a check-in is a day worked, late still counts as present.
-  const present = mine.filter((a) => a.checkIn).length
-  const late = mine.filter((a) => a.late).length
-  const onLeave = leaveAll.filter((l) => l.status === 'approved' && l.from?.slice(0, 7) <= month && month <= (l.to || l.from)?.slice(0, 7)).length
-  // Working days so far this month, Monday to Friday (the team's week).
-  let workingDays = 0
-  for (let d = 1; d <= Number(today.slice(8, 10)); d++) {
-    const day = new Date(`${month}-${String(d).padStart(2, '0')}T00:00:00Z`).getUTCDay()
-    if (day !== 0 && day !== 6) workingDays++
-  }
-  const minutes = mine.reduce((sum, a) => {
-    if (!a.checkIn || !a.checkOut) return sum
-    return sum + Math.max(0, (Date.parse(a.checkOut) - Date.parse(a.checkIn)) / 60000)
-  }, 0)
+  // 🔒 ONE attendance truth: the same month builder the Attendance tab reads,
+  // so the record's tiles and that tab can never disagree. It counts against
+  // the person's OWN weekly schedule rather than an assumed Mon-Fri, and it
+  // never marks days before ATTENDANCE_START absent.
+  const attMonthNow = attendanceMonth(u.username, month)
+  const present = attMonthNow.summary.present
+  const late = attMonthNow.summary.late
+  const onLeave = attMonthNow.summary.leave
+  const workingDays = attMonthNow.summary.scheduledDays
+  const minutes = attMonthNow.summary.workedMinutes
   const checkIns = mine.filter((a) => a.checkIn).map((a) => new Date(a.checkIn))
   const avgCheckIn = checkIns.length
     ? (() => {
@@ -5092,12 +5087,23 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
   // Whose sale a sale is comes from admin — see salesActualFor. The sheet
   // record still carries the monthly target.
   const salesActual = salesRec ? await salesActualFor(u.name, month) : null
-  const attendancePct = workingDays > 0 ? Math.round((present / workingDays) * 100) : null
+  const attendancePct = attMonthNow.summary.ratePct
   const performance = {
     score: profile.performanceScore === '' || profile.performanceScore == null ? null : Number(profile.performanceScore),
     sales: salesRec ? { actual: salesActual, target: salesRec.monthlyTarget ?? null } : null,
     attendancePct,
   }
+  // The person's REAL role scorecard (Adama 27 Aug: "performance is driven by
+  // actual KPIs, not a separate manual score"). Same builder My Progress and
+  // the team-member card use, so the record cannot invent its own targets.
+  // 🔑 A KPI whose `actual` is null is NOT zero — Pulse has no feed for it
+  // yet, and the tab must say so rather than draw an empty bar that reads as
+  // a failure. Attendance is added because we genuinely measure it.
+  const scorecard = scorecardFor(u, salesActual)
+  scorecard.kpis = [
+    ...scorecard.kpis,
+    { key: 'attendance', label: 'Attendance', kind: 'percent', unit: '%', target: 90, weight: 0, actual: attendancePct },
+  ]
 
   // Every document, with who put it there — the Documents tab groups by
   // category and the Overview shows the newest few from the same list.
@@ -5106,24 +5112,44 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
     .sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''))
     .map(({ id, name, category, mimeType, sizeBytes, uploadedAt, uploadedBy }) => ({ id, name, category: category || 'other', mimeType, sizeBytes, uploadedAt, uploadedBy: uploadedBy || '' }))
 
-  // The month's attendance, day by day, so the calendar and the record list
-  // read from one place. Overtime is time past the scheduled day, never a
-  // guess: no check-out means no overtime, not an assumed one.
-  const records = mine
-    .slice()
-    .sort((x, y) => (y.date || '').localeCompare(x.date || ''))
-    .map((r) => {
-      const worked = r.checkIn && r.checkOut ? Math.max(0, (Date.parse(r.checkOut) - Date.parse(r.checkIn)) / 60000) : null
-      return {
-        date: r.date,
-        checkIn: r.checkIn || null,
-        checkOut: r.checkOut || null,
-        late: !!r.late,
-        status: r.status || (r.checkIn ? (r.late ? 'late' : 'present') : 'absent'),
-        workedMinutes: worked == null ? null : Math.round(worked),
-      }
+  // WHAT NEEDS ATTENTION — the record's first screen answers "is anything
+  // wrong here", so each item is a fact with somewhere to go. Only things
+  // that are actually true land here; an empty list says so plainly rather
+  // than inventing a chore.
+  const attention = []
+  if (attMonthNow.summary.missingCheckouts > 0) {
+    const n = attMonthNow.summary.missingCheckouts
+    attention.push({
+      tone: 'bad',
+      title: `${n} attendance ${n === 1 ? 'record needs' : 'records need'} review`,
+      detail: 'Clocked in with no clock-out, so the hours cannot be counted.',
+      action: 'Review attendance', tab: 'Attendance',
     })
-  const overtimeMinutes = records.reduce((sum, r) => sum + Math.max(0, (r.workedMinutes || 0) - 8 * 60), 0)
+  }
+  if (attMonthNow.summary.absent > 0) {
+    const n = attMonthNow.summary.absent
+    attention.push({
+      tone: 'warn',
+      title: `${n} ${n === 1 ? 'day' : 'days'} absent this month`,
+      detail: 'Scheduled days with no clock-in and no approved leave.',
+      action: 'Review attendance', tab: 'Attendance',
+    })
+  }
+  // Behind PACE, not behind target — being on 1 of 5 on the 2nd of the month
+  // is not a problem, and calling it one teaches people to ignore the page.
+  if (salesRec && salesActual != null && salesRec.monthlyTarget) {
+    const dayOfMonth = Number(today.slice(8, 10))
+    const daysInMonth = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate()
+    const expected = (salesRec.monthlyTarget * dayOfMonth) / daysInMonth
+    if (salesActual < Math.floor(expected)) {
+      attention.push({
+        tone: 'warn',
+        title: 'Sales behind pace',
+        detail: `${salesActual} of ${salesRec.monthlyTarget} with ${daysInMonth - dayOfMonth} ${daysInMonth - dayOfMonth === 1 ? 'day' : 'days'} left.`,
+        action: 'Open performance', tab: 'Performance',
+      })
+    }
+  }
 
   // Reviews and the ratings inside them, newest first.
   const reviewsAll = (db.read('reviews', {})[u.name] || [])
@@ -5182,19 +5208,25 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
     attendance: {
       workingDays,
       present,
-      absent: Math.max(0, workingDays - present - onLeave),
+      // Absent is COUNTED, not inferred by subtraction: a scheduled day with
+      // no clock-in and no approved leave. Subtracting used to turn any gap
+      // in the data into an accusation.
+      absent: attMonthNow.summary.absent,
       late,
       leave: onLeave,
-      hours: Math.round(minutes / 60),
+      hours: Math.floor(minutes / 60),
       minutes: Math.round(minutes % 60),
+      ratePct: attMonthNow.summary.ratePct,
+      missingCheckouts: attMonthNow.summary.missingCheckouts,
+      overtimeMinutes: attMonthNow.summary.overtimeMinutes,
       avgCheckIn,
       month,
     },
     performance: { ...performance, averageReview, reviews: reviewsAll.slice(0, 6) },
+    scorecard,
+    attention,
     documents,
     notes,
-    attendanceRecords: records,
-    overtimeMinutes,
     contract: {
       type: u.contractEnd ? 'Fixed term' : u.contractor ? 'Contractor' : 'Permanent',
       start: u.joined || null,
