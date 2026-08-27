@@ -6,6 +6,7 @@ import {
   CalendarPlus, FilePlus2, ThumbsUp, ArrowRight,
 } from 'lucide-react';
 import { api, getToken } from '../lib/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import { payByName } from '../lib/pay.js';
 import { JobPay, Attendance, Documents, Notes, History } from './employee/tabs.jsx';
 import PerformancePerson from './PerformancePerson.jsx';
@@ -22,7 +23,9 @@ const CARD = 'card';
 const D = (n) => 'D' + Number(n || 0).toLocaleString('en-US');
 const day = (iso) => {
   const d = new Date(iso || '');
-  return isNaN(d) ? '—' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  // UTC pin: the company clock is Gambia. Without it a plain '1990-05-04'
+  // parses as UTC midnight and renders as 3 May for a viewer in the US.
+  return isNaN(d) ? '—' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 };
 const tenure = (iso) => {
   const start = Date.parse(iso || '');
@@ -54,6 +57,84 @@ const CardHead = ({ title, action }) => (
   </div>
 );
 const linkish = 'inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-brand)] hover:underline';
+const GENDERS = ['', 'Female', 'Male'];
+const MARITAL = ['', 'Single', 'Married', 'Divorced', 'Widowed'];
+
+// One row while the card is being edited. Rows without a `key` are owned
+// somewhere else (a name, a login email, a contract) and stay as facts.
+function EditRow({ row, value, onChange }) {
+  const Icon = row.icon;
+  return (
+    <div className="flex items-center gap-3 py-2">
+      {Icon ? <Icon size={15} className="shrink-0 text-[var(--color-ink-faint)]" /> : <span className="w-[15px] shrink-0" />}
+      <label className="w-[128px] shrink-0 text-[13px] text-[var(--color-ink-faint)]">{row.label}</label>
+      {row.options ? (
+        <select className="field min-w-0 flex-1" value={value} onChange={(ev) => onChange(ev.target.value)}>
+          {row.options.map((o) => <option key={o || 'blank'} value={o}>{o || '—'}</option>)}
+        </select>
+      ) : (
+        <input className="field min-w-0 flex-1" type={row.type || 'text'} value={value}
+          placeholder={row.placeholder || ''} onChange={(ev) => onChange(ev.target.value)} />
+      )}
+    </div>
+  );
+}
+
+// A card you edit where it is shown, rather than travelling to a form and back
+// (DESIGN.md, "Quick editing"). Edit turns the card's own rows into fields;
+// Save sends ONLY what actually changed, so an untouched field is never
+// rewritten and never lands on the person's History.
+function EditableCard({ title, rows, canEdit, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const fields = rows.filter((r) => r.key);
+
+  function open() {
+    setDraft(Object.fromEntries(fields.map((r) => [r.key, r.raw ?? ''])));
+    setError('');
+    setEditing(true);
+  }
+  async function save() {
+    const changed = {};
+    for (const r of fields) if ((draft[r.key] ?? '') !== (r.raw ?? '')) changed[r.key] = draft[r.key] ?? '';
+    if (!Object.keys(changed).length) { setEditing(false); return; }
+    setBusy(true);
+    setError('');
+    try {
+      await onSave(changed);
+      setEditing(false);
+    } catch (err) {
+      setError(err.message || 'Could not save');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className={`${CARD} p-5`}>
+      <CardHead title={title} action={canEdit && !editing
+        ? <button type="button" onClick={open} className="text-[13px] font-medium text-[var(--color-brand)] hover:underline">Edit</button>
+        : null} />
+      <div className="divide-y divide-[var(--color-line-soft)]">
+        {rows.map((r) => (editing && r.key
+          ? <EditRow key={r.label} row={r} value={draft[r.key] ?? ''} onChange={(v) => setDraft((st) => ({ ...st, [r.key]: v }))} />
+          : <Row key={r.label} icon={r.icon} label={r.label} value={r.value} />))}
+      </div>
+      {editing && (
+        <div className="mt-4 border-t border-[var(--color-line)] pt-4">
+          {/* The failure shows where it happened, not as a toast that leaves. */}
+          {error && <p className="mb-3 text-[13px] text-[var(--color-stage-out)]">{error}</p>}
+          <div className="flex items-center justify-end gap-2">
+            <button type="button" onClick={() => setEditing(false)} disabled={busy} className="btn-secondary disabled:opacity-60">Cancel</button>
+            <button type="button" onClick={save} disabled={busy} className="btn-primary disabled:opacity-60">{busy ? 'Saving…' : 'Save'}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function EmployeePage() {
   const { username } = useParams();
@@ -63,7 +144,23 @@ export default function EmployeePage() {
   const [pay, setPay] = useState(null);
   const [tab, setTab] = useState('Overview');
   const [roster, setRoster] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const { realUser, isViewAs } = useAuth();
+  // The Edit affordance only appears for someone who can actually save — the
+  // server re-checks every write regardless, and view-as stays read-only.
+  const canEditRecord = !!realUser?.canRecordsEdit && !isViewAs;
+  const canMoveDepartment = !!realUser?.canMoveDepartment && !isViewAs;
+
+  // Department keeps its own Manage-staff endpoint and its own history line:
+  // it moves the sales goal and the leaderboard, so it never rides along in
+  // the HR write.
+  async function saveRecord(fields) {
+    const { department, ...rest } = fields;
+    if (department !== undefined) await api(`/staff/${username}/department`, { method: 'POST', body: { department } });
+    if (Object.keys(rest).length) await api(`/hr/employee/${username}`, { method: 'PATCH', body: { fields: rest } });
+    setD(await api(`/hr/employee/${username}`));
+  }
 
   async function uploadDocument(file) {
     if (!file || !d?.employee) return;
@@ -91,6 +188,7 @@ export default function EmployeePage() {
   }, [username]);
   useEffect(() => {
     api('/hr/employees').then((r) => setRoster(r.employees || [])).catch(() => setRoster([]));
+    api('/departments').then((r) => setDepartments(r.departments || [])).catch(() => setDepartments([]));
   }, []);
   useEffect(() => {
     if (!d?.employee?.name) return;
@@ -122,9 +220,9 @@ export default function EmployeePage() {
         </nav>
         <div className="flex items-center gap-2">
           <button disabled={!prev} onClick={() => prev && navigate(`/people/${prev.username}`)}
-            className="btn-secondary flex h-[38px] w-[38px] items-center justify-center p-0 disabled:opacity-40"><ChevronLeft size={16} /></button>
+            className="btn-secondary flex h-[38px] w-[38px] items-center justify-center p-0 disabled:opacity-40"><ChevronLeft size={16} className="shrink-0" /></button>
           <button disabled={!next} onClick={() => next && navigate(`/people/${next.username}`)}
-            className="btn-secondary flex h-[38px] w-[38px] items-center justify-center p-0 disabled:opacity-40"><ChevronRight size={16} /></button>
+            className="btn-secondary flex h-[38px] w-[38px] items-center justify-center p-0 disabled:opacity-40"><ChevronRight size={16} className="shrink-0" /></button>
         </div>
       </div>
 
@@ -178,17 +276,19 @@ export default function EmployeePage() {
 
       {tab === 'Overview' && (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <div className={`${CARD} p-5`}>
-            <CardHead title="Job information" />
-            <div className="divide-y divide-[var(--color-line-soft)]">
-              <Row icon={Briefcase} label="Role" value={e.title} />
-              <Row icon={Building2} label="Department" value={e.department} />
-              <Row icon={FileText} label="Employment type" value={e.employment} />
-              <Row icon={Clock} label="Work schedule" value={e.schedule} />
-              <Row icon={UserRound} label="Reports to" value={e.reportsTo} />
-              <Row icon={MapPin} label="Location" value={e.address} />
-            </div>
-          </div>
+          <EditableCard title="Job information" canEdit={canEditRecord} onSave={saveRecord} rows={[
+            { label: 'Role', icon: Briefcase, key: 'title', raw: e.title, value: e.title },
+            // Only offered to a Manage-staff holder — the one row on this card
+            // that is not the HR grant's to change.
+            { label: 'Department', icon: Building2, key: canMoveDepartment ? 'department' : undefined, options: departments, raw: e.department, value: e.department },
+            // Decided by the contract actions, never typed.
+            { label: 'Employment type', icon: FileText, value: e.employment },
+            { label: 'Employee ID', icon: FileText, key: 'employeeId', raw: e.employeeId, value: e.employeeId },
+            { label: 'Start date', icon: CalendarDays, key: 'joined', type: 'date', raw: e.joined || '', value: e.joined ? day(e.joined) : '' },
+            { label: 'Work schedule', icon: Clock, key: 'schedule', raw: e.schedule, value: e.schedule },
+            { label: 'Reports to', icon: UserRound, key: 'manager', options: ['', ...roster.filter((r) => r.name !== e.name).map((r) => r.name)], raw: e.reportsTo, value: e.reportsTo },
+            { label: 'Location', icon: MapPin, key: 'location', raw: e.location, value: e.location, placeholder: 'Office, site or town' },
+          ]} />
 
           {/* 🔒 Only rendered when the payroll endpoint actually returned a
               figure — a viewer without that power never receives one. */}
@@ -275,19 +375,23 @@ export default function EmployeePage() {
             <Link to={`/performance/${e.username}`} className={`${linkish} mt-4`}>View performance details <ArrowRight size={14} /></Link>
           </div>
 
-          <div className={`${CARD} p-5`}>
-            <CardHead title="Personal information" />
-            <div className="divide-y divide-[var(--color-line-soft)]">
-              <Row label="Full name" value={e.name} />
-              <Row label="Date of birth" value={e.dob} />
-              <Row label="Gender" value={e.gender} />
-              <Row label="Phone" value={e.phone} />
-              <Row label="Email" value={e.email} />
-              <Row label="Address" value={e.address} />
-              <Row label="Nationality" value={e.nationality} />
-              <Row label="Emergency contact" value={e.emergencyContact && `${e.emergencyContact}${e.emergencyPhone ? ` · ${e.emergencyPhone}` : ''}`} />
-            </div>
-          </div>
+          <EditableCard title="Personal information" canEdit={canEditRecord} onSave={saveRecord} rows={[
+            // Not editable: every profile, review, sale, document and warning
+            // in Pulse is filed under this name — renaming here would orphan
+            // all of them. A name change is a Manage-staff job.
+            { label: 'Full name', value: e.name },
+            { label: 'Date of birth', key: 'dob', type: 'date', raw: e.dob || '', value: e.dob ? day(e.dob) : '' },
+            { label: 'Gender', key: 'gender', options: GENDERS, raw: e.gender, value: e.gender },
+            { label: 'Marital status', key: 'maritalStatus', options: MARITAL, raw: e.maritalStatus, value: e.maritalStatus },
+            { label: 'Phone', key: 'phone', type: 'tel', raw: e.phone, value: e.phone },
+            // The work email is the login. It changes on Team & access, where
+            // the CEO grant lives.
+            { label: 'Email', value: e.email },
+            { label: 'Address', key: 'address', raw: e.address, value: e.address },
+            { label: 'Nationality', key: 'nationality', raw: e.nationality, value: e.nationality },
+            { label: 'Emergency contact', key: 'emergencyContact', raw: e.emergencyContact, value: e.emergencyContact },
+            { label: 'Emergency phone', key: 'emergencyPhone', type: 'tel', raw: e.emergencyPhone, value: e.emergencyPhone },
+          ]} />
 
           <div className={`${CARD} p-5 xl:col-span-2`}>
             <CardHead title="Recent documents" action={<Link to="/documents" className="text-[13px] font-medium text-[var(--color-brand)] hover:underline">View all</Link>} />

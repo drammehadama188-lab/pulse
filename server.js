@@ -235,7 +235,7 @@ function publicUser(u) {
   // resolved powers ride along so the UI can gate sections client-side;
   // the server re-checks every request regardless. isTeamLead unlocks the MY
   // TEAM nav section (gated again server-side on /api/team/*).
-  return { ...rest, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u), canCoachingEdit: canSub(u, 'team', 'coaching-edit'), canCoachingDelete: canSub(u, 'team', 'coaching-delete'), canDocsEdit: canSub(u, 'hr', 'files-edit'), canDocsDelete: canSub(u, 'hr', 'files-delete') }
+  return { ...rest, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u), canCoachingEdit: canSub(u, 'team', 'coaching-edit'), canCoachingDelete: canSub(u, 'team', 'coaching-delete'), canDocsEdit: canSub(u, 'hr', 'files-edit'), canDocsDelete: canSub(u, 'hr', 'files-delete'), canRecordsEdit: canSub(u, 'hr', 'records'), canMoveDepartment: canSub(u, 'staffadmin', 'add') }
 }
 // Accepts a username OR an email (Adama 6 Jul: staff know their email, not the
 // internal username — Momodou typed his email and got "Unknown username").
@@ -4236,7 +4236,10 @@ app.delete('/api/agent-files/:id', auth, requireSub('hr', 'files-delete'), notVi
 // Personal/contact + HR fields the static team.js roster doesn't carry. Stored
 // per employee NAME so they survive roster edits. Read by anyone with 'hr';
 // written by 'hr'. Never holds pay (that's the roster/payroll).
-const PROFILE_FIELDS = ['phone', 'email', 'emergencyContact', 'emergencyPhone', 'manager', 'nextReview', 'address', 'notes', 'performanceScore', 'performanceStatus', 'performanceNote']
+const PROFILE_FIELDS = ['phone', 'email', 'emergencyContact', 'emergencyPhone', 'manager', 'nextReview', 'address', 'notes', 'performanceScore', 'performanceStatus', 'performanceNote',
+  // Read by the employee record since 20 Aug, but nothing could ever WRITE
+  // them, so they showed "—" forever no matter who looked (Adama 27 Aug).
+  'schedule', 'location', 'dob', 'gender', 'nationality', 'maritalStatus', 'noticePeriod']
 app.get('/api/employee-profile', auth, requireSub('hr', 'records'), (req, res) => {
   const name = req.query.name
   if (!name) return res.status(400).json({ error: 'name required' })
@@ -4252,6 +4255,94 @@ app.put('/api/employee-profile', auth, requireSub('hr', 'records'), notViewAs, (
   all[name] = { ...(all[name] || {}), ...clean, updatedAt: new Date().toISOString(), updatedBy: req.user.username }
   db.write('profiles', all)
   res.json({ profile: all[name] })
+})
+
+// ---------- edit the employee record in place (Adama 27 Aug) ----------
+// The record page could SHOW a job title, a start date and a date of birth but
+// nothing in Pulse could ever write them, so they read "—" for good. This is
+// the one write behind the per-card Edit on the record.
+//
+// One endpoint, because a single card holds fields from two stores — the
+// roster (users) and the HR profile. The page sends what changed; the server
+// decides where each field lands, so no page has to know the storage.
+//
+// 🔒 Deliberately NOT editable here:
+//   name        — profiles, reviews, sales, documents and warnings are all
+//                 keyed by NAME. A rename here would orphan every one of them.
+//   email       — it is the login. The CEO changes it on Team & access.
+//   department  — moves the sales goal and the leaderboard; it keeps its own
+//                 Manage-staff endpoint and its own history line.
+//   employment  — decided by the contract actions, never typed.
+const RECORD_ROSTER_FIELDS = ['title', 'joined', 'employeeId', 'phone', 'address']
+const RECORD_PROFILE_FIELDS = ['manager', 'schedule', 'location', 'dob', 'gender', 'nationality', 'maritalStatus', 'emergencyContact', 'emergencyPhone', 'noticePeriod']
+const RECORD_FIELD_LABEL = {
+  title: 'Job title', joined: 'Start date', employeeId: 'Employee ID', phone: 'Phone', address: 'Address',
+  manager: 'Reports to', schedule: 'Work schedule', location: 'Location', dob: 'Date of birth', gender: 'Gender',
+  nationality: 'Nationality', maritalStatus: 'Marital status', emergencyContact: 'Emergency contact',
+  emergencyPhone: 'Emergency phone', noticePeriod: 'Notice period',
+}
+const isDayOrBlank = (v) => v === '' || /^\d{4}-\d{2}-\d{2}$/.test(v)
+const employeeIdOf = (u) => u.employeeId || `EMP-${String(u.username).slice(0, 3).toUpperCase()}`
+
+app.patch('/api/hr/employee/:username', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === String(req.params.username || '').trim().toLowerCase())
+  if (!u || isArchived(u)) return res.status(404).json({ error: 'not found' })
+  const fields = req.body?.fields
+  if (!fields || typeof fields !== 'object') return res.status(400).json({ error: 'Nothing to save' })
+
+  const clean = {}
+  for (const k of [...RECORD_ROSTER_FIELDS, ...RECORD_PROFILE_FIELDS]) {
+    if (fields[k] === undefined) continue
+    clean[k] = String(fields[k] ?? '').trim().slice(0, 160)
+  }
+  if (!Object.keys(clean).length) return res.status(400).json({ error: 'Nothing to save' })
+  if (clean.joined !== undefined && !isDayOrBlank(clean.joined)) return res.status(400).json({ error: 'Start date must be a real date' })
+  if (clean.dob !== undefined && !isDayOrBlank(clean.dob)) return res.status(400).json({ error: 'Date of birth must be a real date' })
+  // An employee ID that two people share stops identifying anybody.
+  if (clean.employeeId) {
+    const taken = users.some((x) => x.username !== u.username && employeeIdOf(x).toLowerCase() === clean.employeeId.toLowerCase())
+    if (taken) return res.status(409).json({ error: 'That employee ID already belongs to someone else' })
+  }
+  // "Reports to" has to name somebody who is actually here.
+  if (clean.manager) {
+    const known = users.some((x) => !isArchived(x) && x.name === clean.manager && x.username !== u.username)
+    if (!known) return res.status(400).json({ error: 'Reports to must be someone on the team' })
+  }
+
+  const profiles = db.read('profiles', {})
+  const changes = []
+
+  for (const k of RECORD_ROSTER_FIELDS) {
+    if (clean[k] === undefined) continue
+    const was = String(u[k] ?? '')
+    if (was === clean[k]) continue
+    u[k] = clean[k]
+    // Phone and address were read as `u.x || profile.x`, so a leftover profile
+    // copy would resurrect the value HR had just cleared. One truth: the roster.
+    if (profiles[u.name]) delete profiles[u.name][k]
+    changes.push(`${RECORD_FIELD_LABEL[k]}: ${was || '—'} → ${clean[k] || '—'}`)
+  }
+
+  const profile = profiles[u.name] || {}
+  for (const k of RECORD_PROFILE_FIELDS) {
+    if (clean[k] === undefined) continue
+    const was = String(profile[k] ?? '')
+    if (was === clean[k]) continue
+    profile[k] = clean[k]
+    changes.push(`${RECORD_FIELD_LABEL[k]}: ${was || '—'} → ${clean[k] || '—'}`)
+  }
+
+  if (!changes.length) return res.json({ ok: true, changed: [] })
+
+  profile.updatedAt = new Date().toISOString()
+  profile.updatedBy = req.realUser.username
+  profiles[u.name] = profile
+  db.write('profiles', profiles)
+  // Every change lands on the person's History, the same as a department move.
+  ;(u.history ||= []).push({ date: todayKey(), event: `Record updated by ${req.realUser.name || req.realUser.username} — ${changes.join('; ')}` })
+  db.write('users', users)
+  res.json({ ok: true, changed: changes })
 })
 
 // ---------- onboarding / offboarding checklists (per employee) ----------
@@ -4958,7 +5049,10 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), (req, res) => {
       probationEnd: u.probationEnd || null,
       reportsTo: profile.manager || '',
       schedule: profile.schedule || 'Mon – Fri, 8:00 AM – 5:00 PM',
-      employeeId: u.employeeId || `EMP-${String(u.username).slice(0, 3).toUpperCase()}`,
+      // Where they work — a separate fact from the home address below, which
+      // is why the Job card no longer borrows it.
+      location: profile.location || '',
+      employeeId: employeeIdOf(u),
       dob: profile.dob || '',
       gender: profile.gender || '',
       nationality: profile.nationality || '',
