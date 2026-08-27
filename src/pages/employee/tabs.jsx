@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Download, FileText, Search, Upload, ChevronLeft, ChevronRight, ArrowRight,
-  Star, AlertTriangle, MessageSquare,
+  Star, AlertTriangle, MessageSquare, MoreHorizontal,
 } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
 import { timeShort } from '../../lib/format.js';
 import EmptyState from '../../components/ui/EmptyState.jsx';
+import Pager, { usePager } from '../../components/ui/Pager.jsx';
 
 // The tabs of an employee's record. Each shows what Pulse actually holds and
 // says so plainly when it holds nothing — an empty month is not a zero.
@@ -117,39 +118,152 @@ export function JobPay({ e, pay, contract }) {
 }
 
 // ── Attendance ─────────────────────────────────────────────────────
+// Built to Adama's 27 Aug mockup: the month's tiles, the day-by-day calendar
+// with times on every cell, the totals strip, and the records table with a
+// row action. Every figure comes from ONE call to
+// /api/hr/employee/:username/attendance?month= — the tiles, the calendar,
+// the strip and the table cannot disagree, and the month arrows now move the
+// DATA, not just the grid (before this, they moved an empty grid while the
+// numbers stayed on the current month).
+//
+// 🔒 There is no excused/unexcused split on an absence: nothing in Pulse
+// records one, and a made-up split on a person's record is worse than none
+// (Adama 27 Aug). Approved leave already stands as its own status.
 const DAY_TONE = {
   present: ['var(--color-pill-active)', 'Present'],
   late: ['var(--color-pill-leave)', 'Late'],
   absent: ['var(--color-stage-out)', 'Absent'],
   leave: ['var(--color-stage-new)', 'On leave'],
 };
-export function Attendance({ a, records, overtimeMinutes }) {
-  const [month, setMonth] = useState(a.month);
-  const byDate = useMemo(() => Object.fromEntries(records.map((r) => [r.date, r])), [records]);
-  const rate = a.workingDays ? Math.round((a.present / a.workingDays) * 100) : null;
-  const cells = useMemo(() => {
+// The calendar's own vocabulary — the server's status words, each with the
+// ink it is written in and the wash behind the cell.
+const CELL = {
+  worked: ['Present', 'var(--color-pill-active)', 'var(--color-pill-active-bg)'],
+  late: ['Late', 'var(--color-pill-leave)', 'var(--color-pill-leave-bg)'],
+  absent: ['Absent', 'var(--color-stage-out)', 'var(--color-stage-out-bg)'],
+  leave: ['On leave', 'var(--color-stage-new)', 'var(--color-stage-new-bg)'],
+  sick: ['Sick leave', 'var(--color-stage-new)', 'var(--color-stage-new-bg)'],
+  off: ['Off', 'var(--color-ink-faint)', 'transparent'],
+  today: ['Not started', 'var(--color-ink-soft)', 'transparent'],
+  future: ['Scheduled', 'var(--color-ink-faint)', 'transparent'],
+};
+const FILTERS = [
+  ['all', 'All'], ['present', 'Present'], ['late', 'Late'],
+  ['absent', 'Absent'], ['leave', 'Leave'], ['review', 'Needs review'],
+];
+const hhmm = (iso) => (iso ? String(iso).slice(11, 16) : null);
+const shiftLabel = (s) => (s ? `${s.start}–${s.end}` : '—');
+const hoursLabel = (min) => `${Math.floor((min || 0) / 60)}h ${String(Math.round((min || 0) % 60)).padStart(2, '0')}m`;
+// The shell: it owns the month and fetches it. Kept apart from the view
+// below so the view can be rendered with real data in the tab test — a
+// self-fetching component can only ever be tested as a loading skeleton,
+// and this tab is exactly where a blank page came from once.
+export function Attendance({ username }) {
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [d, setD] = useState(null);
+  const [error, setError] = useState('');
+  const [nonce, setNonce] = useState(0);
+
+  useEffect(() => {
+    let live = true;
+    setD(null);
+    setError('');
+    api(`/hr/employee/${encodeURIComponent(username)}/attendance?month=${month}`)
+      .then((j) => { if (live) setD(j); })
+      .catch((e) => { if (live) setError(e.message || 'Could not load attendance'); });
+    return () => { live = false; };
+  }, [username, month, nonce]);
+
+  return (
+    <AttendanceMonth
+      username={username} d={d} error={error} month={month}
+      onMonth={setMonth} onReload={() => setNonce((n) => n + 1)}
+    />
+  );
+}
+
+export function AttendanceMonth({ username, d, error, month, onMonth, onReload }) {
+  const [filter, setFilter] = useState('all');
+  const [fix, setFix] = useState(null); // the day being corrected
+
+  const shift = (n) => {
+    const x = new Date(`${month}-01T00:00:00Z`);
+    x.setUTCMonth(x.getUTCMonth() + n);
+    onMonth(x.toISOString().slice(0, 7));
+  };
+
+  // The calendar grid: whole weeks, Monday first, so a month always sits in
+  // the same shape. Days outside the month render as ghosts.
+  const grid = useMemo(() => {
     const first = new Date(`${month}-01T00:00:00Z`);
     const start = new Date(first);
     start.setUTCDate(first.getUTCDate() - ((first.getUTCDay() + 6) % 7));
-    return Array.from({ length: 42 }, (_, i) => {
-      const d = new Date(start);
-      d.setUTCDate(start.getUTCDate() + i);
-      return d;
-    });
-  }, [month]);
-  const shift = (n) => {
-    const d = new Date(`${month}-01T00:00:00Z`);
-    d.setUTCMonth(d.getUTCMonth() + n);
-    setMonth(d.toISOString().slice(0, 7));
-  };
+    const byDate = Object.fromEntries((d?.days || []).map((x) => [x.date, x]));
+    const out = [];
+    for (let i = 0; i < 42; i++) {
+      const dt = new Date(start);
+      dt.setUTCDate(start.getUTCDate() + i);
+      const iso = dt.toISOString().slice(0, 10);
+      out.push({ iso, num: dt.getUTCDate(), inMonth: iso.slice(0, 7) === month, cell: byDate[iso] || null });
+    }
+    // A trailing week that belongs entirely to the next month is furniture.
+    return out.slice(0, out.slice(35).every((x) => !x.inMonth) ? 35 : 42);
+  }, [d, month]);
+
+  // The table follows the chips. "Needs review" is the queue that matters:
+  // a day someone clocked into and never out of cannot be trusted or paid.
+  const rows = useMemo(() => {
+    const days = (d?.days || []).filter((x) => x.date <= (d?.today || '') && x.date >= (d?.attendanceStart || ''));
+    const keep = {
+      all: () => true,
+      present: (x) => x.status === 'worked' || x.status === 'late',
+      late: (x) => x.status === 'late',
+      absent: (x) => x.status === 'absent',
+      leave: (x) => x.status === 'leave' || x.status === 'sick',
+      review: (x) => x.missingCheckout,
+    }[filter];
+    return days.filter(keep).sort((x, y) => y.date.localeCompare(x.date));
+  }, [d, filter]);
+  const pager = usePager(rows);
+  useEffect(() => { pager.reset(); }, [filter, month]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (error) return <p className="py-4 text-[13px] text-[var(--color-stage-out)]">{error}</p>;
+
+  const s = d?.summary;
+  const monthLabel = new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const monthNav = (
+    <span className="flex items-center gap-2">
+      <button onClick={() => shift(-1)} aria-label="Previous month"
+        className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[var(--color-line-control)] text-[var(--color-ink-soft)]">
+        <ChevronLeft size={14} />
+      </button>
+      <span className="w-[124px] text-center text-[13px] font-medium text-[var(--color-ink)]">{monthLabel}</span>
+      <button onClick={() => shift(1)} aria-label="Next month"
+        className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[var(--color-line-control)] text-[var(--color-ink-soft)]">
+        <ChevronRight size={14} />
+      </button>
+    </span>
+  );
+
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="t-card">Attendance</h2>
+        {monthNav}
+      </div>
+
+      {/* The four the mockup leads with. Each names its own denominator, so a
+          percentage is never a number without a question attached. */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          ['Attendance rate', rate == null ? '—' : `${rate}%`, `${a.present} of ${a.workingDays} working days`],
-          ['Total hours worked', `${a.hours}h ${a.minutes}m`, 'This month'],
-          ['Overtime', dur(overtimeMinutes), 'Past the scheduled day'],
-          ['Late arrivals', a.late, 'This month'],
+          ['Attendance rate', s ? (s.ratePct == null ? '—' : `${s.ratePct}%`) : '…',
+            s ? `${s.present} of ${s.scheduledDays} scheduled days` : ' '],
+          ['Hours worked', s ? hoursLabel(s.workedMinutes) : '…',
+            s ? `of ${Math.round(s.scheduledMinutes / 60)}h scheduled` : ' '],
+          ['Late arrivals', s ? s.late : '…',
+            s && s.latePctOfAttended != null ? `${s.latePctOfAttended}% of attended days` : 'none yet'],
+          ['Absences', s ? s.absent : '…',
+            s ? (s.absent ? 'scheduled days with no clock-in' : 'none this month') : ' '],
         ].map(([label, value, sub]) => (
           <div key={label} className={`${CARD} p-5`}>
             <p className="text-[13px] text-[var(--color-ink-soft)]">{label}</p>
@@ -158,86 +272,242 @@ export function Attendance({ a, records, overtimeMinutes }) {
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className={`${CARD} p-5`}>
-          <CardHead title="Attendance calendar" action={
-            <span className="flex items-center gap-2">
-              <button onClick={() => shift(-1)} className="rounded-[6px] border border-[var(--color-line-control)] p-1.5 text-[var(--color-ink-soft)]"><ChevronLeft size={14} /></button>
-              <span className="w-[112px] text-center text-[13px] font-medium text-[var(--color-ink)]">
-                {new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
-              </span>
-              <button onClick={() => shift(1)} className="rounded-[6px] border border-[var(--color-line-control)] p-1.5 text-[var(--color-ink-soft)]"><ChevronRight size={14} /></button>
-            </span>} />
-          <div className="grid grid-cols-7 text-center text-[11.5px] text-[var(--color-ink-faint)]">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => <span key={d} className="py-1.5">{d}</span>)}
-          </div>
-          <div className="grid grid-cols-7 gap-1 text-center">
-            {cells.map((d, i) => {
-              const iso = d.toISOString().slice(0, 10);
-              const rec = byDate[iso];
-              const other = iso.slice(0, 7) !== month;
-              const tone = rec ? DAY_TONE[rec.status] : null;
-              return (
-                <span key={i} className={`py-1.5 text-[13px] ${other ? 'text-[var(--color-ink-ghost)]' : 'text-[var(--color-ink-soft)]'}`}
-                  style={tone ? { color: tone[0], fontWeight: 500 } : undefined} title={tone ? tone[1] : ''}>
-                  {d.getUTCDate()}
-                </span>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-4 border-t border-[var(--color-line-soft)] pt-3">
+
+      {/* A record nobody can trust is work for a manager, so it is named at
+          the top rather than left to be noticed in the table. */}
+      {s?.missingCheckouts > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-[10px] border border-[var(--color-pill-leave)] bg-[var(--color-pill-leave-bg)] px-4 py-3">
+          <AlertTriangle size={15} className="shrink-0 text-[var(--color-pill-leave)]" />
+          <span className="text-[13px] font-medium text-[var(--color-ink)]">
+            {s.missingCheckouts} {s.missingCheckouts === 1 ? 'record needs' : 'records need'} review
+          </span>
+          <span className="text-[12.5px] text-[var(--color-ink-soft)]">
+            clocked in with no clock-out — the hours cannot be counted until it is closed
+          </span>
+          <button onClick={() => setFilter('review')} className={`${linkish} ml-auto`}>
+            Review {s.missingCheckouts === 1 ? 'it' : 'them'} <ArrowRight size={14} />
+          </button>
+        </div>
+      )}
+
+      <div className={`${CARD} p-5`}>
+        <CardHead title={monthLabel} action={
+          <span className="flex flex-wrap items-center gap-4">
             {Object.entries(DAY_TONE).map(([k, [colour, label]]) => (
               <span key={k} className="inline-flex items-center gap-1.5 text-[12px] text-[var(--color-ink-faint)]">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: colour }} /> {label}
               </span>
             ))}
-          </div>
+          </span>} />
+
+        <div className="grid grid-cols-7 border-b border-[var(--color-line-soft)] text-center text-[11.5px] text-[var(--color-ink-faint)]">
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((x) => <span key={x} className="py-2">{x}</span>)}
         </div>
-        <div className={`${CARD} p-5`}>
-          <CardHead title="Monthly summary" />
-          <div className="divide-y divide-[var(--color-line-soft)]">
-            <Row label="Working days" value={a.workingDays} />
-            <Row label="Present" value={a.present} />
-            <Row label="Absent" value={a.absent} />
-            <Row label="Late" value={a.late} />
-            <Row label="On leave" value={a.leave} />
+        {!d ? (
+          <div className="grid grid-cols-7">
+            {Array.from({ length: 35 }, (_, i) => (
+              <div key={i} className="h-[92px] border-b border-r border-[var(--color-line-soft)] p-2">
+                <div className="h-3 w-4 rounded-[4px] bg-[var(--color-line-soft)]" />
+              </div>
+            ))}
           </div>
-          <Link to="/attendance" className={`${linkish} mt-3`}>View full attendance report <ArrowRight size={14} /></Link>
-        </div>
-      </div>
-      <div className={`${CARD} overflow-x-auto`}>
-        <div className="p-5 pb-0"><CardHead title="Recent attendance records" /></div>
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
-              {['Date', 'Clock in', 'Clock out', 'Status', 'Worked'].map((h) => <th key={h} className="h-[46px] px-5">{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {records.slice(0, 10).map((r) => {
-              const [colour, label] = DAY_TONE[r.status] || DAY_TONE.absent;
+        ) : (
+          <div className="grid grid-cols-7">
+            {grid.map(({ iso, num, inMonth, cell }) => {
+              const meta = cell ? CELL[cell.status] : null;
+              const isToday = iso === d.today;
               return (
-                <tr key={r.date} className="border-b border-[var(--color-line-soft)] last:border-0">
-                  <td className="px-5 py-4 text-[var(--color-ink)]">{day(r.date)}</td>
-                  <td className="px-5 py-4 text-[var(--color-ink-soft)]">{r.checkIn ? timeShort(r.checkIn) : '—'}</td>
-                  <td className="px-5 py-4 text-[var(--color-ink-soft)]">{r.checkOut ? timeShort(r.checkOut) : '—'}</td>
-                  <td className="px-5 py-4">
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-medium" style={{ color: colour }}>
-                      <span className="h-1.5 w-1.5 rounded-full bg-current" /> {label}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-[var(--color-ink-soft)]">{dur(r.workedMinutes)}</td>
-                </tr>
+                <div key={iso}
+                  className={`h-[92px] overflow-hidden border-b border-r border-[var(--color-line-soft)] p-2 ${isToday ? 'ring-1 ring-inset ring-[var(--color-brand)]' : ''}`}
+                  style={{ background: inMonth && meta ? meta[2] : 'transparent', opacity: inMonth ? 1 : 0.4 }}>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[12px] ${inMonth ? 'text-[var(--color-ink-soft)]' : 'text-[var(--color-ink-ghost)]'}`}>{num}</span>
+                    {isToday && <span className="text-[10.5px] font-medium text-[var(--color-brand)]">Today</span>}
+                    {cell?.missingCheckout && <AlertTriangle size={11} className="text-[var(--color-stage-out)]" />}
+                  </div>
+                  {inMonth && meta && (
+                    <>
+                      <p className="mt-1 truncate text-[12px] font-medium" style={{ color: meta[1] }}>
+                        {cell.missingCheckout ? 'Needs review' : cell.status === 'leave' ? (cell.leaveType || 'On leave') : meta[0]}
+                      </p>
+                      <p className="mt-0.5 truncate text-[11.5px] text-[var(--color-ink-soft)]">
+                        {cell.checkIn
+                          ? `${hhmm(cell.checkIn)}–${hhmm(cell.checkOut) || '—'}`
+                          : cell.status === 'future' || cell.status === 'today'
+                            ? shiftLabel(cell.scheduled)
+                            : cell.status === 'leave' || cell.status === 'sick' ? 'Approved' : ''}
+                      </p>
+                      {cell.workedMinutes != null && (
+                        <p className="mt-0.5 text-[11.5px] text-[var(--color-ink-faint)]">{hoursLabel(cell.workedMinutes)}</p>
+                      )}
+                    </>
+                  )}
+                </div>
               );
             })}
-            {records.length === 0 && <tr><td colSpan={5}>
-              <EmptyState
-                title="No check-ins this month"
-                line="A check-in appears here once their manager records one."
-              />
-            </td></tr>}
-          </tbody>
-        </table>
+          </div>
+        )}
+
+        {/* The month in one line — the same numbers as the tiles, totalled. */}
+        {s && (
+          <div className="grid grid-cols-2 gap-4 pt-4 sm:grid-cols-4 lg:grid-cols-8">
+            {[
+              [s.scheduledDays, 'Scheduled days'], [s.present, 'Present'], [s.late, 'Late'],
+              [s.absent, 'Absent'], [s.leave, 'Leave'],
+              [`${Math.round(s.scheduledMinutes / 60)}h`, 'Scheduled'],
+              [hoursLabel(s.workedMinutes), 'Worked'], [hoursLabel(s.overtimeMinutes), 'Overtime'],
+            ].map(([value, label]) => (
+              <div key={label}>
+                <p className="text-[15px] font-semibold text-[var(--color-ink)]">{value}</p>
+                <p className="mt-0.5 text-[12px] text-[var(--color-ink-faint)]">{label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className={CARD}>
+        <div className="flex flex-wrap items-center justify-between gap-3 p-5 pb-3">
+          <h2 className="t-card">Attendance records</h2>
+          <span className="flex flex-wrap gap-1.5">
+            {FILTERS.map(([k, label]) => (
+              <button key={k} onClick={() => setFilter(k)}
+                className={`h-7 rounded-[8px] px-3 text-[12px] font-medium ${filter === k
+                  ? 'bg-[var(--color-brand)] text-white'
+                  : 'border border-[var(--color-line-control)] text-[var(--color-ink-soft)]'}`}>
+                {label}
+              </button>
+            ))}
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
+                {['Date', 'Schedule', 'Clock in', 'Clock out', 'Worked', 'Status', ''].map((h, i) => (
+                  <th key={i} className="h-[46px] px-5">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {pager.slice.map((r) => {
+                const meta = CELL[r.status] || CELL.absent;
+                const label = r.missingCheckout ? 'Missing checkout' : r.status === 'leave' ? (r.leaveType || 'On leave') : meta[0];
+                const colour = r.missingCheckout ? 'var(--color-stage-out)' : meta[1];
+                const wash = r.missingCheckout ? 'var(--color-stage-out-bg)' : meta[2];
+                return (
+                  <tr key={r.date} className="border-b border-[var(--color-line-soft)] last:border-0">
+                    <td className="whitespace-nowrap px-5 py-4 text-[var(--color-ink)]">{day(r.date)}</td>
+                    <td className="whitespace-nowrap px-5 py-4 text-[var(--color-ink-soft)]">{shiftLabel(r.scheduled)}</td>
+                    <td className="px-5 py-4 text-[var(--color-ink-soft)]">{hhmm(r.checkIn) || '—'}</td>
+                    <td className="px-5 py-4 text-[var(--color-ink-soft)]">{hhmm(r.checkOut) || '—'}</td>
+                    <td className="px-5 py-4 text-[var(--color-ink-soft)]">{r.workedMinutes == null ? '—' : hoursLabel(r.workedMinutes)}</td>
+                    <td className="px-5 py-4">
+                      <span className="inline-flex items-center rounded-[6px] px-2 py-1 text-[12px] font-medium"
+                        style={{ color: colour, background: wash === 'transparent' ? 'var(--color-fill)' : wash }}>
+                        {label}
+                      </span>
+                      {r.fixedByName && (
+                        <span className="mt-1 block text-[11px] text-[var(--color-ink-faint)]">Fixed by {r.fixedByName}</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      {r.scheduled && (
+                        <button onClick={() => setFix(r)} aria-label={`Fix ${r.date}`}
+                          className="rounded-[6px] px-2 py-1 text-[var(--color-ink-faint)] hover:bg-[var(--color-fill)]">
+                          <MoreHorizontal size={16} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {d && rows.length === 0 && (
+                <tr><td colSpan={7}>
+                  <EmptyState
+                    title={filter === 'all' ? 'No attendance yet this month' : 'Nothing in this filter'}
+                    line={filter === 'all'
+                      ? 'Days appear here as they are clocked, from the first scheduled day of the month.'
+                      : 'Try another filter, or All to see the whole month.'}
+                  />
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pager {...pager.props} noun="days" />
+      </div>
+
+      {fix && (
+        <FixDay
+          username={username}
+          row={fix}
+          onClose={() => setFix(null)}
+          onSaved={() => { setFix(null); onReload(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Correcting a day writes through the manager's existing fix endpoint, with
+// its own permission check and its reason — the same path the Attendance
+// page uses, so a correction made here shows up there identically and is
+// never a second, quieter way to change someone's hours.
+function FixDay({ username, row, onClose, onSaved }) {
+  const [checkIn, setCheckIn] = useState(hhmm(row.checkIn) || row.scheduled?.start || '09:00');
+  const [checkOut, setCheckOut] = useState(hhmm(row.checkOut) || row.scheduled?.end || '');
+  const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const save = async () => {
+    setSaving(true);
+    setErr('');
+    try {
+      await api('/team/attendance-fix', {
+        method: 'POST',
+        body: { username, date: row.date, checkIn, checkOut: checkOut || undefined, reason: reason.trim() },
+      });
+      onSaved();
+    } catch (e) {
+      setErr(e.message || 'Could not save that');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-[rgba(23,32,51,0.45)] p-4" onClick={onClose}>
+      <div className={`${CARD} w-full max-w-[420px] p-5`} onClick={(e) => e.stopPropagation()}>
+        <h2 className="t-card">Fix {day(row.date)}</h2>
+        <p className="mt-1 text-[12.5px] text-[var(--color-ink-soft)]">
+          Scheduled {shiftLabel(row.scheduled)}. The reason stays on the record.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-[12px] text-[var(--color-ink-faint)]">Clock in</span>
+            <input type="time" value={checkIn} onChange={(e) => setCheckIn(e.target.value)}
+              className="mt-1 w-full rounded-[8px] border border-[var(--color-line-control)] px-3 py-2 text-[13px]" />
+          </label>
+          <label className="block">
+            <span className="text-[12px] text-[var(--color-ink-faint)]">Clock out</span>
+            <input type="time" value={checkOut} onChange={(e) => setCheckOut(e.target.value)}
+              className="mt-1 w-full rounded-[8px] border border-[var(--color-line-control)] px-3 py-2 text-[13px]" />
+          </label>
+        </div>
+        <label className="mt-3 block">
+          <span className="text-[12px] text-[var(--color-ink-faint)]">Why</span>
+          <input value={reason} onChange={(e) => setReason(e.target.value)}
+            placeholder="Forgot to clock out — confirmed with their manager"
+            className="mt-1 w-full rounded-[8px] border border-[var(--color-line-control)] px-3 py-2 text-[13px]" />
+        </label>
+        {err && <p className="mt-2 text-[12.5px] text-[var(--color-stage-out)]">{err}</p>}
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="btn-secondary">Cancel</button>
+          <button onClick={save} disabled={saving || !reason.trim()} className="btn-primary disabled:opacity-50">
+            {saving ? 'Saving…' : 'Save correction'}
+          </button>
+        </div>
       </div>
     </div>
   );

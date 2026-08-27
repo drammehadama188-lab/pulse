@@ -62,13 +62,38 @@ const person = {
   email: 'k@damia.gm', phone: '+220 700 0000', address: 'Banjul', joined: '2025-03-12',
   employment: 'Full-time', schedule: 'Mon – Fri', reportsTo: 'Adama Damia',
 };
-const attendance = { workingDays: 15, present: 12, absent: 2, late: 1, leave: 0, hours: 96, minutes: 30, avgCheckIn: '08:07', month: '2026-08' };
-const records = [{ date: '2026-08-20', checkIn: '2026-08-20T08:05:00Z', checkOut: '2026-08-20T17:00:00Z', late: false, status: 'present', workedMinutes: 535 }];
+// The Attendance tab is rendered through its VIEW, not the fetching shell:
+// a self-fetching component server-renders as a skeleton and would prove
+// nothing. This payload is the shape /api/hr/employee/:username/attendance
+// returns — keep them in step.
+const shift0 = { start: '08:00', end: '17:00' };
+const attMonth = {
+  month: '2026-08',
+  today: '2026-08-27',
+  attendanceStart: '2026-07-07',
+  days: [
+    { date: '2026-08-20', status: 'worked', checkIn: '2026-08-20T08:05:00Z', checkOut: '2026-08-20T17:00:00Z', workedMinutes: 535, overtimeMinutes: 0, missingCheckout: false, late: false, leaveType: null, scheduled: shift0, scheduledMinutes: 540, fixedByName: null, fixReason: '' },
+    { date: '2026-08-21', status: 'late', checkIn: '2026-08-21T09:03:00Z', checkOut: '2026-08-21T17:03:00Z', workedMinutes: 480, overtimeMinutes: 3, missingCheckout: false, late: true, leaveType: null, scheduled: shift0, scheduledMinutes: 540, fixedByName: 'Adama Damia', fixReason: 'Forgot to clock out' },
+    { date: '2026-08-22', status: 'absent', checkIn: null, checkOut: null, workedMinutes: null, overtimeMinutes: 0, missingCheckout: false, late: false, leaveType: null, scheduled: shift0, scheduledMinutes: 540, fixedByName: null, fixReason: '' },
+    { date: '2026-08-25', status: 'worked', checkIn: '2026-08-25T08:20:00Z', checkOut: null, workedMinutes: null, overtimeMinutes: 0, missingCheckout: true, late: false, leaveType: null, scheduled: shift0, scheduledMinutes: 540, fixedByName: null, fixReason: '' },
+    { date: '2026-08-26', status: 'leave', checkIn: null, checkOut: null, workedMinutes: null, overtimeMinutes: 0, missingCheckout: false, late: false, leaveType: 'Annual', scheduled: shift0, scheduledMinutes: 540, fixedByName: null, fixReason: '' },
+    { date: '2026-08-27', status: 'today', checkIn: null, checkOut: null, workedMinutes: null, overtimeMinutes: 0, missingCheckout: false, late: false, leaveType: null, scheduled: shift0, scheduledMinutes: 540, fixedByName: null, fixReason: '' },
+    { date: '2026-08-29', status: 'off', checkIn: null, checkOut: null, workedMinutes: null, overtimeMinutes: 0, missingCheckout: false, late: false, leaveType: null, scheduled: null, scheduledMinutes: 0, fixedByName: null, fixReason: '' },
+  ],
+  summary: {
+    scheduledDays: 19, present: 13, late: 2, absent: 3, leave: 3,
+    workedMinutes: 4990, scheduledMinutes: 9120, overtimeMinutes: 341,
+    missingCheckouts: 1, ratePct: 68, latePctOfAttended: 10.5,
+  },
+};
+const noop = () => {};
 const cases = [
   ['JobPay', React.createElement(tabs.JobPay, { e: person, pay: { base: 6500, transport: 1000, commission: 0 }, contract: { type: 'Permanent', start: '2025-03-12', end: null, noticePeriod: '1 month', document: null } })],
   ['JobPay without pay', React.createElement(tabs.JobPay, { e: person, pay: null, contract: { type: 'Permanent', start: null, end: null, noticePeriod: '', document: null } })],
-  ['Attendance', React.createElement(tabs.Attendance, { a: attendance, records, overtimeMinutes: 55 })],
-  ['Attendance empty', React.createElement(tabs.Attendance, { a: { ...attendance, present: 0 }, records: [], overtimeMinutes: 0 })],
+  ['Attendance', React.createElement(tabs.AttendanceMonth, { username: 'kaddy', d: attMonth, error: '', month: '2026-08', onMonth: noop, onReload: noop })],
+  ['Attendance empty', React.createElement(tabs.AttendanceMonth, { username: 'kaddy', month: '2026-08', error: '', onMonth: noop, onReload: noop, d: { ...attMonth, days: [], summary: { ...attMonth.summary, scheduledDays: 0, present: 0, late: 0, absent: 0, leave: 0, workedMinutes: 0, scheduledMinutes: 0, overtimeMinutes: 0, missingCheckouts: 0, ratePct: null, latePctOfAttended: null } } })],
+  ['Attendance loading', React.createElement(tabs.AttendanceMonth, { username: 'kaddy', d: null, error: '', month: '2026-08', onMonth: noop, onReload: noop })],
+  ['Attendance failed', React.createElement(tabs.AttendanceMonth, { username: 'kaddy', d: null, error: 'Server said no', month: '2026-08', onMonth: noop, onReload: noop })],
   ['Documents', React.createElement(tabs.Documents, { documents: [{ id: '1', name: 'Contract.pdf', category: 'contract', sizeBytes: 2048, uploadedAt: '2026-01-05', uploadedBy: 'Adama' }], onUpload() {}, uploading: false })],
   ['Documents empty', React.createElement(tabs.Documents, { documents: [], onUpload() {}, uploading: false })],
   ['Notes', React.createElement(tabs.Notes, { notes: [{ kind: 'Coaching', title: 'Call quality', text: 'Good', by: 'Adama', at: '2026-08-01' }], username: 'kaddy' })],

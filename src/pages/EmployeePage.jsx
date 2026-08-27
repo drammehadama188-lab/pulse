@@ -429,7 +429,9 @@ export default function EmployeePage() {
       )}
 
       {tab === 'Job & pay' && <JobPay e={e} pay={pay} contract={d.contract} />}
-      {tab === 'Attendance' && <Attendance a={a} records={d.attendanceRecords} overtimeMinutes={d.overtimeMinutes} />}
+      {/* The tab owns its own month (Adama 27 Aug): it fetches the month it
+          is showing, so the arrows move the DATA and not just the grid. */}
+      {tab === 'Attendance' && <Attendance username={username} />}
       {/* 🔒 One implementation: this is the Performance page itself, embedded,
           so the record cannot show a different number from it. */}
       {tab === 'Performance' && (

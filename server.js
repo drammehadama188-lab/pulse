@@ -3164,6 +3164,107 @@ function leaveOnDate(leaveAll, username, dateKey) {
   const rec = leaveAll.find((l) => l.username === username && l.status === 'approved' && l.from <= dateKey && l.to >= dateKey)
   return rec ? { leaveType: rec.type || 'Annual', note: rec.reason || '' } : null
 }
+// ── ONE MONTH OF ONE PERSON'S ATTENDANCE (Adama 27 Aug, the employee-record
+// Attendance mockup) ──────────────────────────────────────────────────────
+// The record page used to compute attendance for the CURRENT month only, so
+// the tab's month arrows moved the calendar while the data underneath stayed
+// on this month. This owns the month instead, and every figure the tab shows
+// comes from here — the tiles, the calendar, the strip and the table cannot
+// quote different numbers.
+//
+// 🔒 Measured only. Overtime is time past THAT DAY'S scheduled end, not past
+// a hardcoded 8 hours; a day with no check-out earns no overtime rather than
+// an assumed one. There is no excused/unexcused split on an absence because
+// nothing in Pulse records one (Adama 27 Aug) — approved leave is its own
+// status, and the absence count stands on its own.
+const HHMM_MIN = (s) => {
+  const m = /^(\d{2}):(\d{2})$/.exec(String(s || ''))
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null
+}
+function attendanceMonth(username, month) {
+  const days = monthKeys(month)
+  const todayK = todayKey()
+  const attAll = db.read('attendance', []).filter((a) => a.username === username)
+  const leaveAll = db.read('leave', [])
+  const schedule = db.read('schedules', {})[username] || DEFAULT_WEEK
+
+  const cells = days.map((date) => {
+    const attendance = attAll.find((a) => a.date === date) || null
+    const leave = leaveOnDate(leaveAll, username, date)
+    const shift = schedule[dowOfKey(date)] || null
+    const status = dayStatus({ schedule, attendance, leave }, date, todayK)
+    const startMin = shift ? HHMM_MIN(shift.start) : null
+    const endMin = shift ? HHMM_MIN(shift.end) : null
+    const inMs = attendance?.checkIn ? Date.parse(attendance.checkIn) : null
+    const outMs = attendance?.checkOut ? Date.parse(attendance.checkOut) : null
+    const workedMinutes = inMs && outMs ? Math.max(0, Math.round((outMs - inMs) / 60000)) : null
+    // Overtime = past the scheduled end of THAT day. No check-out, no claim.
+    let overtimeMinutes = 0
+    if (outMs != null && endMin != null) {
+      const out = new Date(outMs)
+      overtimeMinutes = Math.max(0, (out.getUTCHours() * 60 + out.getUTCMinutes()) - endMin)
+    }
+    // A day someone clocked into and never out of is not a number we can
+    // trust — it is a record a manager has to close.
+    const missingCheckout = !!(attendance?.checkIn && !attendance.checkOut && date < todayK)
+    return {
+      date,
+      status,
+      checkIn: attendance?.checkIn || null,
+      checkOut: attendance?.checkOut || null,
+      workedMinutes,
+      overtimeMinutes,
+      missingCheckout,
+      late: !!attendance?.late,
+      leaveType: leave?.leaveType || null,
+      scheduled: shift ? { start: shift.start, end: shift.end } : null,
+      scheduledMinutes: startMin != null && endMin != null ? Math.max(0, endMin - startMin) : 0,
+      fixedByName: attendance?.fixedByName || null,
+      fixReason: attendance?.fixReason || '',
+    }
+  })
+
+  // Scheduled days = days this person was rostered, counted only up to today
+  // so a rate is not punished for days that have not happened yet.
+  const elapsed = cells.filter((c) => c.date <= todayK && c.date >= ATTENDANCE_START)
+  const scheduledDays = elapsed.filter((c) => c.scheduled).length
+  const present = elapsed.filter((c) => c.status === 'worked' || c.status === 'late').length
+  const late = elapsed.filter((c) => c.status === 'late').length
+  const absent = elapsed.filter((c) => c.status === 'absent').length
+  const leaveDays = elapsed.filter((c) => c.status === 'leave' || c.status === 'sick').length
+  const workedMinutes = elapsed.reduce((s, c) => s + (c.workedMinutes || 0), 0)
+  const scheduledMinutes = elapsed.filter((c) => c.scheduled).reduce((s, c) => s + c.scheduledMinutes, 0)
+  const overtimeMinutes = elapsed.reduce((s, c) => s + c.overtimeMinutes, 0)
+  const missingCheckouts = elapsed.filter((c) => c.missingCheckout).length
+
+  return {
+    month,
+    today: todayK,
+    attendanceStart: ATTENDANCE_START,
+    days: cells,
+    summary: {
+      scheduledDays,
+      present,
+      late,
+      absent,
+      leave: leaveDays,
+      workedMinutes,
+      scheduledMinutes,
+      overtimeMinutes,
+      missingCheckouts,
+      ratePct: scheduledDays ? Math.round((present / scheduledDays) * 100) : null,
+      latePctOfAttended: present ? Math.round((late / present) * 1000) / 10 : null,
+    },
+  }
+}
+// The tab reads this; same gate as the record it sits on.
+app.get('/api/hr/employee/:username/attendance', auth, requirePower('hr'), (req, res) => {
+  const u = findUser(req.params.username)
+  if (!u || isArchived(u)) return res.status(404).json({ error: 'not found' })
+  const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : todayKey().slice(0, 7)
+  res.json(attendanceMonth(u.username, month))
+})
+
 // layered status: leave > attendance > schedule > calendar position
 function dayStatus({ schedule, attendance, leave }, dateKey, todayK) {
   if (dateKey < ATTENDANCE_START) return 'off' // before the clean restart — never absent
