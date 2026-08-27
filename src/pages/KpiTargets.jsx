@@ -18,11 +18,9 @@ function ymLabel(ym) {
   return `${MON[m - 1]} ${y}`;
 }
 function thisYm() { return new Date().toISOString().slice(0, 7); }
-function nextYm() {
-  const d = new Date();
-  d.setUTCMonth(d.getUTCMonth() + 1);
-  return d.toISOString().slice(0, 7);
-}
+// Changes default to THIS month (Adama 26 Aug: "all the goals are set to
+// start next month not this month"); the month field still lets him pick a
+// future month, and the server still refuses the past.
 
 export default function KpiTargets() {
   const [data, setData] = useState(null);
@@ -53,7 +51,7 @@ export default function KpiTargets() {
       role: roleKey, kpi: k.key, label: k.label, unit: k.unit,
       target: k.target == null ? '' : String(k.target),
       weight: String(k.weight),
-      effectiveFrom: nextYm(),
+      effectiveFrom: thisYm(),
     });
   }
   async function saveDraft() {
@@ -84,7 +82,7 @@ export default function KpiTargets() {
   const [confirmRemove, setConfirmRemove] = useState(null); // customId pending confirm
   function openAdd(role, roleLabel) {
     setErr('');
-    setAddFor({ role, roleLabel, label: '', kind: 'percent', target: '', weight: '10', effectiveFrom: nextYm() });
+    setAddFor({ role, roleLabel, label: '', kind: 'percent', target: '', weight: '10', effectiveFrom: thisYm() });
   }
   async function saveAdd() {
     if (!addFor) return;
