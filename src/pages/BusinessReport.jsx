@@ -116,7 +116,7 @@ export default function BusinessReport() {
         </Card>
       </section>
 
-      <p className="text-[11px] text-[var(--color-ink-faint)]">Generated {new Date(data.generatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} — open it any time; the 1st of the month is when the previous month is complete.</p>
+      <p className="text-[11px] text-[var(--color-ink-faint)]">Generated {new Date(data.generatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} — open it any time; the 1st of the month is when the previous month is complete.</p>
     </div>
   )
 }

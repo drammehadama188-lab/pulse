@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Calendar, Flag, GraduationCap } from 'lucide-react'
 import { api } from '../lib/api.js'
+import { timeShort } from '../lib/format.js'
 import { Card, Pill, SectionTitle } from './ui.jsx'
 
 const META = {
@@ -9,10 +10,10 @@ const META = {
   coaching: { icon: GraduationCap, tone: 'rest', label: 'Coaching' },
 }
 
+// Gambia clock, like the rest of Pulse — see timeShort in lib/format.js.
 function whenLabel(iso) {
   if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) + ' · ' + timeShort(iso)
 }
 
 export default function CoachingFeed({ title = 'Coaching & meetings' }) {

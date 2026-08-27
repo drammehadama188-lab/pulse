@@ -5,7 +5,8 @@ import {
   ThumbsUp, ThumbsDown, HelpCircle, ChevronDown, ChevronRight, Trash2, MessageSquarePlus,
 } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
-import { CARD, BTN_PRIMARY, BTN_LIGHT, fullDate, dayTime, toLocalInput, scoreWord, RECOMMENDATION } from './ui.jsx';
+import { CARD, BTN_PRIMARY, BTN_LIGHT, fullDate, dayTime, toGambiaInput, fromGambiaInput, scoreWord, RECOMMENDATION } from './ui.jsx';
+import { timeShort } from '../../lib/format.js';
 import { PageSkeleton } from '../../components/ui/Skeleton.jsx';
 
 // The interview room: questions on the left, the CV beside them, one score per
@@ -417,9 +418,11 @@ export default function InterviewRoom() {
               className="mt-1.5 w-full rounded-[8px] border border-[var(--color-line)] px-3 py-2.5 text-[12.5px] disabled:bg-[var(--color-fill)]" />
             {!done && (
               <label className="mt-3 block">
+                {/* Gambia time in and out — what is typed here is the time
+                    the office keeps, whatever country it is typed from. */}
                 <span className="text-[11px] text-[var(--color-ink-faint)]">Date and time</span>
-                <input type="datetime-local" value={toLocalInput(iv.scheduledAt)}
-                  onChange={e => patch({ scheduledAt: e.target.value ? new Date(e.target.value).toISOString() : iv.scheduledAt })}
+                <input type="datetime-local" value={toGambiaInput(iv.scheduledAt)}
+                  onChange={e => patch({ scheduledAt: fromGambiaInput(e.target.value) || iv.scheduledAt })}
                   className="mt-1 w-full rounded-[8px] border border-[var(--color-line)] px-3 py-2 text-[12.5px]" />
               </label>
             )}
@@ -433,7 +436,7 @@ export default function InterviewRoom() {
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-2.5 md:px-8">
           <span className={`inline-flex items-center gap-1.5 text-[11.5px] ${error ? 'font-semibold text-[var(--color-stage-out)]' : 'text-[var(--color-ink-faint)]'}`}>
             {error ? `Not saved — ${error}` : savedAt
-              ? <><Check size={13} className="text-[var(--color-good)]" /> Saved {savedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</>
+              ? <><Check size={13} className="text-[var(--color-good)]" /> Saved {timeShort(savedAt)}</>
               : 'Every answer saves as you go'}
           </span>
           <div className="flex items-center gap-2">

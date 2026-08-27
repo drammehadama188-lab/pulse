@@ -5,6 +5,7 @@ import {
   Star, AlertTriangle, MessageSquare,
 } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
+import { timeShort } from '../../lib/format.js';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 
 // The tabs of an employee's record. Each shows what Pulse actually holds and
@@ -12,13 +13,12 @@ import EmptyState from '../../components/ui/EmptyState.jsx';
 
 export const CARD = 'card';
 export const D = (n) => 'D' + Number(n || 0).toLocaleString('en-US');
+// Company clock = Gambia (GMT) — dates pin to UTC like the shared format.js
+// helpers, so a viewer abroad reads the same day the office does. Times go
+// through the shared timeShort, never a page-local copy.
 export const day = (iso) => {
   const d = new Date(iso || '');
-  return isNaN(d) ? '—' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-};
-const hhmm = (iso) => {
-  const d = new Date(iso || '');
-  return isNaN(d) ? '—' : d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return isNaN(d) ? '—' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 };
 const dur = (min) => (min == null ? '—' : `${Math.floor(min / 60)}h ${String(Math.round(min % 60)).padStart(2, '0')}m`);
 const linkish = 'inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-brand)] hover:underline';
@@ -164,7 +164,7 @@ export function Attendance({ a, records, overtimeMinutes }) {
             <span className="flex items-center gap-2">
               <button onClick={() => shift(-1)} className="rounded-[6px] border border-[var(--color-line-control)] p-1.5 text-[var(--color-ink-soft)]"><ChevronLeft size={14} /></button>
               <span className="w-[112px] text-center text-[13px] font-medium text-[var(--color-ink)]">
-                {new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+                {new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
               </span>
               <button onClick={() => shift(1)} className="rounded-[6px] border border-[var(--color-line-control)] p-1.5 text-[var(--color-ink-soft)]"><ChevronRight size={14} /></button>
             </span>} />
@@ -219,8 +219,8 @@ export function Attendance({ a, records, overtimeMinutes }) {
               return (
                 <tr key={r.date} className="border-b border-[var(--color-line-soft)] last:border-0">
                   <td className="px-5 py-4 text-[var(--color-ink)]">{day(r.date)}</td>
-                  <td className="px-5 py-4 text-[var(--color-ink-soft)]">{r.checkIn ? hhmm(r.checkIn) : '—'}</td>
-                  <td className="px-5 py-4 text-[var(--color-ink-soft)]">{r.checkOut ? hhmm(r.checkOut) : '—'}</td>
+                  <td className="px-5 py-4 text-[var(--color-ink-soft)]">{r.checkIn ? timeShort(r.checkIn) : '—'}</td>
+                  <td className="px-5 py-4 text-[var(--color-ink-soft)]">{r.checkOut ? timeShort(r.checkOut) : '—'}</td>
                   <td className="px-5 py-4">
                     <span className="inline-flex items-center gap-1.5 text-[12px] font-medium" style={{ color: colour }}>
                       <span className="h-1.5 w-1.5 rounded-full bg-current" /> {label}

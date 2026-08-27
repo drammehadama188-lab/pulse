@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import { api } from '../../lib/api.js';
-import { CARD, BTN_PRIMARY, PageHead, dayTime, scoreTone, scoreWord, RECOMMENDATION } from './ui.jsx';
+import { CARD, BTN_PRIMARY, PageHead, dayTime, fromGambiaInput, scoreTone, scoreWord, RECOMMENDATION } from './ui.jsx';
 import { TableSkeleton } from '../../components/ui/Skeleton.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import Pager, { usePager } from '../../components/ui/Pager.jsx';
@@ -68,7 +68,8 @@ export default function Interviews() {
           applicantId: pick.applicantId,
           templateId: pick.templateId,
           interviewer: pick.interviewer,
-          scheduledAt: pick.scheduledAt ? new Date(pick.scheduledAt).toISOString() : undefined,
+          // The typed time IS Gambia time, wherever it is typed from.
+          scheduledAt: fromGambiaInput(pick.scheduledAt),
         },
       });
       navigate(`/recruitment/interviews/${interview.id}`);

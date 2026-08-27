@@ -8,17 +8,20 @@ import { useState } from 'react';
 import { Calendar, ChevronDown } from 'lucide-react';
 import { STAGES } from './stages.js';
 
+// Company clock = Gambia = GMT (Adama 27 Aug: "all the times should be
+// gambian"). Every formatter pins to UTC so an interview at 14:00 reads
+// 14:00 wherever it is viewed from.
 export const shortDate = (iso) => {
   const d = new Date(iso || '');
-  return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 };
 export const fullDate = (iso) => {
   const d = new Date(iso || '');
-  return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 };
 export const dayTime = (iso) => {
   const d = new Date(iso || '');
-  return isNaN(d) ? '' : d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return isNaN(d) ? '' : d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
 };
 // "2m ago" for the activity line — a timestamp there is noise.
 export const ago = (iso) => {
@@ -33,11 +36,19 @@ export const ago = (iso) => {
   const d = Math.round(h / 24);
   return d < 7 ? `${d}d ago` : shortDate(iso);
 };
-export const toLocalInput = (iso) => {
+// The datetime-local input speaks Gambia time in BOTH directions: a stored
+// instant renders as its Gambia wall time, and whatever the user types is
+// saved as that Gambia wall time — whichever country they type it from.
+export const toGambiaInput = (iso) => {
   const d = new Date(iso || '');
   if (isNaN(d)) return '';
   const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+};
+export const fromGambiaInput = (v) => {
+  if (!v) return undefined;
+  const d = new Date(v.length === 16 ? `${v}:00Z` : `${v}Z`);
+  return isNaN(d) ? undefined : d.toISOString();
 };
 
 export const STAGE_META = Object.fromEntries(STAGES.map(([k, label, chip, dot]) => [k, { label, chip, dot }]));

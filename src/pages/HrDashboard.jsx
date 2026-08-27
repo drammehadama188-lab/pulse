@@ -5,6 +5,7 @@ import {
   TrendingUp, ClipboardCheck, FileText, CalendarDays, UserPlus, Star,
 } from 'lucide-react';
 import { api } from '../lib/api.js';
+import { timeShort } from '../lib/format.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 
@@ -18,10 +19,9 @@ import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 // is decided there, never hidden here.
 
 const CARD = 'card';
-const time = (iso) => {
-  const d = new Date(iso || '');
-  return isNaN(d) ? '—' : d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-};
+// Times render through the shared timeShort — the company clock is Gambia
+// (GMT). This page once had its own helper without the timezone pin, which
+// showed Adama US-local times (27 Aug).
 const ago = (iso) => {
   const t = Date.parse(iso || '');
   if (isNaN(t)) return '';
@@ -29,7 +29,7 @@ const ago = (iso) => {
   if (m < 1) return 'just now';
   if (m < 60) return `${m}m ago`;
   const h = Math.round(m / 60);
-  if (h < 24) return time(iso);
+  if (h < 24) return timeShort(iso);
   const d = Math.round(h / 24);
   return d === 1 ? 'Yesterday' : `${d} days ago`;
 };
@@ -91,7 +91,7 @@ export default function HrDashboard() {
   function exportReport() {
     if (!d) return;
     const head = ['Name', 'Role', 'Department', 'In today', 'Started'];
-    const rows = d.today.people.map((p) => [p.name, p.title, p.department, p.present ? 'Yes' : 'No', p.startTime ? time(p.startTime) : '']);
+    const rows = d.today.people.map((p) => [p.name, p.title, p.department, p.present ? 'Yes' : 'No', p.startTime ? timeShort(p.startTime) : '']);
     const csv = [head, ...rows].map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const a = document.createElement('a');
@@ -189,7 +189,7 @@ export default function HrDashboard() {
                         {p.present ? 'Present' : 'Absent'}
                       </span>
                     </td>
-                    <td className="py-2 text-[var(--color-ink-soft)]">{p.present ? time(p.startTime) : '—'}</td>
+                    <td className="py-2 text-[var(--color-ink-soft)]">{p.present ? timeShort(p.startTime) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

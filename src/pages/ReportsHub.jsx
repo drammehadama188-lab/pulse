@@ -134,7 +134,7 @@ export default function ReportsHub() {
             </section>
           )}
 
-          <p className="text-[11px] text-[var(--color-ink-faint)]">Generated {new Date(data.generatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} — derived live, nothing hand-written.</p>
+          <p className="text-[11px] text-[var(--color-ink-faint)]">Generated {new Date(data.generatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} — derived live, nothing hand-written.</p>
         </div>
       )}
     </div>

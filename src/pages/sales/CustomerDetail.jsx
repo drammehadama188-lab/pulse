@@ -381,7 +381,7 @@ function Row({ label, value, href, link, icon: Icon }) {
 function fmtWhen(iso) {
   if (!iso) return ''
   const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' · ' + timeShort(iso)
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) + ' · ' + timeShort(iso)
 }
 
 // WhatsApp deep link — Gambia (+220) if a local 7–8 digit number

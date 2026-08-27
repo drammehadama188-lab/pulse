@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FileText, Download, GraduationCap, Calendar, Flag, FolderOpen } from 'lucide-react'
 import { api, getToken } from '../lib/api.js'
+import { timeShort } from '../lib/format.js'
 import { Card, Pill, SectionTitle, Spinner } from '../components/ui.jsx'
 import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 
@@ -16,15 +17,15 @@ const COACH_META = {
   coaching: { icon: GraduationCap, tone: 'rest', label: 'Coaching' },
 }
 
+// Dates and times pin to Gambia (UTC), same as the shared format.js clock.
 function dateLabel(iso) {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 }
 function whenLabel(iso) {
   if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) +
-    ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) +
+    ' · ' + timeShort(iso)
 }
 function DownloadLink({ id }) {
   return (

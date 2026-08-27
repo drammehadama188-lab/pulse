@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../lib/api.js';
+import { timeShort } from '../../lib/format.js';
 import { CARD, PageHead } from './ui.jsx';
 import { TableSkeleton } from '../../components/ui/Skeleton.jsx';
 
@@ -23,9 +24,11 @@ export default function Calendar() {
   const byDay = useMemo(() => {
     const map = {};
     for (const i of interviews) {
-      const d = new Date(i.scheduledAt || '');
-      if (isNaN(d)) continue;
-      (map[keyOf(d)] = map[keyOf(d)] || []).push(i);
+      // Bucket by the GAMBIA day (the ISO's UTC date), not the viewer's —
+      // an early-morning interview must not land on yesterday's cell abroad.
+      const k = String(i.scheduledAt || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+      (map[k] = map[k] || []).push(i);
     }
     for (const k of Object.keys(map)) map[k].sort((a, b) => (a.scheduledAt || '').localeCompare(b.scheduledAt || ''));
     return map;
@@ -77,7 +80,7 @@ export default function Calendar() {
                     {list.map(iv => (
                       <Link key={iv.id} to={`/recruitment/interviews/${iv.id}`}
                         className={`block truncate rounded-md px-1.5 py-1 text-[11px] font-medium ${iv.status === 'completed' ? 'bg-[var(--color-stage-hired-bg)] text-[var(--color-stage-hired)]' : 'bg-[var(--color-stage-new-bg)] text-[var(--color-stage-new)] hover:opacity-90'}`}>
-                        {new Date(iv.scheduledAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} {iv.applicantName}
+                        {timeShort(iv.scheduledAt)} {iv.applicantName}
                       </Link>
                     ))}
                   </div>

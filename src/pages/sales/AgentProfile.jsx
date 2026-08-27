@@ -959,7 +959,7 @@ export default function AgentProfile() {
                   )}
                   <div className="flex-1">
                     <p className="text-[var(--color-ink-soft)] text-[13px]">{parsed.text}</p>
-                    <p className="text-[var(--color-ink-faint)] text-[11px] mt-1">{new Date(n.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · {n.createdBy || 'Damia'}</p>
+                    <p className="text-[var(--color-ink-faint)] text-[11px] mt-1">{new Date(n.createdAt).toLocaleString('en-GB', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} · {n.createdBy || 'Damia'}</p>
                   </div>
                   <button onClick={() => removeFeedback(n.id)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-bad)] opacity-0 group-hover:opacity-100 transition-opacity">
                     <Trash2 size={14} />
