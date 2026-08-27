@@ -5769,7 +5769,20 @@ app.get('/api/my/record', auth, (req, res) => {
 // Sales source by month (Adama 29 Jun): sheet = history (≤ Jun 2026); Admin =
 // truth from Jul 2026 (agents mark deals Won there). Needs ADMIN_SYNC_URL +
 // PULSE_SYNC_KEY in .env; unset/unreachable → null, shown as "Connecting to Admin".
-const SALES_ADMIN_FROM = '2026-07'
+// AUGUST 2026, not July (Adama 27 Aug): "before we had handled, now it's
+// closed — leave the old records, just fix it for this month, and know that
+// when it says closed it means agents sold, just from August."
+//
+// The admin field behind the attribution is the same one it always was, but
+// what people PUT in it changed: it used to record who HANDLED the account,
+// and it now records who CLOSED the sale. So admin's per-person numbers only
+// mean "sales" from August on. July would be read with the old meaning — the
+// person who handled it counted as the person who sold it — so it is left out
+// rather than credited to the wrong agent.
+//
+// 🔒 Do not move this back to '2026-07'. The earlier 29 Jun note ("Admin =
+// truth from Jul 2026") was written before the field's meaning changed.
+const SALES_ADMIN_FROM = '2026-08'
 
 // 🔒 ONE rule for how many sales a person has in a month. Every page that shows
 // the number goes through here (Adama 27 Aug, on a customer closed by Kaddy that
@@ -5780,7 +5793,8 @@ const SALES_ADMIN_FROM = '2026-07'
 // whoever CLOSED the deal — the "Closed by" line on the customer record — never
 // the account manager. Months BEFORE that keep the imported sheet exactly as it
 // stands: nothing already recorded is rewritten ("do not change the records from
-// before").
+// before"). The sheet ends at June, so July has neither source and shows
+// nothing — blank, rather than a number attributed to the wrong person.
 //
 // null means "cannot say" — admin unreachable, or the sheet has no entry. It is
 // never flattened to 0, because a zero reads as a person who sold nothing.
