@@ -3613,7 +3613,9 @@ function attendanceMonth(username, month) {
 // The tab reads this; same gate as the record it sits on.
 app.get('/api/hr/employee/:username/attendance', auth, requirePower('hr'), (req, res) => {
   const u = findUser(req.params.username)
-  if (!u || isArchived(u)) return res.status(404).json({ error: 'not found' })
+  // Someone who has left keeps their attendance: it is the record of the months
+  // they worked, and it is exactly what a question about their exit asks for.
+  if (!u) return res.status(404).json({ error: 'not found' })
   const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : todayKey().slice(0, 7)
   res.json(attendanceMonth(u.username, month))
 })
@@ -4882,11 +4884,18 @@ const OFFBOARDING_ADMIN = [
 ]
 const OFFBOARDING_ITEMS = [...OFFBOARDING_PROPERTY, ...OFFBOARDING_ADMIN]
 const offboardingGroup = (label) => (OFFBOARDING_PROPERTY.includes(label) ? 'Company property' : 'Handover and access')
+// 🔒 THREE STATES, NOT TWO (Adama 28 Aug: "he has no company property so did
+// not see that option and also he had no whatsapp number, we have to add no not
+// apply option when it does not apply"). A list that can only be ticked or left
+// blank turns "he never had a company phone" into "somebody forgot the phone",
+// and an offboarding that can never reach zero is one nobody finishes.
 function mergeChecklist(items, stored, grouped = false) {
   return items.map((label) => ({
     label,
     ...(grouped ? { group: offboardingGroup(label) } : {}),
-    ...(stored && stored[label] ? stored[label] : { done: false }),
+    done: false,
+    na: false,
+    ...(stored && stored[label] ? stored[label] : {}),
   }))
 }
 app.get('/api/employee-checklist', auth, requireSub('hr', 'records'), (req, res) => {
@@ -4896,14 +4905,20 @@ app.get('/api/employee-checklist', auth, requireSub('hr', 'records'), (req, res)
   res.json({ onboarding: mergeChecklist(ONBOARDING_ITEMS, c.onboarding), offboarding: mergeChecklist(OFFBOARDING_ITEMS, c.offboarding, true) })
 })
 app.put('/api/employee-checklist', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
-  const { name, type, label, done } = req.body || {}
+  const { name, type, label, done, state } = req.body || {}
   const items = type === 'onboarding' ? ONBOARDING_ITEMS : type === 'offboarding' ? OFFBOARDING_ITEMS : null
   if (!name || !items) return res.status(400).json({ error: 'name and valid type required' })
   if (!items.includes(label)) return res.status(400).json({ error: 'unknown checklist item' })
   const all = db.read('checklists', {})
   const c = all[name] || {}
   const section = c[type] || {}
-  section[label] = done ? { done: true, doneAt: new Date().toISOString(), doneBy: req.user.username } : { done: false }
+  // `state` is the three-way control; `done` stays accepted so an older client
+  // keeps working.
+  const next = state || (done ? 'done' : 'todo')
+  const stamp = { at: new Date().toISOString(), by: req.user.username }
+  section[label] = next === 'done' ? { done: true, na: false, doneAt: stamp.at, doneBy: stamp.by }
+    : next === 'na' ? { done: false, na: true, naAt: stamp.at, naBy: stamp.by }
+      : { done: false, na: false }
   c[type] = section
   all[name] = c
   db.write('checklists', all)
@@ -5778,7 +5793,9 @@ function applyDueRoleChanges() {
 // month is visible before it lands rather than arriving as a surprise.
 app.get('/api/hr/employee/:username/role-changes', auth, requirePower('hr'), (req, res) => {
   const u = findUser(req.params.username)
-  if (!u || isArchived(u)) return res.status(404).json({ error: 'not found' })
+  // Reading the history of a person who has left is not a write. (The POST
+  // below still refuses: nobody changes the role of somebody who has gone.)
+  if (!u) return res.status(404).json({ error: 'not found' })
   const all = applyDueRoleChanges().filter((c) => c.username === u.username)
   res.json({
     changes: all.sort((a, b) => String(b.effectiveFrom).localeCompare(String(a.effectiveFrom))),

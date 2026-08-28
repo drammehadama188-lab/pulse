@@ -105,10 +105,12 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
       setError(e.message || 'Could not cancel that')
     }
   }
-  async function tick(item, done) {
-    setChecklist((c) => c.map((i) => (i.label === item.label ? { ...i, done } : i)))
+  // done → todo → n/a are three states, not a checkbox. Something the person
+  // never had cannot be ticked and must not sit there forever as outstanding.
+  async function setItem(item, state) {
+    setChecklist((c) => c.map((i) => (i.label === item.label ? { ...i, done: state === 'done', na: state === 'na' } : i)))
     try {
-      await api('/employee-checklist', { method: 'PUT', body: { name: employee.name, type: 'offboarding', label: item.label, done } })
+      await api('/employee-checklist', { method: 'PUT', body: { name: employee.name, type: 'offboarding', label: item.label, state } })
     } catch {
       loadChecklist()
     }
@@ -116,7 +118,7 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v, ...(k === 'payAmount' ? { payEdited: true } : {}) }))
   const dismissal = form?.type === 'Dismissed'
-  const outstanding = checklist.filter((i) => !i.done).length
+  const outstanding = checklist.filter((i) => !i.done && !i.na).length
 
   // Nothing recorded and nothing being recorded: the record stays clean. The
   // action lives in the header, not as an empty card on every profile.
@@ -211,14 +213,23 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
               <p className="text-[12px] font-medium text-[var(--color-ink-faint)]">{group}</p>
               <div className="divide-y divide-[var(--color-line-soft)]">
                 {checklist.filter((i) => (i.group || 'Offboarding') === group).map((item) => (
-                  <label key={item.label} className="flex items-center gap-3 py-2.5">
-                    <input type="checkbox" checked={!!item.done} disabled={!canEdit}
-                      onChange={(e) => tick(item, e.target.checked)} />
-                    <span className={`text-[13px] ${item.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>
+                  <div key={item.label} className="flex items-center gap-3 py-2.5">
+                    <input type="checkbox" checked={!!item.done} disabled={!canEdit || item.na}
+                      onChange={(e) => setItem(item, e.target.checked ? 'done' : 'todo')} />
+                    <span className={`text-[13px] ${item.done || item.na ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink)]'} ${item.done ? 'line-through' : ''}`}>
                       {item.label}
                     </span>
-                    {item.done && <Check size={14} className="ml-auto shrink-0 text-[var(--color-pill-active)]" />}
-                  </label>
+                    <span className="ml-auto flex shrink-0 items-center gap-3">
+                      {item.done && <Check size={14} className="text-[var(--color-pill-active)]" />}
+                      {canEdit && (
+                        <button type="button" onClick={() => setItem(item, item.na ? 'todo' : 'na')}
+                          className={`text-[12px] font-medium ${item.na ? 'text-[var(--color-ink-soft)]' : 'text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]'}`}>
+                          {item.na ? 'Not applicable · undo' : 'Not applicable'}
+                        </button>
+                      )}
+                      {!canEdit && item.na && <span className="text-[12px] text-[var(--color-ink-faint)]">Not applicable</span>}
+                    </span>
+                  </div>
                 ))}
               </div>
             </div>
