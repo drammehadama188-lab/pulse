@@ -7,16 +7,18 @@
  * works out what each file IS from its name, and uploads it to that person's
  * Documents tab with the right label.
  *
- *   DRY RUN (default) — prints exactly what it would do, uploads nothing:
- *     PULSE_TOKEN=… node scripts/import-hr-documents.mjs
+ *   SEE THE PLAN (no sign-in, no network, nothing uploaded):
+ *     node scripts/import-hr-documents.mjs --plan
+ *
+ *   DRY RUN against the live site — asks you to sign in, uploads nothing:
+ *     node scripts/import-hr-documents.mjs
  *
  *   FOR REAL:
- *     PULSE_TOKEN=… node scripts/import-hr-documents.mjs --apply
+ *     node scripts/import-hr-documents.mjs --apply
  *
- * Get PULSE_TOKEN yourself: sign in to Pulse, open the browser console and run
- *   sessionStorage.getItem('damia-staff-token')
- * Never paste it into a chat. The script reads it from the environment, never
- * prints it, and never writes it anywhere.
+ * It asks for your Pulse email and password. The password is not shown as you
+ * type, goes straight to Pulse over HTTPS, and is never stored, logged or
+ * echoed. (PULSE_TOKEN=… still works if you would rather pass a token.)
  *
  * 🔒 SAFE BY DESIGN:
  *   - Reads your folders. Never moves, renames or deletes anything.
@@ -30,17 +32,53 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, extname, basename, relative } from 'node:path';
 import { homedir } from 'node:os';
+import { createInterface } from 'node:readline';
 
 const ROOT = process.env.HR_ROOT || join(homedir(), 'Desktop/excel/HR/team');
 const BASE = process.env.PULSE_URL || 'https://pulse.damiatracker.com';
-const TOKEN = process.env.PULSE_TOKEN;
+let TOKEN = process.env.PULSE_TOKEN;
 const APPLY = process.argv.includes('--apply');
-// --plan needs no token and no network: it just shows what it would file.
+// --plan needs no login and no network: it just shows what it would file.
 const PLAN_ONLY = process.argv.includes('--plan');
 
-if (!TOKEN && !PLAN_ONLY) {
-  console.error('Set PULSE_TOKEN first, or run with --plan to see the mapping without one.');
-  process.exit(1);
+// Asking here beats hunting for a token in the browser console. What is typed
+// goes straight to Pulse over HTTPS and is never stored, echoed or logged.
+function ask(question, hidden = false) {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    // Mask what is typed, but only when this really is a terminal — piped or
+    // redirected input has no cursor to move and would throw.
+    const mask = hidden && process.stdout.isTTY;
+    let onData;
+    if (mask) {
+      onData = () => {
+        process.stdout.clearLine(0);
+        process.stdout.cursorTo(0);
+        process.stdout.write(question + '*'.repeat(rl.line.length));
+      };
+      process.stdin.on('data', onData);
+    }
+    rl.question(question, (answer) => {
+      if (onData) process.stdin.removeListener('data', onData);
+      rl.close();
+      if (mask) process.stdout.write('\n');
+      resolve(answer.trim());
+    });
+  });
+}
+
+async function signIn() {
+  const username = await ask('Pulse email: ');
+  const password = await ask('Password (not shown): ', true);
+  const res = await fetch(`${BASE}/api/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.token) throw new Error(data.error || `sign-in failed (HTTP ${res.status})`);
+  console.log(`Signed in as ${data.user?.name || username}\n`);
+  return data.token;
 }
 
 // Folder name -> the Pulse employee NAME. The upload API keys on the display
@@ -121,8 +159,9 @@ function walk(dir) {
 }
 
 const main = async () => {
-  console.log(PLAN_ONLY ? '── PLAN ONLY (no token, no network, nothing uploaded) ──'
+  console.log(PLAN_ONLY ? '── PLAN ONLY (no sign-in, no network, nothing uploaded) ──'
     : APPLY ? '── UPLOADING ──' : '── DRY RUN (nothing is uploaded) ──');
+  if (!PLAN_ONLY && !TOKEN) TOKEN = await signIn();
 
   // Who really exists, and what each already has. Doing this first means a
   // name that does not match is caught before a single byte is sent.
