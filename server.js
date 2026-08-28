@@ -4842,15 +4842,42 @@ app.patch('/api/hr/employee/:username', auth, requireSub('hr', 'records'), notVi
 
 // ---------- onboarding / offboarding checklists (per employee) ----------
 const ONBOARDING_ITEMS = ['Signed contract', 'Submitted ID', 'Training complete', 'App access granted', 'Uniform issued']
-const OFFBOARDING_ITEMS = ['Equipment returned', 'Accounts disabled', 'Final salary paid', 'Exit interview completed']
-function mergeChecklist(items, stored) {
-  return items.map((label) => ({ label, ...(stored && stored[label] ? stored[label] : { done: false }) }))
+// 🔒 COMPANY PROPERTY IS ITEMISED (Adama 28 Aug: "even a checklist if they hold
+// any company property"). "Equipment returned" as one line is a line nobody can
+// answer honestly: it hides which phone, whose tracker, which SIM. Property is
+// also the reason people reach for withholding pay, which the Labour Act does
+// not allow — so the list exists to get the things BACK on the last day, beside
+// the payment, not after it.
+const OFFBOARDING_PROPERTY = [
+  'Company phone returned',
+  'Tracker or demo unit returned',
+  'SIM card returned',
+  'Laptop or tablet returned',
+  'Office keys returned',
+  'Uniform returned',
+  'ID card returned',
+]
+const OFFBOARDING_ADMIN = [
+  'Customer handover completed',
+  'WhatsApp and customer numbers handed over',
+  'Pulse and admin accounts disabled',
+  'Final pay paid',
+  'Exit interview completed',
+]
+const OFFBOARDING_ITEMS = [...OFFBOARDING_PROPERTY, ...OFFBOARDING_ADMIN]
+const offboardingGroup = (label) => (OFFBOARDING_PROPERTY.includes(label) ? 'Company property' : 'Handover and access')
+function mergeChecklist(items, stored, grouped = false) {
+  return items.map((label) => ({
+    label,
+    ...(grouped ? { group: offboardingGroup(label) } : {}),
+    ...(stored && stored[label] ? stored[label] : { done: false }),
+  }))
 }
 app.get('/api/employee-checklist', auth, requireSub('hr', 'records'), (req, res) => {
   const name = req.query.name
   if (!name) return res.status(400).json({ error: 'name required' })
   const c = (db.read('checklists', {}))[name] || {}
-  res.json({ onboarding: mergeChecklist(ONBOARDING_ITEMS, c.onboarding), offboarding: mergeChecklist(OFFBOARDING_ITEMS, c.offboarding) })
+  res.json({ onboarding: mergeChecklist(ONBOARDING_ITEMS, c.onboarding), offboarding: mergeChecklist(OFFBOARDING_ITEMS, c.offboarding, true) })
 })
 app.put('/api/employee-checklist', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
   const { name, type, label, done } = req.body || {}
@@ -5925,9 +5952,22 @@ app.post('/api/hr/employee/:username/exit', auth, requireSub('hr', 'records'), n
     // The FIGURE, not a sentence about it — and the days it was worked out
     // from travel with it, so the record can still explain itself in a year.
     payAmount: Number(b.payAmount) >= 0 ? money2(b.payAmount) : null,
+    // The whole settlement, as it stood on the day it was agreed: the days, the
+    // lines it was built from and the leave balance. A figure with no working
+    // is a figure nobody can answer questions about a year later.
     payBasis: (() => {
       const part = partMonthFor(u, lastDay.slice(0, 7), lastDay)
-      return { workedDays: part.worked, monthDays: part.inMonth, from: part.from, to: part.to }
+      const m = monthlyPayFor(u)
+      const share = part.inMonth ? part.worked / part.inMonth : 0
+      const lines = [['Base salary', m.base], ['Transport & data', m.transport]]
+        .filter(([, monthly]) => monthly > 0)
+        .map(([label, monthly]) => ({ label, monthly, amount: money2(monthly * share) }))
+      const leave = accruedLeaveFor(u, lastDay)
+      const dayRate = part.inMonth ? money2(m.fixed / part.inMonth) : 0
+      if (leave && leave.balance > 0 && dayRate) {
+        lines.push({ label: `Accrued leave, ${leave.balance} days`, monthly: null, amount: money2(leave.balance * dayRate) })
+      }
+      return { workedDays: part.worked, monthDays: part.inMonth, from: part.from, to: part.to, lines, leave }
     })(),
     note: String(b.note || '').trim().slice(0, 400),
     title: u.title || '',
@@ -6014,6 +6054,70 @@ function monthlyPayFor(u) {
 // figure is somebody's pay, and a rounded lump hides which part is which.
 const money2 = (n) => Math.round(Number(n) * 100) / 100
 
+// ---------- accrued annual leave ----------
+// 🔒 LEAVE BUILDS UP MONTHLY, it does not appear on an anniversary. Labour Act
+// 2023 s.109(2): where an entitlement is expressed over more than a month, "the
+// appropriate proportion of the entitlement is deemed to accrue for each month
+// of employment"; s.109(4) makes what is accrued and unused payable when
+// employment ends; s.109(6) values a leave day at the person's normal
+// contractual rate, excluding bonus and overtime.
+// Blue Book bands: under 3 years 14 working days a year, 3 to 7 years 21, over
+// 7 years 30. Part of a month does not accrue (Adama 28 Aug: completed months).
+function annualLeaveBandFor(months) {
+  const years = (months || 0) / 12
+  if (years >= 7) return 30
+  if (years >= 3) return 21
+  return 14
+}
+function completedMonthsBetween(startKey, endKey) {
+  if (!startKey || !endKey) return null
+  const a = new Date(`${String(startKey).slice(0, 10)}T00:00:00Z`)
+  const b = new Date(`${String(endKey).slice(0, 10)}T00:00:00Z`)
+  if (isNaN(a) || isNaN(b)) return null
+  let m = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth())
+  if (b.getUTCDate() < a.getUTCDate()) m -= 1
+  return Math.max(0, m)
+}
+// Their own scheduled working days inside a date range, used for both the leave
+// entitlement (counted in working days) and the leave already taken.
+function workingDaysBetween(username, fromKey, toKey) {
+  if (!fromKey || !toKey || fromKey > toKey) return 0
+  const stored = db.read('schedules', {})[username]
+  let n = 0
+  const d = new Date(`${fromKey}T00:00:00Z`)
+  const end = new Date(`${toKey}T00:00:00Z`)
+  // A guard on runaway ranges: nobody accrues leave over more than ten years.
+  for (let i = 0; d <= end && i < 4000; i++, d.setUTCDate(d.getUTCDate() + 1)) {
+    const key = d.toISOString().slice(0, 10)
+    if (effectiveWeek(stored, key)[dowOfKey(key)]) n++
+  }
+  return n
+}
+function annualLeaveTaken(username, fromKey, toKey) {
+  return db.read('leave', [])
+    .filter((l) => l.username === username && l.status === 'approved' && String(l.type || 'Annual') === 'Annual')
+    .reduce((sum, l) => {
+      const from = String(l.from || '').slice(0, 10)
+      const to = String(l.to || l.from || '').slice(0, 10)
+      if (!from || to < fromKey || from > toKey) return sum
+      return sum + workingDaysBetween(username, from < fromKey ? fromKey : from, to > toKey ? toKey : to)
+    }, 0)
+}
+function accruedLeaveFor(u, lastDay) {
+  const joined = String(u.joined || '').slice(0, 10)
+  const months = completedMonthsBetween(joined, lastDay)
+  if (months == null) return null
+  const band = annualLeaveBandFor(months)
+  // Each month earns at the band the person was in THAT month, not at today's
+  // band applied backwards — otherwise someone crossing three years of service
+  // would earn 21 days a year for their first three years too.
+  let earnedRaw = 0
+  for (let i = 1; i <= months; i++) earnedRaw += annualLeaveBandFor(i) / 12
+  const earned = money2(earnedRaw)
+  const taken = annualLeaveTaken(u.username, joined, lastDay)
+  return { months, band, earned, taken, balance: money2(Math.max(0, earned - taken)) }
+}
+
 // What the last month comes to, for a last day that has not been saved yet —
 // the form asks as the date is picked. 🔒 The MONEY is only in the answer for
 // someone who may already see pay; everyone else gets the days and no figure,
@@ -6044,6 +6148,17 @@ app.get('/api/hr/employee/:username/final-pay', auth, requirePower('hr'), (req, 
     ['Transport & data', m.transport],
   ].filter(([, monthly]) => monthly > 0)
     .map(([label, monthly]) => ({ label, monthly, amount: money2(monthly * share) }))
+  // Accrued leave is part of what is owed, not a note beside it (s.109(4)). A
+  // leave day is worth a normal working day of the guaranteed monthly pay.
+  const leave = accruedLeaveFor(u, lastDay)
+  const dayRate = part.inMonth ? money2(m.fixed / part.inMonth) : 0
+  if (leave && leave.balance > 0 && dayRate) {
+    lines.push({
+      label: `Accrued leave, ${leave.balance} day${leave.balance === 1 ? '' : 's'}`,
+      monthly: null,
+      amount: money2(leave.balance * dayRate),
+    })
+  }
   const amount = money2(lines.reduce((a, l) => a + l.amount, 0))
   res.json({
     month: monthKey,
@@ -6053,14 +6168,9 @@ app.get('/api/hr/employee/:username/final-pay', auth, requirePower('hr'), (req, 
     monthDays: part.inMonth,
     partial: part.partial,
     monthsService,
-    // 🔒 NOT ZERO, AND NOT GUESSED. Labour Act 2023 s.109(2): where leave is
-    // expressed over more than a month, "the appropriate proportion of the
-    // entitlement is deemed to accrue for each month of employment", and
-    // s.109(4) makes accrued-but-unused leave payable at termination. So the
-    // old "nothing under 12 months" was wrong in law. What the Blue Book's
-    // table actually grants inside year one is still unsettled, so this reports
-    // the COMPLETED MONTHS and leaves the payout to a person.
-    leaveOwed: null,
+    // 🔒 Accrued leave is CALCULATED, not left to whoever is settling up. It is
+    // null only when the join date is missing, which is a gap to fix, not a zero.
+    leave: showPay ? accruedLeaveFor(u, lastDay) : null,
     completedMonths: monthsService,
     // null = "you cannot see pay", which is not the same as zero.
     pay: showPay && m.fixed

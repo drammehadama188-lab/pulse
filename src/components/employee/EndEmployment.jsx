@@ -177,6 +177,12 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
                   ? <span className="text-[var(--color-ink-soft)]"> · {exit.payBasis.workedDays} of {exit.payBasis.monthDays} working days</span>
                   : null}
               </p>
+              {/* The working stays with the figure. */}
+              {(exit.payBasis?.lines || []).map((l) => (
+                <p key={l.label} className="text-[12px] text-[var(--color-ink-faint)]">
+                  {l.label}{l.monthly ? `: D${l.monthly.toLocaleString()} ÷ ${exit.payBasis.monthDays} × ${exit.payBasis.workedDays}` : ''} = D{money(l.amount)}
+                </p>
+              ))}
             </div>
           )}
           {exit.note && (
@@ -198,18 +204,25 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
               {outstanding ? `${outstanding} still to do` : 'All done'}
             </span>
           </div>
-          <div className="divide-y divide-[var(--color-line-soft)]">
-            {checklist.map((item) => (
-              <label key={item.label} className="flex items-center gap-3 py-2.5">
-                <input type="checkbox" checked={!!item.done} disabled={!canEdit}
-                  onChange={(e) => tick(item, e.target.checked)} />
-                <span className={`text-[13px] ${item.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>
-                  {item.label}
-                </span>
-                {item.done && <Check size={14} className="ml-auto shrink-0 text-[var(--color-pill-active)]" />}
-              </label>
-            ))}
-          </div>
+          {/* Company property is its own group: it is the half that has to be
+              back in the building on the last day, beside the payment. */}
+          {[...new Set(checklist.map((i) => i.group || 'Offboarding'))].map((group) => (
+            <div key={group} className="mt-3 first:mt-0">
+              <p className="text-[12px] font-medium text-[var(--color-ink-faint)]">{group}</p>
+              <div className="divide-y divide-[var(--color-line-soft)]">
+                {checklist.filter((i) => (i.group || 'Offboarding') === group).map((item) => (
+                  <label key={item.label} className="flex items-center gap-3 py-2.5">
+                    <input type="checkbox" checked={!!item.done} disabled={!canEdit}
+                      onChange={(e) => tick(item, e.target.checked)} />
+                    <span className={`text-[13px] ${item.done ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink)]'}`}>
+                      {item.label}
+                    </span>
+                    {item.done && <Check size={14} className="ml-auto shrink-0 text-[var(--color-pill-active)]" />}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -261,15 +274,20 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
                     <span className="block text-[var(--color-ink-soft)]">
                       {finalPay.workedDays} of {finalPay.monthDays} working days worked this month
                     </span>
+                    {finalPay.leave && (
+                      <span className="block">
+                        Leave: {finalPay.leave.months} completed month{finalPay.leave.months === 1 ? '' : 's'} earns {finalPay.leave.earned} day{finalPay.leave.earned === 1 ? '' : 's'} at {finalPay.leave.band} a year
+                        {finalPay.leave.taken ? `, ${finalPay.leave.taken} taken` : ''}
+                        {finalPay.leave.balance > 0 ? `, ${finalPay.leave.balance} paid out above` : ', nothing to pay out'}
+                        {finalPay.leave.balance > 0 && '. Days taken are counted from leave recorded in Pulse, so check anything taken before that.'}
+                      </span>
+                    )}
                     {finalPay.pay.commissionMonthly > 0 && (
                       <span className="block">
                         Commission (up to D{finalPay.pay.commissionMonthly.toLocaleString()}/month) is not included — it is only owed on a target met and installs confirmed. Add it above if it is owed.
                       </span>
                     )}
-                    <span className="block">
-                      {finalPay.completedMonths ? `${finalPay.completedMonths} completed month${finalPay.completedMonths === 1 ? '' : 's'} of service` : 'No completed month of service'}
-                      . Leave accrues month by month in law, so add any leave owed above.
-                    </span>
+
                   </span>
                 </>
               ) : (
