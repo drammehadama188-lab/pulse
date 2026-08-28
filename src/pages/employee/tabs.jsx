@@ -162,7 +162,9 @@ export function AttendanceMonth({ d, error, month, onMonth }) {
         <div>
           <h2 className="t-card">Attendance · {monthLabel}</h2>
           <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">
-            Counted against this person&rsquo;s own working days, not an assumed week.
+            {d && d.keepsSchedule === false
+              ? 'This person does not clock in or hold a schedule, so no attendance is counted for them.'
+              : 'Counted against this person\u2019s own working days, not an assumed week.'}
           </p>
         </div>
         <span className="flex items-center gap-2">

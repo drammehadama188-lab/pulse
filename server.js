@@ -3477,7 +3477,14 @@ function attendanceMonth(username, month) {
   // his record read "14 days absent this month" — the month started counting
   // on the 1st (Adama, 27 Aug). The floor is the LATER of the attendance
   // system's own start and this person's join date.
-  const joined = String(findUser(username)?.joined || '').slice(0, 10)
+  // 🔒 SOMEONE WHO DOES NOT CLOCK IN IS NEVER ABSENT. A contractor keeps no
+  // schedule (the flag's whole meaning — Adama 3 Aug, and again 28 Aug for
+  // Abdourahman and the Cleaner: "not full time employees that check in and
+  // out"). Without this their record filled with red "No clock in" days
+  // against a Mon–Fri week nobody ever agreed to.
+  const person = findUser(username)
+  const keepsSchedule = !person?.contractor
+  const joined = String(person?.joined || '').slice(0, 10)
   const startFrom = /^\d{4}-\d{2}-\d{2}$/.test(joined) && joined > ATTENDANCE_START ? joined : ATTENDANCE_START
   // 🔴 A stored schedule is an ARRAY of dated versions ([{from, days}]), not
   // a weekday map — indexing it by day-of-week silently returns entry 0 for
@@ -3490,9 +3497,11 @@ function attendanceMonth(username, month) {
     const attendance = attAll.find((a) => a.date === date) || null
     const leave = leaveOnDate(leaveAll, username, date)
     const schedule = effectiveWeek(stored, date)
-    const shift = schedule[dowOfKey(date)] || null
+    const shift = keepsSchedule ? (schedule[dowOfKey(date)] || null) : null
     // Before they joined, the day is simply not theirs — never an absence.
-    const status = date < startFrom ? 'off' : dayStatus({ schedule, attendance, leave }, date, todayK)
+    const status = date < startFrom || !keepsSchedule
+      ? (attendance?.checkIn ? (attendance.late ? 'late' : 'worked') : 'off')
+      : dayStatus({ schedule, attendance, leave }, date, todayK)
     const startMin = shift ? HHMM_MIN(shift.start) : null
     const endMin = shift ? HHMM_MIN(shift.end) : null
     const inMs = attendance?.checkIn ? Date.parse(attendance.checkIn) : null
@@ -3543,6 +3552,7 @@ function attendanceMonth(username, month) {
     month,
     today: todayK,
     attendanceStart: startFrom,
+    keepsSchedule,
     days: cells,
     summary: {
       scheduledDays,
