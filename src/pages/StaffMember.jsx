@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Mail, Building2, ShieldCheck, KeyRound, Archive } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Mail, Building2, KeyRound, Archive } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Avatar, Button, Spinner, Modal, Field, Input } from '../components/ui.jsx'
@@ -294,8 +294,10 @@ export default function StaffMember() {
         </div>
       )}
 
-      {/* Top cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+      {/* Top cards — Email and Department only. The Access tile counted powers
+          the Access section below already lists one by one, and the header chip
+          already says whether there are any: three places, one fact. */}
+      <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2">
         <Stat icon={Mail} label="Email" value={user.email || '—'} />
         <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
           <div className="flex items-center gap-2 mb-3"><Building2 size={15} className="text-[var(--color-ink-faint)]" /><p className="text-[13px] font-semibold text-[var(--color-ink)]">Department</p></div>
@@ -313,7 +315,6 @@ export default function StaffMember() {
             <p className="text-[13px] text-[var(--color-ink-soft)]">{user.department || '—'}</p>
           )}
         </div>
-        <Stat icon={ShieldCheck} label="Access" value={`${powers.size} ${powers.size === 1 ? 'power' : 'powers'} granted`} accent={powers.size > 0 ? 'text-[var(--color-good)]' : 'text-[var(--color-ink-faint)]'} />
       </div>
 
       {/* Login + reset */}
