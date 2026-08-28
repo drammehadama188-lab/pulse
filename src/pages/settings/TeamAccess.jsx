@@ -30,6 +30,26 @@ export default function TeamAccess() {
   const [roles, setRoles] = useState(null)
   const [activity, setActivity] = useState(null)
   const [error, setError] = useState('')
+  const [savingRole, setSavingRole] = useState(null)
+
+  // Set someone's role from the list itself — opening a person just to pick
+  // from a dropdown is a trip for nothing (Adama 27 Aug, comparing admin).
+  async function setRole(username, roleId) {
+    if (!roleId) return
+    setSavingRole(username)
+    setError('')
+    try {
+      const res = await api(`/staff/${username}/role`, { method: 'POST', body: { roleId } })
+      if (res.user) setUsers((list) => list.map((u) => (u.username === username ? { ...u, ...res.user } : u)))
+      // Member counts on the Roles tab move with it.
+      const fresh = await api('/roles')
+      setRoles(fresh.roles || [])
+    } catch (e) {
+      setError(e.message || 'Could not change that role')
+    } finally {
+      setSavingRole(null)
+    }
+  }
 
   useEffect(() => {
     let live = true
@@ -99,8 +119,15 @@ export default function TeamAccess() {
                     </Link>
                     <span className="block text-[12px] text-[var(--color-ink-faint)]">{u.title || u.department || ''}</span>
                   </td>
-                  <td className="px-5 py-4 text-[var(--color-ink-soft)]">
-                    {roleName[u.roleId] || <span className="text-[var(--color-ink-ghost)]">—</span>}
+                  <td className="px-5 py-4">
+                    <select value={u.roleId || ''} disabled={savingRole === u.username}
+                      onChange={(e) => setRole(u.username, e.target.value)}
+                      className="field min-w-[170px] disabled:opacity-50">
+                      <option value="">No role</option>
+                      {roles.filter((r) => r.id !== 'owner').map((r) => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-5 py-4">
                     <span className="inline-flex items-center rounded-[6px] px-2 py-1 text-[12px] font-medium"
@@ -134,8 +161,13 @@ export default function TeamAccess() {
                   <span className="block text-[13px] font-medium text-[var(--color-ink)]">{r.name}</span>
                   <span className="block text-[12.5px] text-[var(--color-ink-soft)]">{r.description || 'No description'}</span>
                 </span>
-                <span className="shrink-0 text-[12.5px] text-[var(--color-ink-faint)]">
-                  {r.powers?.length || 0} {r.powers?.length === 1 ? 'permission' : 'permissions'} · {r.members} {r.members === 1 ? 'person' : 'people'}
+                <span className="shrink-0 text-right text-[12.5px] text-[var(--color-ink-faint)]">
+                  <span className="block">{r.powers?.length || 0} {r.powers?.length === 1 ? 'permission' : 'permissions'}</span>
+                  {/* 🔑 WHO, not a count — "2 people" is not something he can
+                      act on, and it is the first thing he asked for. */}
+                  <span className="block text-[var(--color-ink-soft)]">
+                    {r.memberNames?.length ? r.memberNames.join(', ') : 'nobody yet'}
+                  </span>
                 </span>
                 <ChevronRight size={16} className="shrink-0 text-[var(--color-ink-faint)]" />
               </Link>

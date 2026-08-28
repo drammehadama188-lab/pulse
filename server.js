@@ -580,10 +580,16 @@ app.get('/api/roles', auth, requireCeo, (req, res) => {
   const roles = ensureRoles()
   const users = seedUsers().filter((u) => !isArchived(u))
   res.json({
-    roles: roles.map((r) => ({
-      ...r,
-      members: users.filter((u) => u.roleId === r.id).length,
-    })),
+    // 🔑 Names, not just a count. "2 people" tells him nothing he can act on
+    // — he asked who (27 Aug). The count stays for the summary line.
+    roles: roles.map((r) => {
+      const mine = users.filter((u) => u.roleId === r.id)
+      return {
+        ...r,
+        members: mine.length,
+        memberNames: mine.map((u) => u.name || u.username),
+      }
+    }),
     powers: POWERS.map(([key, label, detail]) => ({
       key, label, detail,
       subs: (SUBPOWERS[key] || []).map(([k, l, d]) => ({ key: k, label: l, detail: d })),
