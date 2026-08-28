@@ -762,8 +762,20 @@ app.post('/api/staff/:username/access', auth, notViewAs, requireCeo, (req, res) 
   }
   if (req.body?.subs && typeof req.body.subs === 'object') {
     const now = user.permissionSubs || {}
-    const keys = [...new Set([...Object.keys(req.body.subs), ...Object.keys(now)])]
-    const changed = keys.some((k) => !sameSet(req.body.subs[k] || now[k] || [], now[k] || req.body.subs[k] || []))
+    // 🔴 THE DEFAULT HAS TO BE RESOLVED BEFORE COMPARING. `no stored list`
+    // means EVERY capability (canSub: `!Array.isArray(stored) || …`), so
+    // reading `now[k]` as an empty list — or worse, falling back to the
+    // incoming list — made a narrowing look unchanged. It compared the
+    // payload with itself and let subs through: {"team":["schedules"]}
+    // silently stripped coaching, edit and delete from someone whose role
+    // still granted them. Caught by excel-a0 against a running server.
+    const stored = (k) => (Array.isArray(now[k]) ? now[k] : (SUBPOWERS[k] || []).map(([sk]) => sk))
+    const keys = [...new Set([...Object.keys(req.body.subs), ...Object.keys(now)])].filter((k) => SUBPOWERS[k])
+    const changed = keys.some((k) => {
+      const incoming = Array.isArray(req.body.subs[k]) ? req.body.subs[k] : null
+      // A key the caller did not send is not a change to it.
+      return incoming !== null && !sameSet(incoming, stored(k))
+    })
     if (changed) {
       return res.status(409).json({ error: 'What a permission can do comes from the role. Change it on the role in Settings › Team & access.' })
     }
@@ -5398,6 +5410,9 @@ app.get('/api/hr/employees', auth, requirePower('hr'), (req, res) => {
 // unreachable. 🔒 No pay here: the salary card reads the payroll-gated
 // endpoint separately, so a viewer without that power receives no figure at all.
 app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res) => {
+  // A role change dated for today (or any day since) takes effect the moment
+  // the record is opened — nobody has to remember to come back and type it.
+  applyDueRoleChanges()
   const u = findUser(req.params.username)
   if (!u || isArchived(u)) return res.status(404).json({ error: 'not found' })
 
@@ -5606,6 +5621,158 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
     },
     history: (u.history || []).slice().reverse(),
   })
+})
+
+// ---------- ROLE CHANGES (Adama 28 Aug: "the role change should have
+// questions, follow proper procedures, not just that") ----------
+//
+// Changing someone's job is an EVENT, not a field edit. Its consequences live
+// on five different pages — title, department, who they report to, pay, and
+// what they can do in Pulse — so before this they had to be remembered one at
+// a time, and Yafatou's May role change reached none of them.
+//
+// 🔒 EFFECTIVE-DATED, and future dates APPLY THEMSELVES (his call). A change
+// agreed today for 1 September is recorded now and takes effect on the day,
+// the same way a dated schedule entry does — nobody has to remember to come
+// back and type it. `applyDueRoleChanges()` runs on read, so any request
+// after the date brings the person up to date.
+//
+// 🔑 Pay is stored ON THE CHANGE, never applied by this endpoint: payroll is
+// its own gate and its own page. The change carries the agreed figure so the
+// decision is on the record, and payroll remains the only writer of pay.
+const ROLE_CHANGE_REASONS = ['Promotion', 'Restructure', 'Their request', 'Performance', 'Other']
+
+function loadRoleChanges() {
+  const all = db.read('role-changes', [])
+  return Array.isArray(all) ? all : []
+}
+// Bring anyone whose change has come due up to date. Idempotent: a change is
+// applied once and marked, so this can run on every read.
+function applyDueRoleChanges() {
+  const all = loadRoleChanges()
+  const due = all.filter((c) => !c.appliedAt && c.effectiveFrom <= todayKey())
+  if (!due.length) return all
+  const users = seedUsers()
+  for (const c of due) {
+    const u = users.find((x) => x.username === c.username)
+    if (!u) { c.appliedAt = new Date().toISOString(); c.applyNote = 'no such person'; continue }
+    const from = []
+    if (c.title && c.title !== u.title) { from.push(`${u.title || '—'} → ${c.title}`); u.title = c.title }
+    if (c.department && c.department !== u.department) { from.push(`${u.department || '—'} → ${c.department}`); u.department = c.department }
+    if (c.roleId && c.roleId !== u.roleId) {
+      const role = roleById(c.roleId)
+      if (role && role.id !== 'owner') {
+        const { powers, subs } = roleGrant(role)
+        const beforePowers = powersFor(u)
+        u.roleId = role.id
+        u.permissions = [...powers]
+        u.permissionSubs = { ...subs }
+        u.accessLog = [...(u.accessLog || []), {
+          at: new Date().toISOString(), by: c.by || 'pulse',
+          before: beforePowers, after: u.permissions,
+          scopes: u.permissionScopes || {}, subs: u.permissionSubs || {},
+          roleAssigned: role.id,
+        }]
+        from.push(`access role → ${role.name}`)
+      }
+    }
+    // Who they report to lives on the profile, like every other HR field.
+    if (c.manager) {
+      const profiles = db.read('profiles', {})
+      profiles[u.name] = { ...(profiles[u.name] || {}), manager: c.manager }
+      db.write('profiles', profiles)
+      from.push(`reports to ${c.manager}`)
+    }
+    ;(u.history ||= []).push({
+      date: c.effectiveFrom,
+      event: `Role change — ${c.fromTitle || '—'} → ${c.title || u.title}${c.reason ? ` (${c.reason})` : ''}${from.length ? `. ${from.join('; ')}` : ''}`,
+    })
+    c.appliedAt = new Date().toISOString()
+  }
+  db.write('users', users)
+  db.write('role-changes', all)
+  return all
+}
+
+// Everything recorded for one person, newest first, with what is still to come
+// marked. The record page shows upcoming ones so a change agreed for next
+// month is visible before it lands rather than arriving as a surprise.
+app.get('/api/hr/employee/:username/role-changes', auth, requirePower('hr'), (req, res) => {
+  const u = findUser(req.params.username)
+  if (!u || isArchived(u)) return res.status(404).json({ error: 'not found' })
+  const all = applyDueRoleChanges().filter((c) => c.username === u.username)
+  res.json({
+    changes: all.sort((a, b) => String(b.effectiveFrom).localeCompare(String(a.effectiveFrom))),
+    today: todayKey(),
+    reasons: ROLE_CHANGE_REASONS,
+  })
+})
+
+app.post('/api/hr/employee/:username/role-changes', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === String(req.params.username || '').trim().toLowerCase())
+  if (!u || isArchived(u)) return res.status(404).json({ error: 'not found' })
+  const b = req.body || {}
+  const effectiveFrom = String(b.effectiveFrom || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)) return res.status(400).json({ error: 'Pick the date it takes effect' })
+  if (u.joined && effectiveFrom < String(u.joined).slice(0, 10)) {
+    return res.status(400).json({ error: 'A role cannot change before the person joined' })
+  }
+  const title = String(b.title || '').trim().slice(0, 80)
+  if (!title) return res.status(400).json({ error: 'Give the new job title' })
+  const department = String(b.department || '').trim()
+  if (department && !DEPARTMENTS.includes(department)) return res.status(400).json({ error: 'Unknown department' })
+  const reason = ROLE_CHANGE_REASONS.includes(b.reason) ? b.reason : 'Other'
+  const roleId = b.roleId ? String(b.roleId) : ''
+  if (roleId && !roleById(roleId)) return res.status(400).json({ error: 'Unknown access role' })
+  if (roleId === 'owner') return res.status(403).json({ error: 'The Owner role belongs to the CEO alone' })
+  // A manager has to be somebody who is actually here.
+  const manager = String(b.manager || '').trim()
+  if (manager && !users.some((x) => !isArchived(x) && x.name === manager && x.username !== u.username)) {
+    return res.status(400).json({ error: 'Reports to must be someone on the team' })
+  }
+
+  const change = {
+    id: crypto.randomUUID(),
+    username: u.username,
+    effectiveFrom,
+    fromTitle: u.title || '',
+    fromDepartment: u.department || '',
+    title,
+    department,
+    manager,
+    roleId,
+    reason,
+    note: String(b.note || '').trim().slice(0, 400),
+    // 🔑 RECORDED, NOT APPLIED. Payroll is its own gate and its own page; this
+    // keeps the agreed figure on the record so the decision is not lost, and
+    // leaves payroll the only thing that changes what someone is paid.
+    payNote: String(b.payNote || '').trim().slice(0, 160),
+    // A new role is measured differently. Nothing here can know the right
+    // targets, so it says so instead of guessing.
+    kpiReview: b.kpiReview !== false,
+    by: req.realUser.name || req.realUser.username,
+    createdAt: new Date().toISOString(),
+    appliedAt: null,
+  }
+  const all = loadRoleChanges()
+  all.push(change)
+  db.write('role-changes', all)
+  // A change dated today or earlier takes effect immediately; a future one
+  // waits, and applyDueRoleChanges picks it up on the day.
+  applyDueRoleChanges()
+  res.json({ change })
+})
+
+// A future change can be called off before it lands. One already applied
+// stays — undoing history is not a correction, it is a lie.
+app.delete('/api/hr/employee/:username/role-changes/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const all = loadRoleChanges()
+  const c = all.find((x) => x.id === req.params.id)
+  if (!c) return res.status(404).json({ error: 'not found' })
+  if (c.appliedAt) return res.status(409).json({ error: 'That change has already taken effect. Record a new one instead.' })
+  db.write('role-changes', all.filter((x) => x.id !== c.id))
+  res.json({ ok: true })
 })
 
 // ---------- recruitment: positions ----------
