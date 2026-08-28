@@ -258,10 +258,14 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
               <span className="text-[12px] text-[var(--color-ink-faint)]">Final pay</span>
               {finalPay?.pay ? (
                 <>
+                  {/* A plain text field, not type=number: a browser set to a
+                      comma locale renders 2666.66 as "2666,66" in a number
+                      input, and a comma in an amount of money is the kind of
+                      thing that gets read as a thousands separator later. */}
                   <div className="mt-1 flex items-center gap-2">
                     <span className="text-[13px] text-[var(--color-ink-soft)]">D</span>
-                    <input type="number" min="0" step="0.01" className="field w-full" value={form.payAmount}
-                      onChange={(e) => set('payAmount', e.target.value)} />
+                    <input type="text" inputMode="decimal" className="field w-full" value={form.payAmount}
+                      onChange={(e) => set('payAmount', e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'))} />
                   </div>
                   {/* Line by line, so it can be checked against the contract.
                       One lump cannot be. */}

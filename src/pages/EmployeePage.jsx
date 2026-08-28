@@ -165,11 +165,30 @@ export default function EmployeePage() {
   const [roles, setRoles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
+  const [payEdit, setPayEdit] = useState(null);
+  const [payErr, setPayErr] = useState('');
   const { realUser, isViewAs } = useAuth();
   // The Edit affordance only appears for someone who can actually save — the
   // server re-checks every write regardless, and view-as stays read-only.
   const canEditRecord = !!realUser?.canRecordsEdit && !isViewAs;
   const canMoveDepartment = !!realUser?.canMoveDepartment && !isViewAs;
+  // Correcting pay is a payroll act, not an HR one: the same power that may see
+  // the figure is the only one that may change it.
+  const canPayEdit = !!realUser?.canPayEdit && !isViewAs;
+
+  async function savePay() {
+    setPayErr('');
+    try {
+      await api(`/hr/employee/${username}/pay`, { method: 'PATCH', body: payEdit });
+      // Re-read from the payroll endpoint rather than trusting the form: the
+      // server decides what was stored.
+      const m = await payByName(true);
+      setPay(m[d?.employee?.name] || null);
+      setPayEdit(null);
+    } catch (err) {
+      setPayErr(err.message || 'Could not save that');
+    }
+  }
 
   // Department keeps its own Manage-staff endpoint and its own history line:
   // it moves the sales goal and the leaderboard, so it never rides along in
@@ -332,7 +351,9 @@ export default function EmployeePage() {
         <div className="space-y-4">
           <JobPayTab e={e} d={d} pay={pay} netPay={netPay} roster={roster}
             departments={departments} canEdit={canEditActive}
-            canMoveDepartment={canMoveDepartment} onSave={saveRecord} />
+            canMoveDepartment={canMoveDepartment} onSave={saveRecord}
+            canPayEdit={canPayEdit} payEdit={payEdit} setPayEdit={setPayEdit}
+            payErr={payErr} savePay={savePay} />
           {/* A role change is an EVENT with a date and a reason, not a title
               typed over another one — so it sits under the terms it changes. */}
           <RoleChange employee={e} departments={departments} roster={roster} roles={roles}
@@ -518,7 +539,7 @@ export function OverviewTab({ d, e, a, sales, pay, netPay, statusLabel, statusIn
 // ── Job & pay tab ─────────────────────────────────────────────────────
 // Employment stays EDITABLE here — this is where the job facts live, and
 // losing Edit would undo the quick editing he asked for.
-export function JobPayTab({ e, d, pay, netPay, roster, departments, canEdit, canMoveDepartment, onSave }) {
+export function JobPayTab({ e, d, pay, netPay, roster, departments, canEdit, canMoveDepartment, onSave, canPayEdit, payEdit, setPayEdit, payErr, savePay }) {
   return (
 
         <div className="space-y-4">
@@ -550,8 +571,38 @@ export function JobPayTab({ e, d, pay, netPay, roster, departments, canEdit, can
               {/* 🔒 Only rendered when the payroll endpoint actually returned
                   a figure — a viewer without that power never receives one. */}
               <div className={`${CARD} p-5`}>
-                <CardHead title="Compensation" />
-                {pay ? (
+                {/* 🔑 Pay was typed once when the person was created and could
+                    never be corrected. A record saying D6,000 against a signed
+                    letter saying D7,000 was quoted, identically and
+                    confidently, by payroll, this card and the exit settlement.
+                    Editable here, by payroll holders, so a correction lands in
+                    all three at once. */}
+                <CardHead title="Compensation" action={pay && canPayEdit && !payEdit && (
+                  <button onClick={() => setPayEdit({ base: pay.base || 0, transport: pay.transport || 0, commission: pay.commission || 0 })}
+                    className="text-[12.5px] font-medium text-[var(--color-brand)] hover:underline">Edit</button>
+                )} />
+                {pay && payEdit ? (
+                  <div className="space-y-3">
+                    {[['Base salary', 'base'], ['Allowances', 'transport'], ['Commission', 'commission']].map(([label, key]) => (
+                      <label key={key} className="flex items-center justify-between gap-3">
+                        <span className="text-[13px] text-[var(--color-ink-faint)]">{label}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-[13px] text-[var(--color-ink-soft)]">D</span>
+                          <input type="text" inputMode="numeric" className="field w-32 text-right" value={payEdit[key]}
+                            onChange={(ev) => setPayEdit((c) => ({ ...c, [key]: ev.target.value.replace(/[^\d]/g, '') }))} />
+                        </span>
+                      </label>
+                    ))}
+                    <p className="text-[11.5px] text-[var(--color-ink-faint)]">
+                      From the signed contract. Base plus allowances is the guaranteed monthly pay, and is what payroll and a final settlement use. Commission is on-target only and is never included automatically.
+                    </p>
+                    {payErr && <p className="text-[12.5px] text-[var(--color-stage-out)]">{payErr}</p>}
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => { setPayEdit(null); setPayErr(''); }} className="btn-secondary">Cancel</button>
+                      <button onClick={savePay} className="btn-primary">Save</button>
+                    </div>
+                  </div>
+                ) : pay ? (
                   <>
                     <div className="divide-y divide-[var(--color-line-soft)]">
                       <Row label="Base salary" value={`${D(pay.base)} / month`} />

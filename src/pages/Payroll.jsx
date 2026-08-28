@@ -666,6 +666,16 @@ function RunScreen({ period, month, rows, draftOf, setDraft, paySources, payDate
                           smaller, in days, on the row itself (28 Aug part-month
                           rule — someone who joins or leaves mid-month is paid
                           for the days they worked, at both ends). */}
+                      {/* 🔑 What the Base figure is made of. The column used
+                          to mean base alone for the old roster and base plus
+                          transport for anyone created in Pulse, with no way to
+                          tell the rows apart. */}
+                      {p.payParts && (
+                        <p className="text-[12px] text-[var(--color-ink-faint)]">
+                          Base D{p.payParts.base.toLocaleString()}
+                          {p.payParts.transport ? ` + transport D${p.payParts.transport.toLocaleString()}` : ''}
+                        </p>
+                      )}
                       {p.partMonth && (
                         <p className="text-[12px] text-[var(--color-warn)]">
                           Part month · {p.partMonth.workedDays} of {p.partMonth.monthDays} working days ({p.partMonth.from.slice(8)}–{p.partMonth.to.slice(8)})

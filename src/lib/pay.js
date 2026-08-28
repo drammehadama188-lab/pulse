@@ -8,14 +8,17 @@ import { api } from './api'
 
 let _people = null
 // [{ username, name, title, department, base, commission, transport, total }]
-export function rosterPay() {
+// `refresh` re-reads after pay has been corrected, so the card cannot keep
+// showing the figure that was just replaced.
+export function rosterPay(refresh = false) {
+  if (refresh) _people = null
   if (!_people) _people = api('/payroll/people').then((r) => r.people || []).catch(() => [])
   return _people
 }
 
 // name -> pay row, for O(1) lookup on profile pages.
-export async function payByName() {
-  const people = await rosterPay()
+export async function payByName(refresh = false) {
+  const people = await rosterPay(refresh)
   const m = {}
   for (const p of people) m[p.name] = p
   return m

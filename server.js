@@ -240,7 +240,7 @@ function publicUser(u) {
   // resolved powers ride along so the UI can gate sections client-side;
   // the server re-checks every request regardless. isTeamLead unlocks the MY
   // TEAM nav section (gated again server-side on /api/team/*).
-  return { ...rest, roleId: u.roleId || null, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u), canCoachingEdit: canSub(u, 'team', 'coaching-edit'), canCoachingDelete: canSub(u, 'team', 'coaching-delete'), canDocsEdit: canSub(u, 'hr', 'files-edit'), canDocsDelete: canSub(u, 'hr', 'files-delete'), canRecordsEdit: canSub(u, 'hr', 'records'), canMoveDepartment: canSub(u, 'staffadmin', 'add') }
+  return { ...rest, roleId: u.roleId || null, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u), canCoachingEdit: canSub(u, 'team', 'coaching-edit'), canCoachingDelete: canSub(u, 'team', 'coaching-delete'), canDocsEdit: canSub(u, 'hr', 'files-edit'), canDocsDelete: canSub(u, 'hr', 'files-delete'), canRecordsEdit: canSub(u, 'hr', 'records'), canPayEdit: canSub(u, 'payroll', 'edit'), canMoveDepartment: canSub(u, 'staffadmin', 'add') }
 }
 // Accepts a username OR an email (Adama 6 Jul: staff know their email, not the
 // internal username — Momodou typed his email and got "Unknown username").
@@ -1271,6 +1271,7 @@ app.get('/api/users', auth, requirePower('team'), (req, res) => {
       canCoachingDelete: canSub(u, 'team', 'coaching-delete'),
       canDocsEdit: canSub(u, 'hr', 'files-edit'),
       canDocsDelete: canSub(u, 'hr', 'files-delete'),
+      canPayEdit: canSub(u, 'payroll', 'edit'),
       suspended: !!u.suspended,
       contractor: !!u.contractor, // contractors skip check-in/schedules
       // Login state — false means they are still on a password someone else
@@ -3812,7 +3813,7 @@ app.get('/api/payroll/people', auth, requirePower('payroll'), (req, res) => {
     // Pay lives server-side (lib/roster-pay.js), keyed by name. Created-via-Pulse
     // staff carry their figure on the user record (u.salary) instead. Confirmed
     // by Adama 15 Jul: rosterPay holds the identical figures moved out of team.js.
-    const pay = rosterPay[p.name] || u?.pay || (u?.salary ? { total: Number(u.salary) } : {})
+    const pay = contractPay(u)
     return {
       username: u?.username || null,
       name: p.name,
@@ -4092,7 +4093,10 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
   // Working days come from their own schedule; the figure stays editable.
   const suggestedSalary = (name) => {
     const u = seedUsers().find((x) => x.name === name)
-    const base = Number(rosterPay[name]?.base) || Number(u?.salary) || 0
+    // 🔒 The guaranteed monthly pay, base + transport, from the one resolver.
+    // This column used to mean base alone for the old roster and base plus
+    // transport for anyone created in Pulse. Same column, two meanings.
+    const base = monthlyPayFor(u || {}).fixed
     if (!u || !base) return base
     const part = partMonthFor(u, period)
     if (!part.partial || !part.inMonth) return base
@@ -4106,6 +4110,17 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
     if (!part.partial || !part.inMonth) return null
     return { from: part.from, to: part.to, workedDays: part.worked, monthDays: part.inMonth }
   }
+  // 🔑 SAY WHAT THE FIGURE IS MADE OF. The Base column meant two things at once:
+  // for someone created in Pulse `salary` is base PLUS transport, while the
+  // older roster entries carry base alone. Same column, two meanings, and no
+  // way to see which row is which. The split travels with the row now.
+  const payParts = (name) => {
+    const u = seedUsers().find((x) => x.name === name)
+    if (!u) return null
+    const m = monthlyPayFor(u)
+    if (!m.base && !m.transport) return null
+    return { base: m.base, transport: m.transport, commission: m.commission }
+  }
   const people = merged.filter((p) => (seen.has(p.name) ? false : seen.add(p.name))).map((p) => ({
     name: p.name,
     role: p.role || '',
@@ -4114,6 +4129,7 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
     // Says WHY the suggestion is not a whole month, so a smaller number does
     // not read as a mistake.
     partMonth: partMonthNote(p.name),
+    payParts: payParts(p.name),
     paid: paidByName[p.name] || null,
   }))
   // Payments to people no longer on the roster (past staff, pre-Pulse hires)
@@ -5951,7 +5967,12 @@ app.post('/api/hr/employee/:username/exit', auth, requireSub('hr', 'records'), n
     // 🔑 RECORDED, NOT PAID. Payroll stays the only writer of money.
     // The FIGURE, not a sentence about it — and the days it was worked out
     // from travel with it, so the record can still explain itself in a year.
-    payAmount: Number(b.payAmount) >= 0 ? money2(b.payAmount) : null,
+    // A comma-decimal can still arrive from a locale-formatted field; read it
+    // rather than storing NaN or a number a hundred times too small.
+    payAmount: (() => {
+      const n = Number(String(b.payAmount ?? '').replace(',', '.'))
+      return Number.isFinite(n) && n >= 0 ? money2(n) : null
+    })(),
     // The whole settlement, as it stood on the day it was agreed: the days, the
     // lines it was built from and the leave balance. A figure with no working
     // is a figure nobody can answer questions about a year later.
@@ -6034,6 +6055,17 @@ function partMonthFor(u, monthKey, lastDayOverride = null) {
   if (from > to) return { from, to, partial: true, inMonth: 0, worked: 0 } // not employed in this month at all
   return { from, to, partial, ...scheduledDaysIn(u.username, monthKey, from, to) }
 }
+// 🔒 ONE PLACE THAT SAYS WHAT SOMEBODY IS PAID. Order matters: a figure set on
+// the record wins, because it is the one a person corrected against the signed
+// contract; the older roster file is the fallback for staff who predate that.
+// Every page that quotes pay reads this, so a correction lands everywhere at
+// once instead of on the page somebody happened to fix.
+function contractPay(u) {
+  if (!u) return {}
+  if (u.pay && u.payUpdatedAt) return u.pay
+  return rosterPay[u.name] || u.pay || (u.salary ? { base: Number(u.salary) } : {})
+}
+
 // What is GUARANTEED every month, split into its parts. Base + transport is
 // the guaranteed pay (it is what `salary` holds on a created record);
 // 🔒 COMMISSION IS NEVER IN IT — the contract says payable only on confirmed,
@@ -6041,7 +6073,7 @@ function partMonthFor(u, monthKey, lastDayOverride = null) {
 // in an automatic figure. It is reported separately so whoever settles can
 // decide, and a part month never quietly pays or withholds it.
 function monthlyPayFor(u) {
-  const p = rosterPay[u.name] || u.pay || (u.salary ? { base: Number(u.salary) } : {})
+  const p = contractPay(u)
   const base = Number(p.base) || 0
   const transport = Number(p.transport) || 0
   const commission = Number(p.commission) || 0
@@ -6053,6 +6085,35 @@ function monthlyPayFor(u) {
 // Dalasi and butut. 🔒 Never round a part month up to a whole number — the
 // figure is somebody's pay, and a rounded lump hides which part is which.
 const money2 = (n) => Math.round(Number(n) * 100) / 100
+
+// ---------- correcting what somebody is paid ----------
+// 🔑 Pay could be typed ONCE, when the person was created, and never corrected.
+// Mustapha's record said D6,000 base while his signed offer letter says D7,000,
+// and there was no screen anywhere to fix it — so payroll, the salary card and
+// the exit settlement all quoted the same wrong figure, confidently.
+// 🔒 Payroll power only, and the figures never touch a history line: the record
+// history is readable with HR power, and pay is not.
+app.patch('/api/hr/employee/:username/pay', auth, requireSub('payroll', 'edit'), notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === String(req.params.username || '').trim().toLowerCase())
+  if (!u) return res.status(404).json({ error: 'not found' })
+  if (!inScope(req.realUser, 'payroll', u.username)) return res.status(403).json({ error: 'Not in your Payroll scope' })
+  const b = req.body || {}
+  const num = (v) => Math.max(0, Math.round(Number(v) || 0))
+  const base = num(b.base)
+  const transport = num(b.transport)
+  const commission = num(b.commission)
+  if (!base && !transport) return res.status(400).json({ error: 'Give at least a base salary' })
+  u.pay = { base, transport, commission, total: base + transport + commission }
+  // `salary` is the GUARANTEED monthly figure, which is base plus transport.
+  // Commission is on-target only and never belongs in it.
+  u.salary = base + transport
+  u.payUpdatedAt = new Date().toISOString()
+  u.payUpdatedBy = req.realUser.name || req.realUser.username
+  ;(u.history ||= []).push({ date: todayKey(), event: 'Contract pay updated' })
+  db.write('users', users)
+  res.json({ pay: u.pay, salary: u.salary })
+})
 
 // ---------- accrued annual leave ----------
 // 🔒 LEAVE BUILDS UP MONTHLY, it does not appear on an anniversary. Labour Act
