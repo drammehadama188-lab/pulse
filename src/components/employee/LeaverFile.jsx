@@ -52,6 +52,23 @@ export default function LeaverFile({ file, e, notes = [], documents = [], onTab 
         </span>
       </div>
 
+      {/* 🔒 REACHING THEM AFTER THEY HAVE GONE. The work address is a key to
+          our systems and dies with the account, so the personal one is the only
+          address that still works for final pay, a reference or their
+          documents. Missing one is a problem to see, not a blank to skip. */}
+      <div className={`${CARD} grid grid-cols-2 gap-y-4 p-5 sm:grid-cols-3`}>
+        <Fact
+          label="Personal email"
+          value={e.personalEmail || 'Not on file'}
+          tone={e.personalEmail ? undefined : 'var(--color-stage-out)'}
+        />
+        <Fact label="Phone" value={e.phone || 'Not on file'} tone={e.phone ? undefined : 'var(--color-stage-out)'} />
+        <Fact
+          label="Work email"
+          value={<span className="text-[var(--color-ink-faint)] line-through">{e.email || '—'}</span>}
+        />
+      </div>
+
       {/* How long they were here, and whether they finished what they signed. */}
       <div className={`${CARD} grid grid-cols-2 gap-y-4 p-5 sm:grid-cols-4`}>
         <Fact label="Started" value={day(file.first)} />

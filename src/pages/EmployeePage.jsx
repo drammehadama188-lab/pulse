@@ -300,7 +300,22 @@ export default function EmployeePage() {
               {e.title || '—'}{e.department ? ` · ${e.department}` : ''}
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-[var(--color-ink-soft)]">
-              {e.email && <span className="inline-flex items-center gap-1.5"><Mail size={14} className="text-[var(--color-ink-faint)]" /> {e.email}</span>}
+              {/* 🔒 WHICH EMAIL MATTERS DEPENDS ON WHETHER THEY STILL WORK
+                  HERE (Adama 28 Aug): "the work email is only used when he
+                  works with us for getting into our systems, but when fired his
+                  personal email trumps always". The work address is a key to
+                  our systems and it is switched off on the last day, so after
+                  that it is the wrong address to reach anyone about final pay,
+                  a reference or their documents. */}
+              {e.status === 'inactive' ? (
+                e.personalEmail ? (
+                  <span className="inline-flex items-center gap-1.5"><Mail size={14} className="text-[var(--color-ink-faint)]" /> {e.personalEmail} <span className="text-[12px] text-[var(--color-ink-faint)]">personal</span></span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-[var(--color-stage-out)]"><Mail size={14} /> No personal email on file</span>
+                )
+              ) : (
+                e.email && <span className="inline-flex items-center gap-1.5"><Mail size={14} className="text-[var(--color-ink-faint)]" /> {e.email}</span>
+              )}
               {e.phone && <a href={`tel:${e.phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-1.5 hover:text-[var(--color-ink)]"><Phone size={14} className="text-[var(--color-ink-faint)]" /> {e.phone}</a>}
               {e.address && <span className="inline-flex items-center gap-1.5"><MapPin size={14} className="text-[var(--color-ink-faint)]" /> {e.address}</span>}
             </div>
