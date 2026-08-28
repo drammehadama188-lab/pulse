@@ -3201,6 +3201,12 @@ function attendanceMonth(username, month) {
   const todayK = todayKey()
   const attAll = db.read('attendance', []).filter((a) => a.username === username)
   const leaveAll = db.read('leave', [])
+  // 🔴 NOBODY IS ABSENT BEFORE THEY WERE HIRED. Mustapha joined 19 Aug and
+  // his record read "14 days absent this month" — the month started counting
+  // on the 1st (Adama, 27 Aug). The floor is the LATER of the attendance
+  // system's own start and this person's join date.
+  const joined = String(findUser(username)?.joined || '').slice(0, 10)
+  const startFrom = /^\d{4}-\d{2}-\d{2}$/.test(joined) && joined > ATTENDANCE_START ? joined : ATTENDANCE_START
   // 🔴 A stored schedule is an ARRAY of dated versions ([{from, days}]), not
   // a weekday map — indexing it by day-of-week silently returns entry 0 for
   // Sunday and undefined for every other day, which read as "works Sundays
@@ -3213,7 +3219,8 @@ function attendanceMonth(username, month) {
     const leave = leaveOnDate(leaveAll, username, date)
     const schedule = effectiveWeek(stored, date)
     const shift = schedule[dowOfKey(date)] || null
-    const status = dayStatus({ schedule, attendance, leave }, date, todayK)
+    // Before they joined, the day is simply not theirs — never an absence.
+    const status = date < startFrom ? 'off' : dayStatus({ schedule, attendance, leave }, date, todayK)
     const startMin = shift ? HHMM_MIN(shift.start) : null
     const endMin = shift ? HHMM_MIN(shift.end) : null
     const inMs = attendance?.checkIn ? Date.parse(attendance.checkIn) : null
@@ -3247,7 +3254,7 @@ function attendanceMonth(username, month) {
 
   // Scheduled days = days this person was rostered, counted only up to today
   // so a rate is not punished for days that have not happened yet.
-  const elapsed = cells.filter((c) => c.date <= todayK && c.date >= ATTENDANCE_START)
+  const elapsed = cells.filter((c) => c.date <= todayK && c.date >= startFrom)
   const scheduledDays = elapsed.filter((c) => c.scheduled).length
   const present = elapsed.filter((c) => c.status === 'worked' || c.status === 'late').length
   const late = elapsed.filter((c) => c.status === 'late').length
@@ -3261,7 +3268,7 @@ function attendanceMonth(username, month) {
   return {
     month,
     today: todayK,
-    attendanceStart: ATTENDANCE_START,
+    attendanceStart: startFrom,
     days: cells,
     summary: {
       scheduledDays,
