@@ -215,6 +215,11 @@ app.use('/api/applicants/import', express.json({ limit: '10mb' }))
 // A CV is a PDF in the body, past the default too. Same rule: before the global.
 const bigJson = express.json({ limit: '10mb' })
 app.use('/api/applicants', (req, res, next) => (/\/cv$/.test(req.path) ? bigJson(req, res, next) : next()))
+// An employee document is a PDF in the body as well. Without this it hit the
+// 100kb default and every real contract was rejected: 27 Aug the HR import
+// filed three small files for Yafatou and silently lost the other six —
+// including both contracts — because a 600kb PDF base64s well past 100kb.
+app.use('/api/agent-files', bigJson)
 app.use(express.json())
 // Behind nginx (and maybe Cloudflare) in prod, so the real client IP lives in
 // X-Forwarded-For. Trust exactly the proxy hop count (default 1 = nginx) so the
@@ -4335,8 +4340,12 @@ app.get('/api/agent-files/:id/download', (req, res) => {
   if (!meta) return res.status(404).json({ error: 'not found' })
   const filePath = path.join(FILES_DIR, fileSlug(meta.agent), meta.storedAs)
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'file missing' })
+  // ?inline=1 opens it in the browser instead of downloading it (Adama
+  // 27 Aug: "option to view document?"). Same route, same permission check —
+  // reading a contract should not mean putting a copy on your laptop first.
+  const disposition = req.query.inline ? 'inline' : 'attachment'
   res.setHeader('Content-Type', meta.mimeType || 'application/octet-stream')
-  res.setHeader('Content-Disposition', `attachment; filename="${meta.name.replace(/"/g, '')}"`)
+  res.setHeader('Content-Disposition', `${disposition}; filename="${meta.name.replace(/"/g, '')}"`)
   res.sendFile(filePath)
 })
 // Edit (rename / re-categorise) and delete are each their OWN sub-toggle

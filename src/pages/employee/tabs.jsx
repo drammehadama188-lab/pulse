@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Download, FileText, Search, Upload, ChevronLeft, ChevronRight, ArrowRight,
-  Star, AlertTriangle, MessageSquare,
+  Star, AlertTriangle, MessageSquare, Eye,
 } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
 import { timeShort } from '../../lib/format.js';
@@ -316,6 +316,9 @@ export function AttendanceMonth({ d, error, month, onMonth }) {
 }
 
 // ── Documents ──────────────────────────────────────────────────────
+// What a browser can open in a tab. A .docx cannot be, so it gets Download
+// only rather than a View that quietly downloads instead.
+const VIEWABLE = /^(application\/pdf|image\/|text\/plain)/;
 const CATEGORIES = [['all', 'All documents'], ['contract', 'Contracts'], ['document', 'Employment'], ['monthly-review', 'Reviews'], ['general', 'Other']];
 export function Documents({ documents, onUpload, uploading }) {
   const [cat, setCat] = useState('all');
@@ -371,7 +374,19 @@ export function Documents({ documents, onUpload, uploading }) {
                 <td className="whitespace-nowrap px-5 py-4 text-[var(--color-ink-soft)]">{day(f.uploadedAt)}</td>
                 <td className="whitespace-nowrap px-5 py-4 text-[var(--color-ink-soft)]">{Math.round((f.sizeBytes || 0) / 1024)} KB</td>
                 <td className="px-5 py-4 text-right">
-                  <a href={`/api/agent-files/${f.id}/download?t=${encodeURIComponent(getToken() || '')}`} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"><Download size={15} /></a>
+                  {/* View opens it in a tab; Download puts it on the disk.
+                      Only offered for what a browser can actually render —
+                      a View that silently downloads a .docx is a lie. */}
+                  <span className="flex items-center justify-end gap-3">
+                    {VIEWABLE.test(f.mimeType || '') && (
+                      <a href={`/api/agent-files/${f.id}/download?inline=1&t=${encodeURIComponent(getToken() || '')}`}
+                        target="_blank" rel="noopener noreferrer" title="View"
+                        className="text-[var(--color-ink-faint)] hover:text-[var(--color-brand)]"><Eye size={15} /></a>
+                    )}
+                    <a href={`/api/agent-files/${f.id}/download?t=${encodeURIComponent(getToken() || '')}`}
+                      title="Download"
+                      className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"><Download size={15} /></a>
+                  </span>
                 </td>
               </tr>
             ))}
