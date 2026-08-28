@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Mail, Building2, ShieldCheck, KeyRound, Archive } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -70,6 +70,7 @@ export default function StaffMember() {
   const [emailMsg, setEmailMsg] = useState('')
   const [resetOpen, setResetOpen] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
+  const [roles, setRoles] = useState([])
 
   function load() {
     Promise.all([api('/users'), api('/powers')]).then(([u, pw]) => {
@@ -84,12 +85,29 @@ export default function StaffMember() {
   }
   useEffect(() => { load() }, [username])
   useEffect(() => { api('/departments').then((d) => setDepartments(d.departments || [])).catch(() => {}) }, [])
+  // Roles are owner-only to read; a manager without that grant simply sees no
+  // role picker rather than an error.
+  useEffect(() => { api('/roles').then((r) => setRoles(r.roles || [])).catch(() => setRoles([])) }, [])
+
+  // Assigning a role RESETS this person to it. Coverage is untouched.
+  async function changeRole(next) {
+    if (!next || next === user.roleId) return
+    setSavingKey('__role')
+    try {
+      const res = await api(`/staff/${username}/role`, { method: 'POST', body: { roleId: next } })
+      if (res.user) setUser(res.user)
+    } catch (e) {
+      setEmailMsg(e.message || 'Could not change the role')
+    } finally {
+      setSavingKey(null)
+    }
+  }
 
   if (!loaded) return <PageSkeleton tiles={0} rows={6} />
   if (!user) {
     return (
       <div className="max-w-4xl">
-        <button onClick={() => navigate('/team')} className="flex items-center gap-2 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back to Staff</button>
+        <button onClick={() => navigate('/settings/team?tab=members')} className="flex items-center gap-2 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back to Team &amp; access</button>
         <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-10 text-center text-[var(--color-ink-faint)]">Staff member not found.</div>
       </div>
     )
@@ -97,6 +115,15 @@ export default function StaffMember() {
 
   const powers = new Set(user.powers || [])
   const canSignIn = !user.suspended
+  // Where this person deliberately differs from their role. Named out loud so
+  // an exception is never invisible — an unexplained extra power is how access
+  // creeps.
+  const myRole = roles.find((r) => r.id === user.roleId)
+  const roleDiff = myRole
+    ? [...new Set([...powers, ...(myRole.powers || [])])]
+      .filter((k) => powers.has(k) !== (myRole.powers || []).includes(k))
+      .map((k) => (catalogue.find((c) => c.key === k)?.label || k))
+    : []
 
   // Named sub-toggles: who each power covers. No stored list = all staff.
   const coverage = (key) => {
@@ -212,7 +239,7 @@ export default function StaffMember() {
 
   return (
     <div className="max-w-5xl">
-      <button onClick={() => navigate('/team')} className="flex items-center gap-2 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back to Staff</button>
+      <button onClick={() => navigate('/settings/team?tab=members')} className="flex items-center gap-2 text-[13px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] mb-6"><ArrowLeft size={14} /> Back to Team &amp; access</button>
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
@@ -232,6 +259,40 @@ export default function StaffMember() {
           {hasRealPower('staffadmin') && <Button variant="outline" icon={Archive} onClick={() => setArchiveOpen(true)}>Archive</Button>}
         </div>
       </div>
+
+      {/* THE ROLE — set what someone can do in one move, instead of six
+          powers and their sub-toggles one at a time (Adama 27 Aug).
+          🔒 Choosing a role RESETS this person to that role's permissions and
+          clears any exception. Who they cover is NOT touched: coverage is set
+          per person below, and a role must never silently widen it. */}
+      {hasRealPower('staffadmin') && (
+        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-[var(--color-ink)]">Role</p>
+              <p className="mt-1 text-[12.5px] text-[var(--color-ink-soft)]">
+                Sets the permissions below in one move. Changing it replaces them and clears any exception.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={user.roleId || ''}
+                disabled={savingKey === '__role' || roles.length === 0}
+                onChange={(e) => changeRole(e.target.value)}
+                className="field min-w-[180px]">
+                <option value="">No role</option>
+                {roles.map((r) => <option key={r.id} value={r.id} disabled={r.id === 'owner'}>{r.name}</option>)}
+              </select>
+              <Link to="/settings/team?tab=roles" className="text-[12.5px] font-medium text-[var(--color-brand)] hover:underline whitespace-nowrap">Edit roles</Link>
+            </div>
+          </div>
+          {roleDiff.length > 0 && (
+            <p className="mt-3 text-[12.5px] text-[var(--color-ink-soft)]">
+              <b className="font-medium text-[var(--color-ink)]">Differs from the role</b> on {roleDiff.join(', ')} — set deliberately for this person, and kept when the role changes.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Top cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">

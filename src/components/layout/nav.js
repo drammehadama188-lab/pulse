@@ -32,7 +32,7 @@ export const NAV = [
   { id: 'people', to: '/people', label: 'Employees', icon: Users, group: 'People', show: mgr },
   { id: 'attendance-mgr', to: '/attendance', label: 'Attendance', icon: Clock, group: 'People', show: mgr },
   { id: 'recruitment', to: '/recruitment', label: 'Recruitment', icon: UserPlus, group: 'People', show: mgr },
-  { id: 'staff', to: '/team', label: 'Staff', icon: ShieldCheck, group: 'People', show: (u) => has(u, 'staffadmin') },
+
 
   // PERFORMANCE — how people are doing, and what they are measured against.
   { id: 'performance', to: '/performance', label: 'Performance', icon: TrendingUp, group: 'Performance', show: mgr },
@@ -60,6 +60,10 @@ export const NAV = [
   { id: 'documents', to: '/documents', label: 'Documents', icon: FolderOpen, group: 'Company', show: mgr },
   // Tracker Guide — the product taught to staff (Adama 19 Aug); everyone sees it.
   { id: 'tracker-guide', to: '/tracker-guide', label: 'Tracker Guide', icon: GraduationCap, group: 'Company', show: () => true },
+  // SETTINGS — access, roles and company setup. The Staff page was retired
+  // into here on 27 Aug ("the staff page needs to go"): permissions belong in
+  // settings, not as a page of their own beside Employees.
+  { id: 'settings', to: '/settings', label: 'Settings', icon: ShieldCheck, group: 'Company', show: (u) => has(u, 'staffadmin') },
 
   // ANALYTICS — Reports composes server-side from whichever powers the person holds.
   { id: 'reports', to: '/reports', label: 'Reports', icon: BarChart3, group: 'Analytics', show: (u) => ['team', 'approvals', 'payroll', 'hr'].some((p) => has(u, p)) },

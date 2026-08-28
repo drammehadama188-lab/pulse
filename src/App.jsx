@@ -26,6 +26,10 @@ import Profile from './pages/Profile.jsx'
 import ChangePassword from './pages/ChangePassword.jsx'
 import Approvals from './pages/manager/Approvals.jsx'
 import Team from './pages/manager/Team.jsx'
+import { useParams } from 'react-router-dom'
+import Settings from './pages/Settings.jsx'
+import TeamAccess from './pages/settings/TeamAccess.jsx'
+import RoleEditor from './pages/settings/RoleEditor.jsx'
 import HRTeam from './pages/departments/HRTeam.jsx'
 import Employees from './pages/Employees.jsx'
 import EmployeePage from './pages/EmployeePage.jsx'
@@ -72,6 +76,13 @@ function FullScreenLoader() {
 // power="ceo" marks CEO-only pages (unbuilt department shells). The legacy
 // `manager` prop now means holding the Team power. The server independently
 // enforces every check per request — this is presentation only.
+// An old /staff/:username bookmark should land on that person's access page,
+// not just somewhere in Settings.
+function StaffRedirect() {
+  const { username } = useParams()
+  return <Navigate to={`/settings/team/member/${username}`} replace />
+}
+
 function RequireAuth({ children, manager = false, power = null, teamLead = false }) {
   const { user, realUser, loading, isManager, hasPower } = useAuth()
   const location = useLocation()
@@ -196,8 +207,16 @@ export default function App() {
         <Route path="/profile" element={<Navigate to="/me" replace />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/approvals" element={<RequireAuth power="approvals"><Approvals /></RequireAuth>} />
-        <Route path="/team" element={<RequireAuth power="staffadmin"><Team /></RequireAuth>} />
-        <Route path="/staff/:username" element={<RequireAuth power="staffadmin"><StaffMember /></RequireAuth>} />
+        {/* SETTINGS (Adama 27 Aug) — access lives here now, in the
+            arrangement admin got on 25 Aug. The Staff page is retired: /team
+            and /staff/:username redirect in, so an old link or bookmark still
+            lands somewhere real instead of 404ing. */}
+        <Route path="/settings" element={<RequireAuth power="staffadmin"><Settings /></RequireAuth>} />
+        <Route path="/settings/team" element={<RequireAuth power="staffadmin"><TeamAccess /></RequireAuth>} />
+        <Route path="/settings/team/member/:username" element={<RequireAuth power="staffadmin"><StaffMember /></RequireAuth>} />
+        <Route path="/settings/team/roles/:roleId" element={<RequireAuth power="staffadmin"><RoleEditor /></RequireAuth>} />
+        <Route path="/team" element={<Navigate to="/settings/team?tab=members" replace />} />
+        <Route path="/staff/:username" element={<StaffRedirect />} />
 
         {/* Back-compat: the old bundled HR page + its deep links still resolve. */}
         <Route path="/dept/hr" element={<RequireAuth power="hr"><HRTeam /></RequireAuth>} />

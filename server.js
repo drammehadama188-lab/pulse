@@ -240,7 +240,7 @@ function publicUser(u) {
   // resolved powers ride along so the UI can gate sections client-side;
   // the server re-checks every request regardless. isTeamLead unlocks the MY
   // TEAM nav section (gated again server-side on /api/team/*).
-  return { ...rest, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u), canCoachingEdit: canSub(u, 'team', 'coaching-edit'), canCoachingDelete: canSub(u, 'team', 'coaching-delete'), canDocsEdit: canSub(u, 'hr', 'files-edit'), canDocsDelete: canSub(u, 'hr', 'files-delete'), canRecordsEdit: canSub(u, 'hr', 'records'), canMoveDepartment: canSub(u, 'staffadmin', 'add') }
+  return { ...rest, roleId: u.roleId || null, powers: powersFor(u), isTeamLead: leadsATeam(u), approvalsBeyondTeam: approvalsBeyondTeam(u), canCoachingEdit: canSub(u, 'team', 'coaching-edit'), canCoachingDelete: canSub(u, 'team', 'coaching-delete'), canDocsEdit: canSub(u, 'hr', 'files-edit'), canDocsDelete: canSub(u, 'hr', 'files-delete'), canRecordsEdit: canSub(u, 'hr', 'records'), canMoveDepartment: canSub(u, 'staffadmin', 'add') }
 }
 // Accepts a username OR an email (Adama 6 Jul: staff know their email, not the
 // internal username — Momodou typed his email and got "Unknown username").
@@ -488,6 +488,230 @@ app.get('/api/me', auth, (req, res) => {
 // The catalogue, for building the toggle UI.
 app.get('/api/powers', auth, (req, res) => {
   res.json({ powers: POWERS.map(([key, label, detail]) => ({ key, label, detail, subs: (SUBPOWERS[key] || []).map(([k, l, d]) => ({ key: k, label: l, detail: d })) })) })
+})
+
+// ---------- ROLES (Adama 27 Aug: "stop assigning 50 permissions person by
+// person" — the arrangement admin got on 25 Aug, in Pulse) ----------
+//
+// A role owns WHAT someone can do: the powers, and the capability sub-toggles
+// inside each. 🔒 It deliberately does NOT own WHO they cover
+// (`permissionScopes`) — his call, 27 Aug. Coverage stays on the person, so
+// assigning a role can never silently widen which staff a manager can see.
+//
+// 🔑 `user.permissions` / `permissionSubs` remain the ONE set every gate
+// reads (powersFor, can, canSub). Roles write into them; nothing about
+// enforcement changed. A person carries `roleId`, and `customKeys` records
+// where they deliberately differ from their role.
+const BUILTIN_ROLES = [
+  { id: 'owner', name: 'Owner', description: 'Everything. The CEO only.', powers: [...POWER_KEYS], subs: {} },
+  { id: 'manager', name: 'Manager', description: 'Runs a team: approvals, presence, coaching.', powers: ['approvals', 'team'], subs: {} },
+  { id: 'hr-admin', name: 'HR admin', description: 'People records, contracts and documents.', powers: ['hr', 'staffadmin', 'approvals'], subs: {} },
+  { id: 'staff', name: 'Staff', description: 'No management access. Their own work only.', powers: [], subs: {} },
+]
+function loadRoles() {
+  const stored = db.read('roles', null)
+  if (Array.isArray(stored) && stored.length) return stored
+  const seeded = BUILTIN_ROLES.map((r) => ({ ...r, builtin: true }))
+  db.write('roles', seeded)
+  return seeded
+}
+function roleById(id) {
+  return loadRoles().find((r) => r.id === id) || null
+}
+// What a role grants, cleaned against the live catalogues so a stale role
+// cannot hand out a power that no longer exists.
+function roleGrant(role) {
+  const powers = (role?.powers || []).filter((p) => POWER_KEYS.includes(p))
+  const subs = {}
+  for (const [k, v] of Object.entries(role?.subs || {})) {
+    if (!SUBPOWERS[k] || !Array.isArray(v)) continue
+    const valid = new Set(SUBPOWERS[k].map(([sk]) => sk))
+    subs[k] = v.filter((s) => valid.has(s))
+  }
+  return { powers, subs }
+}
+// Where this person differs from their role — the keys they were given or
+// denied on purpose. Shown with a mark in the UI so an exception is never
+// invisible.
+function customKeysFor(user) {
+  const role = roleById(user.roleId)
+  if (!role) return []
+  const { powers } = roleGrant(role)
+  const mine = new Set(powersFor(user))
+  const theirs = new Set(powers)
+  return [...new Set([...mine, ...theirs])].filter((k) => mine.has(k) !== theirs.has(k))
+}
+// Boot migration. 🔒 Reads only — it never changes anyone's permissions. It
+// labels each person with the role that best matches what they ALREADY have,
+// so the first screen he opens is honest rather than a reset.
+function ensureRoles() {
+  const roles = loadRoles()
+  const users = seedUsers()
+  let touched = false
+  for (const u of users) {
+    if (u.roleId || u.username === CEO) {
+      if (u.username === CEO && u.roleId !== 'owner') { u.roleId = 'owner'; touched = true }
+      continue
+    }
+    const mine = new Set(powersFor(u))
+    // The closest role by what they hold now; ties go to the smaller role, so
+    // nobody is labelled with more authority than they actually have.
+    let best = 'staff'
+    let bestScore = -1
+    for (const r of roles) {
+      if (r.id === 'owner') continue
+      const theirs = new Set(roleGrant(r).powers)
+      const overlap = [...mine].filter((k) => theirs.has(k)).length
+      const wrong = [...theirs].filter((k) => !mine.has(k)).length + [...mine].filter((k) => !theirs.has(k)).length
+      const score = overlap * 10 - wrong
+      if (score > bestScore || (score === bestScore && theirs.size < roleGrant(roleById(best)).powers.length)) {
+        best = r.id
+        bestScore = score
+      }
+    }
+    u.roleId = best
+    touched = true
+  }
+  if (touched) db.write('users', users)
+  return roles
+}
+
+app.get('/api/roles', auth, requireCeo, (req, res) => {
+  const roles = ensureRoles()
+  const users = seedUsers().filter((u) => !isArchived(u))
+  res.json({
+    roles: roles.map((r) => ({
+      ...r,
+      members: users.filter((u) => u.roleId === r.id).length,
+    })),
+    powers: POWERS.map(([key, label, detail]) => ({
+      key, label, detail,
+      subs: (SUBPOWERS[key] || []).map(([k, l, d]) => ({ key: k, label: l, detail: d })),
+    })),
+  })
+})
+
+app.post('/api/roles', auth, notViewAs, requireCeo, (req, res) => {
+  const name = String(req.body?.name || '').trim()
+  if (!name) return res.status(400).json({ error: 'Give the role a name' })
+  const roles = loadRoles()
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
+  if (!id) return res.status(400).json({ error: 'Give the role a name' })
+  if (roles.some((r) => r.id === id)) return res.status(409).json({ error: 'A role with that name already exists' })
+  const { powers, subs } = roleGrant(req.body || {})
+  const role = { id, name, description: String(req.body?.description || '').trim().slice(0, 160), powers, subs, builtin: false }
+  roles.push(role)
+  db.write('roles', roles)
+  res.json({ role })
+})
+
+// Editing a role pushes the change to everyone in it — that is the whole
+// point of roles. 🔑 A member's deliberate exceptions (customKeys) are
+// PRESERVED: a role edit must not quietly undo a decision he made about one
+// person.
+app.put('/api/roles/:id', auth, notViewAs, requireCeo, (req, res) => {
+  const roles = loadRoles()
+  const role = roles.find((r) => r.id === req.params.id)
+  if (!role) return res.status(404).json({ error: 'No such role' })
+  if (role.id === 'owner') return res.status(403).json({ error: 'The Owner role cannot be edited' })
+
+  const beforeGrant = roleGrant(role)
+  const { powers, subs } = roleGrant(req.body || {})
+  if (typeof req.body?.name === 'string' && req.body.name.trim()) role.name = req.body.name.trim().slice(0, 60)
+  if (typeof req.body?.description === 'string') role.description = req.body.description.trim().slice(0, 160)
+  role.powers = powers
+  role.subs = subs
+  db.write('roles', roles)
+
+  const users = seedUsers()
+  let changed = 0
+  for (const u of users) {
+    if (u.roleId !== role.id || u.username === CEO || isArchived(u)) continue
+    const mine = new Set(powersFor(u))
+    const wasTheirs = new Set(beforeGrant.powers)
+    // Keys this person differs on stay as they are; everything else follows
+    // the role.
+    const custom = [...mine].filter((k) => !wasTheirs.has(k))
+    const denied = [...wasTheirs].filter((k) => !mine.has(k))
+    const next = new Set(powers.filter((k) => !denied.includes(k)))
+    for (const k of custom) next.add(k)
+    const before = powersFor(u)
+    u.permissions = [...next]
+    u.permissionSubs = { ...subs }
+    u.accessLog = [...(u.accessLog || []), {
+      at: new Date().toISOString(), by: req.realUser.username,
+      before, after: u.permissions, scopes: u.permissionScopes || {}, subs: u.permissionSubs || {},
+      roleEdit: role.id,
+    }]
+    changed++
+  }
+  db.write('users', users)
+  res.json({ role, membersUpdated: changed })
+})
+
+app.delete('/api/roles/:id', auth, notViewAs, requireCeo, (req, res) => {
+  const roles = loadRoles()
+  const role = roles.find((r) => r.id === req.params.id)
+  if (!role) return res.status(404).json({ error: 'No such role' })
+  if (role.builtin) return res.status(403).json({ error: 'A built-in role cannot be deleted' })
+  const members = seedUsers().filter((u) => u.roleId === role.id && !isArchived(u)).length
+  if (members) return res.status(409).json({ error: `${members} ${members === 1 ? 'person is' : 'people are'} on this role. Move them first.` })
+  db.write('roles', roles.filter((r) => r.id !== role.id))
+  res.json({ ok: true })
+})
+
+// Assigning a role RESETS the person to that role's set and clears their
+// exceptions — the deliberate opposite of a role edit. 🔒 Their coverage
+// (permissionScopes) is untouched: who they look after is a separate
+// decision from what they can do.
+app.post('/api/staff/:username/role', auth, notViewAs, requireCeo, (req, res) => {
+  const target = String(req.params.username).toLowerCase()
+  if (target === CEO) return res.status(403).json({ error: 'The CEO’s access cannot be edited' })
+  const role = roleById(String(req.body?.roleId || ''))
+  if (!role) return res.status(404).json({ error: 'No such role' })
+  if (role.id === 'owner') return res.status(403).json({ error: 'The Owner role belongs to the CEO alone' })
+  const users = seedUsers()
+  const user = users.find((u) => u.username === target)
+  if (!user) return res.status(404).json({ error: 'No such user' })
+
+  const before = powersFor(user)
+  const { powers, subs } = roleGrant(role)
+  user.roleId = role.id
+  user.permissions = [...powers]
+  user.permissionSubs = { ...subs }
+  user.accessLog = [...(user.accessLog || []), {
+    at: new Date().toISOString(), by: req.realUser.username,
+    before, after: user.permissions, scopes: user.permissionScopes || {}, subs: user.permissionSubs || {},
+    roleAssigned: role.id,
+  }]
+  db.write('users', users)
+  res.json({ ok: true, user: publicUser(user) })
+})
+
+// Every access change across everyone, newest first. Built from the
+// accessLog Pulse has always kept on each user — nothing new to record.
+app.get('/api/access-activity', auth, requireCeo, (req, res) => {
+  const users = seedUsers()
+  const nameOf = Object.fromEntries(users.map((u) => [u.username, u.name]))
+  const rows = []
+  for (const u of users) {
+    for (const e of u.accessLog || []) {
+      const before = new Set(e.before || [])
+      const after = new Set(e.after || [])
+      rows.push({
+        at: e.at,
+        who: u.name || u.username,
+        by: nameOf[e.by] || e.by || '',
+        gained: [...after].filter((k) => !before.has(k)),
+        lost: [...before].filter((k) => !after.has(k)),
+        signIn: e.signIn || null,
+        roleAssigned: e.roleAssigned || null,
+        roleEdit: e.roleEdit || null,
+      })
+    }
+  }
+  rows.sort((a, b) => String(b.at).localeCompare(String(a.at)))
+  res.json({ activity: rows.slice(0, 300) })
 })
 
 // Set someone's powers. Holder of 'grant' required. Guardrails:
