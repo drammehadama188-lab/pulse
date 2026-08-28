@@ -5166,6 +5166,31 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
       })
     }
   }
+  // 🔒 THE PAPERWORK IS PART OF THE RECORD (Adama 27 Aug: "how do we make
+  // sure pulse always has these"). Pulse held ONE document in total while
+  // every contract sat in a folder on his laptop. A record now says what is
+  // missing, so it cannot drift quietly again.
+  //
+  // 🔑 Judged on what is ON FILE, never on a tick: the onboarding checklist
+  // has a "Signed contract" item anyone can tick with nothing uploaded, and a
+  // tick is not a contract.
+  const hasDoc = (cat) => documents.some((f) => f.category === cat)
+  if (!hasDoc('contract')) {
+    attention.push({
+      tone: 'bad',
+      title: 'No signed contract on file',
+      detail: 'Nothing in this record proves the terms they are employed on.',
+      action: 'Open documents', tab: 'Documents',
+    })
+  }
+  if (!documents.some((f) => /\bid\b/i.test(f.name))) {
+    attention.push({
+      tone: 'warn',
+      title: 'No ID document on file',
+      detail: 'A copy of their ID has not been uploaded.',
+      action: 'Open documents', tab: 'Documents',
+    })
+  }
 
   // Reviews and the ratings inside them, newest first.
   const reviewsAll = (db.read('reviews', {})[u.name] || [])
