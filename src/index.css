@@ -18,12 +18,15 @@
   --color-soft: #fbfcfe;
   --color-fill: #f2f4f8;
 
-  /* Text — five steps, and 🔒 never pure black */
-  --color-ink: #172033;
-  --color-ink-soft: #596579;
-  --color-ink-faint: #8993a5;
-  --color-ink-muted: #a7afbd;
-  --color-ink-ghost: #c3c9d3;
+  /* Text — five steps, and 🔒 never pure black.
+     Darkened 27 Aug (Adama: "can we add more black, the page is so dim").
+     Every step moved down together so the hierarchy between them survives;
+     darkening only the top step would have flattened the other four. */
+  --color-ink: #0b1220;
+  --color-ink-soft: #3d4759;
+  --color-ink-faint: #6b7688;
+  --color-ink-muted: #8a94a6;
+  --color-ink-ghost: #aeb6c4;
 
   /* Blue is rationed: primary buttons, active nav, selected tabs, links,
      focus. Never ordinary information. */
@@ -35,11 +38,14 @@
   --color-brand-100: #f4f8ff;
   --color-damia: #d6294f;
 
-  /* Borders — tonal difference does the work; these are almost invisible */
-  --color-line: rgba(23, 32, 51, 0.06);
-  --color-line-soft: rgba(23, 32, 51, 0.05);
-  --color-line-control: rgba(23, 32, 51, 0.09);
-  --color-card-line: rgba(23, 32, 51, 0.055);
+  /* Borders. They used to be almost invisible (6% and less), which is what
+     made the page read flat — a card edge you cannot see is not an edge
+     (Adama 27 Aug: "make the lines more alive"). Still tonal, not drawn:
+     these are strong enough to separate, not strong enough to box. */
+  --color-line: rgba(11, 18, 32, 0.14);
+  --color-line-soft: rgba(11, 18, 32, 0.09);
+  --color-line-control: rgba(11, 18, 32, 0.20);
+  --color-card-line: rgba(11, 18, 32, 0.12);
 
   /* Table chrome */
   --color-table-head: #fbfcfe;
@@ -108,8 +114,12 @@
   --gradient-signin: linear-gradient(150deg, #f6f7f9 0%, #ffffff 55%, #f3f4f6 100%);
   --gradient-hero: linear-gradient(115deg, #e0345a 0%, #d6294f 42%, #b81e58 72%, #a3173a 100%);
 
-  /* 🔒 If the shadow is noticed, it is too strong. */
-  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.018), 0 4px 12px rgba(15, 23, 42, 0.025);
+  /* Was 1.8% and 2.5% — invisible on an almost-white page, which is the
+     other half of why it read flat (Adama 27 Aug: "so deem so flat"). Lifted
+     so a card sits ON the page rather than melting into it. The old rule
+     "if the shadow is noticed it is too strong" still holds in spirit: this
+     is a lift, not a drop shadow. */
+  --shadow-soft: 0 1px 2px rgba(11, 18, 32, 0.05), 0 4px 14px rgba(11, 18, 32, 0.06);
   --shadow-lift: 0 6px 20px rgba(15, 23, 42, 0.09);
 }
 

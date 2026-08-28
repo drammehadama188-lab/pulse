@@ -64,7 +64,8 @@ bad += rule(
   /\b(?:padding|margin|gap):\s*(?:[0-9]+px\s+)?(?:5|7|9|11|13|15|17|18|19|21|22|23|25|26|27|28|29|30|31)px/,
 );
 const css = readFileSync(`${ROOT}/src/index.css`, 'utf8');
-console.log(/--color-ink: #172033/.test(css) ? '✓ primary ink is his #172033' : '✗ ink token wrong');
+// Darkened 27 Aug on his word: "can we add more black". Still never #000.
+console.log(/--color-ink: #0b1220/.test(css) ? '✓ primary ink is his #0b1220' : '✗ ink token wrong');
 console.log(/Inter/.test(css) ? '✓ Inter is the font' : '✗ font wrong');
 if (bad) {
   console.error(`\n✗ ${bad} breach(es) of the design rules. DESIGN.md is the rulebook, src/design.js the numbers, src/index.css the colours.`);
