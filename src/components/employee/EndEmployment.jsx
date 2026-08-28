@@ -276,10 +276,10 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
                     </span>
                     {finalPay.leave && (
                       <span className="block">
-                        Leave: {finalPay.leave.months} completed month{finalPay.leave.months === 1 ? '' : 's'} earns {finalPay.leave.earned} day{finalPay.leave.earned === 1 ? '' : 's'} at {finalPay.leave.band} a year
+                        Leave this year: {finalPay.leave.months} completed month{finalPay.leave.months === 1 ? '' : 's'} since {day(finalPay.leave.yearFrom)} earns {finalPay.leave.earned} day{finalPay.leave.earned === 1 ? '' : 's'} at {finalPay.leave.band} a year
                         {finalPay.leave.taken ? `, ${finalPay.leave.taken} taken` : ''}
                         {finalPay.leave.balance > 0 ? `, ${finalPay.leave.balance} paid out above` : ', nothing to pay out'}
-                        {finalPay.leave.balance > 0 && '. Days taken are counted from leave recorded in Pulse, so check anything taken before that.'}
+                        . Leave does not carry over, so nothing from last year counts.
                       </span>
                     )}
                     {finalPay.pay.commissionMonthly > 0 && (

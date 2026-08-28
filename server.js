@@ -6103,19 +6103,37 @@ function annualLeaveTaken(username, fromKey, toKey) {
       return sum + workingDaysBetween(username, from < fromKey ? fromKey : from, to > toKey ? toKey : to)
     }, 0)
 }
+// 🔒 NO CARRY-OVER (Adama 28 Aug: "they have to all take their leave in same
+// year no carry over"). Leave is earned and taken inside ONE LEAVE YEAR, which
+// is the calendar year, the same for everybody. Whatever is unused at 31
+// December is gone, so what is paid out on exit is only what was earned since
+// 1 January, or since joining if that is later. This is also why an old
+// employee's balance cannot silently grow into a payout nobody budgeted for.
 function accruedLeaveFor(u, lastDay) {
   const joined = String(u.joined || '').slice(0, 10)
-  const months = completedMonthsBetween(joined, lastDay)
-  if (months == null) return null
-  const band = annualLeaveBandFor(months)
+  const totalMonths = completedMonthsBetween(joined, lastDay)
+  if (totalMonths == null) return null
+  const yearStart = `${lastDay.slice(0, 4)}-01-01`
+  const from = joined > yearStart ? joined : yearStart
+  const monthsThisYear = completedMonthsBetween(from, lastDay) || 0
+  const band = annualLeaveBandFor(totalMonths)
   // Each month earns at the band the person was in THAT month, not at today's
   // band applied backwards — otherwise someone crossing three years of service
   // would earn 21 days a year for their first three years too.
   let earnedRaw = 0
-  for (let i = 1; i <= months; i++) earnedRaw += annualLeaveBandFor(i) / 12
+  const monthsBefore = totalMonths - monthsThisYear
+  for (let i = 1; i <= monthsThisYear; i++) earnedRaw += annualLeaveBandFor(monthsBefore + i) / 12
   const earned = money2(earnedRaw)
-  const taken = annualLeaveTaken(u.username, joined, lastDay)
-  return { months, band, earned, taken, balance: money2(Math.max(0, earned - taken)) }
+  const taken = annualLeaveTaken(u.username, from, lastDay)
+  return {
+    months: monthsThisYear,
+    totalMonths,
+    band,
+    yearFrom: from,
+    earned,
+    taken,
+    balance: money2(Math.max(0, earned - taken)),
+  }
 }
 
 // What the last month comes to, for a last day that has not been saved yet —
