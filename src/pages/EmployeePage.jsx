@@ -177,6 +177,12 @@ export default function EmployeePage() {
     setD(await api(`/hr/employee/${username}`));
   }
 
+  // One place to re-read the record after a write, so a document that was
+  // deleted or added does not leave a stale list on screen.
+  async function refreshRecord() {
+    setD(await api(`/hr/employee/${username}`));
+  }
+
   async function uploadDocument(file) {
     if (!file || !d?.employee) return;
     setUploading(true);
@@ -316,7 +322,10 @@ export default function EmployeePage() {
       {tab === 'Performance' && (
         <PerformanceTab d={d} e={e} a={a} sales={sales} />
       )}
-      {tab === 'Documents' && <Documents documents={d.documents} onUpload={uploadDocument} uploading={uploading} />}
+      {tab === 'Documents' && (
+        <Documents documents={d.documents} onUpload={uploadDocument} uploading={uploading}
+          canDelete={!!realUser?.canDocsDelete && !isViewAs} onChanged={refreshRecord} />
+      )}
       {tab === 'Notes' && <Notes notes={d.notes} username={e.username} />}
       {tab === 'History' && <History history={d.history} />}
 

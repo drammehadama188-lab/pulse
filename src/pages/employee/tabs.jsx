@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Download, FileText, Search, Upload, ChevronLeft, ChevronRight, ArrowRight,
-  Star, AlertTriangle, MessageSquare, Eye,
+  Star, AlertTriangle, MessageSquare, Eye, Trash2,
 } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
 import { timeShort } from '../../lib/format.js';
@@ -320,9 +320,29 @@ export function AttendanceMonth({ d, error, month, onMonth }) {
 // only rather than a View that quietly downloads instead.
 const VIEWABLE = /^(application\/pdf|image\/|text\/plain)/;
 const CATEGORIES = [['all', 'All documents'], ['contract', 'Contracts'], ['document', 'Employment'], ['monthly-review', 'Reviews'], ['general', 'Other']];
-export function Documents({ documents, onUpload, uploading }) {
+export function Documents({ documents, onUpload, uploading, canDelete, onChanged }) {
   const [cat, setCat] = useState('all');
   const [q, setQ] = useState('');
+  // Two-step, in the row itself. A document is deleted for good, so the
+  // second click is the consent — and an inline ask beats a browser popup
+  // you dismiss without reading.
+  const [confirming, setConfirming] = useState(null);
+  const [busy, setBusy] = useState(null);
+  const [err, setErr] = useState('');
+
+  async function remove(id) {
+    setBusy(id);
+    setErr('');
+    try {
+      await api(`/agent-files/${id}`, { method: 'DELETE' });
+      setConfirming(null);
+      await onChanged?.();
+    } catch (e) {
+      setErr(e.message || 'Could not delete that');
+    } finally {
+      setBusy(null);
+    }
+  }
   const shown = documents.filter((f) => (cat === 'all' || f.category === cat) && (!q || f.name.toLowerCase().includes(q.toLowerCase())));
   const count = (k) => (k === 'all' ? documents.length : documents.filter((f) => f.category === k).length);
   return (
@@ -349,6 +369,7 @@ export function Documents({ documents, onUpload, uploading }) {
             <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)]" />
             <input value={q} onChange={(ev) => setQ(ev.target.value)} placeholder="Search documents…" className="field w-full pl-10" />
           </span>
+          {err && <span className="w-full text-[12.5px] text-[var(--color-stage-out)]">{err}</span>}
           <label className="btn-secondary inline-flex cursor-pointer items-center gap-2">
             <Upload size={15} /> {uploading ? 'Uploading…' : 'Upload document'}
             <input type="file" className="sr-only" onChange={(ev) => onUpload(ev.target.files?.[0])} />
@@ -377,16 +398,32 @@ export function Documents({ documents, onUpload, uploading }) {
                   {/* View opens it in a tab; Download puts it on the disk.
                       Only offered for what a browser can actually render —
                       a View that silently downloads a .docx is a lie. */}
-                  <span className="flex items-center justify-end gap-3">
-                    {VIEWABLE.test(f.mimeType || '') && (
-                      <a href={`/api/agent-files/${f.id}/download?inline=1&t=${encodeURIComponent(getToken() || '')}`}
-                        target="_blank" rel="noopener noreferrer" title="View"
-                        className="text-[var(--color-ink-faint)] hover:text-[var(--color-brand)]"><Eye size={15} /></a>
-                    )}
-                    <a href={`/api/agent-files/${f.id}/download?t=${encodeURIComponent(getToken() || '')}`}
-                      title="Download"
-                      className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"><Download size={15} /></a>
-                  </span>
+                  {confirming === f.id ? (
+                    <span className="flex items-center justify-end gap-3 whitespace-nowrap">
+                      <span className="text-[12px] text-[var(--color-ink-soft)]">Delete for good?</span>
+                      <button onClick={() => remove(f.id)} disabled={busy === f.id}
+                        className="text-[12px] font-medium text-[var(--color-stage-out)] hover:underline disabled:opacity-50">
+                        {busy === f.id ? 'Deleting…' : 'Yes, delete'}
+                      </button>
+                      <button onClick={() => setConfirming(null)}
+                        className="text-[12px] font-medium text-[var(--color-ink-soft)] hover:underline">Cancel</button>
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-end gap-3">
+                      {VIEWABLE.test(f.mimeType || '') && (
+                        <a href={`/api/agent-files/${f.id}/download?inline=1&t=${encodeURIComponent(getToken() || '')}`}
+                          target="_blank" rel="noopener noreferrer" title="View"
+                          className="text-[var(--color-ink-faint)] hover:text-[var(--color-brand)]"><Eye size={15} /></a>
+                      )}
+                      <a href={`/api/agent-files/${f.id}/download?t=${encodeURIComponent(getToken() || '')}`}
+                        title="Download"
+                        className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"><Download size={15} /></a>
+                      {canDelete && (
+                        <button onClick={() => { setConfirming(f.id); setErr(''); }} title="Delete"
+                          className="text-[var(--color-ink-faint)] hover:text-[var(--color-stage-out)]"><Trash2 size={15} /></button>
+                      )}
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
