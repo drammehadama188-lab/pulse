@@ -1220,7 +1220,11 @@ app.get('/api/users', auth, requirePower('team'), (req, res) => {
       title: u.title,
       email: u.email || null,
       personalEmail: u.personalEmail || '', // on-file contact — never a login
-      powers: powersFor(u), // drives the Access toggles on the Team page
+      powers: powersFor(u), // what the role gave them — read-only on the member page
+      // The role they are on. Without it the Members list and the member page
+      // both read "No role" for everyone no matter what is stored, so a role
+      // could be assigned and never seen again (28 Aug).
+      roleId: u.roleId || '',
       permissionScopes: u.permissionScopes || {}, // named sub-toggles: who each power affects
       permissionSubs: u.permissionSubs || {}, // capability sub-toggles: what they can do inside it
       isTeamLead: leadsATeam(u), // unlocks MY TEAM nav (also when viewing-as them)

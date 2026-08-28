@@ -30,18 +30,6 @@ function Toggle({ on, disabled, onClick }) {
 }
 
 // compact toggle for the capability sub-rows inside a power card
-function MiniToggle({ on, disabled, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${on ? 'bg-[var(--color-good)]' : 'bg-[var(--color-ink-faint)]'} ${disabled ? 'opacity-50' : ''}`}
-    >
-      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-4' : 'translate-x-0.5'}`} />
-    </button>
-  )
-}
 
 function Stat({ icon: Icon, label, value, accent }) {
   return (
@@ -155,6 +143,10 @@ export default function StaffMember() {
     return out
   }
 
+  // The powers they hold that reach OTHER staff — the only ones with coverage
+  // to set. Read from what the role gave them; this page never grants a power.
+  const scopedPowers = catalogue.filter((p) => powers.has(p.key) && PEOPLE_SCOPED.includes(p.key))
+
   // Persist powers + scopes + subs + sign-in flag. Optimistic; reverts on failure.
   async function persist(nextPowers, nextCanSignIn, key, nextScopes, nextSubs) {
     const prev = { powers: user.powers || [], suspended: user.suspended, permissionScopes: user.permissionScopes, permissionSubs: user.permissionSubs }
@@ -168,11 +160,6 @@ export default function StaffMember() {
       setSavingKey(null)
     }
   }
-  function togglePower(key) {
-    const next = new Set(powers)
-    if (next.has(key)) next.delete(key); else next.add(key)
-    persist([...next], canSignIn, key, scopesPayload(next), subsPayload(next))
-  }
   function toggleScope(key, un) {
     const cov = coverage(key)
     if (cov.has(un)) cov.delete(un); else cov.add(un)
@@ -181,11 +168,6 @@ export default function StaffMember() {
   function setScopeAll(key, on) {
     const cov = new Set(on ? roster.map((r) => r.username) : [])
     persist([...powers], canSignIn, key, scopesPayload(powers, key, cov), subsPayload(powers))
-  }
-  function toggleSubCap(key, subKey) {
-    const cov = subCoverage(key)
-    if (cov.has(subKey)) cov.delete(subKey); else cov.add(subKey)
-    persist([...powers], canSignIn, `${key}.${subKey}`, scopesPayload(powers), subsPayload(powers, key, cov))
   }
   function toggleSignIn() {
     persist([...powers], !canSignIn, '__signin')
@@ -352,73 +334,65 @@ export default function StaffMember() {
         )}
       </div>
 
-      {/* Access — permission toggles, save instantly. CEO-only: Grant access
-          was removed 3 Jul — nobody else manages who can do what. */}
+      {/* WHO THEY COVER — not WHAT they can do (Adama 28 Aug: "all permission
+          toggles should live on the role, here is where i give it to them, not
+          in their individual pages").
+          🔒 A role owns WHAT; it must never own WHO, because assigning a role
+          would then silently widen which staff a manager can see. So the powers
+          and their capabilities are set on the role and only READ here, and the
+          one thing this page still writes is the coverage. */}
       {isCeo && (
       <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
-        <h2 className="text-base font-semibold text-[var(--color-ink)]">Access</h2>
-        <p className="text-[13px] text-[var(--color-ink-soft)] mt-1 mb-5">What {user.name.split(' ')[0]} can open in Pulse — all yours to grant. Changes save instantly and are logged.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {catalogue.map((p) => {
-            const on = powers.has(p.key)
-            const locked = p.key === 'grant' && !isCeo
-            const scoped = on && PEOPLE_SCOPED.includes(p.key)
-            const cov = scoped ? coverage(p.key) : null
-            return (
-              <div key={p.key} className={`self-start rounded-lg border p-4 ${on ? 'border-[var(--color-good-bg)] bg-[var(--color-good-bg)]' : 'border-[var(--color-line)]'}`}>
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[13px] font-semibold text-[var(--color-ink)]">{p.label}{locked && <span className="ml-1.5 text-[10px] font-medium text-[var(--color-ink-faint)]">CEO only</span>}</p>
-                  <Toggle on={on} disabled={locked || savingKey === p.key} onClick={() => !locked && togglePower(p.key)} />
-                </div>
-                <p className="text-[11.5px] text-[var(--color-ink-soft)] mt-1">{p.detail}</p>
-                {on && (p.subs || []).length > 0 && (
-                  <div className="mt-3 border-t border-[var(--color-good-bg)] pt-2">
-                    <p className="mb-1 text-[11.5px] font-medium text-[var(--color-ink-faint)]">They can</p>
-                    {p.subs.map((s) => {
-                      const subOn = subCoverage(p.key).has(s.key)
-                      return (
-                        <div key={s.key} className="flex items-center justify-between gap-2 py-1">
-                          <div className="min-w-0">
-                            <p className={`text-[13px] ${subOn ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)]'}`}>{s.label}</p>
-                            <p className="text-[11px] text-[var(--color-ink-faint)]">{s.detail}</p>
-                          </div>
-                          <MiniToggle on={subOn} disabled={savingKey === `${p.key}.${s.key}`} onClick={() => toggleSubCap(p.key, s.key)} />
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-                {scoped && (
-                  <div className="mt-3 border-t border-[var(--color-good-bg)] pt-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Applies to</p>
-                      <button
-                        className="text-[11px] font-semibold text-[var(--color-good)] hover:text-[var(--color-good)]"
-                        onClick={() => setScopeAll(p.key, cov.size !== roster.length)}
-                      >
-                        {cov.size === roster.length ? 'Clear all' : 'All staff'}
-                      </button>
+        <h2 className="text-base font-semibold text-[var(--color-ink)]">Who {user.name.split(' ')[0]} covers</h2>
+        <p className="mb-5 mt-1 text-[13px] text-[var(--color-ink-soft)]">
+          The role decides what {user.name.split(' ')[0]} can do. This decides which staff it applies to.
+          {' '}<Link to="/settings/team?tab=roles" className="font-medium text-[var(--color-brand)] hover:underline">Edit roles</Link>
+        </p>
+        {scopedPowers.length === 0 ? (
+          <p className="text-[13px] text-[var(--color-ink-soft)]">
+            {user.roleId
+              ? `Nothing on this role reaches other staff, so there is no coverage to set.`
+              : `${user.name.split(' ')[0]} has no role yet, so there is nothing to apply to anyone.`}
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {scopedPowers.map((p) => {
+              const cov = coverage(p.key)
+              return (
+                <div key={p.key} className="self-start rounded-lg border border-[var(--color-line)] p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-[var(--color-ink)]">{p.label}</p>
+                      <p className="mt-1 text-[11.5px] text-[var(--color-ink-soft)]">{p.detail}</p>
                     </div>
-                    {roster.map((s) => (
-                      <label key={s.username} className="flex cursor-pointer items-center gap-2 py-0.5 text-[13px] text-[var(--color-ink-soft)]">
+                    <button
+                      className="shrink-0 text-[11px] font-semibold text-[var(--color-brand)] hover:underline"
+                      onClick={() => setScopeAll(p.key, cov.size !== roster.length)}
+                    >
+                      {cov.size === roster.length ? 'Clear all' : 'All staff'}
+                    </button>
+                  </div>
+                  <div className="mt-3 border-t border-[var(--color-line-soft)] pt-2">
+                    {roster.map((s0) => (
+                      <label key={s0.username} className="flex cursor-pointer items-center gap-2 py-0.5 text-[13px] text-[var(--color-ink-soft)]">
                         <input
                           type="checkbox"
-                          checked={cov.has(s.username)}
-                          onChange={() => toggleScope(p.key, s.username)}
+                          checked={cov.has(s0.username)}
+                          onChange={() => toggleScope(p.key, s0.username)}
                           className="accent-[var(--color-brand)]"
                         />
-                        <span className="truncate">{s.name}</span>
+                        <span className="truncate">{s0.name}</span>
                       </label>
                     ))}
                     <p className={`mt-1 text-[11px] font-medium ${cov.size ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-bad)]'}`}>
-                      {cov.size === roster.length ? `Affects all ${roster.length} staff` : cov.size ? `Affects ${cov.size} of ${roster.length} staff` : 'Affects no one — pick staff below'}
+                      {cov.size === roster.length ? `Affects all ${roster.length} staff` : cov.size ? `Affects ${cov.size} of ${roster.length} staff` : 'Affects no one — pick staff above'}
                     </p>
                   </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
       )}
 
