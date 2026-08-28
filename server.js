@@ -5303,6 +5303,9 @@ app.get('/api/hr/dashboard', auth, requirePower('hr'), async (req, res) => {
 // next door carries salary for the payroll screens, and this one deliberately
 // does not — a page that never displays a figure should never receive one.
 app.get('/api/hr/employees', auth, requirePower('hr'), (req, res) => {
+  // Anyone whose last day has passed drops off this roster the moment it is
+  // read, so the list cannot show a leaver as current.
+  applyDueExits()
   const today = todayKey()
   const leave = db.read('leave', [])
   const onLeaveToday = new Set(
@@ -5413,8 +5416,15 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
   // A role change dated for today (or any day since) takes effect the moment
   // the record is opened — nobody has to remember to come back and type it.
   applyDueRoleChanges()
+  // Same for a last working day that has arrived: the account closes on the day
+  // that was agreed, not the day somebody remembers to close it.
+  applyDueExits()
   const u = findUser(req.params.username)
-  if (!u || isArchived(u)) return res.status(404).json({ error: 'not found' })
+  // 🔒 An archived record still OPENS. Someone who has left is exactly who HR
+  // still has offboarding to finish for — equipment back, final pay, exit
+  // interview — and a 404 sent them to a page that could show none of it.
+  // Writes stay shut: the PATCH above refuses an archived record.
+  if (!u) return res.status(404).json({ error: 'not found' })
 
   const today = todayKey()
   const month = today.slice(0, 7)
@@ -5573,7 +5583,11 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
       phone: u.phone || profile.phone || '',
       address: u.address || profile.address || '',
       joined: u.joined || null,
-      status: u.status || 'active',
+      // Archived reads as Inactive on the record; the raw 'archived' matched no
+      // pill and fell back to the green "Active" one on a person who had left.
+      status: isArchived(u) ? 'inactive' : (u.status || 'active'),
+      left: isArchived(u) ? (u.archivedAt ? u.archivedAt.slice(0, 10) : null) : null,
+      leftReason: isArchived(u) ? (u.archivedReason || 'Left the team') : '',
       employment: u.contractor ? 'Contractor' : u.contractEnd ? 'Contract' : 'Full-time',
       contractEnd: u.contractEnd || null,
       probationEnd: u.probationEnd || null,
@@ -5772,6 +5786,148 @@ app.delete('/api/hr/employee/:username/role-changes/:id', auth, requireSub('hr',
   if (!c) return res.status(404).json({ error: 'not found' })
   if (c.appliedAt) return res.status(409).json({ error: 'That change has already taken effect. Record a new one instead.' })
   db.write('role-changes', all.filter((x) => x.id !== c.id))
+  res.json({ ok: true })
+})
+
+// ---------- ENDING EMPLOYMENT (Adama 28 Aug: "if someone is fired where do i
+// put that in pulse?") ----------
+//
+// The honest answer that day was NOWHERE: the terminate action existed but sat
+// on a profile page nothing linked to any more, keyed to the static roster, so
+// anyone created in Pulse could not be reached by it at all.
+//
+// 🔒 ONE event covers every way employment ends — dismissed, resigned, contract
+// ended, probation not passed. Splitting them into separate flows is how a
+// company ends up with three half-records of the same leaver.
+//
+// 🔒 EFFECTIVE-DATED, and a future last day APPLIES ITSELF, exactly like a role
+// change: a notice period agreed today is on the record today and closes the
+// account on the day. `applyDueExits()` runs on read and is idempotent.
+//
+// 🔑 Closing the account reuses the ARCHIVE path (status, archivedReason,
+// history line, sessions killed) rather than forking a second way to make
+// someone inactive — Past employees reads exactly what that path writes.
+//
+// 🔑 Pay is RECORDED, never applied. Payroll is its own page and its own gate.
+const EXIT_TYPES = ['Dismissed', 'Resigned', 'Contract ended', 'Probation not passed']
+const EXIT_NOTICE = ['Worked', 'Paid in lieu', 'Waived', 'Not applicable']
+
+function loadExits() {
+  const all = db.read('exits', [])
+  return Array.isArray(all) ? all : []
+}
+// Close the account of anyone whose last day has arrived. Idempotent: an exit
+// is applied once and marked, so this is safe on every read.
+function applyDueExits() {
+  const all = loadExits()
+  const due = all.filter((x) => !x.appliedAt && !x.cancelledAt && x.lastDay <= todayKey())
+  if (!due.length) return all
+  const users = seedUsers()
+  let closed = false
+  for (const x of due) {
+    const u = users.find((y) => y.username === x.username)
+    if (!u) { x.appliedAt = new Date().toISOString(); x.applyNote = 'no such person'; continue }
+    if (!isArchived(u)) {
+      u.status = 'archived'
+      u.archivedAt = new Date().toISOString()
+      u.archivedBy = x.by || 'pulse'
+      // Past employees shows this line, so it carries the plain reason.
+      u.archivedReason = `${x.type}${x.reason ? ` — ${x.reason}` : ''}`
+      // 🔒 ONE history line, stamped with the LAST DAY, not the day it was typed.
+      ;(u.history ||= []).push({
+        date: x.lastDay,
+        event: `Left the team — ${x.type}${x.reason ? ` (${x.reason})` : ''}`,
+      })
+      // Logged out immediately: employment ended, so access ends with it.
+      for (const [tok, s] of Object.entries(sessions)) if (s.username === u.username) delete sessions[tok]
+      closed = true
+    }
+    x.appliedAt = new Date().toISOString()
+  }
+  if (closed) { db.write('users', users); persistSessions() }
+  db.write('exits', all)
+  return all
+}
+
+// What is recorded about this person leaving — nothing, something coming, or
+// the exit that already took effect. Cancelled ones stay in the store as a
+// trail but are not shown as live.
+app.get('/api/hr/employee/:username/exit', auth, requirePower('hr'), (req, res) => {
+  const u = findUser(req.params.username)
+  if (!u) return res.status(404).json({ error: 'not found' })
+  const mine = applyDueExits()
+    .filter((x) => x.username === u.username && !x.cancelledAt)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+  res.json({
+    exit: mine[0] || null,
+    today: todayKey(),
+    types: EXIT_TYPES,
+    notice: EXIT_NOTICE,
+    archived: isArchived(u),
+  })
+})
+
+app.post('/api/hr/employee/:username/exit', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === String(req.params.username || '').trim().toLowerCase())
+  if (!u) return res.status(404).json({ error: 'not found' })
+  if (isArchived(u)) return res.status(409).json({ error: 'They have already left' })
+  if (u.username === req.realUser.username) return res.status(400).json({ error: "You can't end your own employment" })
+  if (u.roleId === 'owner') return res.status(403).json({ error: "The owner's record cannot be ended here" })
+  const b = req.body || {}
+  const lastDay = String(b.lastDay || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(lastDay)) return res.status(400).json({ error: 'Pick their last working day' })
+  if (u.joined && lastDay < String(u.joined).slice(0, 10)) {
+    return res.status(400).json({ error: 'A last day cannot be before the person joined' })
+  }
+  if (!EXIT_TYPES.includes(b.type)) return res.status(400).json({ error: 'Say how the employment is ending' })
+  // The same bar the contract action has always held: no reason, no exit.
+  const reason = String(b.reason || '').trim().slice(0, 400)
+  if (!reason) return res.status(400).json({ error: 'A reason is required' })
+  const notice = EXIT_NOTICE.includes(b.notice) ? b.notice : 'Not applicable'
+  const open = loadExits().find((x) => x.username === u.username && !x.cancelledAt && !x.appliedAt)
+  if (open) return res.status(409).json({ error: 'An exit is already recorded for them. Cancel that one first.' })
+
+  const exit = {
+    id: crypto.randomUUID(),
+    username: u.username,
+    name: u.name,
+    type: b.type,
+    lastDay,
+    reason,
+    notice,
+    // Asked at the exit, while the reason is fresh — a year later nobody can
+    // answer it from the file.
+    rehire: b.rehire === true,
+    // 🔑 RECORDED, NOT PAID. Payroll stays the only writer of money.
+    payNote: String(b.payNote || '').trim().slice(0, 160),
+    note: String(b.note || '').trim().slice(0, 400),
+    title: u.title || '',
+    department: u.department || '',
+    by: req.realUser.name || req.realUser.username,
+    createdAt: new Date().toISOString(),
+    appliedAt: null,
+    cancelledAt: null,
+  }
+  const all = loadExits()
+  all.push(exit)
+  db.write('exits', all)
+  // Dated today or earlier it takes effect now; a future one waits for its day.
+  const applied = applyDueExits().find((x) => x.id === exit.id) || exit
+  res.json({ exit: applied })
+})
+
+// A notice can be called off before the last day. One that has already taken
+// effect stays — the account is restored from Team & access, which is where
+// bringing someone back belongs.
+app.delete('/api/hr/employee/:username/exit/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const all = loadExits()
+  const x = all.find((y) => y.id === req.params.id)
+  if (!x || x.cancelledAt) return res.status(404).json({ error: 'not found' })
+  if (x.appliedAt) return res.status(409).json({ error: 'They have already left. Restore the account from Team & access instead.' })
+  x.cancelledAt = new Date().toISOString()
+  x.cancelledBy = req.realUser.name || req.realUser.username
+  db.write('exits', all)
   res.json({ ok: true })
 })
 

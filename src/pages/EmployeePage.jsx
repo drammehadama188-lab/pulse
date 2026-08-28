@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { payByName } from '../lib/pay.js';
 import { Attendance, Documents, Notes, History } from './employee/tabs.jsx';
 import RoleChange from '../components/employee/RoleChange.jsx';
+import EndEmployment from '../components/employee/EndEmployment.jsx';
 import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 
 // One employee, in the design Adama sent (20 Aug): who they are, the four
@@ -163,6 +164,7 @@ export default function EmployeePage() {
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [endOpen, setEndOpen] = useState(false);
   const { realUser, isViewAs } = useAuth();
   // The Edit affordance only appears for someone who can actually save — the
   // server re-checks every write regardless, and view-as stays read-only.
@@ -236,6 +238,10 @@ export default function EmployeePage() {
   // zero, and rendering it as one would tell Adama someone sold nothing.
   const sales = d.performance?.sales || null;
   const [statusLabel, statusBg, statusInk] = STATUS[e.status] || STATUS.active;
+  // Someone who has left keeps their record, but it stops being editable: the
+  // server refuses a write to an archived record, so an Edit button here could
+  // only fail. Offboarding is the exception and stays open below.
+  const canEditActive = canEditRecord && e.status !== 'inactive';
   const initials = (e.name || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   const netPay = pay ? (Number(pay.base) || 0) + (Number(pay.transport) || 0) + (Number(pay.commission) || 0) : null;
 
@@ -248,6 +254,12 @@ export default function EmployeePage() {
           <span className="text-[var(--color-ink)]">{e.name}</span>
         </nav>
         <div className="flex items-center gap-2">
+          {/* Leaving is a thing that happens to a person, so the action is on
+              the person — not buried in a contracts tab somewhere else. */}
+          {canEditActive && !endOpen && (
+            <button onClick={() => setEndOpen(true)}
+              className="btn-secondary text-[var(--color-stage-out)]">End employment</button>
+          )}
           <button disabled={!prev} onClick={() => prev && navigate(`/people/${prev.username}`)}
             className="btn-secondary flex h-[38px] w-[38px] items-center justify-center p-0 disabled:opacity-40"><ChevronLeft size={16} className="shrink-0" /></button>
           <button disabled={!next} onClick={() => next && navigate(`/people/${next.username}`)}
@@ -296,6 +308,11 @@ export default function EmployeePage() {
         </div>
       </div>
 
+      {/* An exit outranks every tab below it: it changes what the whole record
+          means, so it is not something to go and find. */}
+      <EndEmployment employee={e} canEdit={canEditRecord} open={endOpen}
+        onClose={() => setEndOpen(false)} onDone={refreshRecord} />
+
       <div className="mb-5 flex flex-wrap items-center gap-1 border-b border-[var(--color-line)]">
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)}
@@ -308,18 +325,18 @@ export default function EmployeePage() {
       {tab === 'Overview' && (
         <OverviewTab d={d} e={e} a={a} sales={sales} pay={pay} netPay={netPay}
           statusLabel={statusLabel} statusInk={statusInk} onTab={setTab}
-          canEdit={canEditRecord} onSave={saveRecord} />
+          canEdit={canEditActive} onSave={saveRecord} />
       )}
 
       {tab === 'Job & pay' && (
         <div className="space-y-4">
           <JobPayTab e={e} d={d} pay={pay} netPay={netPay} roster={roster}
-            departments={departments} canEdit={canEditRecord}
+            departments={departments} canEdit={canEditActive}
             canMoveDepartment={canMoveDepartment} onSave={saveRecord} />
           {/* A role change is an EVENT with a date and a reason, not a title
               typed over another one — so it sits under the terms it changes. */}
           <RoleChange employee={e} departments={departments} roster={roster} roles={roles}
-            canEdit={canEditRecord} onDone={refreshRecord} />
+            canEdit={canEditActive} onDone={refreshRecord} />
         </div>
       )}
 

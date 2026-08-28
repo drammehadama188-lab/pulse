@@ -385,7 +385,11 @@ export default function Employees() {
                   <td className="h-[72px] whitespace-nowrap px-5 py-4 text-[var(--color-ink-soft)]">{day(p.left)}</td>
                   <td className="h-[72px] px-5 py-4 text-[var(--color-ink-soft)]">{p.reason}</td>
                   <td className="h-[72px] px-5 py-4 text-right">
-                    <Link to={`/past/${String(p.name).toLowerCase().replace(/\s+/g, '-')}`} className="text-[12.5px] font-semibold text-[var(--color-brand)] hover:underline">Records</Link>
+                    {/* Someone archived IN Pulse keeps their record — that is
+                        where their exit and the offboarding still to finish
+                        live. /past/ only knows the older roster of people who
+                        left before Pulse, and showed "not found" for the rest. */}
+                    <Link to={p.username ? `/people/${p.username}` : `/past/${String(p.name).toLowerCase().replace(/\s+/g, '-')}`} className="text-[12.5px] font-semibold text-[var(--color-brand)] hover:underline">Records</Link>
                   </td>
                 </tr>
               ))}
