@@ -96,6 +96,12 @@ const FOLDER_TO_NAME = {
   Ya_Fatou_Sawanneh: 'Yafatou Sawaneh',
 };
 
+// Past staff (Adama, 27 Aug). Their folders still sit in HR/team, but they
+// are not in Pulse and should not be: filing documents on someone who has
+// left would put them back on the roster's radar. Named here so the script
+// says "past staff" quietly instead of warning as if something were wrong.
+const PAST_STAFF = new Set(['Ebrima_Jallow', 'Momodou lamin Keita', 'Ramatoulie_Mboge']);
+
 const MIME = {
   '.pdf': 'application/pdf',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -186,6 +192,10 @@ const main = async () => {
   for (const folder of readdirSync(ROOT).sort()) {
     const dir = join(ROOT, folder);
     if (folder.startsWith('.') || !statSync(dir).isDirectory()) continue;
+    if (PAST_STAFF.has(folder)) {
+      console.log(`\n${folder}\n   ·  past staff — nothing filed, documents stay in the folder`);
+      continue;
+    }
     const who = FOLDER_TO_NAME[folder];
     if (!who) { console.log(`\n${folder}\n   ✗ no mapping — skipped entirely`); continue; }
     if (!PLAN_ONLY && !byName.has(who)) {
