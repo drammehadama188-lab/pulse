@@ -4693,10 +4693,16 @@ app.put('/api/employee-profile', auth, requireSub('hr', 'records'), notViewAs, (
 //   department  — moves the sales goal and the leaderboard; it keeps its own
 //                 Manage-staff endpoint and its own history line.
 //   employment  — decided by the contract actions, never typed.
-const RECORD_ROSTER_FIELDS = ['title', 'joined', 'employeeId', 'phone', 'address']
+// 🔑 `contractEnd` is editable here because it was previously set ONCE at
+// hire and never again — so when Sally's contract was extended by three
+// months there was nowhere in Pulse to put it, and she has read "Permanent"
+// ever since (Adama, 28 Aug: "just did not put it in the system"). An end
+// date that cannot be moved makes every renewal look like a permanent job.
+const RECORD_ROSTER_FIELDS = ['title', 'joined', 'employeeId', 'phone', 'address', 'contractEnd']
 const RECORD_PROFILE_FIELDS = ['manager', 'schedule', 'location', 'dob', 'gender', 'nationality', 'maritalStatus', 'emergencyContact', 'emergencyPhone', 'noticePeriod']
 const RECORD_FIELD_LABEL = {
   title: 'Job title', joined: 'Start date', employeeId: 'Employee ID', phone: 'Phone', address: 'Address',
+  contractEnd: 'Contract ends',
   manager: 'Reports to', schedule: 'Work schedule', location: 'Location', dob: 'Date of birth', gender: 'Gender',
   nationality: 'Nationality', maritalStatus: 'Marital status', emergencyContact: 'Emergency contact',
   emergencyPhone: 'Emergency phone', noticePeriod: 'Notice period',
@@ -4719,6 +4725,13 @@ app.patch('/api/hr/employee/:username', auth, requireSub('hr', 'records'), notVi
   if (!Object.keys(clean).length) return res.status(400).json({ error: 'Nothing to save' })
   if (clean.joined !== undefined && !isDayOrBlank(clean.joined)) return res.status(400).json({ error: 'Start date must be a real date' })
   if (clean.dob !== undefined && !isDayOrBlank(clean.dob)) return res.status(400).json({ error: 'Date of birth must be a real date' })
+  // Blank means no end date — a permanent job. A real date means fixed term,
+  // and the whole app reads it that way (employment type, the contract-ending
+  // warnings, the record's Contract card).
+  if (clean.contractEnd !== undefined && !isDayOrBlank(clean.contractEnd)) return res.status(400).json({ error: 'Contract end must be a real date' })
+  if (clean.contractEnd && clean.joined === undefined && u.joined && clean.contractEnd < String(u.joined).slice(0, 10)) {
+    return res.status(400).json({ error: 'A contract cannot end before it started' })
+  }
   // An employee ID that two people share stops identifying anybody.
   if (clean.employeeId) {
     const taken = users.some((x) => x.username !== u.username && employeeIdOf(x).toLowerCase() === clean.employeeId.toLowerCase())

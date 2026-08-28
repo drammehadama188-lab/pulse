@@ -511,7 +511,12 @@ export function JobPayTab({ e, d, pay, netPay, roster, departments, canEdit, can
               { label: 'Location', icon: MapPin, key: 'location', raw: e.location, value: e.location, placeholder: 'Office, site or town' },
               { label: 'Employee ID', icon: FileText, key: 'employeeId', raw: e.employeeId, value: e.employeeId },
               { label: 'Start date', icon: CalendarDays, key: 'joined', type: 'date', raw: e.joined || '', value: e.joined ? day(e.joined) : '' },
-              { label: 'Contract', icon: FileText, value: `${d.contract.type}${d.contract.end ? ` · ends ${day(d.contract.end)}` : ' · no end date'}` },
+              // Editable because a fixed term gets EXTENDED, and until now
+              // there was nowhere to record that — so an extended contract
+              // silently read as permanent (Adama 28 Aug, Sally). Blank means
+              // no end date; a date means fixed term, and the employment type
+              // follows from it everywhere.
+              { label: 'Contract ends', icon: FileText, key: 'contractEnd', type: 'date', raw: e.contractEnd || '', value: e.contractEnd ? day(e.contractEnd) : 'No end date' },
             ]} />
             <div className="space-y-4">
               {/* 🔒 Only rendered when the payroll endpoint actually returned
