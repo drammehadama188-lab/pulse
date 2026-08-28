@@ -22,6 +22,7 @@ import TeamMember from './pages/TeamMember.jsx'
 import Attendance from './pages/Attendance.jsx'
 import Leave from './pages/Leave.jsx'
 import Pay from './pages/Pay.jsx'
+import Payroll from './pages/Payroll.jsx'
 import Profile from './pages/Profile.jsx'
 import ChangePassword from './pages/ChangePassword.jsx'
 import Approvals from './pages/manager/Approvals.jsx'
@@ -176,7 +177,7 @@ export default function App() {
         <Route path="/reports" element={<RequireAuth><ReportsHub /></RequireAuth>} />
         <Route path="/records" element={<RequireAuth power="hr"><HRTeam only={['warnings']} title="Employee Records" subtitle="Warnings, disciplinary actions and notes" /></RequireAuth>} />
         {/* PAYROLL */}
-        <Route path="/payroll" element={<RequireAuth power="payroll"><HRTeam only={['payroll']} title="Payroll" subtitle="Salaries, commission and payroll history" /></RequireAuth>} />
+        <Route path="/payroll" element={<RequireAuth power="payroll"><Payroll /></RequireAuth>} />
         {/* /benefits was a "coming soon" shell; benefits live on the Pay page. Kept as a redirect so old links still land somewhere real. */}
         <Route path="/benefits" element={<Navigate to="/pay" replace />} />
         {/* COMPANY */}
