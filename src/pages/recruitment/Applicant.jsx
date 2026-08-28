@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, Upload, Download, ClipboardCheck } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, Upload, Download, ClipboardCheck, UserX } from 'lucide-react';
 import { api, getToken } from '../../lib/api.js';
 import { STAGES } from './stages.js';
 import { CARD, BTN_LIGHT, BTN_PRIMARY, fullDate, dayTime, StageChip, scoreTone, scoreWord } from './ui.jsx';
@@ -153,6 +153,30 @@ export default function Applicant() {
           </div>
         </div>
       </div>
+
+      {/* 🔒 They worked here before, and we know because their EMAIL or PHONE
+          matches a closed record — never because of a name. This is the one
+          thing a recruiter must see before booking an interview, so it sits
+          above the tabs rather than inside one. */}
+      {a.pastStaff && (
+        <div className={`mb-5 flex flex-wrap items-start gap-3 rounded-[10px] border px-4 py-3 ${a.pastStaff.rehire === false ? 'border-[var(--color-stage-out)] bg-[var(--color-bad-bg)]' : 'border-[var(--color-pill-leave)] bg-[var(--color-pill-leave-bg)]'}`}>
+          <UserX size={15} className={`mt-0.5 shrink-0 ${a.pastStaff.rehire === false ? 'text-[var(--color-stage-out)]' : 'text-[var(--color-pill-leave)]'}`} />
+          <span className="min-w-0 flex-1 text-[13px] text-[var(--color-ink)]">
+            <b className="font-medium">
+              Worked here before{a.pastStaff.rehire === false ? ' — would not rehire' : ''}
+            </b>
+            <span className="mt-0.5 block text-[12.5px] text-[var(--color-ink-soft)]">
+              {a.pastStaff.title ? `${a.pastStaff.title}. ` : ''}
+              {a.pastStaff.type || 'Left'}{a.pastStaff.left ? ` on ${new Date(a.pastStaff.left).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}` : ''}
+              {a.pastStaff.reason ? `. ${a.pastStaff.reason}` : ''}
+            </span>
+            <span className="mt-0.5 block text-[12px] text-[var(--color-ink-faint)]">
+              Matched on {a.pastStaff.matchedOn}, not on their name. Check it before you act on it.
+            </span>
+          </span>
+          <Link to={`/people/${a.pastStaff.username}`} className="shrink-0 text-[12.5px] font-medium text-[var(--color-brand)] hover:underline">Their file</Link>
+        </div>
+      )}
 
       <div className="mb-5 flex items-center gap-1 border-b border-[var(--color-line)]">
         {TABS.map(([k, label]) => (

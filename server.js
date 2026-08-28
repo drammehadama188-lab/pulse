@@ -4938,6 +4938,44 @@ const APPLICANT_FIELDS = ['name', 'role', 'email', 'phone', 'source', 'notes', '
 // applicant's answers and grades them.
 const CONTACT_STATUS = ['not_contacted', 'called_no_answer', 'contacted']
 const SCREENING = ['', 'strong', 'review', 'weak']
+// 🔒 A PAST EMPLOYEE APPLYING AGAIN IS MATCHED ON EMAIL OR PHONE, NEVER ON
+// NAME (Adama 28 Aug: "never name only, many share same name in the gambia").
+// A name collision would tell you somebody was dismissed when they have never
+// worked here, which is worse than not knowing. Email and phone are the two
+// things an applicant gives that actually belong to them.
+//
+// ⚠️ It can only find people who left with contact details on their record.
+// The pre-Pulse roster in team.js holds names, roles and reasons only, so those
+// leavers cannot be matched by anything and are never guessed at.
+function pastStaffMatchFor(a) {
+  const email = String(a.email || '').trim().toLowerCase()
+  const key = phoneKey(a.phone)
+  if (!email && !key) return null
+  const archived = seedUsers().filter(isArchived)
+  for (const u of archived) {
+    const emails = [u.email, u.personalEmail].filter(Boolean).map((x) => String(x).trim().toLowerCase())
+    const keys = [phoneKey(u.phone), phoneKey(u.whatsapp)].filter(Boolean)
+    const byEmail = email && emails.includes(email)
+    const byPhone = key && keys.includes(key)
+    if (!byEmail && !byPhone) continue
+    const exit = loadExits().filter((x) => x.username === u.username && !x.cancelledAt)
+      .sort((x, y) => String(y.createdAt).localeCompare(String(x.createdAt)))[0] || null
+    return {
+      username: u.username,
+      name: u.name,
+      // Which fact matched, so a person can check it rather than trust it.
+      matchedOn: byEmail && byPhone ? 'email and phone' : byEmail ? 'email' : 'phone',
+      title: u.title || '',
+      left: exit?.lastDay || (u.archivedAt ? u.archivedAt.slice(0, 10) : null),
+      type: exit?.type || '',
+      reason: exit?.reason || u.archivedReason || '',
+      // The one thing a recruiter has to see before booking an interview.
+      rehire: exit ? !!exit.rehire : null,
+    }
+  }
+  return null
+}
+
 app.get('/api/applicants', auth, requireSub('hr', 'records'), (req, res) => {
   // Two repairs on the way out, so records imported before the fixes read
   // correctly without rewriting anyone's file. The "p:" prefix Meta puts on
@@ -4949,6 +4987,7 @@ app.get('/api/applicants', auth, requireSub('hr', 'records'), (req, res) => {
   const list = db.read('applicants', []).slice().sort((a, b) => ((a.updatedAt || a.createdAt) < (b.updatedAt || b.createdAt) ? 1 : -1))
     .map((a) => (a.phone ? { ...a, phone: cleanPhone(a.phone) } : a))
     .map((a) => (imported(a) && a.source !== 'Ads' ? { ...a, form: a.form || a.source, source: 'Ads' } : a))
+    .map((a) => ({ ...a, pastStaff: pastStaffMatchFor(a) }))
   res.json({ applicants: list })
 })
 app.post('/api/applicants', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {

@@ -279,6 +279,15 @@ export default function Applicants() {
                               <span className="block truncate text-[11.5px] text-[var(--color-ink-faint)]">
                                 {a.phoneValid === false ? 'No usable number' : a.phone || '—'}
                               </span>
+                              {/* 🔒 Matched on email or phone, never on a name:
+                                  many people share a name here, and telling a
+                                  recruiter the wrong person was dismissed is
+                                  worse than telling them nothing. */}
+                              {a.pastStaff && (
+                                <span className={`mt-0.5 block truncate text-[11.5px] font-medium ${a.pastStaff.rehire === false ? 'text-[var(--color-stage-out)]' : 'text-[var(--color-pill-leave)]'}`}>
+                                  Past employee{a.pastStaff.rehire === false ? ' · would not rehire' : ''}
+                                </span>
+                              )}
                             </span>
                             {a.cv && <FileText size={12} className="shrink-0 text-[var(--color-ink-faint)]" />}
                           </span>
