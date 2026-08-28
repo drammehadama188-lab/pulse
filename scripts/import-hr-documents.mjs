@@ -16,7 +16,8 @@
  *   FOR REAL:
  *     node scripts/import-hr-documents.mjs --apply
  *
- * It asks for your Pulse email and password. The password is not shown as you
+ * It asks for your Pulse sign-in — email or username, whichever you use —
+ * and your password. The password is not shown as you
  * type, goes straight to Pulse over HTTPS, and is never stored, logged or
  * echoed. (PULSE_TOKEN=… still works if you would rather pass a token.)
  *
@@ -68,7 +69,9 @@ function ask(question, hidden = false) {
 }
 
 async function signIn() {
-  const username = await ask('Pulse email: ');
+  // Pulse matches EITHER the username or the email (findUser), so whatever
+  // he types on the sign-in page works here — no need to remember which.
+  const username = await ask('Pulse email or username (whatever you sign in with): ');
   const password = await ask('Password (not shown): ', true);
   const res = await fetch(`${BASE}/api/login`, {
     method: 'POST',
