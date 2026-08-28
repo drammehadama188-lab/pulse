@@ -170,7 +170,9 @@ const main = async () => {
   // name that does not match is caught before a single byte is sent.
   const roster = PLAN_ONLY ? [] : ((await api('/hr/employees')).employees || []);
   const byName = new Map(roster.map((e) => [e.name, e]));
-  if (!PLAN_ONLY) console.log(`Live roster: ${roster.length} people\n`);
+  if (!PLAN_ONLY) {
+    console.log(`Live roster (${roster.length}): ${roster.map((e) => e.name).join(' · ')}\n`);
+  }
 
   const existing = new Map(); // name -> Set(labels already on the record)
   for (const e of roster) {
@@ -186,7 +188,15 @@ const main = async () => {
     if (folder.startsWith('.') || !statSync(dir).isDirectory()) continue;
     const who = FOLDER_TO_NAME[folder];
     if (!who) { console.log(`\n${folder}\n   ✗ no mapping — skipped entirely`); continue; }
-    if (!PLAN_ONLY && !byName.has(who)) { console.log(`\n${folder} -> ${who}\n   ✗ not on the live roster — skipped entirely`); continue; }
+    if (!PLAN_ONLY && !byName.has(who)) {
+      // Say WHY nothing happened. "Not on the roster" is either "they left"
+      // or "the name is spelled differently here" — and only he can tell
+      // which, so print the names he can compare against.
+      console.log(`\n${folder} -> looked for "${who}"`);
+      console.log('   ✗ nobody by that name on Pulse — they have left, or the name differs.');
+      console.log(`     Pulse has: ${roster.map((e) => e.name).join(' · ')}`);
+      continue;
+    }
     console.log(`\n${folder} -> ${who}`);
 
     const files = walk(dir).sort();
