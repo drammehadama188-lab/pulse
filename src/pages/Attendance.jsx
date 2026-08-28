@@ -1050,82 +1050,64 @@ function summarizeSchedule(schedule) {
 }
 
 function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved }) {
+  // Rebuilt to the mockup Adama sent (28 Aug): people FIRST, then the pattern,
+  // then when it starts — and a preview line that reads back the whole change
+  // in one sentence before it is saved.
   const [days, setDays] = useState({ 1: true, 2: true, 3: true, 4: true, 5: true, 6: false, 0: false })
   const [start, setStart] = useState('09:00')
   const [end, setEnd] = useState('17:00')
+  const [breakMinutes, setBreakMinutes] = useState(0)
   const [selected, setSelected] = useState(() => new Set())
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10)) // schedule effective from
-  const [collapsed, setCollapsed] = useState(() => new Set()) // collapsed departments
+  const [dept, setDept] = useState('all')
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [oneWeek, setOneWeek] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(null) // { count, from } after a successful assign
+  const [error, setError] = useState('')
+  const [saved, setSaved] = useState(null)
 
   const byDept = {}
   for (const p of people) (byDept[p.department || 'Other'] ||= []).push(p)
-  const depts = Object.keys(byDept)
+  const shown = dept === 'all' ? people : (byDept[dept] || [])
 
   const toggleDay = (dow) => setDays((d) => ({ ...d, [dow]: !d[dow] }))
   const togglePerson = (u) => setSelected((s) => { const n = new Set(s); n.has(u) ? n.delete(u) : n.add(u); return n })
-  const setDeptAll = (dept, on) => setSelected((s) => { const n = new Set(s); byDept[dept].forEach((p) => (on ? n.add(p.username) : n.delete(p.username))); return n })
-  const toggleDept = (dept) => setCollapsed((c) => { const n = new Set(c); n.has(dept) ? n.delete(dept) : n.add(dept); return n })
-  const allSelected = selected.size === people.length
+  // "Select all" acts on what is in front of you, not on people a department
+  // filter is hiding — otherwise the count and the list disagree.
+  const shownAllPicked = shown.length > 0 && shown.every((p) => selected.has(p.username))
+  const toggleShown = () => setSelected((s) => {
+    const n = new Set(s)
+    shown.forEach((p) => (shownAllPicked ? n.delete(p.username) : n.add(p.username)))
+    return n
+  })
 
-  // Dynamic, human label for the apply button.
-  function assignLabel() {
-    if (!selected.size) return 'Assign schedule'
-    if (selected.size === 1) { const p = people.find((x) => x.username === [...selected][0]); return `Assign to ${p ? p.name.split(' ')[0] : '1 employee'}` }
-    const wholeDept = depts.find((d) => byDept[d].length === selected.size && byDept[d].every((p) => selected.has(p.username)))
-    if (wholeDept) return `Apply to ${wholeDept}`
-    return `Assign to ${selected.size} employees`
-  }
+  const prettyDate = (v) => new Date(`${v}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+  const daysLabel = fmtDays(Object.fromEntries(WEEK_ORDER.map((d) => [d, days[d] ? { start, end } : null]))) || 'No working days'
+  const noDays = !WEEK_ORDER.some((d) => days[d])
+  const badHours = !(start && end) || start >= end
 
-  async function assign() {
-    if (!selected.size) return
+  async function save() {
+    if (!selected.size || noDays || badHours) return
     setSaving(true)
+    setError('')
     try {
       const dayMap = {}
-      for (const dow of WEEK_ORDER) dayMap[dow] = days[dow] ? { start, end } : null
+      for (const dow of WEEK_ORDER) dayMap[dow] = days[dow] ? { start, end, breakMinutes } : null
       const schedules = {}
-      // Each selected person gets this schedule effective from startDate; earlier
-      // weeks keep their existing schedule automatically (server is date-aware).
-      for (const u of selected) schedules[u] = { from: startDate, days: dayMap }
-      await api(endpoint, { method: 'PUT', body: { schedules } })
-      // Don't just vanish (Adama 7 Jul: "it kicked me out, it did not show it
-      // was assigned") — confirm what was saved and offer to show that week.
-      setSaved({ count: selected.size, from: startDate })
-    } catch (e) { alert(e.message) } finally { setSaving(false) }
+      for (const u of selected) schedules[u] = { from: startDate, days: dayMap, oneWeek }
+      const r = await api(endpoint, { method: 'PUT', body: { schedules } })
+      setSaved({ count: selected.size, from: startDate, until: r?.until || null })
+    } catch (e) {
+      setError(e.message || 'Could not save the schedule')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const sqBtn = (on) => `flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border transition-colors ${on ? 'border-[var(--color-good)] bg-[var(--color-good)] text-white' : 'border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink-faint)] hover:bg-[var(--color-paper)]'}`
-  const quick = 'rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1 text-[11.5px] font-semibold text-[var(--color-ink-soft)] hover:bg-[var(--color-paper)]'
-  const todayStr = new Date().toISOString().slice(0, 10)
-  const nextMondayStr = (() => { const d = new Date(); const add = ((1 - d.getDay() + 7) % 7) || 7; d.setDate(d.getDate() + add); return d.toISOString().slice(0, 10) })()
-  const prettyDate = (s) => new Date(`${s}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-  // Real calendar dates for the week the schedule starts in (Mon-first), so the
-  // weekday toggles read as actual days, anchored to the chosen start date.
-  const weekDates = (() => {
-    const d = new Date(`${startDate}T00:00:00`)
-    const dow = d.getDay()
-    const monday = new Date(d); monday.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow))
-    const map = {}; let first, last
-    for (let i = 0; i < 7; i++) { const x = new Date(monday); x.setDate(monday.getDate() + i); map[x.getDay()] = x; if (i === 0) first = x; if (i === 6) last = x }
-    const fmt = (x) => x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-    return { map, label: `${fmt(first)} – ${fmt(last)}` }
-  })()
-
-  // Success step — say exactly what was saved and offer to jump to that week.
+  // Confirmation — say exactly what was saved and offer to go and look at it.
   if (saved) {
     return (
-      <Modal
-        open
-        onClose={() => onSaved()}
-        title="Team schedule"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => onSaved()}>Close</Button>
-            <Button onClick={() => onSaved(saved.from)}>Show that week</Button>
-          </>
-        }
-      >
+      <Modal open onClose={() => onSaved()} title="Edit team schedules"
+        footer={<><Button variant="ghost" onClick={() => onSaved()}>Close</Button><Button onClick={() => onSaved(saved.from)}>Show that week</Button></>}>
         <div className="space-y-4 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-good-bg)] text-[var(--color-good)]">
             <CheckCircle2 size={30} />
@@ -1133,7 +1115,8 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
           <div>
             <div className="text-[15px] font-semibold text-[var(--color-ink)]">Schedule saved</div>
             <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">
-              {start}–{end} starts {prettyDate(saved.from)} for {saved.count === 1 ? '1 person' : `${saved.count} people`}. Earlier weeks stay as they are.
+              {daysLabel} · {start}–{end} for {saved.count === 1 ? '1 person' : `${saved.count} people`}, starting {prettyDate(saved.from)}.
+              {saved.until ? ` It runs for one week and the old pattern returns on ${prettyDate(saved.until)}.` : ' Earlier weeks stay as they are.'}
             </p>
           </div>
         </div>
@@ -1141,111 +1124,142 @@ function TeamScheduleEditor({ people, endpoint = '/schedules', onClose, onSaved 
     )
   }
 
+  const stepHead = (n, text) => (
+    <div className="flex items-baseline gap-2.5">
+      <span className="text-[13px] font-semibold text-[var(--color-ink-faint)]">{n}</span>
+      <h4 className="text-[15px] font-semibold text-[var(--color-ink)]">{text}</h4>
+    </div>
+  )
+  const pill = (on) => `rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors ${on ? 'border-[var(--color-ink)] bg-[var(--color-ink)] text-white' : 'border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink-soft)] hover:bg-[var(--color-soft)]'}`
+  const dayBtn = (on) => `h-11 flex-1 min-w-[64px] rounded-lg border text-[13px] font-medium transition-colors ${on ? 'border-[var(--color-good)] bg-[var(--color-good-bg)] text-[var(--color-good)]' : 'border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink-faint)] hover:bg-[var(--color-soft)]'}`
+  const preset = 'rounded-full border border-[var(--color-line)] bg-[var(--color-fill)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-ink-soft)] hover:bg-[var(--color-soft)]'
+
   return (
-    <Modal
-      open
-      onClose={onClose}
-      maxWidth="max-w-2xl"
-      title="Team schedule"
+    <Modal open onClose={onClose} maxWidth="max-w-3xl" title="Edit team schedules"
       footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button onClick={assign} disabled={saving || !selected.size}>{saving ? <Spinner size={16} /> : assignLabel()}</Button>
-        </>
-      }
-    >
-      {/* Working days & hours */}
-      <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-paper)] p-4">
-        <p className="mb-1.5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Schedule starts</p>
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <input type="date" value={startDate} min={todayStr} onChange={(e) => setStartDate(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13px]" />
-          <button className={quick} onClick={() => setStartDate(todayStr)}>Today</button>
-          <button className={quick} onClick={() => setStartDate(nextMondayStr)}>Next Monday</button>
-          {startDate > todayStr && <span className="text-[11px] font-medium text-[var(--color-good)]">Takes over from {prettyDate(startDate)} — earlier weeks stay as they are</span>}
-        </div>
-
-        <p className="mb-1.5 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Working days</p>
-        <div className="flex flex-wrap gap-2">
-          {WEEK_ORDER.map((dow) => {
-            const dt = weekDates.map[dow]
-            const iso = dt ? dt.toISOString().slice(0, 10) : ''
-            const before = iso && iso < startDate
-            return (
-              <button key={dow} onClick={() => toggleDay(dow)} title={dt ? dt.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }) : DAY_FULL[dow]} aria-label={`${DAY_FULL[dow]} ${days[dow] ? 'on' : 'off'}`} className={sqBtn(days[dow])}>
-                <span className="text-[11px] font-semibold">{DAY_FULL[dow].slice(0, 2)}</span>
-                <span className={`text-[10px] font-semibold tabular-nums ${days[dow] ? 'text-white/80' : before ? 'text-[var(--color-ink-faint)] line-through' : 'text-[var(--color-ink-soft)]'}`}>{dt ? dt.getDate() : ''}</span>
-              </button>
-            )
-          })}
-        </div>
-        <p className="mt-1.5 text-[11px] text-[var(--color-ink-faint)]">First week: {weekDates.label} · repeats every week</p>
-
-        <p className="mb-1.5 mt-4 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Working hours</p>
-        <div className="flex items-center gap-2 text-[13px]">
-          <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
-          <span className="text-[var(--color-ink-faint)]">→</span>
-          <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2" />
-        </div>
-
-        <p className="mb-1.5 mt-4 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Quick presets</p>
-        <div className="flex flex-wrap gap-1.5">
-          <button className={quick} onClick={() => setDays({ 1: true, 2: true, 3: true, 4: true, 5: true, 6: false, 0: false })}>Mon–Fri</button>
-          <button className={quick} onClick={() => setDays((d) => ({ ...d, 6: false, 0: false }))}>Weekend off</button>
-          <button className={quick} onClick={() => setDays({ 1: false, 2: false, 3: false, 4: false, 5: false, 6: false, 0: false })}>Clear days</button>
-          <span className="mx-1 self-center text-[var(--color-line)]">|</span>
-          {TIME_PRESETS.map(([s, e, label]) => (
-            <button key={label} className={quick} onClick={() => { setStart(s); setEnd(e) }}>{label}</button>
-          ))}
-        </div>
-
-      </div>
-
-      {/* 2 · Assign to employees */}
-      <div className="mt-4">
-        <div className="mb-2 flex items-center justify-between">
-          <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Assign to</p>
-          <div className="flex items-center gap-3 text-[11.5px] font-semibold">
-            <button className="text-[var(--color-brand)]" onClick={() => setSelected(new Set(people.map((p) => p.username)))}>Select All</button>
-            <button className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]" onClick={() => setSelected(new Set())} disabled={!selected.size}>Clear Selection</button>
+        <div className="flex flex-1 flex-wrap items-center justify-between gap-3">
+          <p className="text-[12px] text-[var(--color-ink-faint)]">Schedules control expected work times. Attendance records remain separate.</p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button onClick={save} disabled={saving || !selected.size || noDays || badHours}>{saving ? <Spinner size={16} /> : 'Save schedule'}</Button>
           </div>
         </div>
-        <div className="space-y-3">
-          {depts.map((dept) => {
-            const members = byDept[dept]
-            const deptAll = members.every((p) => selected.has(p.username))
-            const isOpen = !collapsed.has(dept)
-            const picked = members.filter((p) => selected.has(p.username)).length
+      }>
+      <p className="-mt-1 mb-6 text-[13px] text-[var(--color-ink-soft)]">Set the normal working pattern for one person, a team, or everyone.</p>
+
+      {/* 1 — who */}
+      {stepHead('1', 'Who does this apply to?')}
+      <p className="mt-1.5 text-[12px] text-[var(--color-ink-faint)]">Choose employees first. Their current schedules stay visible so you know what you are changing.</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" className={pill(dept === 'all')} onClick={() => setDept('all')}>All staff {people.length}</button>
+        {Object.keys(byDept).sort().map((d) => (
+          <button key={d} type="button" className={pill(dept === d)} onClick={() => setDept(d)}>{d} {byDept[d].length}</button>
+        ))}
+      </div>
+      <div className="mt-3 rounded-lg border border-[var(--color-line)]">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--color-line-soft)] px-4 py-2.5">
+          {/* Sentence case, not the mockup's caps: shouty table headings are
+              banned by the design check (DESIGN.md, 21 Aug). */}
+          <span className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Employee · current schedule</span>
+          <button type="button" onClick={toggleShown} className="text-[12px] font-medium text-[var(--color-brand)] hover:underline">
+            {shownAllPicked ? 'Clear all' : 'Select all'}
+          </button>
+        </div>
+        <div className="grid gap-x-6 p-3 sm:grid-cols-2">
+          {shown.map((p) => {
+            const on = selected.has(p.username)
             return (
-              <div key={dept} className="rounded-lg border border-[var(--color-line-soft)] p-2.5">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" checked={deptAll} onChange={(e) => setDeptAll(dept, e.target.checked)} className="accent-[var(--color-brand)]" onClick={(e) => e.stopPropagation()} />
-                  <button onClick={() => toggleDept(dept)} className="flex flex-1 items-center gap-1.5 text-left text-[11.5px] font-medium text-[var(--color-ink-soft)]">
-                    <ChevronRight size={14} className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} />
-                    {dept} <span className="font-medium text-[var(--color-ink-faint)]">({members.length}{picked ? ` · ${picked} selected` : ''})</span>
-                  </button>
-                </div>
-                <div className={`mt-2 grid gap-2 sm:grid-cols-2 ${isOpen ? '' : 'hidden'}`}>
-                  {members.map((p) => {
-                    const on = selected.has(p.username)
-                    return (
-                      <label key={p.username} className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 ${on ? 'border-[var(--color-brand)] bg-[var(--color-brand-50)]' : 'border-[var(--color-line)]'}`}>
-                        <input type="checkbox" checked={on} onChange={() => togglePerson(p.username)} className="accent-[var(--color-brand)]" />
-                        <Avatar name={p.name} size={26} />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-[13px] font-semibold text-[var(--color-ink)]">{p.name}</div>
-                          <div className="truncate text-[11px] text-[var(--color-ink-faint)]">Now: {summarizeSchedule(p.schedule)}</div>
-                          {p.upcoming && <div className="truncate text-[11px] font-medium text-[var(--color-good)]">From {prettyDate(p.upcoming.from)}: {summarizeSchedule(p.upcoming.days)}</div>}
-                        </div>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
+              <label key={p.username} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-[var(--color-soft)]">
+                <input type="checkbox" checked={on} onChange={() => togglePerson(p.username)} className="accent-[var(--color-brand)]" />
+                <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--color-ink)]">{p.name}</span>
+                <span className="shrink-0 text-[12px] text-[var(--color-ink-faint)]">{summarizeSchedule(p.schedule)}</span>
+              </label>
             )
           })}
+          {shown.length === 0 && <p className="px-2 py-4 text-[13px] text-[var(--color-ink-soft)]">Nobody in this department yet.</p>}
         </div>
-        <p className="mt-3 text-[11px] text-[var(--color-ink-faint)]">Each selected employee gets this schedule from its start date. You're not replacing anything — earlier weeks keep the schedule they already had.</p>
       </div>
+
+      {/* 2 — the pattern */}
+      <div className="mt-8">{stepHead('2', 'New working pattern')}</div>
+      <p className="mb-2 mt-3 text-[12px] font-medium text-[var(--color-ink-faint)]">Working days</p>
+      <div className="flex flex-wrap gap-2">
+        {WEEK_ORDER.map((dow) => (
+          <button key={dow} type="button" onClick={() => toggleDay(dow)} className={dayBtn(days[dow])}>{DAY_FULL[dow].slice(0, 3)}</button>
+        ))}
+      </div>
+      <div className="mt-4 flex flex-wrap items-end gap-6">
+        <div>
+          <p className="mb-2 text-[12px] font-medium text-[var(--color-ink-faint)]">Working hours</p>
+          <div className="flex items-center gap-2">
+            <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="field" />
+            <span className="text-[var(--color-ink-faint)]">→</span>
+            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="field" />
+          </div>
+        </div>
+        <div>
+          <p className="mb-2 text-[12px] font-medium text-[var(--color-ink-faint)]">Break</p>
+          <select value={breakMinutes} onChange={(e) => setBreakMinutes(Number(e.target.value))} className="field">
+            <option value={0}>No fixed break</option>
+            <option value={30}>30 minutes</option>
+            <option value={45}>45 minutes</option>
+            <option value={60}>1 hour</option>
+            <option value={90}>1 hour 30</option>
+          </select>
+        </div>
+        <div>
+          <p className="mb-2 text-[12px] font-medium text-[var(--color-ink-faint)]">Quick presets</p>
+          <div className="flex flex-wrap gap-2">
+            {TIME_PRESETS.map(([s0, e0, label]) => (
+              <button key={label} type="button" className={preset} onClick={() => { setStart(s0); setEnd(e0) }}>{label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+      {badHours && <p className="mt-2 text-[12px] text-[var(--color-bad)]">The finish time has to be after the start time.</p>}
+      {noDays && <p className="mt-2 text-[12px] text-[var(--color-bad)]">Pick at least one working day.</p>}
+
+      {/* 3 — when */}
+      <div className="mt-8">{stepHead('3', 'When should it take effect?')}</div>
+      <div className="mt-3 flex flex-wrap items-start gap-8">
+        <div>
+          <p className="mb-2 text-[12px] font-medium text-[var(--color-ink-faint)]">Effective from</p>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="field" />
+        </div>
+        <div>
+          <p className="mb-2 text-[12px] font-medium text-[var(--color-ink-faint)]">How to apply it</p>
+          <div className="flex flex-wrap gap-6">
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <input type="radio" checked={!oneWeek} onChange={() => setOneWeek(false)} className="mt-0.5 accent-[var(--color-brand)]" />
+              <span>
+                <span className="block text-[13px] font-medium text-[var(--color-ink)]">From this date forward</span>
+                <span className="block text-[12px] text-[var(--color-ink-faint)]">Past attendance is untouched.</span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <input type="radio" checked={oneWeek} onChange={() => setOneWeek(true)} className="mt-0.5 accent-[var(--color-brand)]" />
+              <span>
+                <span className="block text-[13px] font-medium text-[var(--color-ink)]">Only for one week</span>
+                <span className="block text-[12px] text-[var(--color-ink-faint)]">Use for a temporary schedule.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* the whole change, read back in one line, before it is saved */}
+      <div className="mt-6 rounded-lg bg-[var(--color-soft)] p-4">
+        <p className="text-[11.5px] font-medium uppercase tracking-wide text-[var(--color-brand)]">Change preview</p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]">
+          <span className="font-semibold text-[var(--color-ink)]">{selected.size === 1 ? '1 employee' : `${selected.size} employees`} selected</span>
+          <span className="text-[var(--color-ink-soft)]">{daysLabel} · {start}–{end}{breakMinutes ? ` · ${breakMinutes} min break` : ''}</span>
+          <span className="text-[var(--color-ink-soft)]">Starting {prettyDate(startDate)}</span>
+          <span className="font-medium text-[var(--color-good)]">
+            {oneWeek ? 'Runs for one week, then the old pattern returns' : 'Existing history will not change'}
+          </span>
+        </div>
+      </div>
+      {error && <p className="mt-3 text-[13px] text-[var(--color-bad)]">{error}</p>}
     </Modal>
   )
 }

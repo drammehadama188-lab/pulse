@@ -2968,6 +2968,10 @@ const DEFAULT_WEEK = {
   0: null,
 }
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
+const HHMM_MIN = (s) => {
+  const m = /^(\d{2}):(\d{2})$/.exec(String(s || ''))
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null
+}
 
 // Effective-dated schedules (Adama 28 Jun): a person's schedule is a LIST of
 // dated entries [{ from:'YYYY-MM-DD', days:{week} }], and the one in force on a
@@ -3003,10 +3007,7 @@ function weekKeys(startYmd) {
 
 // manager: whole-team week — each person's presence + their weekly schedule
 function shiftHours(shift) {
-  if (!shift) return 0
-  const [sh, sm] = shift.start.split(':').map(Number)
-  const [eh, em] = shift.end.split(':').map(Number)
-  return Math.max(0, (eh * 60 + em - sh * 60 - sm) / 60)
+  return shiftMinutes(shift) / 60
 }
 
 // weekly shift roster — each person's shift (times) + status per day + week hours.
@@ -3065,13 +3066,31 @@ app.get('/api/attendance/week', auth, (req, res) => {
   res.json({ start: wkStart, days, today: todayK, people })
 })
 
+// A break belongs to the SHIFT, not alongside it (Adama 28 Aug mockup) — kept
+// inside the day so every reader of a schedule subtracts it without knowing it
+// exists. 0 = no fixed break, which is what most of the team works.
+const BREAK_CHOICES = [0, 30, 45, 60, 90]
+function cleanBreak(v) {
+  const n = Math.round(Number(v) || 0)
+  return BREAK_CHOICES.includes(n) ? n : 0
+}
 function cleanWeek(incoming = {}) {
   const clean = {}
   for (const dow of [0, 1, 2, 3, 4, 5, 6]) {
     const v = incoming[dow]
-    clean[dow] = v && HHMM.test(v.start || '') && HHMM.test(v.end || '') ? { start: v.start, end: v.end } : null
+    if (!(v && HHMM.test(v.start || '') && HHMM.test(v.end || ''))) { clean[dow] = null; continue }
+    const brk = cleanBreak(v.breakMinutes)
+    clean[dow] = brk ? { start: v.start, end: v.end, breakMinutes: brk } : { start: v.start, end: v.end }
   }
   return clean
+}
+// 🔒 The ONE place a shift becomes minutes. Everything that reports scheduled
+// hours goes through here, so a break can never be counted as worked time on
+// one page and not on another.
+function shiftMinutes(shift) {
+  if (!shift) return 0
+  const span = HHMM_MIN(shift.end) - HHMM_MIN(shift.start)
+  return Math.max(0, span - (Number(shift.breakMinutes) || 0))
 }
 function scheduleRoster(req) {
   // the people the VIEWED user's Team power covers (named sub-toggles);
@@ -3079,6 +3098,35 @@ function scheduleRoster(req) {
   // a schedule (Adama 3 Aug: Abdourahman) — they never appear here.
   const scope = powerScopeSet(req.user, 'team')
   return seedUsers().filter((u) => scope.has(u.username) && !u.contractor)
+}
+
+// Write one dated entry for one person, and hand back what changed.
+//
+// "Only for one week" (Adama 28 Aug mockup) needs NO new storage: the new week
+// goes in at `from`, and a second entry goes in seven days later carrying
+// whatever week WOULD have applied then had this change never happened. The
+// pattern reverts on its own and effectiveWeek() resolves it like any other
+// entry — nothing that reads a schedule has to know a temporary week exists.
+function upsertSchedule(all, username, payload) {
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(payload?.from) ? payload.from : todayKey()
+  const days = cleanWeek(payload?.days || payload)
+  const before = scheduleEntries(all[username])
+  const entries = before.filter((e) => e.from !== from)
+  entries.push({ from, days })
+  let until = null
+  if (payload?.oneWeek) {
+    const d = new Date(`${from}T00:00:00Z`)
+    d.setUTCDate(d.getUTCDate() + 7)
+    until = d.toISOString().slice(0, 10)
+    // If something was already due to start that day, it already says what
+    // resumes — do not overwrite a change he scheduled on purpose.
+    if (!before.some((e) => e.from === until)) {
+      entries.push({ from: until, days: effectiveWeek(all[username], until) })
+    }
+  }
+  entries.sort((a2, b2) => (a2.from < b2.from ? -1 : 1))
+  all[username] = entries
+  return { from, until }
 }
 
 // manager: assign a schedule to people, effective from a date.
@@ -3090,18 +3138,14 @@ app.put('/api/schedules', auth, requireSub('team', 'schedules'), notViewAs, (req
   const allowed = new Set(scheduleRoster(req).map((u) => u.username))
   const all = db.read('schedules', {})
   let count = 0
+  let until = null
   for (const [username, payload] of Object.entries(incoming)) {
     if (!allowed.has(username)) continue
-    const from = /^\d{4}-\d{2}-\d{2}$/.test(payload?.from) ? payload.from : todayKey()
-    const days = cleanWeek(payload?.days || payload)
-    const entries = scheduleEntries(all[username]).filter((e) => e.from !== from)
-    entries.push({ from, days })
-    entries.sort((a, b) => (a.from < b.from ? -1 : 1))
-    all[username] = entries
+    ;({ until } = upsertSchedule(all, username, payload))
     count++
   }
   db.write('schedules', all)
-  res.json({ count })
+  res.json({ count, until })
 })
 
 // MY TEAM: a team lead assigns schedules to their OWN team members, without
@@ -3113,29 +3157,26 @@ app.put('/api/team/schedules', auth, notViewAs, (req, res) => {
   const incoming = req.body?.schedules || {}
   const all = db.read('schedules', {})
   let count = 0
+  let until = null
   for (const [username, payload] of Object.entries(incoming)) {
     if (!teamSet.has(username)) continue
-    const from = /^\d{4}-\d{2}-\d{2}$/.test(payload?.from) ? payload.from : todayKey()
-    const days = cleanWeek(payload?.days || payload)
-    const entries = scheduleEntries(all[username]).filter((e) => e.from !== from)
-    entries.push({ from, days })
-    entries.sort((a, b) => (a.from < b.from ? -1 : 1))
-    all[username] = entries
+    ;({ until } = upsertSchedule(all, username, payload))
     count++
   }
   db.write('schedules', all)
-  res.json({ count })
+  res.json({ count, until })
 })
 
 // manager: set one person's weekly roster (in/off + hours per weekday)
 app.put('/api/schedules/:username', auth, requireSub('team', 'schedules'), notViewAs, (req, res) => {
   const target = findUser(req.params.username)
   if (!target) return res.status(404).json({ error: 'No such user' })
-  const schedule = cleanWeek(req.body?.days)
   const all = db.read('schedules', {})
-  all[target.username] = schedule
+  // Was assigning a bare week object straight over the entry LIST, throwing
+  // away every dated version the person had. Same upsert as the other two now.
+  const { from, until } = upsertSchedule(all, target.username, { from: req.body?.from, days: req.body?.days, oneWeek: req.body?.oneWeek })
   db.write('schedules', all)
-  res.json({ username: target.username, schedule })
+  res.json({ username: target.username, schedule: effectiveWeek(all[target.username], todayKey()), from, until })
 })
 
 // ---------- Reports (Adama 3 Jul) ----------
@@ -3427,10 +3468,6 @@ function leaveOnDate(leaveAll, username, dateKey) {
 // an assumed one. There is no excused/unexcused split on an absence because
 // nothing in Pulse records one (Adama 27 Aug) — approved leave is its own
 // status, and the absence count stands on its own.
-const HHMM_MIN = (s) => {
-  const m = /^(\d{2}):(\d{2})$/.exec(String(s || ''))
-  return m ? Number(m[1]) * 60 + Number(m[2]) : null
-}
 function attendanceMonth(username, month) {
   const days = monthKeys(month)
   const todayK = todayKey()
@@ -3480,8 +3517,10 @@ function attendanceMonth(username, month) {
       missingCheckout,
       late: !!attendance?.late,
       leaveType: leave?.leaveType || null,
-      scheduled: shift ? { start: shift.start, end: shift.end } : null,
-      scheduledMinutes: startMin != null && endMin != null ? Math.max(0, endMin - startMin) : 0,
+      scheduled: shift ? { start: shift.start, end: shift.end, breakMinutes: shift.breakMinutes || 0 } : null,
+      // Through shiftMinutes, so an unpaid break is not reported as hours the
+      // person was scheduled to work.
+      scheduledMinutes: shiftMinutes(shift),
       fixedByName: attendance?.fixedByName || null,
       fixReason: attendance?.fixReason || '',
     }
