@@ -1057,6 +1057,13 @@ export default function HRTeam({
                           <td className="px-3 py-2">
                             <p className="text-[13px] font-medium text-[var(--color-ink)]">{p.name}{p.past && <span className="ml-2 px-1.5 py-0.5 rounded-full bg-[var(--color-fill)] text-[var(--color-ink-soft)] text-[11.5px] font-medium">Past staff</span>}</p>
                             <p className="text-[11.5px] text-[var(--color-ink-soft)]">{p.role}</p>
+                            {/* A smaller suggestion is not a mistake — say why
+                                it is smaller, in days, on the row itself. */}
+                            {p.partMonth && (
+                              <p className="text-[11.5px] text-[var(--color-ink-faint)]">
+                                Part month: {p.partMonth.workedDays} of {p.partMonth.monthDays} working days ({p.partMonth.from.slice(8)}–{p.partMonth.to.slice(8)})
+                              </p>
+                            )}
                           </td>
                           {p.paid ? (
                             <>

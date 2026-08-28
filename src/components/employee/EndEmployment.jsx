@@ -29,6 +29,10 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
   const [form, setForm] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  // What the last month comes to, for the date currently in the form. Computed
+  // on the server: 🔒 the money is only in the answer for someone who may see
+  // pay, so this is a figure to check, not one this page worked out.
+  const [finalPay, setFinalPay] = useState(null)
 
   const load = () => api(`/hr/employee/${employee.username}/exit`).then(setData).catch(() => setData(null))
   const loadChecklist = () => api(`/employee-checklist?name=${encodeURIComponent(employee.name)}`)
@@ -55,6 +59,16 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
       note: '',
     })
   }, [open])
+
+  useEffect(() => {
+    const lastDay = form?.lastDay
+    if (!open || !lastDay) { setFinalPay(null); return }
+    let live = true
+    api(`/hr/employee/${employee.username}/final-pay?lastDay=${lastDay}`)
+      .then((r) => { if (live) setFinalPay(r) })
+      .catch(() => { if (live) setFinalPay(null) })
+    return () => { live = false }
+  }, [open, form?.lastDay, employee.username])
 
   async function save() {
     setBusy(true)
@@ -209,7 +223,23 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
             <label className="block">
               <span className="text-[12px] text-[var(--color-ink-faint)]">Final pay agreed (recorded here, paid in Payroll)</span>
               <input className="field mt-1 w-full" value={form.payNote} onChange={(e) => set('payNote', e.target.value)}
-                placeholder="August salary + 6 days leave, paid 5 Sep" />
+                placeholder={finalPay?.pay ? `D${finalPay.pay.amount.toLocaleString()} for ${finalPay.workedDays} days` : 'What they are owed, and when it is paid'} />
+              {finalPay && (
+                <span className="mt-1 block text-[11.5px] text-[var(--color-ink-faint)]">
+                  {finalPay.workedDays} of {finalPay.monthDays} working days in {finalPay.month}
+                  {finalPay.pay ? (
+                    <>
+                      {' · '}
+                      <button type="button" onClick={() => set('payNote', `D${finalPay.pay.amount.toLocaleString()} — ${finalPay.workedDays} of ${finalPay.monthDays} working days`)}
+                        className="font-medium text-[var(--color-brand)] hover:underline">
+                        Use D{finalPay.pay.amount.toLocaleString()}
+                      </button>
+                      {' (D'}{finalPay.pay.base.toLocaleString()}{' ÷ '}{finalPay.monthDays}{' × '}{finalPay.workedDays}{')'}
+                    </>
+                  ) : ' · you cannot see pay, so no figure is shown'}
+                  {finalPay.leaveOwed === 0 && ' · no leave to pay out (under a year of service)'}
+                </span>
+              )}
             </label>
           </div>
           <label className="block">

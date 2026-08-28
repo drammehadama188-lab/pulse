@@ -4085,13 +4085,34 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
   // Pay moved out of team.js on 15 Jul (security) — p.base no longer exists on
   // roster entries; the split lives in rosterPay, created-staff pay on the user
   // record. Bonus stays 0: commission is "up to", not an automatic payment.
-  const suggestedSalary = (name) =>
-    Number(rosterPay[name]?.base) || Number(seedUsers().find((u) => u.name === name)?.salary) || 0
+  // 🔒 A PART MONTH IS PAID FOR THE DAYS WORKED, at both ends (Adama 28 Aug:
+  // "shouldn't pulse calculate the final pay if started the 19th"). Someone who
+  // joins or leaves mid-month was suggested a FULL salary before this, on their
+  // very first payroll — the month they are least likely to be checked on.
+  // Working days come from their own schedule; the figure stays editable.
+  const suggestedSalary = (name) => {
+    const u = seedUsers().find((x) => x.name === name)
+    const base = Number(rosterPay[name]?.base) || Number(u?.salary) || 0
+    if (!u || !base) return base
+    const part = partMonthFor(u, period)
+    if (!part.partial || !part.inMonth) return base
+    return Math.round((base * part.worked) / part.inMonth)
+  }
+  const partMonthNote = (name) => {
+    const u = seedUsers().find((x) => x.name === name)
+    if (!u) return null
+    const part = partMonthFor(u, period)
+    if (!part.partial || !part.inMonth) return null
+    return { from: part.from, to: part.to, workedDays: part.worked, monthDays: part.inMonth }
+  }
   const people = merged.filter((p) => (seen.has(p.name) ? false : seen.add(p.name))).map((p) => ({
     name: p.name,
     role: p.role || '',
     suggestedSalary: suggestedSalary(p.name),
     suggestedBonus: 0,
+    // Says WHY the suggestion is not a whole month, so a smaller number does
+    // not read as a mistake.
+    partMonth: partMonthNote(p.name),
     paid: paidByName[p.name] || null,
   }))
   // Payments to people no longer on the roster (past staff, pre-Pulse hires)
@@ -5915,6 +5936,99 @@ app.post('/api/hr/employee/:username/exit', auth, requireSub('hr', 'records'), n
   // Dated today or earlier it takes effect now; a future one waits for its day.
   const applied = applyDueExits().find((x) => x.id === exit.id) || exit
   res.json({ exit: applied })
+})
+
+// ---------- part-month pay (Adama 28 Aug: "shouldn't pulse calculate the
+// final pay if started the 19th which is on the contract?") ----------
+//
+// It should, and nothing did: the payroll run suggested a FULL month to
+// everyone, including someone who joined on the 19th.
+//
+// 🔒 WORKING DAYS FROM THEIR OWN SCHEDULE (his call) — never calendar days,
+// never an assumed Mon-Fri. `effectiveWeek()` is the only resolver of a dated
+// schedule, so a changed week is honoured for the days it covers.
+// 🔒 BOTH ENDS: the month someone joins is pro-rated exactly like the month
+// they leave. One rule, or it is not a rule.
+// 🔑 PROPOSED, NEVER PAID. This hands a figure to whoever is doing the paying;
+// payroll stays the only writer of money, and the number stays editable.
+function scheduledDaysIn(username, monthKey, fromKey, toKey) {
+  const stored = db.read('schedules', {})[username]
+  const [y, m] = monthKey.split('-').map(Number)
+  const lastD = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  let inMonth = 0
+  let worked = 0
+  for (let d = 1; d <= lastD; d++) {
+    const key = `${monthKey}-${String(d).padStart(2, '0')}`
+    if (!effectiveWeek(stored, key)[dowOfKey(key)]) continue // not a working day for them
+    inMonth++
+    if (key >= fromKey && key <= toKey) worked++
+  }
+  return { inMonth, worked }
+}
+// The last day we know about: a recorded exit (pending or applied) first, then
+// the archive date for someone who left before exits were recorded here.
+function lastDayOf(u) {
+  const x = loadExits()
+    .filter((e) => e.username === u.username && !e.cancelledAt)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0]
+  if (x) return x.lastDay
+  return isArchived(u) && u.archivedAt ? u.archivedAt.slice(0, 10) : null
+}
+function partMonthFor(u, monthKey, lastDayOverride = null) {
+  const [y, m] = monthKey.split('-').map(Number)
+  const lastD = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  const monthStart = `${monthKey}-01`
+  const monthEnd = `${monthKey}-${String(lastD).padStart(2, '0')}`
+  const joined = String(u.joined || '').slice(0, 10)
+  const leaving = lastDayOverride || lastDayOf(u)
+  const from = joined && joined > monthStart ? joined : monthStart
+  const to = leaving && leaving < monthEnd ? leaving : monthEnd
+  const partial = from !== monthStart || to !== monthEnd
+  if (from > to) return { from, to, partial: true, inMonth: 0, worked: 0 } // not employed in this month at all
+  return { from, to, partial, ...scheduledDaysIn(u.username, monthKey, from, to) }
+}
+function monthlyBaseFor(u) {
+  const p = rosterPay[u.name] || u.pay || (u.salary ? { base: Number(u.salary) } : {})
+  return Number(p.base) || Number(p.total) || 0
+}
+
+// What the last month comes to, for a last day that has not been saved yet —
+// the form asks as the date is picked. 🔒 The MONEY is only in the answer for
+// someone who may already see pay; everyone else gets the days and no figure,
+// because what the browser receives is what the viewer has.
+app.get('/api/hr/employee/:username/final-pay', auth, requirePower('hr'), (req, res) => {
+  const u = findUser(req.params.username)
+  if (!u) return res.status(404).json({ error: 'not found' })
+  const lastDay = String(req.query.lastDay || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(lastDay)) return res.status(400).json({ error: 'lastDay required' })
+  const monthKey = lastDay.slice(0, 7)
+  const part = partMonthFor(u, monthKey, lastDay)
+  // Blue Book: annual leave is earned only after 12 months of continuous
+  // service, so for most leavers there is nothing to pay out — and Pulse can
+  // say so rather than leave somebody wondering.
+  const joined = u.joined ? new Date(`${String(u.joined).slice(0, 10)}T00:00:00Z`) : null
+  const end = new Date(`${lastDay}T00:00:00Z`)
+  const monthsService = joined
+    ? (end.getUTCFullYear() - joined.getUTCFullYear()) * 12 + (end.getUTCMonth() - joined.getUTCMonth())
+      - (end.getUTCDate() < joined.getUTCDate() ? 1 : 0)
+    : null
+  const showPay = req.realUser.username === CEO || inScope(req.realUser, 'payroll', u.username)
+  const base = monthlyBaseFor(u)
+  res.json({
+    month: monthKey,
+    from: part.from,
+    to: part.to,
+    workedDays: part.worked,
+    monthDays: part.inMonth,
+    partial: part.partial,
+    monthsService,
+    // Under a year of service there is no annual-leave balance to pay out.
+    leaveOwed: monthsService != null && monthsService < 12 ? 0 : null,
+    // null = "you cannot see pay", which is not the same as zero.
+    pay: showPay && base
+      ? { base, amount: part.inMonth ? Math.round((base * part.worked) / part.inMonth) : 0 }
+      : null,
+  })
 })
 
 // A notice can be called off before the last day. One that has already taken
