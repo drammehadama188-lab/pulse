@@ -36,6 +36,7 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
   // on the server: 🔒 the money is only in the answer for someone who may see
   // pay, so this is a figure to check, not one this page worked out.
   const [finalPay, setFinalPay] = useState(null)
+  const [showDone, setShowDone] = useState(false)
 
   const load = () => api(`/hr/employee/${employee.username}/exit`).then(setData).catch(() => setData(null))
   const loadChecklist = () => api(`/employee-checklist?name=${encodeURIComponent(employee.name)}`)
@@ -202,10 +203,30 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
         <div>
           <div className="mb-2 flex items-center justify-between gap-3">
             <h2 className="t-card">Offboarding</h2>
-            <span className="text-[12.5px] text-[var(--color-ink-soft)]">
-              {outstanding ? `${outstanding} still to do` : 'All done'}
+            {/* 🔒 FINISHED WORK STOPS ASKING TO BE DONE (Adama 28 Aug: "after i
+                am done why are these boxes open for every[one] after the
+                offboarding, this[is] his record and that's that"). While
+                anything is outstanding this is a worklist. Once it is all
+                answered it is a fact about the person, so it collapses to one
+                line and the boxes go away until somebody asks to see them. */}
+            <span className="flex items-center gap-3">
+              <span className="text-[12.5px] text-[var(--color-ink-soft)]">
+                {outstanding ? `${outstanding} still to do` : 'All done'}
+              </span>
+              {!outstanding && checklist.length > 0 && (
+                <button type="button" onClick={() => setShowDone((v) => !v)}
+                  className="text-[12.5px] font-medium text-[var(--color-brand)] hover:underline">
+                  {showDone ? 'Hide' : 'Show'}
+                </button>
+              )}
             </span>
           </div>
+          {!outstanding && !showDone && checklist.length > 0 && (
+            <p className="text-[13px] text-[var(--color-ink-soft)]">
+              {checklist.filter((i) => i.done).length} done, {checklist.filter((i) => i.na).length} not applicable. Nothing outstanding.
+            </p>
+          )}
+          {(outstanding > 0 || showDone) && (<>
           {/* Company property is its own group: it is the half that has to be
               back in the building on the last day, beside the payment. */}
           {[...new Set(checklist.map((i) => i.group || 'Offboarding'))].map((group) => (
@@ -219,21 +240,27 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
                     <span className={`text-[13px] ${item.done || item.na ? 'text-[var(--color-ink-faint)]' : 'text-[var(--color-ink)]'} ${item.done ? 'line-through' : ''}`}>
                       {item.label}
                     </span>
+                    {/* One control per state, never two at once: a ticked row
+                        offering "not applicable" reads as a question that was
+                        already answered. */}
                     <span className="ml-auto flex shrink-0 items-center gap-3">
                       {item.done && <Check size={14} className="text-[var(--color-pill-active)]" />}
-                      {canEdit && (
-                        <button type="button" onClick={() => setItem(item, item.na ? 'todo' : 'na')}
-                          className={`text-[12px] font-medium ${item.na ? 'text-[var(--color-ink-soft)]' : 'text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]'}`}>
-                          {item.na ? 'Not applicable · undo' : 'Not applicable'}
-                        </button>
+                      {item.na && <span className="text-[12px] text-[var(--color-ink-faint)]">Not applicable</span>}
+                      {canEdit && item.na && (
+                        <button type="button" onClick={() => setItem(item, 'todo')}
+                          className="text-[12px] font-medium text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]">Undo</button>
                       )}
-                      {!canEdit && item.na && <span className="text-[12px] text-[var(--color-ink-faint)]">Not applicable</span>}
+                      {canEdit && !item.na && !item.done && (
+                        <button type="button" onClick={() => setItem(item, 'na')}
+                          className="text-[12px] font-medium text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]">Not applicable</button>
+                      )}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
           ))}
+          </>)}
         </div>
       )}
 
