@@ -8,6 +8,7 @@ import { api, getToken } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { payByName } from '../lib/pay.js';
 import { Attendance, Documents, Notes, History } from './employee/tabs.jsx';
+import RoleChange from '../components/employee/RoleChange.jsx';
 import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 
 // One employee, in the design Adama sent (20 Aug): who they are, the four
@@ -160,6 +161,7 @@ export default function EmployeePage() {
   const [tab, setTab] = useState('Overview');
   const [roster, setRoster] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const { realUser, isViewAs } = useAuth();
   // The Edit affordance only appears for someone who can actually save — the
@@ -210,6 +212,9 @@ export default function EmployeePage() {
   useEffect(() => {
     api('/hr/employees').then((r) => setRoster(r.employees || [])).catch(() => setRoster([]));
     api('/departments').then((r) => setDepartments(r.departments || [])).catch(() => setDepartments([]));
+    // Owner-only to read; anyone else simply gets no access-role picker on a
+    // role change rather than an error.
+    api('/roles').then((r) => setRoles(r.roles || [])).catch(() => setRoles([]));
   }, []);
   useEffect(() => {
     if (!d?.employee?.name) return;
@@ -307,9 +312,15 @@ export default function EmployeePage() {
       )}
 
       {tab === 'Job & pay' && (
-        <JobPayTab e={e} d={d} pay={pay} netPay={netPay} roster={roster}
-          departments={departments} canEdit={canEditRecord}
-          canMoveDepartment={canMoveDepartment} onSave={saveRecord} />
+        <div className="space-y-4">
+          <JobPayTab e={e} d={d} pay={pay} netPay={netPay} roster={roster}
+            departments={departments} canEdit={canEditRecord}
+            canMoveDepartment={canMoveDepartment} onSave={saveRecord} />
+          {/* A role change is an EVENT with a date and a reason, not a title
+              typed over another one — so it sits under the terms it changes. */}
+          <RoleChange employee={e} departments={departments} roster={roster} roles={roles}
+            canEdit={canEditRecord} onDone={refreshRecord} />
+        </div>
       )}
 
       {/* The tab owns its own month (Adama 27 Aug): it fetches the month it
