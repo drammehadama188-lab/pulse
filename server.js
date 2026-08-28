@@ -5652,7 +5652,52 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
     ...(profile.notes ? [{ kind: 'General', title: '', text: profile.notes, by: '', at: profile.notesAt || null }] : []),
   ].sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
 
+  // ---------- the file of somebody who has left ----------
+  // 🔒 ONE PAGE, NOT A HUNT THROUGH TABS (Adama 28 Aug: "after it ended maybe
+  // just one page summarised everything including their attendance and all,
+  // and the page says dismissed, that is his file"). Attendance is summed
+  // across the WHOLE employment rather than the current month, which for a
+  // leaver is usually empty and always misleading.
+  let leaverFile = null
+  if (isArchived(u)) {
+    const last = lastDayOf(u) || (u.archivedAt ? u.archivedAt.slice(0, 10) : today)
+    const first = String(u.joined || '').slice(0, 10) || last
+    const totals = { scheduledDays: 0, present: 0, late: 0, absent: 0, leave: 0, workedMinutes: 0 }
+    // Month by month from the month they joined to the month they left.
+    for (let m = first.slice(0, 7); m <= last.slice(0, 7);) {
+      const s = attendanceMonth(u.username, m).summary
+      totals.scheduledDays += s.scheduledDays
+      totals.present += s.present
+      totals.late += s.late
+      totals.absent += s.absent
+      totals.leave += s.leave
+      totals.workedMinutes += s.workedMinutes
+      const [yy, mm] = m.split('-').map(Number)
+      m = `${mm === 12 ? yy + 1 : yy}-${String(mm === 12 ? 1 : mm + 1).padStart(2, '0')}`
+    }
+    const exitRec = loadExits().filter((x) => x.username === u.username && !x.cancelledAt)
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0] || null
+    const exit = exitForViewer(exitRec, req.realUser, u.username)
+    const daysServed = Math.round((Date.parse(`${last}T00:00:00Z`) - Date.parse(`${first}T00:00:00Z`)) / 86400000) + 1
+    leaverFile = {
+      first,
+      last,
+      daysServed: daysServed > 0 ? daysServed : null,
+      monthsServed: completedMonthsBetween(first, last),
+      contractEnd: u.contractEnd || null,
+      // Did they reach the end of the term they signed for?
+      finishedTerm: u.contractEnd ? last >= String(u.contractEnd).slice(0, 10) : null,
+      exit,
+      attendance: {
+        ...totals,
+        ratePct: totals.scheduledDays ? Math.round((totals.present / totals.scheduledDays) * 100) : null,
+      },
+      checklist: mergeChecklist(OFFBOARDING_ITEMS, (db.read('checklists', {})[u.name] || {}).offboarding, true),
+    }
+  }
+
   res.json({
+    leaverFile,
     employee: {
       username: u.username,
       name: u.name,
@@ -5709,7 +5754,15 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
     contract: {
       type: u.contractEnd ? 'Fixed term' : u.contractor ? 'Contractor' : 'Permanent',
       start: u.joined || null,
+      // 🔑 THE AGREED TERM AND WHAT ACTUALLY HAPPENED ARE TWO DIFFERENT FACTS
+      // (Adama 28 Aug: "i put the right end date when i dismissed him but it
+      // maintained the contract end date… i want to know how long was the
+      // contract and when he got fired"). The contract still ran to 19 Nov; he
+      // left on 28 Aug. Overwriting one with the other loses the question
+      // "did they finish the term".
       end: u.contractEnd || null,
+      endedOn: isArchived(u) ? lastDayOf(u) : null,
+      endedWhy: isArchived(u) ? (u.archivedReason || 'Left the team') : '',
       noticePeriod: profile.noticePeriod || '',
       document: documents.find((f) => f.category === 'contract') || null,
     },
@@ -5941,7 +5994,7 @@ app.get('/api/hr/employee/:username/exit', auth, requirePower('hr'), (req, res) 
     .filter((x) => x.username === u.username && !x.cancelledAt)
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
   res.json({
-    exit: mine[0] || null,
+    exit: exitForViewer(mine[0] || null, req.realUser, u.username),
     today: todayKey(),
     types: EXIT_TYPES,
     notice: EXIT_NOTICE,
@@ -6212,6 +6265,18 @@ function accruedLeaveFor(u, lastDay) {
     taken,
     balance: money2(Math.max(0, earned - taken)),
   }
+}
+
+// 🔒 THE SETTLEMENT IS PAY. An exit record carries the final figure and the
+// working behind it, and the record endpoints are HR-gated, not payroll-gated —
+// so the money comes off unless the caller may already see pay. Stripping it in
+// the PAYLOAD, never in the page: what the browser receives is what the viewer
+// has.
+function exitForViewer(exit, realUser, username) {
+  if (!exit) return null
+  if (realUser?.username === CEO || inScope(realUser, 'payroll', username)) return exit
+  const { payAmount, payBasis, ...rest } = exit
+  return rest
 }
 
 // What the last month comes to, for a last day that has not been saved yet —

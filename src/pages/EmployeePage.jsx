@@ -10,6 +10,7 @@ import { payByName } from '../lib/pay.js';
 import { Attendance, Documents, Notes, History } from './employee/tabs.jsx';
 import RoleChange from '../components/employee/RoleChange.jsx';
 import EndEmployment from '../components/employee/EndEmployment.jsx';
+import LeaverFile from '../components/employee/LeaverFile.jsx';
 import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 
 // One employee, in the design Adama sent (20 Aug): who they are, the four
@@ -341,10 +342,15 @@ export default function EmployeePage() {
         ))}
       </div>
 
-      {tab === 'Overview' && (
-        <OverviewTab d={d} e={e} a={a} sales={sales} pay={pay} netPay={netPay}
-          statusLabel={statusLabel} statusInk={statusInk} onTab={setTab}
-          canEdit={canEditActive} onSave={saveRecord} />
+      {/* 🔒 A LEAVER'S OVERVIEW IS THEIR FILE, not a dashboard of a month they
+          were not here for. The live record answers "how is this person doing";
+          a closed one answers "how long were they here, did they finish the
+          term, why did it end, and is anything outstanding". */}
+      {tab === 'Overview' && (d.leaverFile
+        ? <LeaverFile file={d.leaverFile} e={e} notes={d.notes || []} documents={d.documents || []} onTab={setTab} />
+        : <OverviewTab d={d} e={e} a={a} sales={sales} pay={pay} netPay={netPay}
+            statusLabel={statusLabel} statusInk={statusInk} onTab={setTab}
+            canEdit={canEditActive} onSave={saveRecord} />
       )}
 
       {tab === 'Job & pay' && (
@@ -566,6 +572,7 @@ export function JobPayTab({ e, d, pay, netPay, roster, departments, canEdit, can
               // no end date; a date means fixed term, and the employment type
               // follows from it everywhere.
               { label: 'Contract ends', icon: FileText, key: 'contractEnd', type: 'date', raw: e.contractEnd || '', value: e.contractEnd ? day(e.contractEnd) : 'No end date' },
+              ...(e.left ? [{ label: 'Employment ended', icon: FileText, raw: e.left, value: `${day(e.left)}${e.leftReason ? ` · ${e.leftReason}` : ''}` }] : []),
             ]} />
             <div className="space-y-4">
               {/* 🔒 Only rendered when the payroll endpoint actually returned
@@ -625,6 +632,12 @@ export function JobPayTab({ e, d, pay, netPay, roster, departments, canEdit, can
                   <Row label="Type" value={d.contract.type} />
                   <Row label="Start date" value={d.contract.start ? day(d.contract.start) : ''} />
                   <Row label="End date" value={d.contract.end ? day(d.contract.end) : 'No end date'} />
+                  {/* 🔑 Two different facts. The term he signed ran to 19 Nov;
+                      he left on 28 Aug. Overwriting one with the other loses
+                      the question "did they finish the term". */}
+                  {d.contract.endedOn && (
+                    <Row label="Employment ended" value={<span className="text-[var(--color-stage-out)]">{day(d.contract.endedOn)}{d.contract.endedWhy ? ` · ${d.contract.endedWhy}` : ''}</span>} />
+                  )}
                   <Row label="Notice period" value={d.contract.noticePeriod} />
                   <Row label="Document" value={d.contract.document
                     ? <a href={`/api/agent-files/${d.contract.document.id}/download?t=${encodeURIComponent(getToken() || '')}`} className={linkish}><FileText size={14} /> {d.contract.document.name}</a>
