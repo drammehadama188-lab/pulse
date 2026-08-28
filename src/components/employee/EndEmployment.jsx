@@ -55,7 +55,8 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
       reason: '',
       notice: 'Worked',
       rehire: true,
-      payNote: '',
+      payAmount: '',
+      payEdited: false,
       note: '',
     })
   }, [open])
@@ -65,7 +66,13 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
     if (!open || !lastDay) { setFinalPay(null); return }
     let live = true
     api(`/hr/employee/${employee.username}/final-pay?lastDay=${lastDay}`)
-      .then((r) => { if (live) setFinalPay(r) })
+      .then((r) => {
+        if (!live) return
+        setFinalPay(r)
+        // The date drives the figure, so a new date re-fills it — until it has
+        // been typed over, which is a decision and must survive.
+        setForm((f) => (f && !f.payEdited ? { ...f, payAmount: r.pay ? String(r.pay.amount) : '' } : f))
+      })
       .catch(() => { if (live) setFinalPay(null) })
     return () => { live = false }
   }, [open, form?.lastDay, employee.username])
@@ -104,7 +111,7 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
     }
   }
 
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v, ...(k === 'payAmount' ? { payEdited: true } : {}) }))
   const dismissal = form?.type === 'Dismissed'
   const outstanding = checklist.filter((i) => !i.done).length
 
@@ -158,10 +165,15 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
               <p className="mt-1 text-[13px] font-medium text-[var(--color-ink)]">{value}</p>
             </div>
           ))}
-          {exit.payNote && (
+          {exit.payAmount != null && (
             <div className="col-span-2 sm:col-span-4">
-              <p className="text-[12px] text-[var(--color-ink-faint)]">Final pay agreed (paid in Payroll, not here)</p>
-              <p className="mt-1 text-[13px] text-[var(--color-ink)]">{exit.payNote}</p>
+              <p className="text-[12px] text-[var(--color-ink-faint)]">Final pay (paid in Payroll, not here)</p>
+              <p className="mt-1 text-[13px] text-[var(--color-ink)]">
+                D{Number(exit.payAmount).toLocaleString()}
+                {exit.payBasis?.monthDays
+                  ? <span className="text-[var(--color-ink-soft)]"> · {exit.payBasis.workedDays} of {exit.payBasis.monthDays} working days</span>
+                  : null}
+              </p>
             </div>
           )}
           {exit.note && (
@@ -220,24 +232,32 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
                 {(data?.notice || ['Worked', 'Paid in lieu', 'Waived', 'Not applicable']).map((x) => <option key={x} value={x}>{x}</option>)}
               </select>
             </label>
+            {/* 🔒 THE NUMBER, NOT A SENTENCE. This asked for prose against an
+                example ("August salary + 6 days leave, paid 5 Sep") that was
+                not his month, not his leave and not a date this page decides —
+                Adama 28 Aug: "what is august salary… what do you mean paid 5
+                Sep". Pulse works the figure out and shows how; the box is
+                there to correct it, not to compose it. */}
             <label className="block">
-              <span className="text-[12px] text-[var(--color-ink-faint)]">Final pay agreed (recorded here, paid in Payroll)</span>
-              <input className="field mt-1 w-full" value={form.payNote} onChange={(e) => set('payNote', e.target.value)}
-                placeholder={finalPay?.pay ? `D${finalPay.pay.amount.toLocaleString()} for ${finalPay.workedDays} days` : 'What they are owed, and when it is paid'} />
-              {finalPay && (
-                <span className="mt-1 block text-[11.5px] text-[var(--color-ink-faint)]">
-                  {finalPay.workedDays} of {finalPay.monthDays} working days in {finalPay.month}
-                  {finalPay.pay ? (
-                    <>
-                      {' · '}
-                      <button type="button" onClick={() => set('payNote', `D${finalPay.pay.amount.toLocaleString()} — ${finalPay.workedDays} of ${finalPay.monthDays} working days`)}
-                        className="font-medium text-[var(--color-brand)] hover:underline">
-                        Use D{finalPay.pay.amount.toLocaleString()}
-                      </button>
-                      {' (D'}{finalPay.pay.base.toLocaleString()}{' ÷ '}{finalPay.monthDays}{' × '}{finalPay.workedDays}{')'}
-                    </>
-                  ) : ' · you cannot see pay, so no figure is shown'}
-                  {finalPay.leaveOwed === 0 && ' · no leave to pay out (under a year of service)'}
+              <span className="text-[12px] text-[var(--color-ink-faint)]">Final pay</span>
+              {finalPay?.pay ? (
+                <>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-[13px] text-[var(--color-ink-soft)]">D</span>
+                    <input type="number" min="0" className="field w-full" value={form.payAmount}
+                      onChange={(e) => set('payAmount', e.target.value)} />
+                  </div>
+                  <span className="mt-1 block text-[11.5px] text-[var(--color-ink-faint)]">
+                    {finalPay.workedDays} of {finalPay.monthDays} working days worked this month
+                    {' · '}D{finalPay.pay.base.toLocaleString()} ÷ {finalPay.monthDays} × {finalPay.workedDays}
+                    {finalPay.leaveOwed === 0 && '. No leave to pay out — under a year of service.'}
+                  </span>
+                </>
+              ) : (
+                <span className="mt-1 block text-[12.5px] text-[var(--color-ink-soft)]">
+                  {finalPay
+                    ? `${finalPay.workedDays} of ${finalPay.monthDays} working days worked this month. The amount is set in Payroll — you do not have access to pay.`
+                    : 'Working it out…'}
                 </span>
               )}
             </label>

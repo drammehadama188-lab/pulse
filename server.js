@@ -5921,7 +5921,13 @@ app.post('/api/hr/employee/:username/exit', auth, requireSub('hr', 'records'), n
     // answer it from the file.
     rehire: b.rehire === true,
     // 🔑 RECORDED, NOT PAID. Payroll stays the only writer of money.
-    payNote: String(b.payNote || '').trim().slice(0, 160),
+    // The FIGURE, not a sentence about it — and the days it was worked out
+    // from travel with it, so the record can still explain itself in a year.
+    payAmount: Number(b.payAmount) >= 0 ? Math.round(Number(b.payAmount)) : null,
+    payBasis: (() => {
+      const part = partMonthFor(u, lastDay.slice(0, 7), lastDay)
+      return { workedDays: part.worked, monthDays: part.inMonth, from: part.from, to: part.to }
+    })(),
     note: String(b.note || '').trim().slice(0, 400),
     title: u.title || '',
     department: u.department || '',
