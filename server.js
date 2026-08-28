@@ -745,6 +745,30 @@ app.post('/api/staff/:username/access', auth, notViewAs, requireCeo, (req, res) 
   if (!isCeo && (requested.includes('grant') !== before.includes('grant')))
     return res.status(403).json({ error: 'Only the CEO can give or take Grant access' })
 
+  // 🔒 PERMISSIONS COME FROM THE ROLE (Adama 28 Aug: "all permission toggles
+  // should live here [the role page], not in their individual pages").
+  // Enforced on the SERVER, not only by hiding the toggles: a rule the server
+  // does not hold is a convention, and the next thing to POST here would not
+  // know about it. This endpoint still carries email, personal email, the
+  // sign-in switch and per-person COVERAGE — the client echoes the current
+  // powers back alongside them, so an unchanged echo passes and only a real
+  // change is refused.
+  const sameSet = (a, b) => {
+    const A = [...new Set(a)].sort(); const B = [...new Set(b)].sort()
+    return A.length === B.length && A.every((v, i) => v === B[i])
+  }
+  if (!sameSet(requested, before)) {
+    return res.status(409).json({ error: 'Permissions come from the role. Change them on the role in Settings › Team & access.' })
+  }
+  if (req.body?.subs && typeof req.body.subs === 'object') {
+    const now = user.permissionSubs || {}
+    const keys = [...new Set([...Object.keys(req.body.subs), ...Object.keys(now)])]
+    const changed = keys.some((k) => !sameSet(req.body.subs[k] || now[k] || [], now[k] || req.body.subs[k] || []))
+    if (changed) {
+      return res.status(409).json({ error: 'What a permission can do comes from the role. Change it on the role in Settings › Team & access.' })
+    }
+  }
+
   user.permissions = [...new Set(requested)]
   // Named sub-toggles: which staff each power covers. Cleaned against the
   // roster — never the CEO, never themselves. No stored list = all staff.
