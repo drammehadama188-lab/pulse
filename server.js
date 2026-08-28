@@ -4096,7 +4096,8 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
     if (!u || !base) return base
     const part = partMonthFor(u, period)
     if (!part.partial || !part.inMonth) return base
-    return Math.round((base * part.worked) / part.inMonth)
+    // 🔒 Not rounded to a whole dalasi — see money2.
+    return money2((base * part.worked) / part.inMonth)
   }
   const partMonthNote = (name) => {
     const u = seedUsers().find((x) => x.name === name)
@@ -5923,7 +5924,7 @@ app.post('/api/hr/employee/:username/exit', auth, requireSub('hr', 'records'), n
     // 🔑 RECORDED, NOT PAID. Payroll stays the only writer of money.
     // The FIGURE, not a sentence about it — and the days it was worked out
     // from travel with it, so the record can still explain itself in a year.
-    payAmount: Number(b.payAmount) >= 0 ? Math.round(Number(b.payAmount)) : null,
+    payAmount: Number(b.payAmount) >= 0 ? money2(b.payAmount) : null,
     payBasis: (() => {
       const part = partMonthFor(u, lastDay.slice(0, 7), lastDay)
       return { workedDays: part.worked, monthDays: part.inMonth, from: part.from, to: part.to }
@@ -5993,10 +5994,25 @@ function partMonthFor(u, monthKey, lastDayOverride = null) {
   if (from > to) return { from, to, partial: true, inMonth: 0, worked: 0 } // not employed in this month at all
   return { from, to, partial, ...scheduledDaysIn(u.username, monthKey, from, to) }
 }
-function monthlyBaseFor(u) {
+// What is GUARANTEED every month, split into its parts. Base + transport is
+// the guaranteed pay (it is what `salary` holds on a created record);
+// 🔒 COMMISSION IS NEVER IN IT — the contract says payable only on confirmed,
+// paid, activated installs and "is not guaranteed", so it can never ride along
+// in an automatic figure. It is reported separately so whoever settles can
+// decide, and a part month never quietly pays or withholds it.
+function monthlyPayFor(u) {
   const p = rosterPay[u.name] || u.pay || (u.salary ? { base: Number(u.salary) } : {})
-  return Number(p.base) || Number(p.total) || 0
+  const base = Number(p.base) || 0
+  const transport = Number(p.transport) || 0
+  const commission = Number(p.commission) || 0
+  // A legacy record with only a total: treat it as the guaranteed monthly pay
+  // rather than inventing a split that is not on file.
+  const fixed = base + transport || Number(p.total) || 0
+  return { base, transport, commission, fixed }
 }
+// Dalasi and butut. 🔒 Never round a part month up to a whole number — the
+// figure is somebody's pay, and a rounded lump hides which part is which.
+const money2 = (n) => Math.round(Number(n) * 100) / 100
 
 // What the last month comes to, for a last day that has not been saved yet —
 // the form asks as the date is picked. 🔒 The MONEY is only in the answer for
@@ -6019,7 +6035,16 @@ app.get('/api/hr/employee/:username/final-pay', auth, requirePower('hr'), (req, 
       - (end.getUTCDate() < joined.getUTCDate() ? 1 : 0)
     : null
   const showPay = req.realUser.username === CEO || inScope(req.realUser, 'payroll', u.username)
-  const base = monthlyBaseFor(u)
+  const m = monthlyPayFor(u)
+  const share = part.inMonth ? part.worked / part.inMonth : 0
+  // Every guaranteed part of the monthly pay is pro-rated, and each is shown as
+  // its own line: one lump cannot be checked against a contract.
+  const lines = [
+    ['Base salary', m.base],
+    ['Transport & data', m.transport],
+  ].filter(([, monthly]) => monthly > 0)
+    .map(([label, monthly]) => ({ label, monthly, amount: money2(monthly * share) }))
+  const amount = money2(lines.reduce((a, l) => a + l.amount, 0))
   res.json({
     month: monthKey,
     from: part.from,
@@ -6028,11 +6053,18 @@ app.get('/api/hr/employee/:username/final-pay', auth, requirePower('hr'), (req, 
     monthDays: part.inMonth,
     partial: part.partial,
     monthsService,
-    // Under a year of service there is no annual-leave balance to pay out.
-    leaveOwed: monthsService != null && monthsService < 12 ? 0 : null,
+    // 🔒 NOT ZERO, AND NOT GUESSED. Labour Act 2023 s.109(2): where leave is
+    // expressed over more than a month, "the appropriate proportion of the
+    // entitlement is deemed to accrue for each month of employment", and
+    // s.109(4) makes accrued-but-unused leave payable at termination. So the
+    // old "nothing under 12 months" was wrong in law. What the Blue Book's
+    // table actually grants inside year one is still unsettled, so this reports
+    // the COMPLETED MONTHS and leaves the payout to a person.
+    leaveOwed: null,
+    completedMonths: monthsService,
     // null = "you cannot see pay", which is not the same as zero.
-    pay: showPay && base
-      ? { base, amount: part.inMonth ? Math.round((base * part.worked) / part.inMonth) : 0 }
+    pay: showPay && m.fixed
+      ? { lines, amount, monthlyFixed: m.fixed, commissionMonthly: m.commission }
       : null,
   })
 })

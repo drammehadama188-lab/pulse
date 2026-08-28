@@ -18,6 +18,9 @@ import { api } from '../../lib/api.js'
 // the questions somebody will ask a year from now, and the exit is the only
 // moment anyone can still answer them.
 const CARD = 'card'
+// Dalasi and butut — a part month rarely lands on a whole dalasi, and rounding
+// it silently is somebody's pay going missing.
+const money = (n) => Number(n).toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 })
 const day = (iso) => {
   const d = new Date(iso || '')
   return isNaN(d) ? '—' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
@@ -169,7 +172,7 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
             <div className="col-span-2 sm:col-span-4">
               <p className="text-[12px] text-[var(--color-ink-faint)]">Final pay (paid in Payroll, not here)</p>
               <p className="mt-1 text-[13px] text-[var(--color-ink)]">
-                D{Number(exit.payAmount).toLocaleString()}
+                D{money(exit.payAmount)}
                 {exit.payBasis?.monthDays
                   ? <span className="text-[var(--color-ink-soft)]"> · {exit.payBasis.workedDays} of {exit.payBasis.monthDays} working days</span>
                   : null}
@@ -244,13 +247,29 @@ export default function EndEmployment({ employee, canEdit, open, onClose, onDone
                 <>
                   <div className="mt-1 flex items-center gap-2">
                     <span className="text-[13px] text-[var(--color-ink-soft)]">D</span>
-                    <input type="number" min="0" className="field w-full" value={form.payAmount}
+                    <input type="number" min="0" step="0.01" className="field w-full" value={form.payAmount}
                       onChange={(e) => set('payAmount', e.target.value)} />
                   </div>
-                  <span className="mt-1 block text-[11.5px] text-[var(--color-ink-faint)]">
-                    {finalPay.workedDays} of {finalPay.monthDays} working days worked this month
-                    {' · '}D{finalPay.pay.base.toLocaleString()} ÷ {finalPay.monthDays} × {finalPay.workedDays}
-                    {finalPay.leaveOwed === 0 && '. No leave to pay out — under a year of service.'}
+                  {/* Line by line, so it can be checked against the contract.
+                      One lump cannot be. */}
+                  <span className="mt-2 block space-y-0.5 text-[11.5px] text-[var(--color-ink-faint)]">
+                    {finalPay.pay.lines.map((l) => (
+                      <span key={l.label} className="block">
+                        {l.label}: D{l.monthly.toLocaleString()} ÷ {finalPay.monthDays} × {finalPay.workedDays} = D{money(l.amount)}
+                      </span>
+                    ))}
+                    <span className="block text-[var(--color-ink-soft)]">
+                      {finalPay.workedDays} of {finalPay.monthDays} working days worked this month
+                    </span>
+                    {finalPay.pay.commissionMonthly > 0 && (
+                      <span className="block">
+                        Commission (up to D{finalPay.pay.commissionMonthly.toLocaleString()}/month) is not included — it is only owed on a target met and installs confirmed. Add it above if it is owed.
+                      </span>
+                    )}
+                    <span className="block">
+                      {finalPay.completedMonths ? `${finalPay.completedMonths} completed month${finalPay.completedMonths === 1 ? '' : 's'} of service` : 'No completed month of service'}
+                      . Leave accrues month by month in law, so add any leave owed above.
+                    </span>
                   </span>
                 </>
               ) : (
