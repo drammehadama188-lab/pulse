@@ -151,6 +151,14 @@ let tabsOk = 0;
 for (const [label, el] of cases) if (render(`tab ${label}`, el)) tabsOk++;
 console.log(`✓ ${tabsOk} of ${cases.length} employee tab states render`);
 
+// 3. Modals opened by a button. The page walk above only paints a page's
+// first paint, so a form that lives behind a click is never rendered by it —
+// and the Add employee form spent two days unreachable without anything
+// noticing. Render the open state directly.
+const addStaff = await vite.ssrLoadModule('/src/components/AddStaffForm.jsx');
+render('Add employee form (open)', React.createElement(addStaff.default, { onClose: noop, onCreated: noop }));
+console.log('✓ the Add employee form renders when opened');
+
 await vite.close();
 if (failed) {
   console.error(`\n✗ ${failed} render failure(s) — this is what a blank page looks like before it ships.`);

@@ -5,6 +5,8 @@ import {
   Search, MoreVertical, ChevronLeft, ChevronRight, Filter, AlertTriangle, FileClock,
 } from 'lucide-react';
 import { api } from '../lib/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
+import AddStaffForm from '../components/AddStaffForm.jsx';
 import Pager, { usePager } from '../components/ui/Pager.jsx';
 import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
@@ -62,8 +64,16 @@ export default function Employees() {
   const [joinedTo, setJoinedTo] = useState('');
   const [milestoneOnly, setMilestoneOnly] = useState('');
   const [view, setView] = useState('employees');
+  const [addOpen, setAddOpen] = useState(false);
 
-  useEffect(() => { api('/hr/employees').then(setData).catch((e) => setError(e.message)); }, []);
+  // 🔒 Creating a staff account is a write, so it follows Pulse's write rule:
+  // the button reads the VIEWED person's powers (so view-as stays faithful)
+  // but never acts while viewing as somebody. The server checks both again.
+  const { hasPower, isViewAs } = useAuth();
+  const canAdd = hasPower('staffadmin') && !isViewAs;
+
+  const load = () => api('/hr/employees').then(setData).catch((e) => setError(e.message));
+  useEffect(() => { load(); }, []);
   useEffect(() => { pager.reset(); }, [query, dept, status, employment, milestoneOnly, view]);
 
   const rows = useMemo(() => {
@@ -154,9 +164,14 @@ export default function Employees() {
               where you add one person, so the other two buttons are the honest
               pair: take the list out, or add somebody. */}
           <button onClick={() => exportCsv(false)} className={light}><Download size={15} /> Export</button>
-          <Link to="/people?tab=roster" className={`${btn} btn-primary hover:bg-[var(--color-brand-600)]`}>
-            <Plus size={15} /> Add employee
-          </Link>
+          {/* This was a <Link> to /people?tab=roster — which is this very page,
+              so it navigated to itself and looked broken (Adama 29 Aug). The
+              form it should always have opened is AddStaffForm. */}
+          {canAdd && (
+            <button onClick={() => setAddOpen(true)} className={`${btn} btn-primary hover:bg-[var(--color-brand-600)]`}>
+              <Plus size={15} /> Add employee
+            </button>
+          )}
         </div>
       </div>
 
@@ -412,6 +427,13 @@ export default function Employees() {
 
       {/* Warnings are not a directory: a warning belongs to a person's record
           and to Reviews & Coaching, which is where it is written and read. */}
+
+      {addOpen && (
+        <AddStaffForm
+          onClose={() => setAddOpen(false)}
+          onCreated={load}
+        />
+      )}
     </div>
   );
 }
