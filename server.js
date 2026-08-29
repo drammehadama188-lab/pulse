@@ -14,6 +14,11 @@ import { rosterPay, pastStaffPay, payrollHistory as legacyPayrollHistory, totalP
 import { sallyCustomers, sallyMonthlyHistory } from './src/data/sally-sales-seed.js'
 import { buildPayrollHistory, zohoConfigured, paySources, recordSalaryPayment, resolveVendor, getExpense, deleteExpense, updateSalaryExpense, existingSalaryExpense, salaryExpensesForMonth } from './lib/zoho-books.js'
 import { sendMail, emailConfigured } from './lib/email.js'
+// The performance model — weights, bands and the three-source calculation —
+// lives in ONE file the server and the pages both import (lib/, not src/).
+import {
+  PERF_WEIGHTS, overallPerformance, workKpiScore, managerAssessment, perfStatus, prevMonthKey,
+} from './lib/performance-model.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -7101,90 +7106,79 @@ async function fetchAdminRetention(name, month) {
   } catch { return null }
 }
 async function fetchAdminStock(month) {
-  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
-  if (!base || !key) return null
-  try {
-    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/stock?month=${month}`, { headers: { 'x-pulse-key': key } })
-    if (!resp.ok) return null
-    const data = await resp.json()
-    return typeof data.accountabilityPct === 'number' ? data : null
-  } catch { return null }
+  const data = await fetchAdminFeed(`/api/integrations/pulse/stock?month=${month}`)
+  return data && typeof data.accountabilityPct === 'number' ? data : null
 }
 // Case-resolution from Admin (Ya Fatou's KPI): resolved on time ÷
 // (resolved that month + open cases past their SLA). null = unreachable.
 async function fetchAdminCases(name, month) {
-  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
-  if (!base || !key) return null
-  try {
-    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/cases?month=${month}`, { headers: { 'x-pulse-key': key } })
-    if (!resp.ok) return null
-    return ((await resp.json()).agents || []).find((a) => a.name === name) || null
-  } catch { return null }
+  const data = await fetchAdminFeed(`/api/integrations/pulse/cases?month=${month}`)
+  return (data?.agents || []).find((a) => a.name === name) || null
 }
 // Installations-within-3-days from Admin (company-wide — Ya Fatou coordinates
 // the process): onTime ÷ (completed this month + open past 3 days).
 async function fetchAdminInstall(month) {
-  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
-  if (!base || !key) return null
-  try {
-    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/install?month=${month}`, { headers: { 'x-pulse-key': key } })
-    if (!resp.ok) return null
-    const data = await resp.json()
-    return typeof data.installPct === 'number' || data.completed != null ? data : null
-  } catch { return null }
+  const data = await fetchAdminFeed(`/api/integrations/pulse/install?month=${month}`)
+  return data && (typeof data.installPct === 'number' || data.completed != null) ? data : null
 }
 // Trackers-online rate for the agent's BOOK (live snapshot from Admin — same
 // rules as Admin's own online meter). No book yet → null, never faked.
 async function fetchAdminOnline(name) {
-  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
-  if (!base || !key) return null
-  try {
-    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/online`, { headers: { 'x-pulse-key': key } })
-    if (!resp.ok) return null
-    return ((await resp.json()).agents || []).find((a) => a.name === name) || null
-  } catch { return null }
+  const data = await fetchAdminFeed('/api/integrations/pulse/online')
+  return (data?.agents || []).find((a) => a.name === name) || null
 }
 // Verified 5-star Google reviews credited to the agent this month. An agent
 // absent from the feed simply has none yet — that's a real 0, not "unknown".
 async function fetchAdminReviews(name, month) {
-  const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
-  if (!base || !key) return null
-  try {
-    const resp = await fetch(`${base.replace(/\/$/, '')}/api/integrations/pulse/reviews?month=${month}`, { headers: { 'x-pulse-key': key } })
-    if (!resp.ok) return null
-    const row = ((await resp.json()).agents || []).find((a) => a.name === name)
-    return row ? Number(row.verified) || 0 : 0
-  } catch { return null }
+  const data = await fetchAdminFeed(`/api/integrations/pulse/reviews?month=${month}`)
+  if (!data) return null
+  const row = (data.agents || []).find((a) => a.name === name)
+  return row ? Number(row.verified) || 0 : 0
 }
 // Whole feed, unfiltered — the Team Lead card aggregates ACROSS the team's
 // books, so it needs every agent row, not one name. null = unreachable.
+// 🔑 EVERY Admin read goes through here, and an identical read inside the same
+// few seconds is served once. The Performance board scores the whole roster,
+// and each person's card wants the same five month-wide feeds — without this
+// it made one HTTP call per person per KPI to the same URL.
+const ADMIN_FEED_TTL_MS = 15000
+const adminFeedCache = new Map()
 async function fetchAdminFeed(pathWithQuery) {
   const base = process.env.ADMIN_SYNC_URL, key = process.env.PULSE_SYNC_KEY
   if (!base || !key) return null
-  try {
-    const resp = await fetch(`${base.replace(/\/$/, '')}${pathWithQuery}`, { headers: { 'x-pulse-key': key } })
-    if (!resp.ok) return null
-    return await resp.json()
-  } catch { return null }
+  const hit = adminFeedCache.get(pathWithQuery)
+  if (hit && Date.now() - hit.at < ADMIN_FEED_TTL_MS) return hit.promise
+  const promise = (async () => {
+    try {
+      const resp = await fetch(`${base.replace(/\/$/, '')}${pathWithQuery}`, { headers: { 'x-pulse-key': key } })
+      if (!resp.ok) return null
+      return await resp.json()
+    } catch { return null }
+  })()
+  // A failed read must not be remembered as the answer for the next 15s.
+  promise.then((v) => { if (v == null) adminFeedCache.delete(pathWithQuery) }, () => adminFeedCache.delete(pathWithQuery))
+  adminFeedCache.set(pathWithQuery, { at: Date.now(), promise })
+  return promise
 }
-app.get('/api/my/progress', auth, async (req, res) => {
-  const name = req.user.name
-  const u = findUser(req.user.username)
-  const person = team.find((t) => t.name === name) || null
-  const profile = (db.read('profiles', {}))[name] || {}
-  const reviews = ((db.read('reviews', {}))[name] || [])
-    .slice().sort((a, b) => (a.period || '').localeCompare(b.period || ''))
+// ---------- WORK KPIs: ONE builder (Adama 29 Aug) ----------
+// The role scorecard with its REAL actuals from Admin. This used to live inline
+// inside /api/my/progress, which meant a person could see their own work KPIs
+// and nobody could see the team's. The Performance board scores the same
+// numbers now, so a manager and the person they manage cannot be looking at two
+// different scorecards.
+// 🔒 An actual that Admin cannot answer for stays NULL — never 0, never faked.
+// `person` is the static roster row when there is one; `u` is the user record.
+async function workScorecardFor({ u, person = null, name, month }) {
   const sales = (db.read('agent-sales', {}))[name] || null
-  const sc = profile.performanceScore === '' || profile.performanceScore == null ? null : Number(profile.performanceScore)
-
-  // ----- Scorecard: each ROLE has its own weighted KPIs (Adama 29 Jun). Targets
-  // + weights here; ACTUALS come from ADMIN once that connection is built —
-  // until then only sales has an interim actual (the sheet); every other KPI
-  // stays null ("Connecting to Admin") so nothing is ever faked. Roles covered:
-  // Sales agent, Customer Service, Team Lead. Technician = contractor, no
-  // scorecard for now.
-  const now = new Date()
-  const CUR = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const CUR = month
+  // 🔴 SOME ADMIN FEEDS ARE A SNAPSHOT OF TODAY, NOT OF A MONTH. "Trackers
+  // online" and the team's attendance answer "right now"; there is no way to
+  // ask them what they were in July. Scoring a finished month with them would
+  // quietly judge that month on this morning's data, so for any month but the
+  // current one they are UNMEASURED — and an unmeasured KPI leaves the
+  // denominator rather than counting as a miss.
+  const SCORING_LIVE_MONTH = month === todayKey().slice(0, 7)
+  const liveOnly = (v) => (SCORING_LIVE_MONTH ? v : null)
   const r = (person?.role || u?.title || '').toLowerCase()
   const t = (person?.type || u?.department || '').toLowerCase()
   let scKey = null
@@ -7209,7 +7203,7 @@ app.get('/api/my/progress', auth, async (req, res) => {
     // Admin"). Retention MOVED to Customer Service 9 Jul (renewal outreach is
     // Yafatou's job). Percent KPIs carry a `detail` line — the counts behind
     // the % (Adama 4 Jul: "I like to see numbers, not only percentage").
-    const onl = await fetchAdminOnline(name)
+    const onl = SCORING_LIVE_MONTH ? await fetchAdminOnline(name) : null
     const kS = kpiN('sales', 5, 40), kO = kpiN('online', 75, 20)
     scorecard = { role: 'Sales agent', kpis: [
       { key: 'sales', label: 'Tracker sales', kind: 'count', target: Number(u?.target) || kS.target, weight: kS.weight, unit: 'sales', actual: salesActual },
@@ -7247,7 +7241,8 @@ app.get('/api/my/progress', auth, async (req, res) => {
         detail: stock ? `${stock.cleanThisMonth ?? 0} clean counts of ${stock.weeksExpected ?? 4} weeks${stock.outstandingMissing ? ` · ${stock.outstandingMissing} missing` : ''}` : null },
     ] }
   } else if (scKey === 'team-lead') {
-    const teamAtt = teamAttendancePct(u) // real now — from Pulse attendance
+    // teamAttendancePct only ever answers for the current month.
+    const teamAtt = liveOnly(teamAttendancePct(u))
     // Month-one ramp (Adama 2 Jul): keep the standard, ramp the man. Score
     // sales + attendance only; coaching stays an activity, NOT a scored KPI.
     // Numbers come from the KPI Targets store — the ramp's 12 is the catalog
@@ -7261,7 +7256,7 @@ app.get('/api/my/progress', auth, async (req, res) => {
     const [salesF, retF, onlF, revF] = await Promise.all([
       fetchAdminFeed(`/api/integrations/pulse/sales?month=${CUR}`),
       fetchAdminFeed(`/api/integrations/pulse/retention?month=${CUR}`),
-      fetchAdminFeed('/api/integrations/pulse/online'),
+      SCORING_LIVE_MONTH ? fetchAdminFeed('/api/integrations/pulse/online') : null,
       fetchAdminFeed(`/api/integrations/pulse/reviews?month=${CUR}`),
     ])
     const teamRows = (feed) => (feed?.agents || []).filter((a) => teamNames.has(a.name))
@@ -7309,6 +7304,161 @@ app.get('/api/my/progress', auth, async (req, res) => {
 
   // Normalized weights + any CEO-added custom KPIs join the card (Adama 3 Jul).
   if (scorecard && scKey) scorecard.kpis = overlayPlan(scorecard.kpis, scKey, CUR)
+  return { key: scKey, scorecard }
+}
+
+// One person's whole performance picture for a month. Everything the board row
+// and the record page show comes from here, so the two cannot disagree.
+async function performanceFor(u, month) {
+  const name = u.name
+  const person = team.find((t) => t.name === name) || null
+  const { scorecard } = await workScorecardFor({ u, person, name, month })
+  const work = workKpiScore(scorecard)
+  const att = attendanceMonth(u.username, month)
+  const reviewList = (db.read('reviews', {}))[name] || []
+  const manager = managerAssessment(reviewList, month)
+  const overall = overallPerformance({
+    work: work?.pct ?? null,
+    attendance: att.summary.ratePct,
+    manager: manager.pct,
+  })
+  return {
+    username: u.username,
+    name,
+    title: u.title || '',
+    department: u.department || '',
+    scorecardRole: scorecard?.role || null,
+    work: work ? { ...work, kpis: scorecard.kpis } : null,
+    attendance: {
+      pct: att.summary.ratePct,
+      late: att.summary.late,
+      absent: att.summary.absent,
+      present: att.summary.present,
+      scheduledDays: att.summary.scheduledDays,
+      keepsSchedule: att.keepsSchedule,
+    },
+    manager: { reviewed: manager.reviewed, pct: manager.pct, stars: manager.stars, at: manager.at },
+    overall,
+    status: perfStatus(overall),
+  }
+}
+
+// The board: every scored person for a month, plus the five header figures.
+// 🔒 The people scored are the LIVE roster — the same list Employees shows.
+app.get('/api/performance/board', auth, requireSub('hr', 'performance'), async (req, res) => {
+  const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? String(req.query.month) : todayKey().slice(0, 7)
+  // 🔒 Only the people this caller's HR power actually covers. A board that
+  // scored the whole company for anyone holding hr:performance would hand a
+  // supervisor everybody's numbers (rule 51 — a route acting on records
+  // re-checks WHICH records, not just that you are logged in).
+  const scope = powerScopeSet(req.realUser, 'hr')
+  const roster = seedUsers().filter((u) =>
+    scope.has(u.username) && !isArchived(u) && !/cleaner/i.test(`${u.title || ''} ${u.name || ''}`))
+  const people = await Promise.all(roster.map((u) => performanceFor(u, month)))
+
+  const prev = prevMonthKey(month)
+  const before = await Promise.all(roster.map((u) => performanceFor(u, prev)))
+  const avg = (list, pick) => {
+    const vals = list.map(pick).filter((v) => v != null)
+    return vals.length ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length) : null
+  }
+  const averagePerformance = avg(people, (p) => p.overall)
+  const attendanceAverage = avg(people, (p) => p.attendance.pct)
+  const prevPerformance = avg(before, (p) => p.overall)
+  const prevAttendance = avg(before, (p) => p.attendance.pct)
+  const scored = people.filter((p) => p.overall != null)
+  const top = scored.slice().sort((a, b) => b.overall - a.overall)[0] || null
+
+  res.json({
+    month,
+    weights: PERF_WEIGHTS,
+    people,
+    summary: {
+      employees: people.length,
+      onTrack: people.filter((p) => p.status === 'on-track').length,
+      needsAttention: people.filter((p) => p.status === 'needs-attention').length,
+      notScored: people.filter((p) => p.status === 'not-scored').length,
+      averagePerformance,
+      // 🔑 null, not 0 — "no comparison" and "no change" are different answers.
+      performanceDelta: averagePerformance == null || prevPerformance == null ? null : averagePerformance - prevPerformance,
+      attendanceAverage,
+      attendanceDelta: attendanceAverage == null || prevAttendance == null ? null : attendanceAverage - prevAttendance,
+      reviewsDue: people.filter((p) => !p.manager.reviewed).length,
+      reviewsTotal: people.length,
+      topPerformer: top ? { username: top.username, name: top.name, overall: top.overall, status: top.status } : null,
+    },
+  })
+})
+
+// One person's performance record. Same numbers as their row on the board,
+// plus what sits behind them: every KPI, the attendance month, the review
+// history, and what changed since last month.
+app.get('/api/performance/person/:username', auth, requireSub('hr', 'performance'), async (req, res) => {
+  // Reached by username, but an older bookmark carries a slugified NAME
+  // (/performance/sally-saidy) — that used to be the only address this page
+  // had, so it still has to resolve.
+  const key = String(req.params.username || '')
+  const slug = (n) => String(n || '').toLowerCase().replace(/\s+/g, '-')
+  const u = findUser(key) || seedUsers().find((x) => slug(x.name) === key)
+  if (!u) return res.status(404).json({ error: 'not found' })
+  // Same scope check as the board — a record page reached by URL is still a
+  // record, and being allowed the page is not being allowed this person.
+  if (!powerScopeSet(req.realUser, 'hr').has(u.username)) return res.status(403).json({ error: 'forbidden' })
+  const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? String(req.query.month) : todayKey().slice(0, 7)
+  const cur = await performanceFor(u, month)
+  const prev = await performanceFor(u, prevMonthKey(month))
+  const reviewList = ((db.read('reviews', {}))[u.name] || [])
+    .slice().sort((a, b) => (b.period || '').localeCompare(a.period || ''))
+  const coaching = db.read('coaching', []).filter((c) => c.username === u.username || c.name === u.name)
+  const warnings = db.read('warnings', []).filter((w) => w.agent === u.name)
+
+  // Points, the way the design reads them: what each source contributed out of
+  // the weight it carries. A source with no number contributes nothing and says
+  // so — it is not a zero.
+  const points = [
+    { key: 'work', label: 'Work KPIs (from Admin)', weight: PERF_WEIGHTS.work, pct: cur.work?.pct ?? null, was: prev.work?.pct ?? null },
+    { key: 'attendance', label: 'Attendance (from Pulse)', weight: PERF_WEIGHTS.attendance, pct: cur.attendance.pct, was: prev.attendance.pct },
+    { key: 'manager', label: 'Manager assessment', weight: PERF_WEIGHTS.manager, pct: cur.manager.pct, was: prev.manager.pct },
+  ].map((p) => ({
+    ...p,
+    earned: p.pct == null ? null : Math.round((p.pct / 100) * p.weight),
+    delta: p.pct == null || p.was == null ? null : p.pct - p.was,
+  }))
+
+  res.json({
+    month,
+    weights: PERF_WEIGHTS,
+    person: { username: u.username, name: u.name, title: u.title || '', department: u.department || '', status: u.status || 'active' },
+    performance: cur,
+    previous: { month: prevMonthKey(month), overall: prev.overall },
+    points,
+    attendanceMonth: attendanceMonth(u.username, month),
+    reviews: reviewList,
+    coaching,
+    warnings,
+  })
+})
+
+app.get('/api/my/progress', auth, async (req, res) => {
+  const name = req.user.name
+  const u = findUser(req.user.username)
+  const person = team.find((t) => t.name === name) || null
+  const profile = (db.read('profiles', {}))[name] || {}
+  const reviews = ((db.read('reviews', {}))[name] || [])
+    .slice().sort((a, b) => (a.period || '').localeCompare(b.period || ''))
+  const sales = (db.read('agent-sales', {}))[name] || null
+  const sc = profile.performanceScore === '' || profile.performanceScore == null ? null : Number(profile.performanceScore)
+
+  // ----- Scorecard: each ROLE has its own weighted KPIs (Adama 29 Jun). Targets
+  // + weights here; ACTUALS come from ADMIN once that connection is built —
+  // until then only sales has an interim actual (the sheet); every other KPI
+  // stays null ("Connecting to Admin") so nothing is ever faked. Roles covered:
+  // Sales agent, Customer Service, Team Lead. Technician = contractor, no
+  // scorecard for now.
+  const now = new Date()
+  const CUR = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const { key: scKey, scorecard } = await workScorecardFor({ u, person, name, month: CUR })
+
 
   // ----- MY HISTORY (Adama 4 Jul: the page showed only "now", nothing about
   // past performance). Month-by-month sales record: the SHEET is the truth

@@ -1,487 +1,570 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import {
-  ArrowLeft, Trophy, TrendingUp, TrendingDown, Minus, AlertTriangle, X, Check,
-  Star, Gift, Target, CalendarClock, ClipboardList, ArrowUpRight, Lightbulb, Lock, Plus, ExternalLink,
-} from 'lucide-react'
-import { team } from '../data/team'
+import { useEffect, useMemo, useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { ArrowLeft, ExternalLink, CalendarCheck, ClipboardList, TrendingUp, ShieldCheck, Lightbulb } from 'lucide-react'
 import { api } from '../lib/api.js'
-import PeriodPicker from '../components/PeriodPicker.jsx'
+import EmptyState from '../components/ui/EmptyState.jsx'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 import {
-  CUR_PERIOD, MONTH_NAMES, periodLabel, fmtDateY, slugify, RATING_AXES, ACTION_OPTIONS,
-  band, statusFor, defaultPeriod, scoreForPeriod, salesForPeriod, insightsFor, trendSeries, monthTarget,
-  effectiveScore, salesTrendDelta,
-} from '../lib/performance.js'
+  PERF_WEIGHTS, PERF_STATUS, SCORE_GUIDE, RATING_AXES, kpiAttainment,
+} from '../../lib/performance-model.js'
+import { SOURCE_TONE, GRADE_TONE, StatusChip, Meter, Ring, Stars, initials, gradeTone } from '../components/performance.jsx'
 
-const TABS = [['overview', 'Overview'], ['kpis', 'KPIs'], ['trend', 'Trend'], ['reviews', 'Reviews']]
+// One person's performance record — Adama's 29 Aug design.
+//
+// 🔒 Nothing on this page is typed by hand except the manager's assessment, and
+// that is a QUARTER of the score. The rest is read from Admin and from Pulse
+// attendance and shown with its source named, so somebody being judged can see
+// exactly which system produced which number.
+//
+// Same endpoint family as the board, so the row you clicked and the page you
+// land on cannot say two different things.
 
-// `embeddedFor` renders this inside an employee's record: same page, same
-// numbers, minus its own back link and name header.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const monthLabel = (m) => { const [y, mo] = String(m).split('-'); return `${MONTHS[Number(mo) - 1] || '?'} ${y}` }
+const dayLabel = (iso) => {
+  const d = new Date(iso || '')
+  return isNaN(d) ? '—' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+}
+function monthOptions() {
+  const now = new Date()
+  const out = []
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))
+    out.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`)
+  }
+  return out
+}
+const CUR_MONTH = monthOptions()[0]
+
+const TABS = [
+  ['overview', 'Overview'],
+  ['kpis', 'KPIs (Admin data)'],
+  ['attendance', 'Attendance (Pulse)'],
+  ['review', 'Manager review'],
+  ['history', 'Reviews history'],
+  ['notes', 'Notes & actions'],
+]
+
 export default function PerformancePerson({ embeddedFor = null }) {
   const { slug } = useParams()
   const navigate = useNavigate()
-  // Embedded in a record, the person comes with it. Standalone, look in the
-  // static roster first and then ASK THE SERVER — anyone created in Pulse is
-  // not in that file, and used to land on "Employee not found" here.
-  const [fetched, setFetched] = useState(null)
-  const person = useMemo(
-    () => embeddedFor || team.find((t) => slugify(t.name) === slug) || fetched,
-    [slug, embeddedFor, fetched],
-  )
-  useEffect(() => {
-    if (embeddedFor || team.find((t) => slugify(t.name) === slug)) return
-    api('/hr/employees')
-      .then((d) => {
-        const found = (d.employees || []).find((e) => slugify(e.name) === slug || e.username === slug)
-        if (found) setFetched({ name: found.name, role: found.title, type: found.department, target: 0, status: found.status })
-      })
-      .catch(() => {})
-  }, [slug, embeddedFor])
-
+  const username = embeddedFor?.username || slug
+  const [month, setMonth] = useState(CUR_MONTH)
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
   const [tab, setTab] = useState('overview')
-  const [period, setPeriod] = useState(defaultPeriod)
 
-  const [live, setLive] = useState({ score: null, note: '', nextReview: '' })
-  const [reviews, setReviews] = useState([])
-  const [sales, setSales] = useState(null)
-  const [warnings, setWarnings] = useState([])
-  const [reviewing, setReviewing] = useState(false)
-  const [openReview, setOpenReview] = useState(null)
-
-  // Editable live score + note (current period only).
-  const [draft, setDraft] = useState('')
-  const [noteDraft, setNoteDraft] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [savedFlash, setSavedFlash] = useState(false)
-
-  useEffect(() => {
-    if (!person) return
-    const n = encodeURIComponent(person.name)
-    api(`/employee-profile?name=${n}`).then((d) => {
-      const p = d.profile || {}; const raw = p.performanceScore
-      const sc = raw === '' || raw == null ? null : Number(raw)
-      setLive({ score: sc, note: p.performanceNote || '', nextReview: p.nextReview || '' })
-      setDraft(sc == null ? '' : String(sc)); setNoteDraft(p.performanceNote || '')
-    }).catch(() => {})
-    api(`/reviews?name=${n}`).then((d) => setReviews(d.reviews || [])).catch(() => setReviews([]))
-    api(`/agent-sales?name=${n}`).then((d) => setSales(d.sales || null)).catch(() => setSales(null))
-    api(`/warnings?agent=${n}`).then((d) => setWarnings(d.warnings || [])).catch(() => setWarnings([]))
-  }, [person?.name])
-
-  if (!person) return <div className="p-8 text-[13px] text-[var(--color-ink-soft)]">Employee not found. <button onClick={() => navigate('/performance')} className="font-semibold text-[var(--color-brand)] underline">Back to Performance</button></div>
-
-  const liveMap = { [person.name]: live }
-  const reviewsMap = { [person.name]: reviews }
-  const editable = period.kind === 'current'
-  const score = scoreForPeriod(person.name, period, liveMap, reviewsMap)
-  // Manual review/live score (what the manager set, if anything).
-  const manualScore = editable ? (draft === '' ? null : Number(draft)) : score
-  // Headline score: manual wins; a sales role falls back to real sales attainment.
-  const { score: effScore, source: effSource } = effectiveScore(manualScore, person, sales, period)
-  const b = band(effScore)
-  const periodReview = period.kind === 'month' ? reviews.find((r) => r.period === period.period) : null
-  const periodStatus = periodReview?.status || statusFor(effScore).label
-  const periodSales = salesForPeriod(sales, period)
-  const insights = insightsFor(person.name, liveMap, reviewsMap, sales)
-  const series = trendSeries(reviews, live.score)
-  // 🔑 Money that is not known prints as "—", never D0: admin months carried no
-  // revenue at all until the feed started sending it, and a zero there reads as
-  // "this month earned nothing".
-  const money = (v) => (v == null ? '—' : `D${v.toLocaleString()}`)
-  const salesOfTarget = (r) => (r.target ? `${r.sales}/${r.target} sales` : `${r.sales} sale${r.sales === 1 ? '' : 's'}`)
-  const hasCurrentReview = reviews.some((r) => r.period === CUR_PERIOD)
-  const initials = person.name.split(' ').map((w) => w[0]).slice(0, 2).join('')
-
-  const prevScore = series.length >= 2 ? series[series.length - 2].v : null
-  const delta = effSource === 'sales'
-    ? salesTrendDelta(sales, period)
-    : (manualScore != null && prevScore != null && period.kind === 'current' ? manualScore - prevScore : null)
-
-  async function saveScore() {
-    setSaving(true)
-    try {
-      await api('/employee-profile', { method: 'PUT', body: { name: person.name, fields: { performanceScore: draft === '' ? '' : String(draft), performanceNote: noteDraft || '' } } })
-      setLive((l) => ({ ...l, score: draft === '' ? null : Number(draft), note: noteDraft }))
-      setSavedFlash(true); setTimeout(() => setSavedFlash(false), 1800)
-    } catch { /* ignore */ }
-    setSaving(false)
+  const load = () => {
+    setError(null)
+    api(`/performance/person/${encodeURIComponent(username)}?month=${month}`).then(setData).catch((e) => setError(e.message))
   }
-  function reloadReviews() { api(`/reviews?name=${encodeURIComponent(person.name)}`).then((d) => setReviews(d.reviews || [])).catch(() => {}) }
+  useEffect(() => { setData(null); load() }, [username, month])
+
+  if (error) {
+    return (
+      <div className="card">
+        <EmptyState title="That performance record could not be opened" line={error}
+          action={<Link to="/performance" className="text-[13px] font-semibold text-[var(--color-brand)]">Back to performance</Link>} />
+      </div>
+    )
+  }
+  if (!data) return <PageSkeleton tiles={3} rows={6} />
+
+  const { person, performance: p, points, previous } = data
+  const reviewedThisMonth = p.manager.reviewed
 
   return (
-    <div className={embeddedFor ? 'space-y-4' : 'mx-auto max-w-5xl space-y-4 pb-16'}>
+    <div>
       {!embeddedFor && (
-        <button onClick={() => navigate('/performance')} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><ArrowLeft size={16} /> Back to Performance</button>
+        <button onClick={() => navigate('/performance')}
+          className="mb-4 inline-flex items-center gap-2 text-[13px] font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
+          <ArrowLeft size={15} /> Back to performance
+        </button>
       )}
 
-      {/* Header — the record shows who this is, so embedded keeps only the
-          period switcher. */}
-      <div className={embeddedFor
-        ? 'flex flex-wrap items-center justify-end gap-4'
-        : 'flex flex-wrap items-start justify-between gap-4 rounded-lg border border-[var(--color-line)] bg-white p-5'}>
-        {!embeddedFor && (
-        <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg text-[18px] font-semibold text-white" style={{ background: 'var(--gradient-avatar)' }}>{initials}</div>
-          <div>
-            <h1 className="t-page">{person.name}</h1>
-            <p className="text-[13px] text-[var(--color-ink-soft)]">{person.role} · {person.type}</p>
-            <button onClick={() => navigate(`/agents/${slugify(person.name)}`)} className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"><ExternalLink size={12} /> Full employee profile</button>
+      <div className="card flex flex-wrap items-center justify-between gap-6 p-5">
+        <div className="flex min-w-0 items-center gap-3.5">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-[16px] font-semibold text-white"
+            style={{ background: p.overall == null ? 'var(--color-pill-inactive)' : gradeTone(p.overall) }}>
+            {initials(person.name)}
+          </span>
+          <div className="min-w-0">
+            <h1 className="truncate text-[22px] font-semibold tracking-[-0.3px] text-[var(--color-ink)]">{person.name}</h1>
+            <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">{person.title || '—'} · {person.department || '—'}</p>
+            <Link to={`/people/${person.username}`} className="mt-1.5 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-brand)] hover:underline">
+              View full employee profile <ExternalLink size={12} />
+            </Link>
           </div>
         </div>
-        )}
-        {/* Period switcher */}
-        <PeriodPicker value={period} onChange={setPeriod} />
+
+        <div className="flex flex-wrap items-start gap-8">
+          <Fact label="Overall performance" hint={`Work KPIs ${PERF_WEIGHTS.work}% + attendance ${PERF_WEIGHTS.attendance}% + manager ${PERF_WEIGHTS.manager}%, over the sources that have a number.`}>
+            <span className="text-[26px] font-semibold leading-none tabular-nums" style={{ color: gradeTone(p.overall) }}>
+              {p.overall == null ? '—' : `${p.overall}%`}
+            </span>
+          </Fact>
+          <Fact label="Status"><StatusChip status={p.status} /></Fact>
+          <Fact label="Review">
+            <span className="block text-[15px] font-semibold text-[var(--color-ink)]">{reviewedThisMonth ? 'Reviewed' : 'Not reviewed'}</span>
+            <span className="mt-1 block text-[12px]" style={{ color: reviewedThisMonth ? 'var(--color-ink-faint)' : 'var(--color-pill-leave)' }}>
+              {reviewedThisMonth ? dayLabel(p.manager.at) : p.overall == null ? 'Not due yet' : `Due this ${month === CUR_MONTH ? 'month' : monthLabel(month)}`}
+            </span>
+          </Fact>
+          <Fact label="Period">
+            <select value={month} onChange={(e) => setMonth(e.target.value)} className="field" aria-label="Month">
+              {monthOptions().map((m) => <option key={m} value={m}>{m === CUR_MONTH ? 'This month' : monthLabel(m)}</option>)}
+            </select>
+          </Fact>
+        </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <SummaryCard label="Score" value={effScore == null ? '—' : `${effScore}%`} accent={b.text}
-          sub={<span className="flex items-center gap-1.5"><span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${b.chip}`}>{b.label}</span>{effSource === 'sales' && <span className="text-[11.5px] font-medium text-[var(--color-good)]">from sales</span>}</span>} big />
-        <SummaryCard label="Revenue" value={periodSales ? money(periodSales.revenue) : '—'} accent="text-[var(--color-ink)]" sub={periodSales ? salesOfTarget(periodSales) : 'no sales data'} />
-        <SummaryCard label="Status" value={periodStatus} accent={b.text} small />
-        <SummaryCard label="Trend" value={delta == null ? '—' : <span className={`inline-flex items-center gap-0.5 ${delta > 0 ? 'text-[var(--color-good)]' : delta < 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink-faint)]'}`}>{delta > 0 ? <TrendingUp size={20} /> : delta < 0 ? <TrendingDown size={20} /> : <Minus size={20} />}{delta > 0 ? `+${delta}` : delta}</span>} accent="text-[var(--color-ink)]" sub="vs last month" />
+      <div className="mb-5 mt-5 flex flex-wrap items-center gap-1 border-b border-[var(--color-line)]">
+        {TABS.map(([k, label]) => (
+          <button key={k} onClick={() => setTab(k)}
+            className={`-mb-px border-b-2 px-3.5 py-2.5 text-[13px] font-medium ${tab === k ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-[var(--color-line)]">
-        <div className="flex gap-4">
-          {TABS.map(([id, label]) => (
-            <button key={id} onClick={() => setTab(id)} className={`relative -mb-px border-b-2 px-1 py-3 text-[13px] font-semibold transition-colors ${tab === id ? 'border-[var(--color-brand)] text-[var(--color-ink)]' : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink-soft)]'}`}>
-              {label}{id === 'reviews' && reviews.length ? <span className="ml-1.5 rounded-full bg-[var(--color-fill)] px-1.5 text-[11px] text-[var(--color-ink-soft)]">{reviews.length}</span> : null}
-            </button>
+      {tab === 'overview' && <Overview data={data} month={month} previous={previous} points={points} />}
+      {tab === 'kpis' && <KpiTab work={p.work} month={month} />}
+      {tab === 'attendance' && <AttendanceTab month={data.attendanceMonth} label={monthLabel(month)} />}
+      {tab === 'review' && <ReviewTab data={data} month={month} onSaved={() => { setData(null); load() }} />}
+      {tab === 'history' && <HistoryTab reviews={data.reviews} />}
+      {tab === 'notes' && <NotesTab coaching={data.coaching} warnings={data.warnings} />}
+    </div>
+  )
+}
+
+function Fact({ label, children, hint }) {
+  return (
+    <div className="border-l border-[var(--color-line)] pl-6 first:border-0 first:pl-0">
+      <p className="text-[12px] font-medium text-[var(--color-ink-faint)]" title={hint || undefined}>{label}</p>
+      <div className="mt-2">{children}</div>
+    </div>
+  )
+}
+
+// ---------- Overview ----------
+// Exported so the record page can be rendered and looked at with real-shaped
+// data without a login (and so the render test covers it, not just the shell).
+export function Overview({ data, month, previous, points }) {
+  const p = data.performance
+  const insight = useMemo(() => keyInsight(data, month), [data, month])
+  const actions = recommendedActions(data)
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="card p-5 lg:col-span-1">
+        <h2 className="text-[14px] font-semibold text-[var(--color-ink)]">Performance summary</h2>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--color-ink-soft)]">
+          Overall score is calculated from work KPIs, attendance and manager assessment.
+        </p>
+
+        <div className="mt-5 flex flex-wrap items-center gap-6">
+          <Donut points={points} overall={p.overall} />
+          <div className="min-w-[190px] flex-1 space-y-3">
+            {points.map((pt) => (
+              <div key={pt.key} className="flex items-start gap-2.5">
+                <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: SOURCE_TONE[pt.key] }} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12.5px] text-[var(--color-ink-soft)]">{pt.label}</span>
+                  <span className="mt-0.5 block text-[12px] text-[var(--color-ink-faint)]">
+                    {pt.earned == null
+                      ? `Not scored — of ${pt.weight} points`
+                      : `${pt.earned} of ${pt.weight} points`}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: pt.pct == null ? 'var(--color-ink-faint)' : 'var(--color-ink)' }}>
+                  {pt.weight}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[var(--color-line-soft)] pt-4 text-[11.5px] text-[var(--color-ink-faint)]">
+          <span>Score guide:</span>
+          {SCORE_GUIDE.map((g) => (
+            <span key={g.id} className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full" style={{ background: GRADE_TONE[g.id] }} />
+              {g.id === 'excellent' ? '90%+' : g.id === 'good' ? '70 – 89%' : g.id === 'attention' ? '50 – 69%' : 'Below 50%'} {g.label}
+            </span>
           ))}
         </div>
       </div>
 
-      {tab === 'overview' && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="space-y-4 lg:col-span-2">
-            {/* Headline score: sales attainment for sales roles, or the manager's
-                review/live score. A manual score (slider below) always overrides. */}
-            <Card title={`Performance · ${period.label}`}>
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-[11.5px] text-[var(--color-ink-faint)]">{effSource === 'sales' ? 'Sales score · target attainment' : period.kind === 'range' ? 'Average score' : period.kind === 'current' ? 'Score' : 'Locked score'}</p>
-                  <p className={`text-6xl font-semibold leading-none ${b.text}`}>{effScore == null ? '—' : `${effScore}%`}</p>
-                  {effSource === 'sales' && periodSales && <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">{salesOfTarget(periodSales)}{periodSales.revenue != null ? ` · ${money(periodSales.revenue)}` : ''}</p>}
-                </div>
-                <span className={`rounded-full px-3 py-1 text-[11.5px] font-medium ${statusFor(effScore).tone}`}>{periodStatus}</span>
-              </div>
-              {editable && (
-                <div className="mt-4 border-t border-[var(--color-line-soft)] pt-3">
-                  <p className="mb-1 text-[11.5px] font-medium text-[var(--color-ink-faint)]">Manager score {effSource === 'sales' && <span className="font-normal normal-case text-[var(--color-ink-faint)]">— set to override the sales score</span>}</p>
-                  <input type="range" min="0" max="100" value={draft === '' ? 0 : draft} onChange={(e) => setDraft(e.target.value)} className="w-full accent-[var(--color-brand)]" />
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-[11px] text-[var(--color-ink-faint)]">{draft === '' ? 'No manual score — using the sales score above.' : `Manual score: ${draft}%`}</span>
-                    <div className="flex-1" />
-                    <input type="number" min="0" max="100" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="—" className="w-20 rounded-lg border border-[var(--color-line)] px-2 py-1 text-[13px]" />
-                    <button onClick={() => setDraft('')} className="rounded-lg px-2 py-1 text-[11.5px] text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]">Clear</button>
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            {/* Real monthly sales + customers — the substance of the page */}
-            {sales && <Card title={`Sales by month · ${period.label}`} icon={Trophy}><SalesBreakdown sales={sales} period={period} /></Card>}
-
-            {/* Insights */}
-            <Card title="Performance insights" icon={Lightbulb}>
-              <ul className="space-y-2">{insights.map((it, i) => <li key={i} className="flex items-start gap-2.5 text-[13px]"><span className={`mt-1.5 block h-1.5 w-1.5 shrink-0 rounded-full ${it.tone === 'good' ? 'bg-[var(--color-good)]' : it.tone === 'bad' ? 'bg-[var(--color-bad)]' : 'bg-[var(--color-ink-faint)]'}`} /><span className="leading-snug text-[var(--color-ink-soft)]">{it.text}</span></li>)}</ul>
-            </Card>
-
-            {/* Manager notes */}
-            <Card title="Manager notes">
-              {editable ? (
-                <>
-                  <textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} rows={3} placeholder="e.g. Strong month — candidate for promotion." className="w-full rounded-lg border border-[var(--color-line)] p-3 text-[13px] focus:border-[var(--color-ink-faint)] focus:outline-none" />
-                  <div className="mt-3 flex items-center gap-3">
-                    <button onClick={saveScore} disabled={saving} className="rounded-[8px] bg-[var(--color-brand)] px-[18px] py-2.5 text-[13px] font-medium text-white hover:brightness-95 disabled:opacity-50">{saving ? 'Saving…' : 'Save score & notes'}</button>
-                    {savedFlash && <span className="inline-flex items-center gap-1 text-[13px] text-[var(--color-good)]"><Check size={15} /> Saved</span>}
-                  </div>
-                </>
-              ) : <p className="rounded-lg bg-[var(--color-fill)] p-3 text-[13px] text-[var(--color-ink-soft)]">{periodReview?.notes || 'No notes recorded for this period.'}</p>}
-            </Card>
+      <div className="space-y-4">
+        <div className="card p-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-[14px] font-semibold text-[var(--color-ink)]">What&rsquo;s driving this score?</h2>
+            <span className="text-[11.5px] text-[var(--color-ink-faint)]">vs {monthLabel(previous.month)}</span>
           </div>
-
-          {/* Right rail: actions + warnings */}
-          <div className="space-y-4">
-            <RecommendedActions score={effScore} warnings={warnings} />
-            <Card title="Warnings">
-              {warnings.length === 0 ? <p className="text-[13px] text-[var(--color-ink-soft)]">No active warnings.</p>
-                : <div className="space-y-2">{warnings.map((w, i) => <div key={i} className="flex items-start gap-2 rounded-lg bg-[var(--color-bad-bg)] p-3 text-[13px] text-[var(--color-bad)]"><AlertTriangle size={14} className="mt-0.5 shrink-0" /><span>{w.reason || w.note || 'Warning'}</span></div>)}</div>}
-            </Card>
+          <div className="mt-3.5 divide-y divide-[var(--color-line-soft)]">
+            {points.map((pt) => (
+              <div key={pt.key} className="flex items-center justify-between gap-3 py-3">
+                <span className="text-[13px] text-[var(--color-ink-soft)]">{pt.label.replace(/ \(.*\)$/, '')}</span>
+                <span className="flex items-center gap-4">
+                  <span className="text-[13px] font-semibold tabular-nums" style={{ color: pt.pct == null ? 'var(--color-ink-faint)' : 'var(--color-ink)' }}>
+                    {pt.pct == null ? '—' : `${pt.pct}%`}
+                  </span>
+                  <span className="w-[52px] text-right text-[12.5px] font-semibold tabular-nums"
+                    style={{ color: pt.delta == null ? 'var(--color-ink-faint)' : pt.delta > 0 ? 'var(--color-pill-active)' : pt.delta < 0 ? 'var(--color-stage-out)' : 'var(--color-ink-faint)' }}>
+                    {pt.delta == null ? '—' : `${pt.delta > 0 ? '↑' : pt.delta < 0 ? '↓' : ''}${Math.abs(pt.delta)}%`}
+                  </span>
+                </span>
+              </div>
+            ))}
           </div>
         </div>
-      )}
 
-      {tab === 'kpis' && (
-        <div className="max-w-2xl space-y-4">
-          {periodSales && periodSales.target != null && (
-            <div className="rounded-lg border border-[var(--color-good-bg)] bg-[var(--color-good-bg)] p-5">
-              <div className="mb-3 flex items-center justify-between"><span className="flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-good)]"><Trophy size={15} /> Sales</span><span className="text-[15px] font-semibold text-[var(--color-ink)]">{periodSales.sales}/{periodSales.target}</span></div>
-              <div className="h-3 overflow-hidden rounded-full bg-[var(--color-good-bg)]"><div className="h-full rounded-full bg-[var(--color-good)]" style={{ width: `${Math.min(periodSales.target ? (periodSales.sales / periodSales.target) * 100 : 0, 100)}%` }} /></div>
-              <p className="mt-2 text-[11.5px] text-[var(--color-ink-soft)]">{periodSales.revenue != null ? `${money(periodSales.revenue)} revenue` : 'Revenue not recorded for this period'}{periodSales.pending ? ' · not entered yet' : ''}</p>
-            </div>
-          )}
-          {sales && <Card title={`Sales by month · ${period.label}`} icon={Trophy}><SalesBreakdown sales={sales} period={period} /></Card>}
-          <Card title={periodReview ? `Reviewed KPIs · ${period.label}` : 'Current KPI'}>
-            {periodReview?.kpis?.length > 0 ? (
-              <div className="space-y-2">{periodReview.kpis.map((k, i) => <div key={i} className="flex items-center gap-2.5 text-[13px]">{k.done ? <Check size={16} className="text-[var(--color-good)]" /> : <X size={16} className="text-[var(--color-bad)]" />}<span className={k.done ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)]'}>{k.label}</span></div>)}</div>
-            ) : (
-              <div>
-                <p className="rounded-lg bg-[var(--color-fill)] p-3 text-[13px] text-[var(--color-ink-soft)]">{person.kpi || person.coreResponsibility || 'No KPI set.'}</p>
-                {period.kind === 'current' && <p className="mt-2 text-[11.5px] text-[var(--color-ink-faint)]">Tick off KPIs as done when you complete this month's review (Reviews tab).</p>}
-              </div>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {tab === 'trend' && (
-        <Card title="Performance trend">
-          {series.length >= 2 ? <BigTrend series={series} />
-            : <div className="py-8 text-center"><p className="text-[13px] text-[var(--color-ink-soft)]">Not enough history yet.</p><p className="mt-1 text-[11.5px] text-[var(--color-ink-faint)]">The trend builds as you complete and lock monthly reviews. {series.length === 1 ? `So far: ${series[0].v}% in ${periodLabel(series[0].period)}.` : ''}</p></div>}
-        </Card>
-      )}
-
-      {tab === 'reviews' && (
-        <ReviewsTab person={person} reviews={reviews} hasCurrent={hasCurrentReview} draft={draft} noteDraft={noteDraft} warningsCount={warnings.length}
-          onComplete={() => setReviewing(true)} onOpen={setOpenReview} />
-      )}
-
-      {reviewing && <ReviewForm person={person} defaultScore={draft} defaultNotes={noteDraft} warningsCount={warnings.length} onClose={() => setReviewing(false)} onSaved={() => { setReviewing(false); reloadReviews() }} />}
-      {openReview && <ReviewDetail review={openReview} onClose={() => setOpenReview(null)} />}
-    </div>
-  )
-}
-
-// Real month-by-month sales for the active period — counts, revenue and the
-// actual customers closed. This is the substance of a sales rep's performance.
-function SalesBreakdown({ sales, period }) {
-  if (!sales || !sales.months) return null
-  const all = Object.keys(sales.months)
-  let months = period.kind === 'current' || period.kind === 'month' ? [period.period]
-    : period.kind === 'all' ? all : (period.months || [])
-  months = months.filter((m) => sales.months[m]).sort()
-  if (!months.length) return <p className="rounded-lg bg-[var(--color-fill)] p-3 text-[13px] text-[var(--color-ink-soft)]">No sales recorded for this period.</p>
-  const live = months.filter((m) => !sales.months[m].pending)
-  const totSales = live.reduce((s, m) => s + (sales.months[m].sales || 0), 0)
-  // Only months that actually carry a figure are added up, and the total says
-  // so — adding an unknown month as zero understated the period silently.
-  const withRev = live.filter((m) => sales.months[m].revenue != null)
-  const totRev = withRev.length ? withRev.reduce((s, m) => s + (sales.months[m].revenue || 0), 0) : null
-  return (
-    <div>
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-[13px] font-semibold text-[var(--color-ink)]">{totSales} sale{totSales === 1 ? '' : 's'}</span>
-        <span className="text-[13px] font-semibold text-[var(--color-ink)]">{totRev == null ? <span className="font-normal text-[var(--color-ink-faint)]">revenue not recorded</span> : <>D{totRev.toLocaleString()} <span className="font-normal text-[var(--color-ink-faint)]">revenue{withRev.length < live.length ? ` · ${withRev.length} of ${live.length} months` : ''}</span></>}</span>
+        {insight && (
+          <div className="card flex items-start gap-3 p-5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{ background: 'var(--color-stage-new-bg)', color: 'var(--color-stage-new)' }}>
+              <Lightbulb size={16} />
+            </span>
+            <span>
+              <span className="block text-[13px] font-semibold text-[var(--color-ink)]">Key insight</span>
+              <span className="mt-1 block text-[12.5px] leading-relaxed text-[var(--color-ink-soft)]">{insight}</span>
+            </span>
+          </div>
+        )}
       </div>
-      <div className="space-y-2.5">
-        {months.map((m) => {
-          const r = sales.months[m]
-          // The target this month was set against, not one number applied to
-          // every month on the page.
-          const target = monthTarget(sales, m)
-          const pct = target ? Math.min((r.sales / target) * 100, 100) : 0
-          const custs = r.customers || []
-          return (
-            <div key={m} className="rounded-lg border border-[var(--color-line)] p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-[13px] font-semibold text-[var(--color-ink)]">{periodLabel(m)}</span>
-                <span className="text-[13px] font-semibold text-[var(--color-ink-soft)]">{r.pending ? <span className="text-[11px] font-medium text-[var(--color-warn)]">not entered yet</span> : target ? `${r.sales}/${target}` : `${r.sales} sale${r.sales === 1 ? '' : 's'}`}</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-[var(--color-fill)]"><div className="h-full rounded-full bg-[var(--color-good)]" style={{ width: `${pct}%` }} /></div>
-              <div className="mt-2 flex items-start justify-between gap-3">
-                <div className="flex flex-wrap gap-1.5">
-                  {/* 🔑 This line is about the CUSTOMERS, so it may only speak
-                      about customers. It used to say "No sales this month"
-                      whenever no names came through, printing the opposite of
-                      the count sitting right above it. */}
-                  {custs.length ? custs.map((c, i) => <span key={i} className="inline-flex items-center rounded-full bg-[var(--color-good-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-good)]">{c}</span>)
-                    : <span className="text-[11px] text-[var(--color-ink-faint)]">{r.pending ? '—' : r.sales ? 'Customers not listed' : 'No sales this month'}</span>}
-                </div>
-                <span className="shrink-0 text-[11.5px] font-semibold text-[var(--color-ink-soft)]">{r.revenue == null ? '—' : `D${r.revenue.toLocaleString()}`}</span>
-              </div>
-            </div>
-          )
-        })}
+
+      <div className="space-y-4">
+        <div className="card p-5">
+          <h2 className="text-[14px] font-semibold text-[var(--color-ink)]">Recommended actions</h2>
+          <div className="mt-3.5 space-y-2">
+            {actions.map((a) => (
+              <Link key={a.label} to={a.to}
+                className="flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[12.5px] font-semibold transition-colors hover:opacity-90"
+                style={{ background: a.tint, color: a.ink }}>
+                <a.icon size={14} /> {a.label}
+              </Link>
+            ))}
+          </div>
+          <p className="mt-3.5 text-[11.5px] text-[var(--color-ink-faint)]">Based on this month&rsquo;s KPIs, attendance and review status.</p>
+        </div>
+
+        <div className="card flex items-start gap-3 p-4"
+          style={{ background: 'var(--color-stage-new-bg)', borderColor: 'var(--color-stage-new-bg)' }}>
+          <ShieldCheck size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--color-stage-new)' }} />
+          <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--color-stage-new)' }}>
+            Scores are calculated automatically from Admin and Pulse data. Managers provide assessment and feedback — they do not override factual results.
+          </p>
+        </div>
       </div>
     </div>
   )
 }
 
-function SummaryCard({ label, value, sub, accent = 'text-[var(--color-ink)]', big, small }) {
+// The donut is the score AND its make-up: one arc per source, sized by the
+// points that source actually earned. 🔒 A source with no number draws no arc —
+// the gap in the ring is the missing review, not a zero.
+function Donut({ points, overall, size = 150, stroke = 16 }) {
+  const r = (size - stroke) / 2
+  const c = 2 * Math.PI * r
+  let offset = 0
+  const arcs = points.map((pt) => {
+    const len = ((pt.earned || 0) / 100) * c
+    const arc = { key: pt.key, len, offset }
+    offset += len
+    return arc
+  })
   return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-white p-4">
-      <p className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">{label}</p>
-      <p className={`mt-1 truncate font-semibold ${big ? 'text-[26px]' : small ? 'text-base' : 'text-[22px]'} ${accent}`}>{value}</p>
-      {sub ? <p className="mt-1 text-[11.5px] text-[var(--color-ink-soft)]">{sub}</p> : <p className="mt-1 text-[11.5px]">&nbsp;</p>}
-    </div>
-  )
-}
-
-function Card({ title, icon: Icon, children }) {
-  return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-white p-5">
-      <div className="mb-3 flex items-center gap-2">{Icon && <Icon size={15} className="text-[var(--color-ink-faint)]" />}<h3 className="text-[11.5px] font-medium text-[var(--color-ink-soft)]">{title}</h3></div>
-      {children}
-    </div>
-  )
-}
-
-function RecommendedActions({ score, warnings }) {
-  const s = score
-  const recs = []
-  if (s == null) recs.push({ icon: ClipboardList, label: 'Set a score', tone: 'gray' })
-  if (s != null && s >= 95) { recs.push({ icon: Star, label: 'Public recognition', tone: 'emerald' }); recs.push({ icon: Gift, label: 'Recommend bonus', tone: 'emerald' }); recs.push({ icon: ArrowUpRight, label: 'Promotion candidate', tone: 'blue' }) }
-  else if (s != null && s >= 85) recs.push({ icon: Gift, label: 'Bonus candidate', tone: 'blue' })
-  if (s != null && s < 55) { recs.push({ icon: CalendarClock, label: 'Schedule coaching', tone: 'amber' }); recs.push({ icon: Target, label: 'Weekly check-in', tone: 'amber' }); recs.push({ icon: AlertTriangle, label: 'Performance improvement plan', tone: 'red' }) }
-  else if (s != null && s < 70) recs.push({ icon: Target, label: 'Set clearer goals', tone: 'amber' })
-  if (warnings.length) recs.push({ icon: AlertTriangle, label: 'Address warnings', tone: 'red' })
-  const RTONE = { red: 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]', amber: 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]', blue: 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]', emerald: 'bg-[var(--color-good-bg)] text-[var(--color-good)]', gray: 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]' }
-  return (
-    <Card title="Recommended actions">
-      <div className="flex flex-wrap gap-2">{recs.map((r, i) => <span key={i} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-medium ${RTONE[r.tone]}`}><r.icon size={13} />{r.label}</span>)}</div>
-      <p className="mt-2 text-[11px] text-[var(--color-ink-faint)]">Suggested from score + warnings.</p>
-    </Card>
-  )
-}
-
-// Larger trend chart for the dedicated Trend tab.
-function BigTrend({ series }) {
-  const W = 640, H = 220, padX = 32, padY = 24
-  const vals = series.map((s) => s.v)
-  const min = Math.max(0, Math.min(...vals) - 6), max = Math.min(100, Math.max(...vals) + 6)
-  const x = (i) => padX + (i * (W - padX * 2)) / Math.max(series.length - 1, 1)
-  const y = (v) => H - padY - ((v - min) / (max - min || 1)) * (H - padY * 2)
-  const d = series.map((s, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(s.v).toFixed(1)}`).join(' ')
-  const area = `${d} L${x(series.length - 1)},${H - padY} L${x(0)},${H - padY} Z`
-  return (
-    <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: 240 }}>
-        {[0, 0.5, 1].map((g) => { const yy = padY + g * (H - padY * 2); return <line key={g} x1={padX} x2={W - padX} y1={yy} y2={yy} stroke="var(--color-line-soft)" strokeWidth="1" /> })}
-        <path d={area} fill="rgba(214,41,79,0.08)" />
-        <path d={d} fill="none" stroke="var(--color-brand)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        {series.map((s, i) => <g key={i}><circle cx={x(i)} cy={y(s.v)} r="4" fill="var(--color-brand)" /><text x={x(i)} y={y(s.v) - 10} textAnchor="middle" className="fill-[var(--color-ink-soft)] text-[12px] font-semibold">{s.v}</text><text x={x(i)} y={H - 6} textAnchor="middle" className="fill-[var(--color-ink-faint)] text-[11px]">{MONTH_NAMES[Number(String(s.period).split('-')[1]) - 1]}</text></g>)}
+    <span className="relative inline-flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-fill)" strokeWidth={stroke} />
+        {arcs.filter((a) => a.len > 0).map((a) => (
+          <circle key={a.key} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={SOURCE_TONE[a.key]} strokeWidth={stroke}
+            strokeDasharray={`${a.len} ${c - a.len}`} strokeDashoffset={-a.offset} />
+        ))}
       </svg>
-    </div>
+      <span className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-[28px] font-semibold leading-none tabular-nums" style={{ color: gradeTone(overall) }}>
+          {overall == null ? '—' : `${overall}%`}
+        </span>
+        <span className="mt-1 text-[11px] text-[var(--color-ink-faint)]">Overall score</span>
+      </span>
+    </span>
   )
 }
 
-function ReviewsTab({ reviews, hasCurrent, onComplete, onOpen }) {
-  const yr = new Date().getFullYear()
-  const pad2 = (n) => String(n).padStart(2, '0')
-  const reviewed = new Set((reviews || []).map((r) => r.period))
-  const curMonth = new Date().getMonth()
+// 🔒 Derived from the numbers on the page, never invented. If nothing stands
+// out, the card is not shown at all rather than filled with something bland.
+function keyInsight(data, month) {
+  const p = data.performance
+  const w = p.work
+  if (w && w.measured === 0 && w.total > 0) return `No work KPI can be measured yet for ${monthLabel(month)}, so the score rests on attendance and the manager's review alone.`
+  if (w && w.measured && w.met < w.measured) {
+    const missed = w.kpis.filter((k) => kpiAttainment(k) != null && Number(k.actual) < Number(k.target))
+    const worst = missed.sort((a, b) => kpiAttainment(a) - kpiAttainment(b))[0]
+    if (worst) return `${worst.label} is the biggest gap: ${worst.actual} against a target of ${worst.target}. ${w.met} of ${w.measured} targets met this month.`
+  }
+  if (p.attendance.pct != null && p.attendance.pct < 90) return `Attendance is ${p.attendance.pct}% — ${p.attendance.absent} day${p.attendance.absent === 1 ? '' : 's'} absent and ${p.attendance.late} late this month.`
+  if (!p.manager.reviewed && p.overall != null) return `The manager's assessment is ${data.weights.manager}% of the score and has not been written for ${monthLabel(month)}.`
+  if (w && w.measured && w.met === w.measured) return `Every measurable target was met this month (${w.met} of ${w.measured}).`
+  return null
+}
+
+function recommendedActions(data) {
+  const p = data.performance
+  const out = []
+  if (!p.manager.reviewed) out.push({ label: 'Write this month’s review', to: '#review', icon: ClipboardList, tint: 'var(--color-stage-interview-bg)', ink: 'var(--color-stage-interview)' })
+  if (p.status === 'needs-attention') out.push({ label: 'Schedule a 1:1', to: '/reviews', icon: CalendarCheck, tint: 'var(--color-stage-new-bg)', ink: 'var(--color-stage-new)' })
+  if (p.work && p.work.measured && p.work.met < p.work.measured) out.push({ label: 'Review the KPI targets', to: '/kpi-targets', icon: TrendingUp, tint: 'var(--color-stage-offer-bg)', ink: 'var(--color-stage-offer)' })
+  if (p.attendance.pct != null && p.attendance.pct < 90) out.push({ label: 'Check the attendance record', to: '/attendance', icon: CalendarCheck, tint: 'var(--color-stage-out-bg)', ink: 'var(--color-stage-out)' })
+  if (!out.length) out.push({ label: 'Log a coaching note', to: '/reviews', icon: ClipboardList, tint: 'var(--color-fill)', ink: 'var(--color-ink-soft)' })
+  return out
+}
+
+// ---------- KPIs ----------
+function KpiTab({ work, month }) {
+  if (!work || !work.kpis?.length) {
+    return <div className="card"><EmptyState title="No KPI scorecard for this role" line="Work KPIs are set per role on the KPI Targets page. A role with no scorecard is scored on attendance and the manager's review." /></div>
+  }
   return (
-    <div className="max-w-3xl space-y-4">
-      <Card title={`Review schedule · ${yr}`}>
-        <div className="grid grid-cols-6 gap-2">
-          {MONTH_NAMES.map((m, i) => {
-            const p = `${yr}-${pad2(i + 1)}`
-            const done = reviewed.has(p), isCur = p === CUR_PERIOD, future = i > curMonth
-            return <div key={m} className={`rounded-lg py-2 text-center text-[11.5px] font-medium ${done ? 'bg-[var(--color-good-bg)] text-[var(--color-good)]' : isCur ? 'bg-[var(--color-warn-bg)] text-[var(--color-warn)]' : future ? 'bg-[var(--color-fill)] text-[var(--color-ink-faint)]' : 'bg-[var(--color-bad-bg)] text-[var(--color-bad)]'}`} title={done ? 'Reviewed' : isCur ? 'Due now' : future ? 'Upcoming' : 'Missing'}>{m}{done ? ' ✓' : ''}</div>
+    <div className="card overflow-x-auto">
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
+            <th className="h-[46px] rounded-tl-[10px] px-5">KPI</th>
+            <th className="h-[46px] px-5">Target</th>
+            <th className="h-[46px] px-5">Actual</th>
+            <th className="h-[46px] px-5">Attainment</th>
+            <th className="h-[46px] px-5">Weight</th>
+            <th className="h-[46px] px-5">Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          {work.kpis.map((k) => {
+            const at = kpiAttainment(k)
+            const met = at != null && Number(k.actual) >= Number(k.target)
+            return (
+              <tr key={k.key} className="border-b border-[var(--color-line-soft)] last:border-0">
+                <td className="h-[68px] px-5 py-3">
+                  <span className="block text-[13px] font-semibold text-[var(--color-ink)]">{k.label}</span>
+                  {k.detail && <span className="mt-0.5 block text-[12px] text-[var(--color-ink-faint)]">{k.detail}</span>}
+                </td>
+                <td className="h-[68px] px-5 py-3 text-[var(--color-ink-soft)] tabular-nums">{k.target ?? '—'}{k.unit === '%' ? '%' : ''}</td>
+                <td className="h-[68px] px-5 py-3 tabular-nums">
+                  {k.actual == null
+                    ? <span className="text-[var(--color-ink-faint)]">Not measured</span>
+                    : <span className="font-semibold text-[var(--color-ink)]">{k.actual}{k.unit === '%' ? '%' : ''}</span>}
+                </td>
+                <td className="h-[68px] px-5 py-3"><Meter pct={at} tone={SOURCE_TONE.work} width={100} /></td>
+                <td className="h-[68px] px-5 py-3 text-[var(--color-ink-soft)] tabular-nums">{k.weight ?? '—'}%</td>
+                <td className="h-[68px] px-5 py-3">
+                  {at == null
+                    ? <span className="text-[12px] text-[var(--color-ink-faint)]">Not counted</span>
+                    : <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+                        style={met
+                          ? { background: 'var(--color-pill-active-bg)', color: 'var(--color-pill-active)' }
+                          : { background: 'var(--color-pill-leave-bg)', color: 'var(--color-pill-leave)' }}>
+                        {met ? 'Target met' : 'Below target'}
+                      </span>}
+                </td>
+              </tr>
+            )
           })}
-        </div>
-        <p className="mt-2 text-[11px] text-[var(--color-ink-faint)]">Green = completed · amber = due now · red = missing.</p>
-      </Card>
-
-      {!hasCurrent
-        ? <button onClick={onComplete} className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[var(--color-line)] py-4 text-[13px] font-semibold text-[var(--color-ink-soft)] hover:border-[var(--color-ink-faint)] hover:bg-[var(--color-fill)]"><Plus size={16} /> Complete {periodLabel(CUR_PERIOD)} review</button>
-        : <div className="flex items-center gap-2 rounded-lg bg-[var(--color-good-bg)] px-4 py-3 text-[13px] text-[var(--color-good)]"><Check size={16} />{periodLabel(CUR_PERIOD)} review is locked.</div>}
-
-      <div>
-        <p className="mb-2.5 text-[11.5px] font-medium text-[var(--color-ink-soft)]">Review history</p>
-        {reviews.length === 0 ? <p className="rounded-lg bg-[var(--color-fill)] p-4 text-[13px] text-[var(--color-ink-soft)]">No reviews yet. Completing a monthly review creates a permanent, locked record here — your audit trail.</p>
-          : <div className="space-y-2">{reviews.slice().sort((a, b) => (b.period || '').localeCompare(a.period || '')).map((r) => { const st = statusFor(r.score); const bb = band(r.score); return (
-            <button key={r.id} onClick={() => onOpen(r)} className="flex w-full items-center gap-3 rounded-lg border border-[var(--color-line)] bg-white px-4 py-3 text-left hover:border-[var(--color-line)]">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2"><span className="text-[13px] font-semibold text-[var(--color-ink)]">{periodLabel(r.period)}</span><Lock size={11} className="text-[var(--color-ink-faint)]" /></div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-ink-faint)]"><span className={`rounded-full px-2 py-0.5 font-medium ${st.tone}`}>{r.status || st.label}</span><span>· {r.manager}</span><span>· {fmtDateY(r.completedAt)}</span></div>
-              </div>
-              <span className={`text-[18px] font-semibold ${bb.text}`}>{r.score == null ? '—' : `${r.score}%`}</span>
-            </button>
-          ) })}</div>}
-      </div>
+        </tbody>
+      </table>
+      {work.unmeasured?.length > 0 && (
+        <p className="border-t border-[var(--color-line-soft)] px-5 py-3.5 text-[12px] text-[var(--color-ink-faint)]">
+          {work.measured} of {work.total} KPIs are measured for {monthLabel(month)}. Admin has no figure yet for {work.unmeasured.join(', ')}, so {work.unmeasured.length === 1 ? 'it is' : 'they are'} left out of the score rather than counted as a miss.
+        </p>
+      )}
     </div>
   )
 }
 
-function ReviewDetail({ review: r, onClose }) {
-  const st = statusFor(r.score), bb = band(r.score)
+// ---------- Attendance ----------
+function AttendanceTab({ month, label }) {
+  const s = month?.summary
+  if (!s) return <div className="card"><EmptyState title="No attendance for this month" line="Nothing has been recorded yet." /></div>
+  if (!month.keepsSchedule) {
+    return <div className="card"><EmptyState title="This person keeps no schedule" line="Contractors do not clock in, so attendance is not part of their score." /></div>
+  }
+  const cells = [
+    ['Attendance rate', s.ratePct == null ? '—' : `${s.ratePct}%`, SOURCE_TONE.attendance],
+    ['Days present', `${s.present} of ${s.scheduledDays}`, 'var(--color-ink)'],
+    ['Late', String(s.late), s.late ? 'var(--color-pill-leave)' : 'var(--color-ink)'],
+    ['Absent', String(s.absent), s.absent ? 'var(--color-stage-out)' : 'var(--color-ink)'],
+    ['On leave', String(s.leave), 'var(--color-ink)'],
+  ]
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative h-full w-full max-w-md overflow-y-auto bg-[var(--color-surface)] shadow-[var(--shadow-lift)]">
-        <div className="sticky top-0 flex items-center gap-2 border-b border-[var(--color-line-soft)] bg-white px-5 py-4"><button onClick={onClose} className="rounded-full p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]"><ArrowLeft size={18} /></button><h3 className="font-semibold text-[var(--color-ink)]">{periodLabel(r.period)} review</h3><span className="ml-auto inline-flex items-center gap-1 rounded-full bg-[var(--color-fill)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-ink-soft)]"><Lock size={11} /> Locked</span></div>
-        <div className="space-y-4 p-5">
-          <div className="flex items-end justify-between">
-            <div><p className="text-[11.5px] text-[var(--color-ink-faint)]">Overall score</p><p className={`text-5xl font-semibold ${bb.text}`}>{r.score == null ? '—' : `${r.score}%`}</p><span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${st.tone}`}>{r.status || st.label}</span></div>
-            <div className="text-right text-[11.5px] text-[var(--color-ink-soft)]"><p>Manager</p><p className="font-semibold text-[var(--color-ink-soft)]">{r.manager}</p><p className="mt-1">Completed</p><p className="font-semibold text-[var(--color-ink-soft)]">{fmtDateY(r.completedAt)}</p></div>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        {cells.map(([k, v, tone]) => (
+          <div key={k} className="card p-5">
+            <p className="text-[12px] font-medium text-[var(--color-ink-faint)]">{k}</p>
+            <p className="mt-2.5 text-[24px] font-semibold leading-none tabular-nums" style={{ color: tone }}>{v}</p>
           </div>
-          {r.kpis?.length > 0 && <Section title="KPI"><div className="space-y-1.5">{r.kpis.map((k, i) => <div key={i} className="flex items-center gap-2 text-[13px]">{k.done ? <Check size={15} className="text-[var(--color-good)]" /> : <X size={15} className="text-[var(--color-bad)]" />}<span className={k.done ? 'text-[var(--color-ink-soft)]' : 'text-[var(--color-ink-faint)]'}>{k.label}</span></div>)}</div></Section>}
-          {Object.keys(r.ratings || {}).length > 0 && <Section title="Ratings"><div className="space-y-2">{Object.entries(r.ratings).map(([k, v]) => <div key={k}><div className="mb-0.5 flex justify-between text-[11.5px]"><span className="text-[var(--color-ink-soft)]">{k}</span><span className="font-semibold text-[var(--color-ink-soft)]">{v}%</span></div><div className="h-2 overflow-hidden rounded-full bg-[var(--color-fill)]"><div className="h-full rounded-full bg-[var(--color-rest)]" style={{ width: `${Number(v) || 0}%` }} /></div></div>)}</div></Section>}
-          {r.achievements?.length > 0 && <Section title="Achievements"><div className="flex flex-wrap gap-1.5">{r.achievements.map((a, i) => <span key={i} className="inline-flex items-center gap-1 rounded-full bg-[var(--color-good-bg)] px-2.5 py-1 text-[11.5px] font-medium text-[var(--color-good)]"><Trophy size={11} />{a}</span>)}</div></Section>}
-          <Section title="Warnings"><p className="text-[13px] text-[var(--color-ink-soft)]">{r.warningsCount ? `${r.warningsCount} active at review time` : 'None'}</p></Section>
-          {r.notes && <Section title="Manager notes"><p className="whitespace-pre-wrap rounded-lg bg-[var(--color-fill)] p-3 text-[13px] text-[var(--color-ink-soft)]">{r.notes}</p></Section>}
-          {r.actions?.length > 0 && <Section title="Actions taken"><div className="space-y-1.5">{r.actions.map((a, i) => <div key={i} className="flex items-center gap-2 text-[13px] text-[var(--color-ink-soft)]"><Check size={15} className="text-[var(--color-good)]" />{a}</div>)}</div></Section>}
+        ))}
+      </div>
+      <div className="card p-5">
+        <h3 className="mb-3.5 text-[13px] font-semibold text-[var(--color-ink)]">{label}</h3>
+        <div className="flex flex-wrap gap-1.5">
+          {month.days.map((d) => (
+            <span key={d.date} title={`${d.date} · ${d.status}`}
+              className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[11px] font-medium"
+              style={dayTone(d.status)}>
+              {Number(d.date.slice(-2))}
+            </span>
+          ))}
         </div>
       </div>
     </div>
   )
 }
+const dayTone = (status) => ({
+  worked: { background: 'var(--color-pill-active-bg)', color: 'var(--color-pill-active)' },
+  late: { background: 'var(--color-pill-leave-bg)', color: 'var(--color-pill-leave)' },
+  absent: { background: 'var(--color-stage-out-bg)', color: 'var(--color-stage-out)' },
+  leave: { background: 'var(--color-stage-new-bg)', color: 'var(--color-stage-new)' },
+  sick: { background: 'var(--color-stage-screening-bg)', color: 'var(--color-stage-screening)' },
+}[status] || { background: 'var(--color-fill)', color: 'var(--color-ink-faint)' })
 
-function ReviewForm({ person, defaultScore, defaultNotes, warningsCount, onClose, onSaved }) {
-  const [score, setScore] = useState(defaultScore || '')
-  const [statusLabel, setStatusLabel] = useState('')
+// ---------- Manager review ----------
+// 🔒 This is the ONLY number on the page a person types, and it is worth
+// PERF_WEIGHTS.manager of the score. It cannot replace the factual half.
+function ReviewTab({ data, month, onSaved }) {
+  const existing = data.reviews.find((r) => r.period === month)
   const [ratings, setRatings] = useState(() => Object.fromEntries(RATING_AXES.map((a) => [a, ''])))
-  const [kpis, setKpis] = useState(() => [{ label: person.kpi || person.coreResponsibility || '', done: false }].filter((k) => k.label))
-  const [kpiInput, setKpiInput] = useState('')
-  const [achievements, setAchievements] = useState([])
-  const [achInput, setAchInput] = useState('')
-  const [actions, setActions] = useState([])
-  const [notes, setNotes] = useState(defaultNotes || '')
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [busy, setBusy] = useState(false)
-  const effectiveStatus = statusLabel || statusFor(score === '' ? null : Number(score)).label
 
-  async function submit() {
-    setBusy(true); setErr('')
-    try {
-      await api('/reviews', { method: 'POST', body: {
-        name: person.name, period: CUR_PERIOD, score: score === '' ? '' : Number(score), status: effectiveStatus,
-        ratings: Object.fromEntries(Object.entries(ratings).filter(([, v]) => v !== '').map(([k, v]) => [k, Number(v)])),
-        kpis, achievements, actions, notes, warningsCount,
-      } })
-      onSaved()
-    } catch (e) { setErr(e?.message || 'Could not save. A review for this month may already be locked.'); setBusy(false) }
+  if (existing) {
+    return (
+      <div className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-[14px] font-semibold text-[var(--color-ink)]">Review for {monthLabel(month)}</h2>
+          <span className="text-[12px] text-[var(--color-ink-faint)]">Locked {dayLabel(existing.completedAt)} by {existing.manager || '—'}</span>
+        </div>
+        <div className="mt-4 space-y-2.5">
+          {RATING_AXES.map((a) => (
+            <div key={a} className="flex items-center gap-4">
+              <span className="w-40 shrink-0 text-[13px] text-[var(--color-ink-soft)]">{a}</span>
+              <Meter pct={existing.ratings?.[a] == null || existing.ratings[a] === '' ? null : Number(existing.ratings[a])} tone={SOURCE_TONE.manager} width={160} />
+            </div>
+          ))}
+        </div>
+        {existing.notes && <p className="mt-4 whitespace-pre-wrap rounded-[8px] bg-[var(--color-fill)] p-3.5 text-[12.5px] leading-relaxed text-[var(--color-ink-soft)]">{existing.notes}</p>}
+      </div>
+    )
   }
 
+  const submit = async () => {
+    setSaving(true)
+    setErr('')
+    try {
+      await api('/reviews', { method: 'POST', body: {
+        name: data.person.name,
+        period: month,
+        ratings: Object.fromEntries(Object.entries(ratings).filter(([, v]) => v !== '').map(([k, v]) => [k, Number(v)])),
+        notes,
+      } })
+      onSaved()
+    } catch (e) { setErr(e.message) } finally { setSaving(false) }
+  }
+  const any = Object.values(ratings).some((v) => v !== '')
+
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative h-full w-full max-w-md overflow-y-auto bg-[var(--color-surface)] shadow-[var(--shadow-lift)]">
-        <div className="sticky top-0 flex items-center gap-2 border-b border-[var(--color-line-soft)] bg-white px-5 py-4"><button onClick={onClose} className="rounded-full p-1.5 text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]"><ArrowLeft size={18} /></button><h3 className="font-semibold text-[var(--color-ink)]">Complete {periodLabel(CUR_PERIOD)} review</h3></div>
-        <div className="space-y-5 p-5">
-          <p className="rounded-lg bg-[var(--color-warn-bg)] px-3 py-2 text-[11px] text-[var(--color-warn)]">Once saved, this review is <b>locked permanently</b> as part of {person.name.split(' ')[0]}'s record. It cannot be edited.</p>
-          <Field label="Overall score"><div className="flex items-center gap-3"><input type="number" min="0" max="100" value={score} onChange={(e) => setScore(e.target.value)} className="w-24 rounded-lg border border-[var(--color-line)] px-3 py-2 text-[15px] font-semibold" placeholder="0–100" /><span className={`rounded-full px-2.5 py-1 text-[11.5px] font-medium ${statusFor(score === '' ? null : Number(score)).tone}`}>{effectiveStatus}</span></div></Field>
-          <Field label="Status (override)"><select value={statusLabel} onChange={(e) => setStatusLabel(e.target.value)} className="w-full rounded-lg border border-[var(--color-line)] px-3 py-2 text-[13px]"><option value="">Auto from score ({statusFor(score === '' ? null : Number(score)).label})</option>{['Outstanding', 'Exceeded expectations', 'Met expectations', 'Needs improvement', 'Below expectations'].map((o) => <option key={o} value={o}>{o}</option>)}</select></Field>
-          <Field label="Ratings (manager-entered)"><div className="space-y-2">{RATING_AXES.map((a) => <div key={a} className="flex items-center gap-3"><span className="w-32 shrink-0 text-[13px] text-[var(--color-ink-soft)]">{a}</span><input type="number" min="0" max="100" value={ratings[a]} onChange={(e) => setRatings((r) => ({ ...r, [a]: e.target.value }))} placeholder="—" className="w-20 rounded-lg border border-[var(--color-line)] px-2 py-1 text-[13px]" /><span className="text-[11.5px] text-[var(--color-ink-faint)]">%</span></div>)}</div></Field>
-          <Field label="KPI checklist"><div className="space-y-1.5">{kpis.map((k, i) => <div key={i} className="flex items-center gap-2"><button onClick={() => setKpis((ks) => ks.map((x, j) => j === i ? { ...x, done: !x.done } : x))} className={`flex h-5 w-5 items-center justify-center rounded border ${k.done ? 'border-[var(--color-good)] bg-[var(--color-good)] text-white' : 'border-[var(--color-line)]'}`}>{k.done && <Check size={12} />}</button><span className="flex-1 text-[13px] text-[var(--color-ink-soft)]">{k.label}</span><button onClick={() => setKpis((ks) => ks.filter((_, j) => j !== i))} className="text-[var(--color-ink-faint)] hover:text-[var(--color-bad)]"><X size={14} /></button></div>)}<div className="flex gap-2"><input value={kpiInput} onChange={(e) => setKpiInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && kpiInput.trim()) { setKpis((ks) => [...ks, { label: kpiInput.trim(), done: false }]); setKpiInput('') } }} placeholder="Add a KPI…" className="flex-1 rounded-lg border border-[var(--color-line)] px-2 py-1 text-[13px]" /><button onClick={() => { if (kpiInput.trim()) { setKpis((ks) => [...ks, { label: kpiInput.trim(), done: false }]); setKpiInput('') } }} className="rounded-lg bg-[var(--color-fill)] px-3 text-[13px]">Add</button></div></div></Field>
-          <Field label="Achievements"><div className="mb-1.5 flex flex-wrap gap-1.5">{achievements.map((a, i) => <span key={i} className="inline-flex items-center gap-1 rounded-full bg-[var(--color-good-bg)] px-2 py-0.5 text-[11.5px] text-[var(--color-good)]">{a}<button onClick={() => setAchievements((xs) => xs.filter((_, j) => j !== i))}><X size={11} /></button></span>)}</div><div className="flex gap-2"><input value={achInput} onChange={(e) => setAchInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && achInput.trim()) { setAchievements((xs) => [...xs, achInput.trim()]); setAchInput('') } }} placeholder="e.g. Employee of the month" className="flex-1 rounded-lg border border-[var(--color-line)] px-2 py-1 text-[13px]" /><button onClick={() => { if (achInput.trim()) { setAchievements((xs) => [...xs, achInput.trim()]); setAchInput('') } }} className="rounded-lg bg-[var(--color-fill)] px-3 text-[13px]">Add</button></div></Field>
-          <Field label="Actions taken"><div className="flex flex-wrap gap-1.5">{ACTION_OPTIONS.map((o) => { const on = actions.includes(o); return <button key={o} onClick={() => setActions((xs) => on ? xs.filter((x) => x !== o) : [...xs, o])} className={`rounded-full px-3 py-1 text-[11.5px] font-medium ${on ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-fill)] text-[var(--color-ink-soft)]'}`}>{o}</button> })}</div></Field>
-          <Field label="Warnings at review time"><p className="text-[13px] text-[var(--color-ink-soft)]">{warningsCount ? `${warningsCount} active` : 'None'} <span className="text-[11px] text-[var(--color-ink-faint)]">(from live record)</span></p></Field>
-          <Field label="Manager notes"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full rounded-lg border border-[var(--color-line)] p-3 text-[13px]" placeholder="Summary of the month…" /></Field>
-          {err && <p className="rounded-lg bg-[var(--color-bad-bg)] px-3 py-2 text-[13px] text-[var(--color-bad)]">{err}</p>}
-        </div>
-        <div className="sticky bottom-0 flex gap-2 border-t border-[var(--color-line-soft)] bg-white px-5 py-4">
-          <button onClick={onClose} className="rounded-[8px] border border-[var(--color-line-control)] px-[18px] py-2.5 text-[13px] font-medium text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)]">Cancel</button>
-          <button onClick={submit} disabled={busy} className="flex-1 rounded-full bg-[var(--color-brand)] py-3 text-base font-semibold text-white hover:brightness-95 disabled:opacity-50">{busy ? 'Locking…' : 'Lock review'}</button>
-        </div>
+    <div className="card max-w-[640px] p-5">
+      <h2 className="text-[14px] font-semibold text-[var(--color-ink)]">Assessment for {monthLabel(month)}</h2>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--color-ink-soft)]">
+        Rate each area out of 100. This is {data.weights.manager}% of the overall score; the other {100 - data.weights.manager}% is measured, not rated.
+      </p>
+      <div className="mt-4 space-y-2.5">
+        {RATING_AXES.map((a) => (
+          <label key={a} className="flex items-center gap-4">
+            <span className="w-40 shrink-0 text-[13px] text-[var(--color-ink-soft)]">{a}</span>
+            <input type="number" min="0" max="100" value={ratings[a]} placeholder="—"
+              onChange={(e) => setRatings((r) => ({ ...r, [a]: e.target.value }))}
+              className="field w-24" />
+            <span className="text-[12px] text-[var(--color-ink-faint)]">%</span>
+            <Stars count={ratings[a] === '' ? null : Math.round(Number(ratings[a]) / 20)} />
+          </label>
+        ))}
+      </div>
+      <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4}
+        placeholder="What went well, what to work on next month…" className="field mt-4 w-full" />
+      {err && <p className="mt-3 text-[12.5px] text-[var(--color-stage-out)]">{err}</p>}
+      <div className="mt-4 flex items-center gap-3">
+        <button onClick={submit} disabled={!any || saving} className="btn-primary disabled:opacity-50">
+          {saving ? 'Saving…' : 'Lock this review'}
+        </button>
+        <span className="text-[12px] text-[var(--color-ink-faint)]">A locked review cannot be edited.</span>
       </div>
     </div>
   )
 }
 
-function Field({ label, children }) { return <div><p className="mb-1.5 text-[11.5px] font-medium text-[var(--color-ink-soft)]">{label}</p>{children}</div> }
-function Section({ title, children }) { return <div><p className="mb-2.5 text-[11.5px] font-medium text-[var(--color-ink-soft)]">{title}</p>{children}</div> }
+// ---------- Reviews history ----------
+function HistoryTab({ reviews }) {
+  if (!reviews.length) return <div className="card"><EmptyState title="No reviews yet" line="Once a month is reviewed it is locked and appears here." /></div>
+  return (
+    <div className="card overflow-x-auto">
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)] text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]">
+            <th className="h-[46px] rounded-tl-[10px] px-5">Month</th>
+            <th className="h-[46px] px-5">Assessment</th>
+            <th className="h-[46px] px-5">Manager</th>
+            <th className="h-[46px] px-5">Locked</th>
+            <th className="h-[46px] px-5">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {reviews.map((r) => {
+            const axes = RATING_AXES.map((a) => Number(r.ratings?.[a])).filter((n) => Number.isFinite(n) && n > 0)
+            const pct = axes.length ? Math.round(axes.reduce((s, n) => s + n, 0) / axes.length) : (r.score == null ? null : Number(r.score))
+            return (
+              <tr key={r.id} className="border-b border-[var(--color-line-soft)] last:border-0">
+                <td className="h-[64px] px-5 py-3 font-semibold text-[var(--color-ink)]">{monthLabel(r.period)}</td>
+                <td className="h-[64px] px-5 py-3">
+                  <span className="flex items-center gap-2.5">
+                    <Stars count={pct == null ? null : Math.round(pct / 20)} />
+                    <span className="text-[13px] font-semibold tabular-nums text-[var(--color-ink)]">{pct == null ? '—' : `${pct}%`}</span>
+                  </span>
+                </td>
+                <td className="h-[64px] px-5 py-3 text-[var(--color-ink-soft)]">{r.manager || '—'}</td>
+                <td className="h-[64px] whitespace-nowrap px-5 py-3 text-[var(--color-ink-soft)]">{dayLabel(r.completedAt)}</td>
+                <td className="h-[64px] max-w-[360px] truncate px-5 py-3 text-[var(--color-ink-faint)]">{r.notes || '—'}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ---------- Notes & actions ----------
+function NotesTab({ coaching, warnings }) {
+  const items = [
+    ...warnings.map((w) => ({ id: `w${w.id}`, kind: `${(w.type || 'Verbal').replace(/^./, (c) => c.toUpperCase())} warning`, when: w.date, text: w.reason || '', tone: 'var(--color-stage-out)' })),
+    ...coaching.map((c) => ({ id: `c${c.id}`, kind: c.type === 'flag' ? 'Flag' : 'Coaching', when: c.date || c.createdAt, text: c.note || c.body || '', tone: 'var(--color-stage-new)' })),
+  ].sort((a, b) => String(b.when || '').localeCompare(String(a.when || '')))
+
+  if (!items.length) return <div className="card"><EmptyState title="Nothing logged" line="Warnings and coaching notes for this person appear here as they are written." /></div>
+  return (
+    <div className="card divide-y divide-[var(--color-line-soft)]">
+      {items.map((i) => (
+        <div key={i.id} className="flex items-start gap-3.5 p-5">
+          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: i.tone }} />
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-baseline gap-2">
+              <span className="text-[13px] font-semibold text-[var(--color-ink)]">{i.kind}</span>
+              <span className="text-[12px] text-[var(--color-ink-faint)]">{dayLabel(i.when)}</span>
+            </span>
+            <span className="mt-1 block text-[12.5px] leading-relaxed text-[var(--color-ink-soft)]">{i.text || '—'}</span>
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
