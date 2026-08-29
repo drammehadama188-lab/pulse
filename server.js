@@ -6814,8 +6814,44 @@ app.post('/api/reviews', auth, requireSub('hr', 'performance'), notViewAs, (req,
 // Per-agent monthly tracker sales + revenue, attributed via the sheet's
 // "Sold By" column. Stored in data/agent-sales.json (gitignored — real
 // customer/financial data, never committed). Read by 'hr'.
-app.get('/api/agent-sales', auth, requireSub('hr', 'performance'), (req, res) => {
-  const all = db.read('agent-sales', {})
+// 🔑 THE SHEET ENDS IN JUNE. This store is the imported sales history, and
+// every month from SALES_ADMIN_FROM on lives in ADMIN, not here — so the
+// Performance board, which scores a sales role on attainment when nobody has
+// been rated by hand, had no figure for August and showed the whole company as
+// "Not rated" while sales were being closed every day.
+//
+// 🔒 ONE RULE, ONE PLACE: the admin months are overlaid here, through
+// salesTallyFor, so every reader of this endpoint gets the same number the
+// record page and My Day already show. July stays blank on purpose — see
+// SALES_ADMIN_FROM.
+app.get('/api/agent-sales', auth, requireSub('hr', 'performance'), async (req, res) => {
+  const stored = db.read('agent-sales', {})
+  const all = JSON.parse(JSON.stringify(stored))
+  const cur = todayKey().slice(0, 7)
+  for (let m = SALES_ADMIN_FROM; m <= cur;) {
+    const tally = await salesTallyFor(m)
+    if (tally) {
+      for (const [who, won] of tally) {
+        const rec = all[who] || (all[who] = { monthlyTarget: null, months: {} })
+        rec.months = rec.months || {}
+        // `source` marks where the number came from, so a reader can tell an
+        // admin month from an imported one.
+        rec.months[m] = { ...(rec.months[m] || {}), sales: won, source: 'admin' }
+      }
+      // 🔑 A seller who closed nothing this month sold ZERO — that is a fact and
+      // a score of 0%. Leaving them out of the overlay would print "Not rated"
+      // beside somebody who simply did not sell, which reads as a missing
+      // number rather than a real one. Only people who carry a target, so
+      // nobody is scored on a target they were never given.
+      for (const [who, rec] of Object.entries(all)) {
+        if (!rec || !Number(rec.monthlyTarget)) continue
+        rec.months = rec.months || {}
+        if (rec.months[m] == null) rec.months[m] = { sales: tally.get(who) ?? 0, source: 'admin' }
+      }
+    }
+    const [yy, mm] = m.split('-').map(Number)
+    m = `${mm === 12 ? yy + 1 : yy}-${String(mm === 12 ? 1 : mm + 1).padStart(2, '0')}`
+  }
   const name = req.query.name
   if (name) return res.json({ sales: all[name] || null })
   res.json({ sales: all })
