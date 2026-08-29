@@ -6828,15 +6828,31 @@ app.get('/api/agent-sales', auth, requireSub('hr', 'performance'), async (req, r
   const stored = db.read('agent-sales', {})
   const all = JSON.parse(JSON.stringify(stored))
   const cur = todayKey().slice(0, 7)
+  // One admin month, in the shape the sheet months already use, so the page
+  // renders both the same way.
+  // 🔑 A number that is not KNOWN stays null and prints as "—". Revenue used to
+  // be dropped by the feed entirely and rendered `|| 0`, so a month with real
+  // sales showed "D0" — a claim, not a gap. A month with NO sales genuinely
+  // earned nothing, so that one is a true zero.
+  const fromAdmin = (r) => {
+    const sales = Number(r?.won) || 0
+    return {
+      sales,
+      revenue: r && r.revenue != null ? Number(r.revenue) || 0 : (sales === 0 ? 0 : null),
+      customers: (r?.customers || []).map((c) => (Number(c?.amount) > 0 ? `${c.name} @ D${Number(c.amount).toLocaleString()}` : (c?.name || 'Customer'))),
+      // `source` marks where the number came from, so a reader can tell an
+      // admin month from an imported one.
+      source: 'admin',
+    }
+  }
   for (let m = SALES_ADMIN_FROM; m <= cur;) {
-    const tally = await salesTallyFor(m)
-    if (tally) {
-      for (const [who, won] of tally) {
+    const feed = await salesFeedFor(m)
+    if (feed) {
+      const rows = new Map((feed.agents || []).map((r) => [r.name, r]))
+      for (const [who, r] of rows) {
         const rec = all[who] || (all[who] = { monthlyTarget: null, months: {} })
         rec.months = rec.months || {}
-        // `source` marks where the number came from, so a reader can tell an
-        // admin month from an imported one.
-        rec.months[m] = { ...(rec.months[m] || {}), sales: won, source: 'admin' }
+        rec.months[m] = fromAdmin(r)
       }
       // 🔑 A seller who closed nothing this month sold ZERO — that is a fact and
       // a score of 0%. Leaving them out of the overlay would print "Not rated"
@@ -6846,11 +6862,31 @@ app.get('/api/agent-sales', auth, requireSub('hr', 'performance'), async (req, r
       for (const [who, rec] of Object.entries(all)) {
         if (!rec || !Number(rec.monthlyTarget)) continue
         rec.months = rec.months || {}
-        if (rec.months[m] == null) rec.months[m] = { sales: tally.get(who) ?? 0, source: 'admin' }
+        if (rec.months[m] == null) rec.months[m] = fromAdmin(rows.get(who))
       }
     }
     const [yy, mm] = m.split('-').map(Number)
     m = `${mm === 12 ? yy + 1 : yy}-${String(mm === 12 ? 1 : mm + 1).padStart(2, '0')}`
+  }
+  // 🔒 A month is scored against the target Pulse HELD FOR THAT MONTH — the same
+  // KPI Targets store the KPI page and My Day read. It used to be one frozen
+  // `monthlyTarget`, imported with the sheet in June, so Performance scored
+  // August against 5 while KPI Targets said 7 and September's 10 would never
+  // have arrived at all. Months before the admin cutover keep the number they
+  // were actually scored on: nothing already recorded is rewritten.
+  // 🔑 Only a SALES person carries the sales-agent target. Anyone else who
+  // closed something shows the count with no target, rather than being measured
+  // against a goal that was never theirs.
+  const targetCache = {}
+  const targetFor = (m) => (m in targetCache ? targetCache[m] : (targetCache[m] = kpiNumber('sales', 'sales', m)?.target ?? null))
+  const deptByName = new Map(seedUsers().map((u) => [u.name, u.department]))
+  for (const [who, rec] of Object.entries(all)) {
+    for (const [m, row] of Object.entries(rec?.months || {})) {
+      if (!row) continue
+      row.target = m >= SALES_ADMIN_FROM
+        ? (deptByName.get(who) === 'Sales' ? targetFor(m) : null)
+        : (rec.monthlyTarget ?? null)
+    }
   }
   const name = req.query.name
   if (name) return res.json({ sales: all[name] || null })
@@ -7025,11 +7061,17 @@ function salesFromSheet(name, month) {
   const m = db.read('agent-sales', {})[name]?.months?.[month]
   return m && !m.pending ? (m.sales ?? null) : null
 }
+// Admin's raw month, once. The feed carries the count AND (since 29 Aug) what
+// the month was worth and who was bought from — a page that shows a month,
+// rather than a score, needs all three.
+async function salesFeedFor(month) {
+  if (month < SALES_ADMIN_FROM) return null
+  return await fetchAdminFeed(`/api/integrations/pulse/sales?month=${month}`)
+}
 // The whole month in ONE request, for pages that show a team rather than one
 // person. Map of name → sales closed; null when admin could not be reached.
 async function salesTallyFor(month) {
-  if (month < SALES_ADMIN_FROM) return null
-  const feed = await fetchAdminFeed(`/api/integrations/pulse/sales?month=${month}`)
+  const feed = await salesFeedFor(month)
   if (!feed) return null
   return new Map((feed.agents || []).map((r) => [r.name, Number(r.won) || 0]))
 }

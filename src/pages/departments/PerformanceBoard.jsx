@@ -11,7 +11,9 @@ import {
 // Performance overview — answers "who is performing, who isn't". A clean,
 // serious table; clicking a person opens their full-width performance page
 // (/performance/:slug), NOT a cramped drawer. Every number is real (manager
-// scores, locked reviews, sales from Ya Fatou's sheet). No sampled data.
+// scores, locked reviews, sales from the imported sheet up to June and from
+// admin since August). No sampled data. The roster comes from the caller and is
+// the LIVE employee list.
 
 function Trend({ delta, size = 14 }) {
   if (delta == null) return <Minus size={size} className="text-[var(--color-ink-faint)]" />

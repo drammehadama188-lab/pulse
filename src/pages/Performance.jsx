@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react'
-import { team } from '../data/team'
 import { api } from '../lib/api.js'
 import PerformanceBoard from './departments/PerformanceBoard.jsx'
 import HRTeam from './departments/HRTeam.jsx'
@@ -10,9 +9,20 @@ import HRTeam from './departments/HRTeam.jsx'
 export default function Performance() {
   const [tab, setTab] = useState('performance')
   const [warnings, setWarnings] = useState([])
+  // 🔒 The people scored here are the LIVE roster — the same list Employees
+  // shows. It used to be the static src/data/team.js seed file, so anyone hired
+  // or moved in Pulse never appeared on the board at all, and a leaver could
+  // still be ranked on it.
+  const [roster, setRoster] = useState(null)
+  const [rosterFailed, setRosterFailed] = useState(false)
 
   useEffect(() => {
     api('/warnings').then((d) => setWarnings(d.warnings || [])).catch(() => setWarnings([]))
+    api('/hr/employees')
+      .then((d) => setRoster((d.employees || []).map((e) => ({
+        username: e.username, name: e.name, role: e.title || '', type: e.department || 'Other', status: e.status,
+      }))))
+      .catch(() => { setRoster([]); setRosterFailed(true) })
   }, [])
 
   const warningsByAgent = useMemo(() => {
@@ -45,8 +55,10 @@ export default function Performance() {
         ))}
       </div>
 
+      {rosterFailed && <p className="text-[13px] text-[var(--color-bad)]">Could not load the team. The board is empty rather than out of date.</p>}
+
       {tab === 'performance'
-        ? <PerformanceBoard team={team} warningsByAgent={warningsByAgent} />
+        ? <PerformanceBoard team={roster || []} warningsByAgent={warningsByAgent} />
         : <HRTeam only={['kpi']} title="KPI Settings" subtitle="Rules and targets per role" />}
     </div>
   )

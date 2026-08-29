@@ -1,7 +1,8 @@
 // Shared performance logic — used by the Performance overview (PerformanceBoard)
 // and the dedicated per-employee page (PerformancePerson). All numbers are real:
-// manager-set live scores, locked monthly reviews, and sales from Ya Fatou's
-// sheet. Nothing here samples or invents data.
+// manager-set live scores, locked monthly reviews, and sales — the imported
+// sheet up to June 2026, admin from August on. Nothing here samples or invents
+// data, and a number that is not known stays null rather than becoming zero.
 
 export const now = new Date()
 const pad2 = (n) => String(n).padStart(2, '0')
@@ -11,6 +12,14 @@ export const periodLabel = (p) => { const [y, m] = String(p).split('-'); return 
 export const fmtDateY = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
 export const prevMonth = (period) => { const [y, m] = String(period).split('-').map(Number); const d = new Date(y, m - 2, 1); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}` }
 export const slugify = (name) => name.toLowerCase().replace(/\s+/g, '-')
+// Whole days still to come in the current month, today excluded — the month is
+// judged when it ends, not while it runs. The Gambia is on UTC, so UTC parts
+// are the local date.
+export function daysLeftInMonth(d = new Date()) {
+  const end = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)
+  const today = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  return Math.max(0, Math.round((end - today) / 86400000) - 1)
+}
 
 export const RATING_AXES = ['Sales', 'Attendance', 'Communication', 'Customer rating', 'Initiative']
 export const ACTION_OPTIONS = ['Bonus approved', 'Promotion recommended', 'Coaching scheduled', 'Public recognition', 'Performance improvement plan', 'Salary review']
@@ -116,19 +125,34 @@ export function scoreForPeriod(name, p, live, reviewsByName) {
   return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null
 }
 
+// The target a single month was scored against. The server stamps it on the
+// month from Pulse's KPI Targets, so a change of goal applies from the month it
+// takes effect and no page carries its own copy. `monthlyTarget` is the old
+// sheet-wide number, kept only as the fallback for a month the server did not
+// stamp.
+export function monthTarget(sales, m) {
+  const row = sales?.months?.[m]
+  if (row && row.target != null) return Number(row.target) || 0
+  return Number(sales?.monthlyTarget) || 0
+}
+
 // Real sales for the active period (sum across the period's months).
+// 🔑 Revenue can be UNKNOWN — admin months carry the money only since the feed
+// started sending it. Unknown stays null so the page prints "—"; summing it as
+// zero told the reader a month with sales earned nothing.
 export function salesForPeriod(sales, p) {
   if (!sales || !sales.months || !p) return null
-  const target = sales.monthlyTarget || 0
   const months = p.kind === 'range' ? (p.months || []) : p.kind === 'all' ? Object.keys(sales.months) : [p.period]
-  const rows = months.map((m) => sales.months[m]).filter(Boolean)
-  if (!rows.length) return null
-  const liveRows = rows.filter((m) => !m.pending)
-  const totalSales = liveRows.reduce((s, m) => s + (m.sales || 0), 0)
-  const revenue = liveRows.reduce((s, m) => s + (m.revenue || 0), 0)
-  const denom = p.kind === 'current' || p.kind === 'month' ? 1 : Math.max(liveRows.length, 1)
-  const targetForPeriod = target * denom
-  return { sales: totalSales, revenue, target: targetForPeriod || null, pending: rows.some((m) => m.pending) && !liveRows.length }
+  const pairs = months.map((m) => [m, sales.months[m]]).filter(([, r]) => r)
+  if (!pairs.length) return null
+  const live = pairs.filter(([, r]) => !r.pending)
+  const totalSales = live.reduce((s, [, r]) => s + (r.sales || 0), 0)
+  const withRevenue = live.filter(([, r]) => r.revenue != null)
+  const revenue = withRevenue.length ? withRevenue.reduce((s, [, r]) => s + (r.revenue || 0), 0) : null
+  // Each month brings its own target, so a period spanning a goal change adds
+  // up to what was actually asked for rather than one number times a count.
+  const targetForPeriod = live.reduce((s, [m]) => s + monthTarget(sales, m), 0)
+  return { sales: totalSales, revenue, target: targetForPeriod || null, pending: pairs.some(([, r]) => r.pending) && !live.length }
 }
 
 // Real, derived insights for one person — from locked reviews + live score +
@@ -153,9 +177,15 @@ export function insightsFor(name, live, reviewsByName, sales) {
     const recorded = Object.entries(sales.months).filter(([, m]) => !m.pending).sort((a, b) => a[0].localeCompare(b[0]))
     const last = recorded[recorded.length - 1]
     if (last) {
-      const [p, m] = last, tgt = sales.monthlyTarget || 0
+      const [p, m] = last, tgt = monthTarget(sales, p)
+      // 🔑 A month still running has not been missed. Saying "missed" on the 3rd
+      // judges a month that has 28 days left in it; the honest line is where
+      // they stand and how long is left.
       if (tgt && m.sales >= tgt) out.push({ tone: 'good', text: `Hit the sales target in ${periodLabel(p)} (${m.sales}/${tgt}).` })
-      else if (tgt) out.push({ tone: 'bad', text: `Missed the sales target in ${periodLabel(p)} (${m.sales}/${tgt}).` })
+      else if (tgt && p === CUR_PERIOD) {
+        const left = daysLeftInMonth()
+        out.push({ tone: left === 0 ? 'bad' : 'muted', text: `${m.sales} of ${tgt} sales this month, ${left} ${left === 1 ? 'day' : 'days'} left.` })
+      } else if (tgt) out.push({ tone: 'bad', text: `Missed the sales target in ${periodLabel(p)} (${m.sales}/${tgt}).` })
     }
   }
 

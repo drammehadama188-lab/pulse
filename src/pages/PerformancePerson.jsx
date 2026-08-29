@@ -9,7 +9,7 @@ import { api } from '../lib/api.js'
 import PeriodPicker from '../components/PeriodPicker.jsx'
 import {
   CUR_PERIOD, MONTH_NAMES, periodLabel, fmtDateY, slugify, RATING_AXES, ACTION_OPTIONS,
-  band, statusFor, defaultPeriod, scoreForPeriod, salesForPeriod, insightsFor, trendSeries,
+  band, statusFor, defaultPeriod, scoreForPeriod, salesForPeriod, insightsFor, trendSeries, monthTarget,
   effectiveScore, salesTrendDelta,
 } from '../lib/performance.js'
 
@@ -84,7 +84,11 @@ export default function PerformancePerson({ embeddedFor = null }) {
   const periodSales = salesForPeriod(sales, period)
   const insights = insightsFor(person.name, liveMap, reviewsMap, sales)
   const series = trendSeries(reviews, live.score)
-  const target = person.target || sales?.monthlyTarget || null
+  // 🔑 Money that is not known prints as "—", never D0: admin months carried no
+  // revenue at all until the feed started sending it, and a zero there reads as
+  // "this month earned nothing".
+  const money = (v) => (v == null ? '—' : `D${v.toLocaleString()}`)
+  const salesOfTarget = (r) => (r.target ? `${r.sales}/${r.target} sales` : `${r.sales} sale${r.sales === 1 ? '' : 's'}`)
   const hasCurrentReview = reviews.some((r) => r.period === CUR_PERIOD)
   const initials = person.name.split(' ').map((w) => w[0]).slice(0, 2).join('')
 
@@ -133,7 +137,7 @@ export default function PerformancePerson({ embeddedFor = null }) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <SummaryCard label="Score" value={effScore == null ? '—' : `${effScore}%`} accent={b.text}
           sub={<span className="flex items-center gap-1.5"><span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${b.chip}`}>{b.label}</span>{effSource === 'sales' && <span className="text-[11.5px] font-medium text-[var(--color-good)]">from sales</span>}</span>} big />
-        <SummaryCard label="Revenue" value={periodSales ? `D${periodSales.revenue.toLocaleString()}` : '—'} accent="text-[var(--color-ink)]" sub={periodSales ? `${periodSales.sales}/${periodSales.target} sales` : 'no sales data'} />
+        <SummaryCard label="Revenue" value={periodSales ? money(periodSales.revenue) : '—'} accent="text-[var(--color-ink)]" sub={periodSales ? salesOfTarget(periodSales) : 'no sales data'} />
         <SummaryCard label="Status" value={periodStatus} accent={b.text} small />
         <SummaryCard label="Trend" value={delta == null ? '—' : <span className={`inline-flex items-center gap-0.5 ${delta > 0 ? 'text-[var(--color-good)]' : delta < 0 ? 'text-[var(--color-bad)]' : 'text-[var(--color-ink-faint)]'}`}>{delta > 0 ? <TrendingUp size={20} /> : delta < 0 ? <TrendingDown size={20} /> : <Minus size={20} />}{delta > 0 ? `+${delta}` : delta}</span>} accent="text-[var(--color-ink)]" sub="vs last month" />
       </div>
@@ -159,7 +163,7 @@ export default function PerformancePerson({ embeddedFor = null }) {
                 <div>
                   <p className="text-[11.5px] text-[var(--color-ink-faint)]">{effSource === 'sales' ? 'Sales score · target attainment' : period.kind === 'range' ? 'Average score' : period.kind === 'current' ? 'Score' : 'Locked score'}</p>
                   <p className={`text-6xl font-semibold leading-none ${b.text}`}>{effScore == null ? '—' : `${effScore}%`}</p>
-                  {effSource === 'sales' && periodSales && <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">{periodSales.sales}/{periodSales.target} sales · D{periodSales.revenue.toLocaleString()}</p>}
+                  {effSource === 'sales' && periodSales && <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">{salesOfTarget(periodSales)}{periodSales.revenue != null ? ` · ${money(periodSales.revenue)}` : ''}</p>}
                 </div>
                 <span className={`rounded-full px-3 py-1 text-[11.5px] font-medium ${statusFor(effScore).tone}`}>{periodStatus}</span>
               </div>
@@ -216,7 +220,7 @@ export default function PerformancePerson({ embeddedFor = null }) {
             <div className="rounded-lg border border-[var(--color-good-bg)] bg-[var(--color-good-bg)] p-5">
               <div className="mb-3 flex items-center justify-between"><span className="flex items-center gap-1.5 text-[13px] font-semibold text-[var(--color-good)]"><Trophy size={15} /> Sales</span><span className="text-[15px] font-semibold text-[var(--color-ink)]">{periodSales.sales}/{periodSales.target}</span></div>
               <div className="h-3 overflow-hidden rounded-full bg-[var(--color-good-bg)]"><div className="h-full rounded-full bg-[var(--color-good)]" style={{ width: `${Math.min(periodSales.target ? (periodSales.sales / periodSales.target) * 100 : 0, 100)}%` }} /></div>
-              <p className="mt-2 text-[11.5px] text-[var(--color-ink-soft)]">D{periodSales.revenue.toLocaleString()} revenue{periodSales.pending ? ' · not entered yet' : ''}</p>
+              <p className="mt-2 text-[11.5px] text-[var(--color-ink-soft)]">{periodSales.revenue != null ? `${money(periodSales.revenue)} revenue` : 'Revenue not recorded for this period'}{periodSales.pending ? ' · not entered yet' : ''}</p>
             </div>
           )}
           {sales && <Card title={`Sales by month · ${period.label}`} icon={Trophy}><SalesBreakdown sales={sales} period={period} /></Card>}
@@ -255,7 +259,6 @@ export default function PerformancePerson({ embeddedFor = null }) {
 // actual customers closed. This is the substance of a sales rep's performance.
 function SalesBreakdown({ sales, period }) {
   if (!sales || !sales.months) return null
-  const target = sales.monthlyTarget || 0
   const all = Object.keys(sales.months)
   let months = period.kind === 'current' || period.kind === 'month' ? [period.period]
     : period.kind === 'all' ? all : (period.months || [])
@@ -263,31 +266,41 @@ function SalesBreakdown({ sales, period }) {
   if (!months.length) return <p className="rounded-lg bg-[var(--color-fill)] p-3 text-[13px] text-[var(--color-ink-soft)]">No sales recorded for this period.</p>
   const live = months.filter((m) => !sales.months[m].pending)
   const totSales = live.reduce((s, m) => s + (sales.months[m].sales || 0), 0)
-  const totRev = live.reduce((s, m) => s + (sales.months[m].revenue || 0), 0)
+  // Only months that actually carry a figure are added up, and the total says
+  // so — adding an unknown month as zero understated the period silently.
+  const withRev = live.filter((m) => sales.months[m].revenue != null)
+  const totRev = withRev.length ? withRev.reduce((s, m) => s + (sales.months[m].revenue || 0), 0) : null
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
         <span className="text-[13px] font-semibold text-[var(--color-ink)]">{totSales} sale{totSales === 1 ? '' : 's'}</span>
-        <span className="text-[13px] font-semibold text-[var(--color-ink)]">D{totRev.toLocaleString()} <span className="font-normal text-[var(--color-ink-faint)]">revenue</span></span>
+        <span className="text-[13px] font-semibold text-[var(--color-ink)]">{totRev == null ? <span className="font-normal text-[var(--color-ink-faint)]">revenue not recorded</span> : <>D{totRev.toLocaleString()} <span className="font-normal text-[var(--color-ink-faint)]">revenue{withRev.length < live.length ? ` · ${withRev.length} of ${live.length} months` : ''}</span></>}</span>
       </div>
       <div className="space-y-2.5">
         {months.map((m) => {
           const r = sales.months[m]
+          // The target this month was set against, not one number applied to
+          // every month on the page.
+          const target = monthTarget(sales, m)
           const pct = target ? Math.min((r.sales / target) * 100, 100) : 0
           const custs = r.customers || []
           return (
             <div key={m} className="rounded-lg border border-[var(--color-line)] p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-[13px] font-semibold text-[var(--color-ink)]">{periodLabel(m)}</span>
-                <span className="text-[13px] font-semibold text-[var(--color-ink-soft)]">{r.pending ? <span className="text-[11px] font-medium text-[var(--color-warn)]">not entered yet</span> : `${r.sales}/${target}`}</span>
+                <span className="text-[13px] font-semibold text-[var(--color-ink-soft)]">{r.pending ? <span className="text-[11px] font-medium text-[var(--color-warn)]">not entered yet</span> : target ? `${r.sales}/${target}` : `${r.sales} sale${r.sales === 1 ? '' : 's'}`}</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-[var(--color-fill)]"><div className="h-full rounded-full bg-[var(--color-good)]" style={{ width: `${pct}%` }} /></div>
               <div className="mt-2 flex items-start justify-between gap-3">
                 <div className="flex flex-wrap gap-1.5">
+                  {/* 🔑 This line is about the CUSTOMERS, so it may only speak
+                      about customers. It used to say "No sales this month"
+                      whenever no names came through, printing the opposite of
+                      the count sitting right above it. */}
                   {custs.length ? custs.map((c, i) => <span key={i} className="inline-flex items-center rounded-full bg-[var(--color-good-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-good)]">{c}</span>)
-                    : <span className="text-[11px] text-[var(--color-ink-faint)]">{r.pending ? '—' : 'No sales this month'}</span>}
+                    : <span className="text-[11px] text-[var(--color-ink-faint)]">{r.pending ? '—' : r.sales ? 'Customers not listed' : 'No sales this month'}</span>}
                 </div>
-                <span className="shrink-0 text-[11.5px] font-semibold text-[var(--color-ink-soft)]">D{(r.revenue || 0).toLocaleString()}</span>
+                <span className="shrink-0 text-[11.5px] font-semibold text-[var(--color-ink-soft)]">{r.revenue == null ? '—' : `D${r.revenue.toLocaleString()}`}</span>
               </div>
             </div>
           )
