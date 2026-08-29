@@ -229,3 +229,24 @@ export function trendSeries(reviews, liveScore) {
   if (liveScore != null && (!revs.length || revs[revs.length - 1].period !== CUR_PERIOD)) revs.push({ period: CUR_PERIOD, v: liveScore })
   return revs
 }
+
+// HOW THE BOARD SLICES THE ROSTER (Adama 29 Aug). Four groups that PARTITION
+// the team: everyone is in exactly one, and the four counts add up to the
+// roster. 🔒 The tiles and the dropdown on the Performance page set the same
+// `group`, so a tile's number is exactly the rows clicking it gives you.
+export const PERF_GROUPS = [
+  { id: 'performing', label: 'Performing', test: (s) => s != null && s >= 85 },
+  { id: 'on-track', label: 'On track', test: (s) => s != null && s >= 70 && s < 85 },
+  { id: 'attention', label: 'Needs attention', test: (s) => s != null && s < 70 },
+  { id: 'unrated', label: 'Not rated', test: (s) => s == null },
+]
+export const groupOf = (score) => PERF_GROUPS.find((g) => g.test(score))?.id || 'unrated'
+
+// Where a score came from. Shown on the row so nobody reads a derived number as
+// a review that was never written — the "everyone Not rated" confusion.
+export const SCORE_SOURCES = [
+  { id: 'manual', label: 'Manager review' },
+  { id: 'sales', label: 'Sales attainment' },
+  { id: 'none', label: 'Not scored' },
+]
+export const sourceLabel = (s) => SCORE_SOURCES.find((x) => x.id === (s || 'none'))?.label || 'Not scored'
