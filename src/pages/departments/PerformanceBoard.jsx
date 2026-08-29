@@ -79,18 +79,19 @@ export default function PerformanceBoard({ data = NO_DATA, month = '', isCurrent
 
   const s = data.summary || NO_DATA.summary
   const field = 'field'
-  const th = 'h-[46px] whitespace-nowrap px-4 text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]'
-  const td = 'h-[72px] px-4 py-3 align-middle'
+  const th = 'h-[46px] whitespace-nowrap px-3.5 text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]'
+  const td = 'h-[72px] px-3.5 py-3 align-middle'
 
   return (
     <>
 
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
-      {/* Four counts of the same list, so it earns twice the width the single
-          figures beside it get. */}
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-7">
+      {/* Four counts of the same list, and a person's whole name, each earn
+          twice the width the single figures beside them get. A tile that has to
+          hyphenate a name is too narrow, not the name's problem. */}
       <div className="card p-5 md:col-span-2">
         <p className="text-[12px] font-medium text-[var(--color-ink-faint)]">Team overview</p>
-        <div className="mt-3 flex items-start gap-5">
+        <div className="mt-3 flex flex-wrap items-start gap-x-5 gap-y-3.5">
           {[[s.employees, 'Employees', 'var(--color-ink)'],
             [s.onTrack, 'On track', 'var(--color-pill-active)'],
             [s.needsAttention, 'Needs attention', 'var(--color-pill-leave)'],
@@ -111,7 +112,7 @@ export default function PerformanceBoard({ data = NO_DATA, month = '', isCurrent
         tone={s.reviewsDue ? 'var(--color-stage-interview)' : 'var(--color-pill-active)'}
         foot={<span className="text-[12px] text-[var(--color-ink-faint)]">{isCurrentMonth ? 'This month' : monthLabel(month)}</span>} />
 
-      <div className="card flex items-start gap-3 p-5">
+      <div className="card flex items-start gap-3 p-5 md:col-span-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
           style={{ background: 'var(--color-pill-active-bg)', color: 'var(--color-pill-active)' }}>
           <Trophy size={17} strokeWidth={1.8} />
@@ -124,7 +125,7 @@ export default function PerformanceBoard({ data = NO_DATA, month = '', isCurrent
                 className="mt-1 block truncate text-[15px] font-semibold text-[var(--color-ink)] hover:underline">
                 {s.topPerformer.name}
               </button>
-              <span className="mt-1 block text-[12px] text-[var(--color-ink-faint)]">
+              <span className="mt-1 block truncate text-[12px] text-[var(--color-ink-faint)]">
                 <span className="font-semibold" style={{ color: gradeTone(s.topPerformer.overall) }}>{s.topPerformer.overall}%</span>
                 {' · '}{PERF_STATUS[s.topPerformer.status]}
               </span>
@@ -165,8 +166,11 @@ export default function PerformanceBoard({ data = NO_DATA, month = '', isCurrent
       </div>
     </div>
 
+    {/* 🔒 The table SCROLLS rather than squeezing. Without a floor it kept
+        compressing until the Status chip was cut in half and Review fell off
+        the card entirely, with nothing to tell the reader more was there. */}
     <div className="card mt-4 overflow-x-auto">
-      <table className="w-full text-[13px]">
+      <table className="w-full min-w-[1160px] text-[13px]">
         <thead>
           <tr className="border-b border-[var(--color-line-soft)] bg-[var(--color-table-head)]">
             <th className={`${th} w-12 rounded-tl-[10px] text-center`}>#</th>
@@ -208,15 +212,15 @@ export default function PerformanceBoard({ data = NO_DATA, month = '', isCurrent
                   </span>
                 </span>
               </td>
-              <td className={`${td} text-[13px] text-[var(--color-ink-soft)]`}>{p.department || '—'}</td>
+              <td className={`${td} whitespace-nowrap text-[13px] text-[var(--color-ink-soft)]`}>{p.department || '—'}</td>
               <td className={td}>
-                <Meter pct={p.work?.pct ?? null} tone={SOURCE_TONE.work} />
+                <Meter pct={p.work?.pct ?? null} tone={SOURCE_TONE.work} width={96} />
                 <span className="mt-1 block text-[12px] text-[var(--color-ink-faint)]">
                   {p.work?.measured ? `${p.work.met}/${p.work.measured} targets` : 'No targets yet'}
                 </span>
               </td>
               <td className={td}>
-                <Meter pct={p.attendance.pct} tone={SOURCE_TONE.attendance} />
+                <Meter pct={p.attendance.pct} tone={SOURCE_TONE.attendance} width={96} />
                 <span className="mt-1 block text-[12px] text-[var(--color-ink-faint)]">
                   {p.attendance.pct == null
                     ? (p.attendance.keepsSchedule ? 'No data yet' : 'No schedule')
@@ -235,7 +239,7 @@ export default function PerformanceBoard({ data = NO_DATA, month = '', isCurrent
                       </span>
                     </>)}
               </td>
-              <td className={td}><Ring pct={p.overall} /></td>
+              <td className={td}><Ring pct={p.overall} size={38} /></td>
               <td className={td}><StatusChip status={p.status} /></td>
               <td className={`${td} whitespace-nowrap text-[13px]`}>
                 {p.manager.reviewed
