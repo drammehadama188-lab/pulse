@@ -1431,9 +1431,21 @@ app.get('/api/attendance', auth, requirePower('team'), (req, res) => {
 // source doesn't exist yet (reviews.json empty, Admin KPI feed off). Self-scoped
 // to the caller's own team; 403 if they don't lead one (re-checked server-side).
 // Which role scorecard applies to a person (mirrors /api/my/progress).
-function scorecardKey(u) {
-  const r = (u.title || '').toLowerCase()
-  const t = (u.department || '').toLowerCase()
+// 🔒 ONE resolver for which scorecard a person is scored on, and 🔴 the LIVE
+// record wins. `person` is the static src/data/team.js seed row, and it is only
+// a fallback for somebody the users store has no title for. Reading the seed
+// FIRST is what kept Yafatou on the Customer Service card after 19 Aug: a role
+// change updates the user record, and nothing updates that file (Adama 29 Aug —
+// "Yafatou is an assistant manager in training why does it say here she is the
+// top performer").
+//
+// 🔑 Assistant Manager is checked BEFORE Customer Service: her title carried
+// "Customer Service Supervisor" for months and the substring match would keep
+// claiming her.
+function scorecardKey(u, person = null) {
+  const r = (u?.title || person?.role || '').toLowerCase()
+  const t = (u?.department || person?.type || '').toLowerCase()
+  if (r.includes('assistant manager')) return 'assistant-manager'
   if (r.includes('team lead')) return 'team-lead'
   if (r.includes('customer service') || t === 'customer service') return 'customer-service'
   if (t === 'sales' || r.includes('sales')) return 'sales'
@@ -7179,12 +7191,7 @@ async function workScorecardFor({ u, person = null, name, month }) {
   // denominator rather than counting as a miss.
   const SCORING_LIVE_MONTH = month === todayKey().slice(0, 7)
   const liveOnly = (v) => (SCORING_LIVE_MONTH ? v : null)
-  const r = (person?.role || u?.title || '').toLowerCase()
-  const t = (person?.type || u?.department || '').toLowerCase()
-  let scKey = null
-  if (r.includes('team lead')) scKey = 'team-lead'
-  else if (r.includes('customer service') || t === 'customer service') scKey = 'customer-service'
-  else if (t === 'sales' || r.includes('sales agent') || r.includes('sales intern') || r.includes('senior sales')) scKey = 'sales'
+  const scKey = scorecardKey(u, person)
 
   let scorecard = null
   // Targets/weights resolve through the KPI Targets store (CEO-set on the
@@ -7239,6 +7246,52 @@ async function workScorecardFor({ u, person = null, name, month }) {
       { key: 'stock', label: 'Stock accountability (trackers)', kind: 'percent', target: kSt.target, weight: kSt.weight, unit: '% verified',
         actual: typeof stock?.accountabilityPct === 'number' ? stock.accountabilityPct : null,
         detail: stock ? `${stock.cleanThisMonth ?? 0} clean counts of ${stock.weeksExpected ?? 4} weeks${stock.outstandingMissing ? ` · ${stock.outstandingMissing} missing` : ''}` : null },
+    ] }
+  } else if (scKey === 'assistant-manager') {
+    // Adama 29 Aug: Yafatou runs day-to-day OPERATIONS, so her KPIs are the
+    // company's operational numbers, not one person's book. Every actual here
+    // is the SAME Admin feed the Customer Service and Team Lead cards read,
+    // aggregated company-wide rather than filtered to a name.
+    // 🔒 Team tracker sales is the team's TOTAL. It is not credited to her —
+    // a sale belongs to its closer, never the manager.
+    const [casF, retF, salesF] = await Promise.all([
+      fetchAdminFeed(`/api/integrations/pulse/cases?month=${CUR}`),
+      fetchAdminFeed(`/api/integrations/pulse/retention?month=${CUR}`),
+      fetchAdminFeed(`/api/integrations/pulse/sales?month=${CUR}`),
+    ])
+    const inst = await fetchAdminInstall(CUR)
+    const stock = await fetchAdminStock(CUR)
+    const sum = (feed, f) => (feed?.agents || []).reduce((acc, a) => acc + (Number(a[f]) || 0), 0)
+    const casOnTime = sum(casF, 'onTime')
+    const casTotal = sum(casF, 'resolved') + sum(casF, 'openOverdue')
+    const rnDue = sum(retF, 'due'), rnRen = sum(retF, 'renewed')
+    const teamWon = salesF ? sum(salesF, 'won') : null
+    const kC = kpiN('cases', 85, 10), kRn = kpiN('renewal', 85, 10), kI = kpiN('install', 95, 10)
+    const kOff = kpiN('offline-review', 90, 10), kSt = kpiN('stock', 100, 10)
+    const kAt = kpiN('team-attendance', 90, 10), kTS = kpiN('team-sales', 12, 10)
+    scorecard = { role: 'Assistant Manager', kpis: [
+      { key: 'cases', label: 'Case resolution', kind: 'percent', target: kC.target, weight: kC.weight, unit: '%',
+        actual: casF && casTotal ? Math.round((casOnTime / casTotal) * 100) : null,
+        detail: casF && casTotal ? `${casOnTime} on time of ${casTotal}` : (casF ? 'no cases this month yet' : null) },
+      { key: 'renewal', label: 'Customer renewal rate', kind: 'percent', target: kRn.target, weight: kRn.weight, unit: '% of renewals due',
+        actual: retF && rnDue ? Math.round((rnRen / rnDue) * 100) : null,
+        due: retF ? rnDue : null,
+        detail: retF && rnDue ? `${rnRen} renewed of ${rnDue} due` : (retF ? 'no renewals due this month yet' : null) },
+      { key: 'install', label: 'Installations completed within 3 days', kind: 'percent', target: kI.target, weight: kI.weight, unit: '%',
+        actual: typeof inst?.installPct === 'number' ? inst.installPct : null,
+        detail: inst && (inst.completed || inst.openLate)
+          ? `${inst.onTime} within 3 days of ${inst.completed + inst.openLate}${inst.openLate ? ` · ${inst.openLate} open past 3 days` : ''}`
+          : (inst ? 'no installations this month yet' : null) },
+      // 🔴 NOTHING FEEDS THIS YET. There is no offline-review endpoint in Admin,
+      // so it stays null and is named as unmeasured rather than counted as a
+      // miss — the same rule as every other KPI Admin cannot answer for.
+      { key: 'offline-review', label: 'Offline devices reviewed', kind: 'percent', target: kOff.target, weight: kOff.weight, unit: '%', actual: null },
+      { key: 'stock', label: 'Stock accountability', kind: 'percent', target: kSt.target, weight: kSt.weight, unit: '%',
+        actual: typeof stock?.accountabilityPct === 'number' ? stock.accountabilityPct : null,
+        detail: stock ? `${stock.cleanThisMonth ?? 0} clean counts of ${stock.weeksExpected ?? 4} weeks${stock.outstandingMissing ? ` · ${stock.outstandingMissing} missing` : ''}` : null },
+      { key: 'team-attendance', label: 'Team attendance', kind: 'percent', target: kAt.target, weight: kAt.weight, unit: '%',
+        actual: liveOnly(teamAttendancePct(u)) },
+      { key: 'team-sales', label: 'Team tracker sales', kind: 'count', target: kTS.target, weight: kTS.weight, unit: 'sales', actual: teamWon },
     ] }
   } else if (scKey === 'team-lead') {
     // teamAttendancePct only ever answers for the current month.
@@ -7346,6 +7399,11 @@ async function performanceFor(u, month) {
 // The board: every scored person for a month, plus the five header figures.
 // 🔒 The people scored are the LIVE roster — the same list Employees shows.
 app.get('/api/performance/board', auth, requireSub('hr', 'performance'), async (req, res) => {
+  // A role change that has come due decides WHICH scorecard someone is scored
+  // on, so it has to land before anybody is scored. It used to apply only when
+  // their record was opened — a promotion dated for the 1st would have left
+  // them on their old KPIs here until somebody happened to click them.
+  applyDueRoleChanges()
   const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? String(req.query.month) : todayKey().slice(0, 7)
   // 🔒 Only the people this caller's HR power actually covers. A board that
   // scored the whole company for anyone holding hr:performance would hand a
@@ -7397,6 +7455,7 @@ app.get('/api/performance/person/:username', auth, requireSub('hr', 'performance
   // Reached by username, but an older bookmark carries a slugified NAME
   // (/performance/sally-saidy) — that used to be the only address this page
   // had, so it still has to resolve.
+  applyDueRoleChanges()
   const key = String(req.params.username || '')
   const slug = (n) => String(n || '').toLowerCase().replace(/\s+/g, '-')
   const u = findUser(key) || seedUsers().find((x) => slug(x.name) === key)

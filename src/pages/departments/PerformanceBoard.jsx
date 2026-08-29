@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Download, Search, Trophy, ChevronRight } from 'lucide-react'
+import { Download, Search, Trophy, ArrowUp, ChevronRight } from 'lucide-react'
 import Pager, { usePager } from '../../components/ui/Pager.jsx'
 import EmptyState from '../../components/ui/EmptyState.jsx'
 import { PERF_WEIGHTS, PERF_STATUS } from '../../../lib/performance-model.js'
@@ -78,6 +78,8 @@ export default function PerformanceBoard({ data = NO_DATA, month = '', isCurrent
   }
 
   const s = data.summary || NO_DATA.summary
+  // Only somebody actually on track earns the word "top".
+  const leading = s.topPerformer?.status === 'on-track'
   const field = 'field'
   const th = 'h-[46px] whitespace-nowrap px-3.5 text-left text-[11.5px] font-medium text-[var(--color-ink-faint)]'
   const td = 'h-[72px] px-3.5 py-3 align-middle'
@@ -112,13 +114,22 @@ export default function PerformanceBoard({ data = NO_DATA, month = '', isCurrent
         tone={s.reviewsDue ? 'var(--color-stage-interview)' : 'var(--color-pill-active)'}
         foot={<span className="text-[12px] text-[var(--color-ink-faint)]">{isCurrentMonth ? 'This month' : monthLabel(month)}</span>} />
 
+      {/* 🔒 "Top performer" is a claim, and it is only true when the best score
+          is actually a good one. With nobody on track the tile was putting a
+          trophy over somebody who needs attention and calling her the top
+          performer (Adama 29 Aug). Then it says what it really is: the highest
+          score this month. */}
       <div className="card flex items-start gap-3 p-5 md:col-span-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
-          style={{ background: 'var(--color-pill-active-bg)', color: 'var(--color-pill-active)' }}>
-          <Trophy size={17} strokeWidth={1.8} />
+          style={leading
+            ? { background: 'var(--color-pill-active-bg)', color: 'var(--color-pill-active)' }
+            : { background: 'var(--color-fill)', color: 'var(--color-ink-faint)' }}>
+          {leading ? <Trophy size={17} strokeWidth={1.8} /> : <ArrowUp size={17} strokeWidth={1.8} />}
         </span>
         <span className="min-w-0">
-          <span className="block text-[12px] font-medium text-[var(--color-ink-faint)]">Top performer</span>
+          <span className="block text-[12px] font-medium text-[var(--color-ink-faint)]">
+            {leading ? 'Top performer' : 'Highest this month'}
+          </span>
           {s.topPerformer ? (
             <>
               <button onClick={() => navigate(`/performance/${s.topPerformer.username}`)}
