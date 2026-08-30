@@ -1441,9 +1441,14 @@ app.post('/api/staff/:username/activate', auth, requireSub('staffadmin', 'add'),
   if (!isDraft(u)) return res.json({ status: u.status })
   const missing = missingForActivate(u)
   if (missing.length) return res.status(400).json({ error: `Cannot activate — still missing: ${missing.join(', ')}`, missing })
-  // Probation is a state of an ACTIVE employee, so it resolves on activation
-  // rather than being carried as a status through the draft.
-  u.status = u.probationEnd && Date.parse(u.probationEnd) >= Date.now() ? 'probation' : 'active'
+  // 🔴 ACTIVE, ALWAYS — probation is DERIVED from probationEnd, it is not a
+  // stored status. Writing 'probation' here looked tidier and broke the admin
+  // roster sync, which only ever gives a NEW person a seat when Pulse says
+  // 'active' (`!prev && u.status !== 'active'` → skip). Every new hire on
+  // probation would have been silently denied an admin seat forever.
+  // The Employees list and the record page have always derived the probation
+  // chip from probationEnd; nothing needed a second source for it.
+  u.status = 'active'
   ;(u.history ||= []).push({ date: todayKey(), event: `Activated as ${u.title || 'staff'}` })
   db.write('users', users)
   res.json({ status: u.status })
