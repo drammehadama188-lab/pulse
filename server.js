@@ -1216,6 +1216,8 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
     // 🔒 Created by the Add-employee wizard = PENDING, never active. The record
     // is being built; it becomes an employee when it is activated.
     status: req.body?.draft === false ? 'active' : 'pending',
+    // Step 1 is behind them the moment the record exists.
+    draftStep: 1,
     createdViaPulse: true,
     createdBy: req.user.username,
     createdAt: new Date().toISOString(),
@@ -1295,6 +1297,7 @@ app.get('/api/staff/:username/draft', auth, requireSub('staffadmin', 'add'), (re
     draft: {
       username: u.username,
       status: u.status,
+      step: Math.max(0, Math.min(5, Number(u.draftStep) || 0)),
       name: u.name || '', email: u.email || '', personalEmail: u.personalEmail || '',
       phone: u.phone || '', address: u.address || '',
       title: u.title || '', department: u.department || 'Sales',
@@ -1354,6 +1357,10 @@ app.put('/api/staff/:username/draft', auth, requireSub('staffadmin', 'add'), not
     u.salary = base + transport
   }
   if (b.target !== undefined) u.target = Number(b.target) || 0
+  // 🔒 WHERE THEY GOT TO. Reopening a half-built record at step 1 makes them
+  // walk the whole thing again to reach the step they were on — the exact
+  // "starting each time i close it" this was built to stop (Adama 30 Aug).
+  if (b.step !== undefined) u.draftStep = Math.max(0, Math.min(5, Number(b.step) || 0))
   if (b.manager !== undefined) {
     const manager = String(b.manager || '').trim()
     if (manager && !users.some((x) => isOnStaff(x) && x.name === manager)) return res.status(400).json({ error: 'Reports to must be someone on the team' })

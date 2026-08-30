@@ -152,6 +152,9 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
           target: x.target, roleId: x.roleId,
         }))
         setMissing(d.missing || [])
+        // 🔒 Land where they stopped, not at the beginning. Back still works if
+        // they want to go over something again.
+        if (Number.isFinite(x.step)) setStep(Math.max(0, Math.min(STEPS.length - 1, x.step)))
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
@@ -215,16 +218,16 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   // 🔒 SAVE, THEN MOVE. Step 1 creates the record as PENDING; every step after
   // updates it. Nothing typed is ever lost by closing the page, which is the
   // whole point — the record is being worked on, not started over.
-  async function saveStep() {
+  async function saveStep(landingOn = step) {
     setBusy(true)
     setError('')
     try {
       if (!username) {
-        const r = await api('/staff', { method: 'POST', body: { ...payload(), type: /manager|lead|supervisor/i.test(v.title) ? 'manager' : 'agent' } })
+        const r = await api('/staff', { method: 'POST', body: { ...payload(), step: landingOn, type: /manager|lead|supervisor/i.test(v.title) ? 'manager' : 'agent' } })
         setUsername(r.staff.username)
         onCreated?.()
       } else {
-        const r = await api(`/staff/${username}/draft`, { method: 'PUT', body: payload() })
+        const r = await api(`/staff/${username}/draft`, { method: 'PUT', body: { ...payload(), step: landingOn } })
         setMissing(r.missing || [])
       }
       return true
@@ -239,15 +242,16 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   const next = async () => {
     const p = problemWith(step)
     if (p) return setError(p)
-    if (!(await saveStep())) return
-    setStep((n) => Math.min(STEPS.length - 1, n + 1))
+    const landing = Math.min(STEPS.length - 1, step + 1)
+    if (!(await saveStep(landing))) return
+    setStep(landing)
   }
   const back = () => { setError(''); setStep((n) => Math.max(0, n - 1)) }
   const goTo = async (i) => {
     if (i === step) return
-    if (i < step) { setError(''); await saveStep(); return setStep(i) }
+    if (i < step) { setError(''); await saveStep(i); return setStep(i) }
     for (let k = step; k < i; k++) { const p = problemWith(k); if (p) { setStep(k); return setError(p) } }
-    if (!(await saveStep())) return
+    if (!(await saveStep(i))) return
     setStep(i)
   }
 
@@ -376,7 +380,10 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
             style={i === step
               ? { background: 'var(--color-brand-50)', color: 'var(--color-brand)' }
               : { background: 'var(--color-fill)', color: i < step ? 'var(--color-ink-soft)' : 'var(--color-ink-faint)' }}>
-            {i < step && <Check size={11} className="mr-1 inline align-middle" />}{label}
+            {i < step
+              ? <Check size={11} className="mr-1 inline align-middle" />
+              : <span className="mr-1.5 tabular-nums opacity-60">{i + 1}</span>}
+            {label}
           </button>
         ))}
       </div>
