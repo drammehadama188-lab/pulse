@@ -64,9 +64,12 @@ function Row({ children }) {
   return <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">{children}</div>
 }
 function Note({ tone = 'quiet', title, children }) {
+  // 🔒 --color-fill (#f2f4f8) is the ONE neutral grey in the theme, and it was
+  // doing every surface in here. Pulse's language for a quiet blue panel is
+  // --color-brand-50; amber stays amber.
   const c = tone === 'warn'
     ? { background: 'var(--color-pill-leave-bg)', color: 'var(--color-pill-leave)' }
-    : { background: 'var(--color-fill)', color: 'var(--color-ink-soft)' }
+    : { background: 'var(--color-brand-50)', color: 'var(--color-brand)' }
   return (
     <div className="rounded-[10px] p-4" style={{ background: c.background }}>
       <p className="text-[12.5px] font-semibold" style={{ color: c.color }}>{title}</p>
@@ -233,7 +236,7 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
           <button key={k} onClick={() => goTo(i)}
             className="rounded-full px-3.5 py-1.5 text-[12px] font-medium transition-colors"
             style={i === step
-              ? { background: 'var(--color-stage-new-bg)', color: 'var(--color-stage-new)' }
+              ? { background: 'var(--color-brand-50)', color: 'var(--color-brand)' }
               : { background: 'var(--color-fill)', color: i < step ? 'var(--color-ink-soft)' : 'var(--color-ink-faint)' }}>
             {i < step && <Check size={11} className="mr-1 inline align-middle" />}{label}
           </button>
@@ -313,7 +316,7 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
                         onClick={() => setV((p) => ({ ...p, week: { ...p.week, [k]: !p.week[k] } }))}
                         className="rounded-full px-2.5 py-1.5 text-[12px] font-medium transition-colors"
                         style={v.week[k]
-                          ? { background: 'var(--color-stage-new-bg)', color: 'var(--color-stage-new)' }
+                          ? { background: 'var(--color-brand-50)', color: 'var(--color-brand)' }
                           : { background: 'var(--color-fill)', color: 'var(--color-ink-faint)' }}>
                         {label}
                       </button>
@@ -427,7 +430,8 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
       {id === 'documents' && (
         <Section title="Documents" line="Add employee documents now, or track them as outstanding onboarding items.">
           <button type="button" onClick={() => fileInput.current?.click()}
-            className="flex w-full flex-col items-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-line-control)] bg-[var(--color-soft)] px-6 py-10 transition-colors hover:border-[var(--color-brand-soft)]">
+            className="flex w-full flex-col items-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-line-control)] px-6 py-10 transition-colors hover:border-[var(--color-brand-soft)]"
+            style={{ background: 'var(--color-paper)' }}>
             <Upload size={20} className="text-[var(--color-brand)]" />
             <span className="text-[13px] font-semibold text-[var(--color-ink)]">Drop files here or choose files</span>
             <span className="text-[11.5px] text-[var(--color-ink-faint)]">PDF, JPG or PNG · up to 10 MB</span>
@@ -436,9 +440,12 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
             onChange={(e) => { setExtra((p) => [...p, ...Array.from(e.target.files || [])]); e.target.value = '' }} />
 
           <h3 className="mt-7 text-[13px] font-semibold text-[var(--color-ink)]">Employment documents</h3>
-          <div className="mt-3 space-y-3">
+          {/* One bordered list with hairline dividers — the same shape as an
+              Employees row. Three separate boxes was a third pattern for the
+              same job. */}
+          <div className="mt-3 overflow-hidden rounded-[10px] border border-[var(--color-line)]">
             {DOC_SLOTS.map((d) => (
-              <div key={d.key} className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-[var(--color-line)] px-4 py-3.5">
+              <div key={d.key} className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-line-soft)] px-4 py-3.5 transition-colors last:border-0 hover:bg-[var(--color-row-hover)]">
                 <span className="min-w-0">
                   <span className="block text-[13px] font-semibold text-[var(--color-ink)]">{d.label}</span>
                   <span className="mt-0.5 block text-[11.5px] text-[var(--color-ink-faint)]">{d.required ? 'Required' : 'Optional'}</span>
@@ -577,12 +584,21 @@ function Shell({ title, subtitle, onClose, children }) {
     }
   }, [onClose])
   return (
-    <div className="fixed inset-0 z-50 flex" style={{ background: 'rgba(11,18,32,0.28)' }} onMouseDown={onClose}>
-      <span className="hidden shrink-0 md:block" style={{ width: 228 }} />
+    // 🔒 The app's own ground, and the app's own frame. Every Pulse page is
+    // white cards on --color-paper inside max-w-1440 / px-8; this covered all
+    // of that with one flat white sheet running edge to edge, which is why it
+    // did not line up with the page underneath it (Adama 30 Aug).
+    // 🔑 The overlay stops at the sidebar instead of lying over it. A pale veil
+    // across the dark rail washed it out to grey — the sidebar is the one piece
+    // of strong colour on the screen and it has to stay crisp.
+    <div className="fixed inset-y-0 right-0 left-0 z-50 overflow-hidden md:left-[228px]"
+      style={{ background: 'rgba(248,249,252,0.88)' }} onMouseDown={onClose}>
+      <div className="flex h-full">
+        <div className="min-w-0 flex-1 overflow-hidden px-4 py-4 md:px-8 md:py-8">
       <div onMouseDown={(e) => e.stopPropagation()}
-        className="flex h-full min-w-0 flex-1 flex-col border-l border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-lift)]">
+        className="card mx-auto flex h-full max-w-[1440px] flex-col overflow-hidden">
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--color-line-soft)] px-6 py-5 md:px-9"
-          style={{ background: 'var(--color-fill)' }}>
+          style={{ background: 'var(--color-paper)' }}>
           <div>
             <h1 className="text-[21px] font-semibold tracking-[-0.3px] text-[var(--color-ink)]">{title}</h1>
             <p className="mt-1 text-[12.5px] text-[var(--color-ink-soft)]">{subtitle}</p>
@@ -592,6 +608,8 @@ function Shell({ title, subtitle, onClose, children }) {
           </button>
         </div>
         {children}
+      </div>
+        </div>
       </div>
     </div>
   )
@@ -604,7 +622,7 @@ function Body({ children }) {
 function Footer({ left, middle, right }) {
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-t border-[var(--color-line)] px-6 py-4 md:px-9"
-      style={{ background: 'var(--color-fill)' }}>
+      style={{ background: 'var(--color-paper)' }}>
       <span className="min-w-[90px]">{left}</span>
       {middle && <span className="text-[12px] text-[var(--color-ink-faint)]">{middle}</span>}
       <span className="min-w-[90px] text-right">{right}</span>
