@@ -312,6 +312,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
         try {
           await api('/agent-files', { method: 'POST', body: {
             agent: v.name.trim(), name: f.name, mimeType: f.type, category,
+            // 🔒 A contract someone uploads is the copy that came BACK signed.
+            ...(category === 'contract' ? { stage: 'signed' } : {}),
             base64: await readAsBase64(f),
           } })
         } catch { failed.push(f.name) }
@@ -330,13 +332,22 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   // 🔒 ONE IDEA OF THE DOCUMENT. A contract generated on the previous step is
   // the employment contract — the Documents step must not go on asking for it
   // as though it were a different piece of paper.
-  const onFile = (key) => key === 'contract' && Number(contract?.filed) > 0
+  // 🔒 Both copies are kept and they answer different questions: the issued one
+  // is what we sent, the signed one is the contract of record. Only the signed
+  // one closes the item.
+  const onFile = (key) => key === 'contract' && (Number(contract?.signed) > 0 || Number(contract?.issued) > 0)
+  const contractState = () => {
+    if (docs.contract) return docs.contract.name
+    if (Number(contract?.signed) > 0) return 'Signed copy on file'
+    if (Number(contract?.issued) > 0) return 'Issued — awaiting the signed copy'
+    return 'Not uploaded'
+  }
 
   async function fileContract() {
     setBusy(true); setError('')
     try {
       await api(`/staff/${username}/contract/file`, { method: 'POST', body: {} })
-      setContract((c) => ({ ...c, filed: (Number(c?.filed) || 0) + 1 }))
+      setContract((c) => ({ ...c, issued: (Number(c?.issued) || 0) + 1 }))
       setSentTo('filed')
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
@@ -345,7 +356,7 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     setBusy(true); setError('')
     try {
       const r = await api(`/staff/${username}/contract/send`, { method: 'POST', body: { to: contract.to } })
-      setContract((c) => ({ ...c, filed: (Number(c?.filed) || 0) + 1 }))
+      setContract((c) => ({ ...c, issued: (Number(c?.issued) || 0) + 1 }))
       setSentTo(r.blocked ? 'blocked' : r.to)
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
@@ -697,8 +708,13 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
                 <button onClick={fileContract} disabled={busy} className="btn-secondary hover:bg-[var(--color-soft)] disabled:opacity-60">
                   Keep a copy on their file
                 </button>
-                {contract.filed > 0 && (
-                  <span className="text-[12px] text-[var(--color-ink-faint)]">{contract.filed} already on file</span>
+                {(contract.issued > 0 || contract.signed > 0) && (
+                  <span className="text-[12px] text-[var(--color-ink-faint)]">
+                    {contract.issued > 0 && `${contract.issued} issued`}
+                    {contract.issued > 0 && contract.signed > 0 && ' · '}
+                    {contract.signed > 0 && `${contract.signed} signed`}
+                    {' on file'}
+                  </span>
                 )}
               </div>
 
@@ -711,13 +727,15 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
               )}
 
               {sentTo === 'filed' && (
-                <div className="mt-4"><Note title="Filed">A copy is on their record, and it counts as their employment contract on the next step.</Note></div>
+                <div className="mt-4"><Note title="Filed">The issued copy is on their file. The signed one goes on top of it when it comes back — both are kept.</Note></div>
               )}
               {sentTo === 'blocked' && (
                 <div className="mt-4"><Note tone="warn" title="Not sent — outbound email is off on this machine">The copy was still filed. On the live server it would have gone out.</Note></div>
               )}
               {sentTo && sentTo !== 'filed' && sentTo !== 'blocked' && (
-                <div className="mt-4"><Note title={`Sent to ${sentTo}`}>A copy is on their record. When they send the signed one back, upload it on the next step.</Note></div>
+                <div className="mt-4"><Note title={`Sent to ${sentTo}`}>
+                  The copy we issued is on their file. When the signed one comes back, upload it on the next step — both are kept, and the signed one is the contract of record.
+                </Note></div>
               )}
 
               <div className="mt-5">
@@ -756,10 +774,10 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
                 <span className="flex items-center gap-4">
                   <span className="text-[12px] font-medium truncate max-w-[240px]"
                     style={{ color: docs[d.key] || onFile(d.key) ? 'var(--color-pill-active)' : d.required ? 'var(--color-pill-leave)' : 'var(--color-ink-faint)' }}>
-                    {docs[d.key] ? docs[d.key].name : onFile(d.key) ? 'Generated and on file' : 'Not uploaded'}
+                    {d.key === 'contract' ? contractState() : docs[d.key] ? docs[d.key].name : 'Not uploaded'}
                   </span>
                   <label className="cursor-pointer text-[12.5px] font-semibold text-[var(--color-brand)] hover:underline">
-                    {docs[d.key] ? 'Replace' : 'Upload'}
+                    {docs[d.key] ? 'Replace' : d.key === 'contract' && Number(contract?.issued) > 0 ? 'Upload signed' : 'Upload'}
                     <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) setDocs((p) => ({ ...p, [d.key]: f })); e.target.value = '' }} />
                   </label>

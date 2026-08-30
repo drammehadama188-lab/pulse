@@ -1445,7 +1445,13 @@ app.get('/api/staff/:username/contract', auth, requireSub('staffadmin', 'add'), 
     html: contractHtml(u, { week, manager }),
     missing: missingForContract(u, week),
     to: u.personalEmail || u.email || '',
-    filed: db.read('agent-files', []).filter((f) => f.agent === u.name && f.category === 'contract').length,
+    // 🔒 TWO DOCUMENTS, BOTH KEPT, ONLY ONE COUNTS. The issued copy proves what
+    // was sent and when; the signed copy is the contract of record. Neither is
+    // ever deleted for the other — a signed contract does not erase the
+    // question of what was issued (Adama 30 Aug: "if they sign do we keep both
+    // or just one").
+    issued: db.read('agent-files', []).filter((f) => f.agent === u.name && f.category === 'contract' && f.stage !== 'signed').length,
+    signed: db.read('agent-files', []).filter((f) => f.agent === u.name && f.category === 'contract' && f.stage === 'signed').length,
   })
 })
 
@@ -1461,8 +1467,9 @@ function fileContract(u, htmlDoc, by) {
   const files = db.read('agent-files', [])
   const meta = {
     id, agent: u.name,
-    name: `Contract of Employment — ${u.name} (${todayKey()}).html`,
-    category: 'contract', mimeType: 'text/html', sizeBytes: buffer.length,
+    name: `Contract of Employment (issued ${todayKey()}) — ${u.name}.html`,
+    category: 'contract', stage: 'issued',
+    mimeType: 'text/html', sizeBytes: buffer.length,
     storedAs, uploadedAt: new Date().toISOString(), uploadedBy: by, generated: true,
   }
   files.push(meta)
@@ -5145,7 +5152,7 @@ app.get('/api/my/file', auth, (req, res) => {
   res.json({ reviews, documents, coaching })
 })
 app.post('/api/agent-files', auth, requireSub('hr', 'performance'), notViewAs, (req, res) => {
-  const { agent, name, mimeType, base64, category } = req.body || {}
+  const { agent, name, mimeType, base64, category, stage } = req.body || {}
   if (!agent || !name || !base64) return res.status(400).json({ error: 'agent, name, base64 required' })
   if (!hrNamesSet(req.realUser).has(agent)) return res.status(403).json({ error: 'Not in your HR scope' })
   const dir = ensureAgentDir(agent)
@@ -5157,6 +5164,8 @@ app.post('/api/agent-files', auth, requireSub('hr', 'performance'), notViewAs, (
   fs.writeFileSync(path.join(dir, storedAs), buffer)
   const files = db.read('agent-files', [])
   const meta = { id, agent, name, category: category || 'general', mimeType: mimeType || 'application/octet-stream', sizeBytes: buffer.length, storedAs, uploadedAt: new Date().toISOString(), uploadedBy: req.user.name || 'Manager' }
+  // A contract uploaded by hand is the copy that came BACK signed.
+  if (stage === 'signed' || stage === 'issued') meta.stage = stage
   files.push(meta)
   db.write('agent-files', files)
   res.json({ success: true, file: meta })
