@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Upload, Check, ArrowLeft, FileText, CheckCircle2 } from 'lucide-react'
+import { Upload, Check, ArrowLeft, FileText, CheckCircle2, Mail } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { PageSkeleton } from './ui/Skeleton.jsx'
 // 🔒 The house dropdown. A native <select> hands the OS its own menu — a
@@ -146,7 +146,7 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   const on = (k) => (e) => set(k, e.target.value)
 
   const [contract, setContract] = useState(null)
-  const [sentTo, setSentTo] = useState('')
+  const [justIssued, setJustIssued] = useState(false)
   const [docs, setDocs] = useState({})   // slot key → File
   const [extra, setExtra] = useState([]) // other files
 
@@ -336,6 +336,9 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   // is what we sent, the signed one is the contract of record. Only the signed
   // one closes the item.
   const onFile = (key) => key === 'contract' && (Number(contract?.signed) > 0 || Number(contract?.issued) > 0)
+  // Issued at any point, whether just now or on an earlier visit.
+  const issuedNow = justIssued || Number(contract?.issued) > 0
+  const todayLong = () => new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   const contractState = () => {
     if (docs.contract) return docs.contract.name
     if (Number(contract?.signed) > 0) return 'Signed copy on file'
@@ -343,22 +346,41 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     return 'Not uploaded'
   }
 
-  async function fileContract() {
+  // 🔒 PULSE DOES NOT SEND THE CONTRACT. It used to post it from the server as
+  // noreply@, which meant a contract arrived from an address nobody replies to,
+  // Adama had no say in which account it came from, and the only sign anything
+  // had happened was a line of text under an unchanged blue button (Adama
+  // 30 Aug: "sending should open my email and i choose which email sends it ...
+  // no indication except it's sent").
+  //
+  // So: the file is issued and filed HERE, and the mail is composed in HIS
+  // email client, from whichever account he picks, where he can see it before
+  // it goes and it lands in his sent items like every other letter.
+  async function issueContract() {
     setBusy(true); setError('')
     try {
       await api(`/staff/${username}/contract/file`, { method: 'POST', body: {} })
       setContract((c) => ({ ...c, issued: (Number(c?.issued) || 0) + 1 }))
-      setSentTo('filed')
+      const url = URL.createObjectURL(new Blob([contract.html], { type: 'text/html;charset=utf-8' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Contract of Employment — ${v.name.trim() || 'employee'}.html`
+      a.click()
+      URL.revokeObjectURL(url)
+      setJustIssued(true)
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
-  // 🔒 Only reachable from the button under the contract they have just read.
-  async function sendContract() {
-    setBusy(true); setError('')
-    try {
-      const r = await api(`/staff/${username}/contract/send`, { method: 'POST', body: { to: contract.to } })
-      setContract((c) => ({ ...c, issued: (Number(c?.issued) || 0) + 1 }))
-      setSentTo(r.blocked ? 'blocked' : r.to)
-    } catch (e) { setError(e.message) } finally { setBusy(false) }
+
+  function openInEmail() {
+    const first = (v.name.trim() || '').split(/\s+/)[0]
+    const subject = 'Your contract of employment — Damia Security Solutions Ltd'
+    const body = [
+      `Dear ${first},`, '',
+      'Please find your contract of employment attached.',
+      'Read it carefully, and if you are happy with it, sign it and send a copy back to us.', '',
+      'Adama Drammeh', 'Managing Director', 'Damia Security Solutions Ltd',
+    ].join('\n')
+    window.location.href = `mailto:${encodeURIComponent(contract.to || '')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
   async function activate() {
@@ -701,41 +723,39 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
                   className="block h-[520px] w-full border-0 bg-white" />
               </div>
 
+              {/* 🔒 Two steps, in the order they actually happen: get the
+                  document, then write the mail. The second is deliberately
+                  quiet until the first has been done — there is nothing to
+                  attach before the contract has been issued. */}
               <div className="mt-5 flex flex-wrap items-center gap-3">
-                <button onClick={sendContract} disabled={busy || !contract.to} className="btn-primary disabled:opacity-60">
-                  {busy ? 'Sending…' : `Send to ${contract.to || 'their email'}`}
+                <button onClick={issueContract} disabled={busy} className="btn-primary disabled:opacity-60">
+                  {busy ? 'Issuing…' : issuedNow ? 'Download again' : 'Issue contract & download'}
                 </button>
-                <button onClick={fileContract} disabled={busy} className="btn-secondary hover:bg-[var(--color-soft)] disabled:opacity-60">
-                  Keep a copy on their file
+                <button onClick={openInEmail} disabled={!contract.to}
+                  className={`inline-flex items-center gap-2 btn-secondary hover:bg-[var(--color-soft)] disabled:opacity-50 ${issuedNow ? '' : 'opacity-60'}`}>
+                  <Mail size={15} /> Open in my email
                 </button>
-                {(contract.issued > 0 || contract.signed > 0) && (
-                  <span className="text-[12px] text-[var(--color-ink-faint)]">
-                    {contract.issued > 0 && `${contract.issued} issued`}
-                    {contract.issued > 0 && contract.signed > 0 && ' · '}
-                    {contract.signed > 0 && `${contract.signed} signed`}
-                    {' on file'}
-                  </span>
+              </div>
+
+              {/* What has actually happened, in plain words, where the button was. */}
+              <div className="mt-4">
+                {issuedNow ? (
+                  <Note title={`Issued ${todayLong()} · on their file`}>
+                    The file has downloaded. Press <strong>Open in my email</strong>, attach it, and send it from whichever account you want — Pulse does not send it for you. When the signed copy comes back, upload it on the next step; both are kept and the signed one is the contract of record.
+                  </Note>
+                ) : (
+                  <Note title="Nothing has been issued yet">
+                    Nothing has left this page. Issuing writes the contract to their file and downloads a copy for you to attach.
+                  </Note>
                 )}
               </div>
 
               {!contract.to && (
                 <div className="mt-4">
-                  <Note tone="warn" title="Nowhere to send it">
-                    There is no personal email on their record. Add one on the Personal step — that is the address the letter goes to, because the work email does not exist yet.
+                  <Note tone="warn" title="No address to write to">
+                    There is no personal email on their record, so the email cannot be addressed. Add one on the Personal step — that is where the letter goes, because the work email does not exist yet.
                   </Note>
                 </div>
-              )}
-
-              {sentTo === 'filed' && (
-                <div className="mt-4"><Note title="Filed">The issued copy is on their file. The signed one goes on top of it when it comes back — both are kept.</Note></div>
-              )}
-              {sentTo === 'blocked' && (
-                <div className="mt-4"><Note tone="warn" title="Not sent — outbound email is off on this machine">The copy was still filed. On the live server it would have gone out.</Note></div>
-              )}
-              {sentTo && sentTo !== 'filed' && sentTo !== 'blocked' && (
-                <div className="mt-4"><Note title={`Sent to ${sentTo}`}>
-                  The copy we issued is on their file. When the signed one comes back, upload it on the next step — both are kept, and the signed one is the contract of record.
-                </Note></div>
               )}
 
               <div className="mt-5">

@@ -1434,8 +1434,11 @@ app.post('/api/staff/:username/activate', auth, requireSub('staffadmin', 'add'),
 // sign too."
 //
 // 🔒 The wording is HIS — lib/contract.js is his own employment agreement with
-// the facts filled in from the record. 🔒 Nothing is ever sent without it being
-// shown first and Send being pressed: this endpoint only READS.
+// the facts filled in from the record.
+// 🔒 PULSE DOES NOT SEND CONTRACTS. It issues them and files them; the mail is
+// written in Adama's own email client, from an account he picks, so a contract
+// never arrives from noreply@ and he can see it before it goes (30 Aug). There
+// is deliberately no send endpoint here to drift back into use.
 app.get('/api/staff/:username/contract', auth, requireSub('staffadmin', 'add'), (req, res) => {
   const u = seedUsers().find((x) => x.username === String(req.params.username || '').trim().toLowerCase())
   if (!u) return res.status(404).json({ error: 'No such staff member' })
@@ -1489,42 +1492,6 @@ app.post('/api/staff/:username/contract/file', auth, requireSub('staffadmin', 'a
   ;(u.history ||= []).push({ date: todayKey(), event: 'Contract generated and filed' })
   db.write('users', users)
   res.json({ file })
-})
-
-// 🔒 SENDS TO THE PERSONAL EMAIL. That is the whole point of the field: the
-// work email does not exist yet when the letter goes out. A copy is filed at
-// the same time, so what was sent is always on the record.
-app.post('/api/staff/:username/contract/send', auth, requireSub('staffadmin', 'add'), notViewAs, async (req, res) => {
-  const users = seedUsers()
-  const u = users.find((x) => x.username === req.params.username)
-  if (!u) return res.status(404).json({ error: 'No such staff member' })
-  const to = String(req.body?.to || u.personalEmail || u.email || '').trim().toLowerCase()
-  if (!/^\S+@\S+\.\S+$/.test(to)) return res.status(400).json({ error: 'No valid email to send to — add their personal email on the Personal step.' })
-  const week = effectiveWeek(db.read('schedules', {})[u.username], u.joined || todayKey())
-  const missing = missingForContract(u, week)
-  if (missing.length) return res.status(400).json({ error: `The contract cannot be sent yet — missing: ${missing.join(', ')}`, missing })
-  if (!emailConfigured() && String(process.env.OUTBOUND_EMAIL || '').toLowerCase() !== 'off') {
-    return res.status(503).json({ error: 'Email is not set up on this server.' })
-  }
-  const manager = (db.read('profiles', {})[u.name] || {}).manager || ''
-  const htmlDoc = contractHtml(u, { week, manager })
-  const first = String(u.name || '').split(/\s+/)[0]
-  try {
-    const result = await sendMail({
-      to,
-      subject: `Your contract of employment — Damia Tracker Gambia`,
-      text: `Dear ${first},\n\nPlease find your contract of employment attached below. Read it carefully, and if you are happy with it, sign and return a copy to us.\n\nDamia Tracker Gambia`,
-      html: `<p>Dear ${first},</p><p>Please find your contract of employment below. Read it carefully, and if you are happy with it, sign and return a copy to us.</p><hr>${htmlDoc}`,
-    })
-    // 🔒 File it whatever the mail server said. A copy of what was sent belongs
-    // on the record even if the send later turns out to have bounced.
-    const file = fileContract(u, htmlDoc, req.user.name || req.user.username)
-    ;(u.history ||= []).push({ date: todayKey(), event: `Contract sent to ${to}` })
-    db.write('users', users)
-    res.json({ sent: !result.blocked, blocked: !!result.blocked, to, file })
-  } catch (e) {
-    res.status(502).json({ error: `Could not send: ${e.message}` })
-  }
 })
 
 // Mark someone as a contractor — stays on payroll and in the staff list, but
