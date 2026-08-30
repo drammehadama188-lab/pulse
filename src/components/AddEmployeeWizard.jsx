@@ -65,6 +65,10 @@ const DOC_SLOTS = [
   { key: 'id', label: 'ID / Passport', required: true },
   { key: 'policies', label: 'Signed company policies', required: false },
 ]
+// Same lists the employee record uses, so a value set here reads back the same
+// way there.
+const GENDERS = ['Female', 'Male']
+const MARITAL = ['Single', 'Married', 'Divorced', 'Widowed']
 const DAY_KEYS = [['1', 'Mon'], ['2', 'Tue'], ['3', 'Wed'], ['4', 'Thu'], ['5', 'Fri'], ['6', 'Sat'], ['0', 'Sun']]
 const DEFAULT_WEEK = { 1: true, 2: true, 3: true, 4: true, 5: true, 6: false, 0: false }
 
@@ -132,6 +136,7 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
 
   const [v, setV] = useState({
     name: '', email: '', personalEmail: '', phone: '', address: '',
+    dob: '', gender: '', maritalStatus: '', nationality: '', emergencyContact: '', emergencyPhone: '',
     title: 'Sales Agent', department: 'Sales', manager: '', employmentType: 'Full-time',
     joined: today(), week: { ...DEFAULT_WEEK }, start: '09:00', end: '17:00',
     contractMonths: '', onProbation: true, probationMonths: '3',
@@ -164,6 +169,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
         setV((p) => ({
           ...p,
           name: x.name, email: x.email, personalEmail: x.personalEmail, phone: x.phone, address: x.address,
+          dob: x.dob || '', gender: x.gender || '', maritalStatus: x.maritalStatus || '',
+          nationality: x.nationality || '', emergencyContact: x.emergencyContact || '', emergencyPhone: x.emergencyPhone || '',
           title: x.title, department: x.department || p.department, manager: x.manager,
           employmentType: x.employmentType || p.employmentType, joined: x.joined,
           week: x.week && Object.keys(x.week).length ? x.week : p.week,
@@ -196,6 +203,16 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
 
   const probationEnd = v.onProbation ? addMonths(v.joined, v.probationMonths) : ''
   // What is paid whatever happens, and what is paid when the target is met.
+  const age = (() => {
+    const d = new Date(`${v.dob}T00:00:00Z`)
+    if (!v.dob || isNaN(d)) return null
+    const now = new Date()
+    let a = now.getUTCFullYear() - d.getUTCFullYear()
+    const before = now.getUTCMonth() < d.getUTCMonth()
+      || (now.getUTCMonth() === d.getUTCMonth() && now.getUTCDate() < d.getUTCDate())
+    if (before) a -= 1
+    return a >= 0 && a < 120 ? a : null
+  })()
   const guaranteed = (Number(v.baseSalary) || 0) + (Number(v.transport) || 0)
   const onTarget = guaranteed + (Number(v.commission) || 0)
   const contractEnd = Number(v.contractMonths) > 0 ? addMonths(v.joined, v.contractMonths) : ''
@@ -243,6 +260,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     for (const [k] of DAY_KEYS) week[k] = v.week[k] ? { start: v.start, end: v.end } : null
     return {
       name: v.name.trim(), email: v.email.trim(), personalEmail: v.personalEmail.trim(),
+      dob: v.dob, gender: v.gender, maritalStatus: v.maritalStatus,
+      nationality: v.nationality.trim(), emergencyContact: v.emergencyContact.trim(), emergencyPhone: v.emergencyPhone.trim(),
       title: v.title.trim(), department: v.department, manager: v.manager,
       employmentType: v.employmentType, joined: v.joined,
       schedule: isContractor ? null : week,
@@ -496,6 +515,46 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
             <span className={L}>Address</span>
             <input value={v.address} onChange={on('address')} placeholder="e.g. Bakau, New Town Road" className="field w-full" />
           </label>
+
+          <div className="mt-4">
+            <Row>
+              <label className="block">
+                <span className={L}>Date of birth</span>
+                <input type="date" value={v.dob} onChange={on('dob')} className="field w-full" />
+                {/* 🔒 Age is DERIVED from the date of birth, never typed and
+                    never stored — a stored age is wrong within a year. */}
+                {age != null && <span className={HELP}>{age} years old</span>}
+              </label>
+              <label className="block">
+                <span className={L}>Nationality</span>
+                <input value={v.nationality} onChange={on('nationality')} placeholder="e.g. Gambian" className="field w-full" />
+              </label>
+              <label className="block">
+                <span className={L}>Gender</span>
+                <MenuSelect value={v.gender} onChange={(x) => set('gender', x)} placeholder="Not stated"
+                  options={[{ value: '', label: 'Not stated' }, ...GENDERS.map((g) => ({ value: g, label: g }))]} />
+              </label>
+              <label className="block">
+                <span className={L}>Marital status</span>
+                <MenuSelect value={v.maritalStatus} onChange={(x) => set('maritalStatus', x)} placeholder="Not stated"
+                  options={[{ value: '', label: 'Not stated' }, ...MARITAL.map((m) => ({ value: m, label: m }))]} />
+              </label>
+            </Row>
+          </div>
+
+          <h3 className="mt-7 text-[15px] font-semibold text-[var(--color-ink)]">Emergency contact</h3>
+          <div className="mt-3">
+            <Row>
+              <label className="block">
+                <span className={L}>Name</span>
+                <input value={v.emergencyContact} onChange={on('emergencyContact')} placeholder="Who to call" className="field w-full" />
+              </label>
+              <label className="block">
+                <span className={L}>Phone</span>
+                <input value={v.emergencyPhone} onChange={on('emergencyPhone')} placeholder="e.g. 3XX XX XX" className="field w-full" />
+              </label>
+            </Row>
+          </div>
         </Section>
       )}
 

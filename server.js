@@ -1304,6 +1304,8 @@ app.get('/api/staff/:username/draft', auth, requireSub('staffadmin', 'add'), (re
       phone: u.phone || '', address: u.address || '',
       title: u.title || '', department: u.department || 'Sales',
       manager: (db.read('profiles', {})[u.name] || {}).manager || '',
+      ...Object.fromEntries(['dob', 'gender', 'maritalStatus', 'nationality', 'emergencyContact', 'emergencyPhone']
+        .map((k) => [k, (db.read('profiles', {})[u.name] || {})[k] || ''])),
       employmentType: u.employmentType || '', joined: u.joined || todayKey(),
       week: Object.fromEntries(Object.keys(week).map((k) => [k, !!week[k]])),
       start: anyDay?.start || '09:00', end: anyDay?.end || '17:00',
@@ -1363,11 +1365,21 @@ app.put('/api/staff/:username/draft', auth, requireSub('staffadmin', 'add'), not
   // walk the whole thing again to reach the step they were on — the exact
   // "starting each time i close it" this was built to stop (Adama 30 Aug).
   if (b.step !== undefined) u.draftStep = Math.max(0, Math.min(4, Number(b.step) || 0))
+  // 🔒 Who they are beyond a name: date of birth, gender, marital status,
+  // nationality and who to call in an emergency. These live on the PROFILE —
+  // the same store the record page reads and writes — so the wizard and the
+  // record can never hold two versions of the same fact.
+  const DRAFT_PROFILE = ['dob', 'gender', 'maritalStatus', 'nationality', 'emergencyContact', 'emergencyPhone']
+  const profilePatch = {}
+  for (const k of DRAFT_PROFILE) if (b[k] !== undefined) profilePatch[k] = String(b[k] || '').trim().slice(0, 120)
   if (b.manager !== undefined) {
     const manager = String(b.manager || '').trim()
     if (manager && !users.some((x) => isOnStaff(x) && x.name === manager)) return res.status(400).json({ error: 'Reports to must be someone on the team' })
+    profilePatch.manager = manager
+  }
+  if (Object.keys(profilePatch).length) {
     const profiles = db.read('profiles', {})
-    profiles[u.name] = { ...(profiles[u.name] || {}), manager }
+    profiles[u.name] = { ...(profiles[u.name] || {}), ...profilePatch }
     db.write('profiles', profiles)
   }
   // 🔒 Access is the CEO's alone, on a draft exactly as anywhere else.
