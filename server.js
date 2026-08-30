@@ -14,6 +14,8 @@ import { rosterPay, pastStaffPay, payrollHistory as legacyPayrollHistory, totalP
 import { sallyCustomers, sallyMonthlyHistory } from './src/data/sally-sales-seed.js'
 import { buildPayrollHistory, zohoConfigured, paySources, recordSalaryPayment, resolveVendor, getExpense, deleteExpense, updateSalaryExpense, existingSalaryExpense, salaryExpensesForMonth } from './lib/zoho-books.js'
 import { sendMail, emailConfigured } from './lib/email.js'
+// The contract, composed from the record using HIS OWN agreement wording.
+import { contractHtml, missingForContract } from './lib/contract.js'
 // The performance model — weights, bands and the three-source calculation —
 // lives in ONE file the server and the pages both import (lib/, not src/).
 import {
@@ -1297,7 +1299,7 @@ app.get('/api/staff/:username/draft', auth, requireSub('staffadmin', 'add'), (re
     draft: {
       username: u.username,
       status: u.status,
-      step: Math.max(0, Math.min(4, Number(u.draftStep) || 0)),
+      step: Math.max(0, Math.min(5, Number(u.draftStep) || 0)),
       name: u.name || '', email: u.email || '', personalEmail: u.personalEmail || '',
       phone: u.phone || '', address: u.address || '',
       title: u.title || '', department: u.department || 'Sales',
@@ -1360,7 +1362,7 @@ app.put('/api/staff/:username/draft', auth, requireSub('staffadmin', 'add'), not
   // 🔒 WHERE THEY GOT TO. Reopening a half-built record at step 1 makes them
   // walk the whole thing again to reach the step they were on — the exact
   // "starting each time i close it" this was built to stop (Adama 30 Aug).
-  if (b.step !== undefined) u.draftStep = Math.max(0, Math.min(4, Number(b.step) || 0))
+  if (b.step !== undefined) u.draftStep = Math.max(0, Math.min(5, Number(b.step) || 0))
   if (b.manager !== undefined) {
     const manager = String(b.manager || '').trim()
     if (manager && !users.some((x) => isOnStaff(x) && x.name === manager)) return res.status(400).json({ error: 'Reports to must be someone on the team' })
@@ -1423,6 +1425,99 @@ app.post('/api/staff/:username/activate', auth, requireSub('staffadmin', 'add'),
   ;(u.history ||= []).push({ date: todayKey(), event: `Activated as ${u.title || 'staff'}` })
   db.write('users', users)
   res.json({ status: u.status })
+})
+
+// ---------- the contract (Adama 30 Aug) ----------
+// "we have to have a contract generator after pay is decided before documents,
+// called contracts, that shows the contract, that way you can just send it via
+// email to the person and review, and this goes to their files and after they
+// sign too."
+//
+// 🔒 The wording is HIS — lib/contract.js is his own employment agreement with
+// the facts filled in from the record. 🔒 Nothing is ever sent without it being
+// shown first and Send being pressed: this endpoint only READS.
+app.get('/api/staff/:username/contract', auth, requireSub('staffadmin', 'add'), (req, res) => {
+  const u = seedUsers().find((x) => x.username === String(req.params.username || '').trim().toLowerCase())
+  if (!u) return res.status(404).json({ error: 'No such staff member' })
+  const week = effectiveWeek(db.read('schedules', {})[u.username], u.joined || todayKey())
+  const manager = (db.read('profiles', {})[u.name] || {}).manager || ''
+  res.json({
+    html: contractHtml(u, { week, manager }),
+    missing: missingForContract(u, week),
+    to: u.personalEmail || u.email || '',
+    filed: db.read('agent-files', []).filter((f) => f.agent === u.name && f.category === 'contract').length,
+  })
+})
+
+// Keep a copy on their file. 🔑 Same category the Documents step reads, so
+// filing the contract here ticks "Employment contract" there rather than
+// leaving a second, separate idea of the same document.
+function fileContract(u, htmlDoc, by) {
+  const dir = ensureAgentDir(u.name)
+  const id = 'f_' + crypto.randomUUID()
+  const storedAs = `${id}.html`
+  const buffer = Buffer.from(htmlDoc, 'utf8')
+  fs.writeFileSync(path.join(dir, storedAs), buffer)
+  const files = db.read('agent-files', [])
+  const meta = {
+    id, agent: u.name,
+    name: `Contract of Employment — ${u.name} (${todayKey()}).html`,
+    category: 'contract', mimeType: 'text/html', sizeBytes: buffer.length,
+    storedAs, uploadedAt: new Date().toISOString(), uploadedBy: by, generated: true,
+  }
+  files.push(meta)
+  db.write('agent-files', files)
+  return meta
+}
+
+app.post('/api/staff/:username/contract/file', auth, requireSub('staffadmin', 'add'), notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === req.params.username)
+  if (!u) return res.status(404).json({ error: 'No such staff member' })
+  const week = effectiveWeek(db.read('schedules', {})[u.username], u.joined || todayKey())
+  const missing = missingForContract(u, week)
+  if (missing.length) return res.status(400).json({ error: `The contract cannot be written yet — missing: ${missing.join(', ')}`, missing })
+  const manager = (db.read('profiles', {})[u.name] || {}).manager || ''
+  const file = fileContract(u, contractHtml(u, { week, manager }), req.user.name || req.user.username)
+  ;(u.history ||= []).push({ date: todayKey(), event: 'Contract generated and filed' })
+  db.write('users', users)
+  res.json({ file })
+})
+
+// 🔒 SENDS TO THE PERSONAL EMAIL. That is the whole point of the field: the
+// work email does not exist yet when the letter goes out. A copy is filed at
+// the same time, so what was sent is always on the record.
+app.post('/api/staff/:username/contract/send', auth, requireSub('staffadmin', 'add'), notViewAs, async (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === req.params.username)
+  if (!u) return res.status(404).json({ error: 'No such staff member' })
+  const to = String(req.body?.to || u.personalEmail || u.email || '').trim().toLowerCase()
+  if (!/^\S+@\S+\.\S+$/.test(to)) return res.status(400).json({ error: 'No valid email to send to — add their personal email on the Personal step.' })
+  const week = effectiveWeek(db.read('schedules', {})[u.username], u.joined || todayKey())
+  const missing = missingForContract(u, week)
+  if (missing.length) return res.status(400).json({ error: `The contract cannot be sent yet — missing: ${missing.join(', ')}`, missing })
+  if (!emailConfigured() && String(process.env.OUTBOUND_EMAIL || '').toLowerCase() !== 'off') {
+    return res.status(503).json({ error: 'Email is not set up on this server.' })
+  }
+  const manager = (db.read('profiles', {})[u.name] || {}).manager || ''
+  const htmlDoc = contractHtml(u, { week, manager })
+  const first = String(u.name || '').split(/\s+/)[0]
+  try {
+    const result = await sendMail({
+      to,
+      subject: `Your contract of employment — Damia Tracker Gambia`,
+      text: `Dear ${first},\n\nPlease find your contract of employment attached below. Read it carefully, and if you are happy with it, sign and return a copy to us.\n\nDamia Tracker Gambia`,
+      html: `<p>Dear ${first},</p><p>Please find your contract of employment below. Read it carefully, and if you are happy with it, sign and return a copy to us.</p><hr>${htmlDoc}`,
+    })
+    // 🔒 File it whatever the mail server said. A copy of what was sent belongs
+    // on the record even if the send later turns out to have bounced.
+    const file = fileContract(u, htmlDoc, req.user.name || req.user.username)
+    ;(u.history ||= []).push({ date: todayKey(), event: `Contract sent to ${to}` })
+    db.write('users', users)
+    res.json({ sent: !result.blocked, blocked: !!result.blocked, to, file })
+  } catch (e) {
+    res.status(502).json({ error: `Could not send: ${e.message}` })
+  }
 })
 
 // Mark someone as a contractor — stays on payroll and in the staff list, but

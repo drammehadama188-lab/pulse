@@ -36,6 +36,10 @@ const STEPS = [
   ['personal', 'Personal'],
   ['employment', 'Employment'],
   ['pay', 'Pay'],
+  // 🔒 AFTER PAY, BEFORE DOCUMENTS (Adama 30 Aug). The contract states the pay,
+  // so it cannot be written until pay is decided; and it becomes one of their
+  // documents, so it comes before the step that collects them.
+  ['contract', 'Contract'],
   ['documents', 'Documents'],
   ['access', 'Access'],
 ]
@@ -141,6 +145,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   }
   const on = (k) => (e) => set(k, e.target.value)
 
+  const [contract, setContract] = useState(null)
+  const [sentTo, setSentTo] = useState('')
   const [docs, setDocs] = useState({})   // slot key → File
   const [extra, setExtra] = useState([]) // other files
 
@@ -171,6 +177,14 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }, [resumeUsername])
+
+  // 🔑 Read from the SAVED record, not the form state — the contract has to be
+  // the document that matches what is on file, not what is half-typed.
+  useEffect(() => {
+    if (STEPS[step][0] !== 'contract' || !username) return
+    setContract(null)
+    api(`/staff/${username}/contract`).then(setContract).catch((e) => setError(e.message))
+  }, [step, username])
 
   useEffect(() => {
     api('/hr/employees').then((d) => setPeople((d.employees || []).map((e) => e.name))).catch(() => setPeople([]))
@@ -303,7 +317,7 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
         } catch { failed.push(f.name) }
       }
       const r = await api(`/staff/${who}/complete`, { method: 'POST', body: {} })
-      const missingDocs = DOC_SLOTS.filter((d) => d.required && !docs[d.key]).map((d) => d.label)
+      const missingDocs = DOC_SLOTS.filter((d) => d.required && !docs[d.key] && !onFile(d.key)).map((d) => d.label)
       setDone({ username: who, name: v.name.trim(), email: v.email.trim(), status: r.status, missing: missingDocs, failed })
       onCreated?.()
     } catch (e) {
@@ -311,6 +325,29 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     } finally {
       setBusy(false)
     }
+  }
+
+  // 🔒 ONE IDEA OF THE DOCUMENT. A contract generated on the previous step is
+  // the employment contract — the Documents step must not go on asking for it
+  // as though it were a different piece of paper.
+  const onFile = (key) => key === 'contract' && Number(contract?.filed) > 0
+
+  async function fileContract() {
+    setBusy(true); setError('')
+    try {
+      await api(`/staff/${username}/contract/file`, { method: 'POST', body: {} })
+      setContract((c) => ({ ...c, filed: (Number(c?.filed) || 0) + 1 }))
+      setSentTo('filed')
+    } catch (e) { setError(e.message) } finally { setBusy(false) }
+  }
+  // 🔒 Only reachable from the button under the contract they have just read.
+  async function sendContract() {
+    setBusy(true); setError('')
+    try {
+      const r = await api(`/staff/${username}/contract/send`, { method: 'POST', body: { to: contract.to } })
+      setContract((c) => ({ ...c, filed: (Number(c?.filed) || 0) + 1 }))
+      setSentTo(r.blocked ? 'blocked' : r.to)
+    } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
 
   async function activate() {
@@ -632,6 +669,67 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
         </Section>
       )}
 
+      {id === 'contract' && (
+        <Section title="Contract" line="Written from the record. Read it, then send it or keep a copy on their file.">
+          {!username && <Note title="Save the earlier steps first">The contract is written from what is saved, so there is nothing to write yet.</Note>}
+
+          {username && !contract && <p className="text-[13px] text-[var(--color-ink-soft)]">Writing the contract…</p>}
+
+          {contract?.missing?.length > 0 && (
+            <Note tone="warn" title="The contract cannot be written yet">
+              Missing: {contract.missing.join(', ')}. Go back and fill those in — a contract with a blank salary or start date is worse than no contract.
+            </Note>
+          )}
+
+          {contract && !contract.missing?.length && (
+            <>
+              {/* The document itself, exactly as it will be sent and filed.
+                  🔒 Nothing can be sent that has not been shown here first. */}
+              <div className="overflow-hidden rounded-[10px] border border-[var(--color-line)]">
+                <iframe title="Contract of employment" srcDoc={contract.html}
+                  className="block h-[520px] w-full border-0 bg-white" />
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <button onClick={sendContract} disabled={busy || !contract.to} className="btn-primary disabled:opacity-60">
+                  {busy ? 'Sending…' : `Send to ${contract.to || 'their email'}`}
+                </button>
+                <button onClick={fileContract} disabled={busy} className="btn-secondary hover:bg-[var(--color-soft)] disabled:opacity-60">
+                  Keep a copy on their file
+                </button>
+                {contract.filed > 0 && (
+                  <span className="text-[12px] text-[var(--color-ink-faint)]">{contract.filed} already on file</span>
+                )}
+              </div>
+
+              {!contract.to && (
+                <div className="mt-4">
+                  <Note tone="warn" title="Nowhere to send it">
+                    There is no personal email on their record. Add one on the Personal step — that is the address the letter goes to, because the work email does not exist yet.
+                  </Note>
+                </div>
+              )}
+
+              {sentTo === 'filed' && (
+                <div className="mt-4"><Note title="Filed">A copy is on their record, and it counts as their employment contract on the next step.</Note></div>
+              )}
+              {sentTo === 'blocked' && (
+                <div className="mt-4"><Note tone="warn" title="Not sent — outbound email is off on this machine">The copy was still filed. On the live server it would have gone out.</Note></div>
+              )}
+              {sentTo && sentTo !== 'filed' && sentTo !== 'blocked' && (
+                <div className="mt-4"><Note title={`Sent to ${sentTo}`}>A copy is on their record. When they send the signed one back, upload it on the next step.</Note></div>
+              )}
+
+              <div className="mt-5">
+                <Note title="Wording comes from the existing agreements">
+                  The clauses are the ones already in use in HR/team; only the facts change, and they come from this record — so the contract and the record cannot disagree.
+                </Note>
+              </div>
+            </>
+          )}
+        </Section>
+      )}
+
       {id === 'documents' && (
         <Section title="Documents" line="Add employee documents now, or track them as outstanding onboarding items.">
           <button type="button" onClick={() => fileInput.current?.click()}
@@ -656,9 +754,9 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
                   <span className="mt-0.5 block text-[11.5px] text-[var(--color-ink-faint)]">{d.required ? 'Required' : 'Optional'}</span>
                 </span>
                 <span className="flex items-center gap-4">
-                  <span className="text-[12px] font-medium truncate max-w-[220px]"
-                    style={{ color: docs[d.key] ? 'var(--color-pill-active)' : d.required ? 'var(--color-pill-leave)' : 'var(--color-ink-faint)' }}>
-                    {docs[d.key] ? docs[d.key].name : 'Not uploaded'}
+                  <span className="text-[12px] font-medium truncate max-w-[240px]"
+                    style={{ color: docs[d.key] || onFile(d.key) ? 'var(--color-pill-active)' : d.required ? 'var(--color-pill-leave)' : 'var(--color-ink-faint)' }}>
+                    {docs[d.key] ? docs[d.key].name : onFile(d.key) ? 'Generated and on file' : 'Not uploaded'}
                   </span>
                   <label className="cursor-pointer text-[12.5px] font-semibold text-[var(--color-brand)] hover:underline">
                     {docs[d.key] ? 'Replace' : 'Upload'}
