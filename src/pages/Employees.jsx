@@ -322,7 +322,10 @@ export default function Employees() {
                     {menu === e.username && (
                       <div onMouseLeave={() => setMenu(null)}
                         className="absolute right-4 top-10 z-30 w-48 rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-lift)]">
-                        {e.status === 'complete' && (
+                        {e.status === 'complete' && !e.email && (
+                          <span className="block px-3 py-2 text-[12.5px] text-[var(--color-ink-faint)]">Needs a work email to activate</span>
+                        )}
+                        {e.status === 'complete' && e.email && (
                           <button
                             onClick={async () => {
                               setMenu(null);

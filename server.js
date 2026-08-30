@@ -159,6 +159,16 @@ function draftNameSet() {
 // What a record needs before it can be called complete. 🔒 Documents and Pulse
 // access are NEVER on this list — Adama's own rule is that a missing document
 // does not block anything, and somebody can be employed with no sign-in.
+// 🔒 ACTIVATION NEEDS A COMPANY EMAIL (Adama 30 Aug: "we cannot activate
+// without a company email"). Completing does NOT — the work email is created
+// after the letter goes out, which is deliberately later. So the two checks are
+// different on purpose: a record can be finished with no address, and nobody
+// goes live without one.
+function missingForActivate(u) {
+  const gaps = missingForComplete(u)
+  if (!String(u.email || '').trim()) gaps.push('Work email')
+  return gaps
+}
 function missingForComplete(u) {
   const gaps = []
   if (!String(u.name || '').trim()) gaps.push('Full name')
@@ -1429,7 +1439,7 @@ app.post('/api/staff/:username/activate', auth, requireSub('staffadmin', 'add'),
   if (!u) return res.status(404).json({ error: 'No such staff member' })
   if (isArchived(u)) return res.status(409).json({ error: 'That record is archived.' })
   if (!isDraft(u)) return res.json({ status: u.status })
-  const missing = missingForComplete(u)
+  const missing = missingForActivate(u)
   if (missing.length) return res.status(400).json({ error: `Cannot activate — still missing: ${missing.join(', ')}`, missing })
   // Probation is a state of an ACTIVE employee, so it resolves on activation
   // rather than being carried as a status through the draft.

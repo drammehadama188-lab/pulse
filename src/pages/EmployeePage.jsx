@@ -299,9 +299,14 @@ export default function EmployeePage() {
               contract comes back. Only offered once the record is complete —
               activating a half-built record is what the two states exist to
               prevent. */}
+          {/* 🔒 No company email, no activation. Said on the button rather
+              than discovered by pressing it. */}
           {e.status === 'complete' && (
-            <button onClick={activate} disabled={activating}
-              className="btn-primary disabled:opacity-60">{activating ? 'Activating…' : 'Activate'}</button>
+            <button onClick={activate} disabled={activating || !e.email}
+              title={e.email ? undefined : 'Needs a work email first'}
+              className="btn-primary disabled:opacity-50">
+              {activating ? 'Activating…' : e.email ? 'Activate' : 'Activate — needs a work email'}
+            </button>
           )}
           {canEditActive && !isDraftRecord && !endOpen && (
             <button onClick={() => setEndOpen(true)}
