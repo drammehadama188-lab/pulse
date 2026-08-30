@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { payByName } from '../lib/pay.js';
 import { Attendance, Documents, Notes, History } from './employee/tabs.jsx';
 import RoleChange from '../components/employee/RoleChange.jsx';
+import Assignment from '../components/employee/Assignment.jsx';
 import EndEmployment from '../components/employee/EndEmployment.jsx';
 import LeaverFile from '../components/employee/LeaverFile.jsx';
 import { PageSkeleton } from '../components/ui/Skeleton.jsx';
@@ -379,6 +380,10 @@ export default function EmployeePage() {
               typed over another one — so it sits under the terms it changes. */}
           <RoleChange employee={e} departments={departments} roster={roster} roles={roles}
             canEdit={canEditActive} onDone={refreshRecord} />
+          {/* The role is the role; the assignment sits UNDER it — what they
+              are told to do for a period, and what they are judged on while
+              they do it. It changes no title, no pay and no permission. */}
+          <Assignment employee={e} canEdit={canEditActive} onDone={refreshRecord} />
         </div>
       )}
 

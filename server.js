@@ -1490,19 +1490,103 @@ app.get('/api/attendance', auth, requirePower('team'), (req, res) => {
 // from the locked profile, contract end from the roster. Honest blanks where a
 // source doesn't exist yet (reviews.json empty, Admin KPI feed off). Self-scoped
 // to the caller's own team; 403 if they don't lead one (re-checked server-side).
-// Which role scorecard applies to a person (mirrors /api/my/progress).
-// 🔒 ONE resolver for which scorecard a person is scored on, and 🔴 the LIVE
-// record wins. `person` is the static src/data/team.js seed row, and it is only
-// a fallback for somebody the users store has no title for. Reading the seed
-// FIRST is what kept Yafatou on the Customer Service card after 19 Aug: a role
-// change updates the user record, and nothing updates that file (Adama 29 Aug —
-// "Yafatou is an assistant manager in training why does it say here she is the
-// top performer").
+// ---------- ASSIGNMENTS: what someone is TOLD TO DO for a period ----------
+//
+// Adama 30 Aug: "Their roles are their roles and under the role we have
+// assignment. what they are told to do within a period. By default their role
+// is customer service then that's the job. But lets say i want someone to
+// handle a job for a month and be scored by that i can change the assignment
+// from customer service to sales manager this is usually temporary. when the
+// assignment says a department they will be judged by that".
+//
+// 🔒 THE MODEL. The ROLE is permanent and owns the title, the pay and what the
+// person can do in Pulse. The ASSIGNMENT sits UNDER the role, carries a period,
+// and owns exactly ONE thing: WHICH SCORECARD SCORES THEM. Nothing else moves.
+//   · the title does not change — a permanent move is a role change
+//   · pay does not change — payroll stays the only writer of pay
+//   · permissions do not change — those come from the access role
+//
+// 🔒 IT REPLACES, IT DOES NOT ADD. Yafatou is the case that settled it: the
+// Customer Service and Assistant Manager cards read the SAME company-wide
+// Admin feeds for renewals, installations and stock, so running both side by
+// side would print one number twice and call it two scorecards.
+//
+// 🔒 A MONTH IS SCORED BY THE ASSIGNMENT THAT WAS RUNNING THAT MONTH — the
+// same rule the KPI targets follow. Ending an assignment must never silently
+// rescore the months it covered. And when it lapses, scoring returns to the
+// role on its own: nobody has to remember to switch it back.
+const ASSIGNMENT_REASONS = ['Training for the role', 'Covering someone', 'Cross-training', 'Extra responsibility', 'Other']
+
+function loadAssignments() {
+  const all = db.read('assignments', [])
+  return Array.isArray(all) ? all : []
+}
+// The assignment running in a given month. Compared by MONTH, not by day: a
+// scorecard is a monthly thing, so an assignment that ran for any part of a
+// month is what that month is judged on. An open end date runs until ended.
+function assignmentFor(username, month) {
+  const M = /^\d{4}-\d{2}$/.test(String(month || '')) ? String(month) : todayKey().slice(0, 7)
+  return loadAssignments()
+    .filter((a) => a.username === username && !a.cancelledAt)
+    .filter((a) => String(a.from).slice(0, 7) <= M && (!a.to || String(a.to).slice(0, 7) >= M))
+    .sort((a, b) => String(b.from).localeCompare(String(a.from)))[0] || null
+}
+// Same shape as applyDueRoleChanges: a future assignment applies itself on the
+// day, and a finished one writes its own closing line. Idempotent — both are
+// stamped once, so this can run on every read.
+function applyDueAssignments() {
+  const all = loadAssignments()
+  const today = todayKey()
+  const started = all.filter((a) => !a.startedAt && !a.cancelledAt && String(a.from) <= today)
+  const ended = all.filter((a) => a.startedAt && !a.endedNoteAt && a.to && String(a.to) < today)
+  if (!started.length && !ended.length) return all
+  const users = seedUsers()
+  for (const a of started) {
+    const u = users.find((x) => x.username === a.username)
+    a.startedAt = new Date().toISOString()
+    if (!u) { a.applyNote = 'no such person'; continue }
+    ;(u.history ||= []).push({
+      date: a.from,
+      event: `Assignment started — ${a.label}${a.to ? ` until ${a.to}` : ' (no end date set)'}${a.reason ? ` (${a.reason})` : ''}. Scored on the ${a.scorecardLabel} KPIs; job title unchanged.`,
+    })
+  }
+  for (const a of ended) {
+    const u = users.find((x) => x.username === a.username)
+    a.endedNoteAt = new Date().toISOString()
+    if (!u) continue
+    ;(u.history ||= []).push({
+      date: a.to,
+      event: `Assignment ended — ${a.label}. Back to being scored on their role.`,
+    })
+  }
+  db.write('users', users)
+  db.write('assignments', all)
+  return all
+}
+
+// Which scorecard scores this person. 🔒 The ASSIGNMENT outranks the title: it
+// is what they were told to do for this period, and so it is what they agreed
+// to be judged on. With no assignment running, the title decides, exactly as
+// before.
+//
+// 🔑 The live USER RECORD wins over the static src/data/team.js seed row —
+// `person` is only a fallback for somebody the users store has no title for.
+// Reading the seed FIRST is what kept Yafatou on the Customer Service card
+// after 19 Aug: a role change updates the user record, and nothing updates
+// that file (Adama 29 Aug — "Yafatou is an assistant manager in training why
+// does it say here she is the top performer").
 //
 // 🔑 Assistant Manager is checked BEFORE Customer Service: her title carried
 // "Customer Service Supervisor" for months and the substring match would keep
 // claiming her.
-function scorecardKey(u, person = null) {
+function scorecardKey(u, person = null, month = null) {
+  const a = u?.username ? assignmentFor(u.username, month) : null
+  if (a && KPI_CATALOG[a.scorecard]) return a.scorecard
+  return titleScorecardKey(u, person)
+}
+// The card their ROLE alone would put them on — what an assignment replaces,
+// and what scoring returns to when it ends.
+function titleScorecardKey(u, person = null) {
   const r = (u?.title || person?.role || '').toLowerCase()
   const t = (u?.department || person?.type || '').toLowerCase()
   if (r.includes('assistant manager')) return 'assistant-manager'
@@ -1734,8 +1818,8 @@ app.get('/api/integrations/kpi-targets', (req, res) => {
 })
 
 function scorecardFor(u, salesActual) {
-  const key = scorecardKey(u)
   const MONTH = todayKey().slice(0, 7)
+  const key = scorecardKey(u, null, MONTH)
   // Sales + CS numbers resolve through the KPI Targets store (CEO-set,
   // effective by month); the per-person sales target (u.target) still wins
   // for that one person when set.
@@ -1765,6 +1849,15 @@ function scorecardFor(u, salesActual) {
     { key: 'coaching', label: 'Coaching & check-ins', kind: 'percent', target: 100, weight: 20, unit: '% done', actual: null },
     { key: 'team-attendance', label: 'Team attendance', kind: 'percent', target: 95, weight: 10, unit: '%', actual: null },
   ] }
+  // Any other card the catalog knows (Assistant Manager today) resolves
+  // straight from the catalog. 🔴 Before assignments this returned null, which
+  // showed a person NO KPIs at all — survivable while only a title could
+  // reach that card, but an assignment can now point anyone at any card, and a
+  // blank scorecard reads as "measured, scored nothing" rather than "not built".
+  // Actuals stay null here: this builder is the preview, and workScorecardFor
+  // is what fetches the real numbers.
+  const plan = kpiPlanFor(key, MONTH)
+  if (plan) return { role: plan.role, kpis: plan.kpis.map((k) => ({ ...k, actual: null })) }
   return null
 }
 // Coaching cadence = every TWO WEEKS (Adama 1 Jul; was weekly, changed). A
@@ -5612,6 +5705,7 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
   // A role change dated for today (or any day since) takes effect the moment
   // the record is opened — nobody has to remember to come back and type it.
   applyDueRoleChanges()
+  applyDueAssignments()
   // Same for a last working day that has arrived: the account closes on the day
   // that was agreed, not the day somebody remembers to close it.
   applyDueExits()
@@ -6037,6 +6131,111 @@ app.delete('/api/hr/employee/:username/role-changes/:id', auth, requireSub('hr',
   if (!c) return res.status(404).json({ error: 'not found' })
   if (c.appliedAt) return res.status(409).json({ error: 'That change has already taken effect. Record a new one instead.' })
   db.write('role-changes', all.filter((x) => x.id !== c.id))
+  res.json({ ok: true })
+})
+
+// Everything assigned to one person, newest first. The scorecards on offer are
+// the catalog's own keys, so an assignment can only ever point at a card that
+// really exists and really has numbers behind it.
+app.get('/api/hr/employee/:username/assignments', auth, requirePower('hr'), (req, res) => {
+  const u = findUser(req.params.username)
+  if (!u) return res.status(404).json({ error: 'not found' })
+  const all = applyDueAssignments().filter((a) => a.username === u.username && !a.cancelledAt)
+  const month = todayKey().slice(0, 7)
+  res.json({
+    assignments: all.sort((a, b) => String(b.from).localeCompare(String(a.from))),
+    current: assignmentFor(u.username, month),
+    // What their ROLE alone would score them on, so the page can say plainly
+    // what the assignment is replacing and what it goes back to.
+    roleScorecard: (() => {
+      const k = titleScorecardKey(u)
+      return k ? { key: k, label: KPI_CATALOG[k].role } : null
+    })(),
+    scorecards: Object.keys(KPI_CATALOG).map((k) => ({ key: k, label: KPI_CATALOG[k].role })),
+    today: todayKey(),
+    reasons: ASSIGNMENT_REASONS,
+  })
+})
+
+app.post('/api/hr/employee/:username/assignments', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const u = findUser(req.params.username)
+  if (!u || isArchived(u)) return res.status(404).json({ error: 'not found' })
+  const b = req.body || {}
+  const from = String(b.from || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) return res.status(400).json({ error: 'Pick the date the assignment starts' })
+  if (u.joined && from < String(u.joined).slice(0, 10)) {
+    return res.status(400).json({ error: 'An assignment cannot start before the person joined' })
+  }
+  const to = b.to ? String(b.to).slice(0, 10) : ''
+  if (to && !/^\d{4}-\d{2}-\d{2}$/.test(to)) return res.status(400).json({ error: 'That end date is not a date' })
+  if (to && to < from) return res.status(400).json({ error: 'The assignment cannot end before it starts' })
+  const scorecard = String(b.scorecard || '')
+  if (!KPI_CATALOG[scorecard]) return res.status(400).json({ error: 'Pick what they will be judged on' })
+  const reason = ASSIGNMENT_REASONS.includes(b.reason) ? b.reason : 'Other'
+  // 🔒 ONE assignment at a time. Two overlapping ones would put a person on two
+  // scorecards for the same month, which is the thing this model exists to
+  // avoid — the two cards mostly read the SAME company-wide feeds, so it would
+  // print one number twice and call it two results.
+  const clash = loadAssignments().find((a) => a.username === u.username && !a.cancelledAt
+    && String(a.from).slice(0, 7) <= (to || '9999-12').slice(0, 7)
+    && (!a.to || String(a.to).slice(0, 7) >= from.slice(0, 7)))
+  if (clash) {
+    return res.status(409).json({ error: `${u.name.split(' ')[0]} is already assigned to ${clash.scorecardLabel} over those dates. End that one first.` })
+  }
+
+  const a = {
+    id: crypto.randomUUID(),
+    username: u.username,
+    scorecard,
+    scorecardLabel: KPI_CATALOG[scorecard].role,
+    label: String(b.label || '').trim().slice(0, 80) || KPI_CATALOG[scorecard].role,
+    from,
+    to,
+    reason,
+    note: String(b.note || '').trim().slice(0, 400),
+    // What their role scores them on, captured NOW. When the assignment ends
+    // they go back to the role, and the role may have moved on in the meantime;
+    // this is a record of what was replaced, not a promise of what returns.
+    replacedScorecard: titleScorecardKey(u) || null,
+    fromTitle: u.title || '',
+    by: req.realUser.name || req.realUser.username,
+    createdAt: new Date().toISOString(),
+    startedAt: null,
+    cancelledAt: null,
+  }
+  const all = loadAssignments()
+  all.push(a)
+  db.write('assignments', all)
+  applyDueAssignments()
+  res.json({ assignment: a })
+})
+
+// End a running assignment. 🔒 It is dated, never deleted: the months it
+// covered stay scored the way they were lived. Default is today, and an end
+// date cannot be pushed back before it started.
+app.post('/api/hr/employee/:username/assignments/:id/end', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const all = loadAssignments()
+  const a = all.find((x) => x.id === req.params.id && x.username === String(req.params.username || '').trim().toLowerCase())
+  if (!a || a.cancelledAt) return res.status(404).json({ error: 'not found' })
+  const to = req.body?.to ? String(req.body.to).slice(0, 10) : todayKey()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(to)) return res.status(400).json({ error: 'That end date is not a date' })
+  if (to < String(a.from)) return res.status(400).json({ error: 'The assignment cannot end before it starts' })
+  a.to = to
+  a.endedBy = req.realUser.name || req.realUser.username
+  a.endedAt = new Date().toISOString()
+  db.write('assignments', all)
+  applyDueAssignments()
+  res.json({ assignment: a })
+})
+
+// An assignment that has not started yet can be called off. One that has run
+// cannot: it is ENDED with a date, not erased.
+app.delete('/api/hr/employee/:username/assignments/:id', auth, requireSub('hr', 'records'), notViewAs, (req, res) => {
+  const all = loadAssignments()
+  const a = all.find((x) => x.id === req.params.id)
+  if (!a) return res.status(404).json({ error: 'not found' })
+  if (a.startedAt) return res.status(409).json({ error: 'That assignment has already started. End it with a date instead.' })
+  db.write('assignments', all.filter((x) => x.id !== a.id))
   res.json({ ok: true })
 })
 
@@ -7251,7 +7450,9 @@ async function workScorecardFor({ u, person = null, name, month }) {
   // denominator rather than counting as a miss.
   const SCORING_LIVE_MONTH = month === todayKey().slice(0, 7)
   const liveOnly = (v) => (SCORING_LIVE_MONTH ? v : null)
-  const scKey = scorecardKey(u, person)
+  // 🔒 The month being scored decides the card, so a finished assignment
+  // leaves the months it covered scored as they were lived.
+  const scKey = scorecardKey(u, person, month)
 
   let scorecard = null
   // Targets/weights resolve through the KPI Targets store (CEO-set on the
@@ -7464,6 +7665,7 @@ app.get('/api/performance/board', auth, requireSub('hr', 'performance'), async (
   // their record was opened — a promotion dated for the 1st would have left
   // them on their old KPIs here until somebody happened to click them.
   applyDueRoleChanges()
+  applyDueAssignments()
   const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? String(req.query.month) : todayKey().slice(0, 7)
   // 🔒 Only the people this caller's HR power actually covers. A board that
   // scored the whole company for anyone holding hr:performance would hand a
@@ -7516,6 +7718,7 @@ app.get('/api/performance/person/:username', auth, requireSub('hr', 'performance
   // (/performance/sally-saidy) — that used to be the only address this page
   // had, so it still has to resolve.
   applyDueRoleChanges()
+  applyDueAssignments()
   const key = String(req.params.username || '')
   const slug = (n) => String(n || '').toLowerCase().replace(/\s+/g, '-')
   const u = findUser(key) || seedUsers().find((x) => slug(x.name) === key)
