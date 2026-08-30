@@ -38,6 +38,9 @@ const tenure = (iso) => {
   return y ? `${y}y ${m}m` : `${m}m`;
 };
 const STATUS = {
+  // 🔒 Being built and being employed are different facts (Adama 30 Aug).
+  pending: ['Pending completion', 'var(--color-pill-leave-bg)', 'var(--color-pill-leave)'],
+  complete: ['Ready to activate', 'var(--color-stage-new-bg)', 'var(--color-stage-new)'],
   active: ['Active', 'var(--color-pill-active-bg)', 'var(--color-pill-active)'],
   probation: ['Probation', 'var(--color-pill-probation-bg)', 'var(--color-pill-probation)'],
   leave: ['On leave', 'var(--color-pill-leave-bg)', 'var(--color-pill-leave)'],
@@ -167,6 +170,7 @@ export default function EmployeePage() {
   const [roles, setRoles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
+  const [activating, setActivating] = useState(false);
   const [payEdit, setPayEdit] = useState(null);
   const [payErr, setPayErr] = useState('');
   const { realUser, isViewAs } = useAuth();
@@ -204,6 +208,13 @@ export default function EmployeePage() {
 
   // One place to re-read the record after a write, so a document that was
   // deleted or added does not leave a stale list on screen.
+  async function activate() {
+    setActivating(true);
+    try { await api(`/staff/${username}/activate`, { method: 'POST', body: {} }); await refreshRecord(); }
+    catch (err) { setError(err.message); }
+    finally { setActivating(false); }
+  }
+
   async function refreshRecord() {
     setD(await api(`/hr/employee/${username}`));
   }
@@ -258,7 +269,14 @@ export default function EmployeePage() {
   // 🔑 `actual: null` means admin has no count for this month — it is NOT a
   // zero, and rendering it as one would tell Adama someone sold nothing.
   const sales = d.performance?.sales || null;
-  const [statusLabel, statusBg, statusInk] = STATUS[e.status] || STATUS.active;
+  // 🔴 AN UNKNOWN STATUS IS NOT "ACTIVE". This fell back to STATUS.active, so a
+  // record that was merely COMPLETE showed a green Active badge on somebody
+  // Adama had never activated (30 Aug: "it's active but i have not activated
+  // it"). A default that means "fully employed" is the worst possible guess:
+  // it is the one answer that cannot be walked back by looking at the page.
+  const [statusLabel, statusBg, statusInk] = STATUS[e.status]
+    || [e.status || 'Unknown', 'var(--color-pill-inactive-bg)', 'var(--color-pill-inactive)'];
+  const isDraftRecord = e.status === 'pending' || e.status === 'complete';
   // Someone who has left keeps their record, but it stops being editable: the
   // server refuses a write to an archived record, so an Edit button here could
   // only fail. Offboarding is the exception and stays open below.
@@ -277,7 +295,15 @@ export default function EmployeePage() {
         <div className="flex items-center gap-2">
           {/* Leaving is a thing that happens to a person, so the action is on
               the person — not buried in a contracts tab somewhere else. */}
-          {canEditActive && !endOpen && (
+          {/* 🔒 The end of the process, where he is standing when the signed
+              contract comes back. Only offered once the record is complete —
+              activating a half-built record is what the two states exist to
+              prevent. */}
+          {e.status === 'complete' && (
+            <button onClick={activate} disabled={activating}
+              className="btn-primary disabled:opacity-60">{activating ? 'Activating…' : 'Activate'}</button>
+          )}
+          {canEditActive && !isDraftRecord && !endOpen && (
             <button onClick={() => setEndOpen(true)}
               className="btn-secondary text-[var(--color-stage-out)]">End employment</button>
           )}
