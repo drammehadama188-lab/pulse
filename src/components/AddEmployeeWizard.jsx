@@ -359,12 +359,17 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   async function issueContract() {
     setBusy(true); setError('')
     try {
-      await api(`/staff/${username}/contract/file`, { method: 'POST', body: {} })
+      const r = await api(`/staff/${username}/contract/file`, { method: 'POST', body: {} })
       setContract((c) => ({ ...c, issued: (Number(c?.issued) || 0) + 1 }))
-      const url = URL.createObjectURL(new Blob([contract.html], { type: 'text/html;charset=utf-8' }))
+      // 🔒 The PDF that was just filed is the PDF he attaches — the same bytes,
+      // not a second rendering that could differ from the one on the record.
+      const bin = atob(r.pdfBase64)
+      const bytes = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
       const a = document.createElement('a')
       a.href = url
-      a.download = `Contract of Employment — ${v.name.trim() || 'employee'}.html`
+      a.download = `Contract of Employment — ${v.name.trim() || 'employee'}.pdf`
       a.click()
       URL.revokeObjectURL(url)
       setJustIssued(true)
@@ -729,7 +734,7 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
                   attach before the contract has been issued. */}
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <button onClick={issueContract} disabled={busy} className="btn-primary disabled:opacity-60">
-                  {busy ? 'Issuing…' : issuedNow ? 'Download again' : 'Issue contract & download'}
+                  {busy ? 'Issuing…' : issuedNow ? 'Download the PDF again' : 'Issue contract & download PDF'}
                 </button>
                 <button onClick={openInEmail} disabled={!contract.to}
                   className={`inline-flex items-center gap-2 btn-secondary hover:bg-[var(--color-soft)] disabled:opacity-50 ${issuedNow ? '' : 'opacity-60'}`}>
@@ -741,11 +746,11 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
               <div className="mt-4">
                 {issuedNow ? (
                   <Note title={`Issued ${todayLong()} · on their file`}>
-                    The file has downloaded. Press <strong>Open in my email</strong>, attach it, and send it from whichever account you want — Pulse does not send it for you. When the signed copy comes back, upload it on the next step; both are kept and the signed one is the contract of record.
+                    The PDF has downloaded. Press <strong>Open in my email</strong>, attach it, and send it from whichever account you want — Pulse does not send it for you. When the signed copy comes back, upload it on the next step; both are kept and the signed one is the contract of record.
                   </Note>
                 ) : (
                   <Note title="Nothing has been issued yet">
-                    Nothing has left this page. Issuing writes the contract to their file and downloads a copy for you to attach.
+                    Nothing has left this page. Issuing writes the contract to their file as a PDF and downloads that same PDF for you to attach.
                   </Note>
                 )}
               </div>

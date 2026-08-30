@@ -15,7 +15,7 @@ import { sallyCustomers, sallyMonthlyHistory } from './src/data/sally-sales-seed
 import { buildPayrollHistory, zohoConfigured, paySources, recordSalaryPayment, resolveVendor, getExpense, deleteExpense, updateSalaryExpense, existingSalaryExpense, salaryExpensesForMonth } from './lib/zoho-books.js'
 import { sendMail, emailConfigured } from './lib/email.js'
 // The contract, composed from the record using HIS OWN agreement wording.
-import { contractHtml, missingForContract } from './lib/contract.js'
+import { contractHtml, contractPdf, missingForContract } from './lib/contract.js'
 // The performance model — weights, bands and the three-source calculation —
 // lives in ONE file the server and the pages both import (lib/, not src/).
 import {
@@ -1461,18 +1461,21 @@ app.get('/api/staff/:username/contract', auth, requireSub('staffadmin', 'add'), 
 // Keep a copy on their file. 🔑 Same category the Documents step reads, so
 // filing the contract here ticks "Employment contract" there rather than
 // leaving a second, separate idea of the same document.
-function fileContract(u, htmlDoc, by) {
+// 🔒 A CONTRACT IS A PDF. It was filed as .html — a format nobody attaches to
+// an email, prints, or signs (Adama 30 Aug: "so it's not in PDF"). The HTML is
+// still what the step renders on screen; the DOCUMENT is a PDF, built from the
+// same blocks, so what is read and what is issued cannot drift apart.
+function fileContract(u, pdfBuffer, by) {
   const dir = ensureAgentDir(u.name)
   const id = 'f_' + crypto.randomUUID()
-  const storedAs = `${id}.html`
-  const buffer = Buffer.from(htmlDoc, 'utf8')
-  fs.writeFileSync(path.join(dir, storedAs), buffer)
+  const storedAs = `${id}.pdf`
+  fs.writeFileSync(path.join(dir, storedAs), pdfBuffer)
   const files = db.read('agent-files', [])
   const meta = {
     id, agent: u.name,
-    name: `Contract of Employment (issued ${todayKey()}) — ${u.name}.html`,
+    name: `Contract of Employment (issued ${todayKey()}) — ${u.name}.pdf`,
     category: 'contract', stage: 'issued',
-    mimeType: 'text/html', sizeBytes: buffer.length,
+    mimeType: 'application/pdf', sizeBytes: pdfBuffer.length,
     storedAs, uploadedAt: new Date().toISOString(), uploadedBy: by, generated: true,
   }
   files.push(meta)
@@ -1480,7 +1483,7 @@ function fileContract(u, htmlDoc, by) {
   return meta
 }
 
-app.post('/api/staff/:username/contract/file', auth, requireSub('staffadmin', 'add'), notViewAs, (req, res) => {
+app.post('/api/staff/:username/contract/file', auth, requireSub('staffadmin', 'add'), notViewAs, async (req, res) => {
   const users = seedUsers()
   const u = users.find((x) => x.username === req.params.username)
   if (!u) return res.status(404).json({ error: 'No such staff member' })
@@ -1488,10 +1491,13 @@ app.post('/api/staff/:username/contract/file', auth, requireSub('staffadmin', 'a
   const missing = missingForContract(u, week)
   if (missing.length) return res.status(400).json({ error: `The contract cannot be written yet — missing: ${missing.join(', ')}`, missing })
   const manager = (db.read('profiles', {})[u.name] || {}).manager || ''
-  const file = fileContract(u, contractHtml(u, { week, manager }), req.user.name || req.user.username)
-  ;(u.history ||= []).push({ date: todayKey(), event: 'Contract generated and filed' })
+  const pdf = await contractPdf(u, { week, manager })
+  const file = fileContract(u, pdf, req.user.name || req.user.username)
+  ;(u.history ||= []).push({ date: todayKey(), event: 'Contract issued (PDF) and filed' })
   db.write('users', users)
-  res.json({ file })
+  // The same bytes go back so the browser can hand him the file to attach —
+  // one round trip, and what he attaches is byte-for-byte what is on the record.
+  res.json({ file, pdfBase64: pdf.toString('base64') })
 })
 
 // Mark someone as a contractor — stays on payroll and in the staff list, but
