@@ -101,7 +101,7 @@ function Note({ tone = 'quiet', title, children }) {
   return (
     <div className="rounded-[10px] p-4" style={{ background: c.background }}>
       <p className="text-[12.5px] font-semibold" style={{ color: c.color }}>{title}</p>
-      {children && <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-ink-soft)]">{children}</p>}
+      {children ? <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-ink-soft)]">{children}</p> : null}
     </div>
   )
 }
@@ -382,8 +382,6 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     const body = [
       `Dear ${first},`, '',
       'Please find your contract of employment attached.',
-      '',
-      '[ATTACH THE PDF BEFORE SENDING — delete this line]',
       'Read it carefully, and if you are happy with it, sign it and send a copy back to us.', '',
       'Adama Drammeh', 'Managing Director', 'Damia Security Solutions Ltd',
     ].join('\n')
@@ -738,44 +736,24 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
                 <button onClick={issueContract} disabled={busy} className="btn-primary disabled:opacity-60">
                   {busy ? 'Issuing…' : issuedNow ? 'Download the PDF again' : 'Issue contract & download PDF'}
                 </button>
-                {/* 🔒 THE BUTTON SAYS WHAT IT DOES. "Open in my email" read as
-                    though the PDF came with it; mailto: cannot carry an
-                    attachment — no browser can — so the label has to say that
-                    rather than leave him to discover it in a sent email with
-                    nothing on it (Adama 30 Aug: "it did not attach to the
-                    email, should i do that myself?"). */}
                 <button onClick={openInEmail} disabled={!contract.to}
                   className={`inline-flex items-center gap-2 btn-secondary hover:bg-[var(--color-soft)] disabled:opacity-50 ${issuedNow ? '' : 'opacity-60'}`}>
-                  <Mail size={15} /> Open a draft — you attach the PDF
+                  <Mail size={15} /> Open in my email
                 </button>
               </div>
 
-              {/* What has actually happened, in plain words, where the button was. */}
-              <div className="mt-4">
-                {issuedNow ? (
-                  <Note title={`Issued ${todayLong()} · on their file`}>
-                    The PDF is on their file and in your Downloads. <strong>You attach it yourself</strong> — an email draft opened from a browser cannot carry a file, so the draft opens addressed and written, and you drag the PDF in before sending. When the signed copy comes back, upload it on the next step; both are kept and the signed one is the contract of record.
-                  </Note>
-                ) : (
-                  <Note title="Nothing has been issued yet">
-                    Nothing has left this page. Issuing writes the contract to their file as a PDF and downloads that same PDF for you to attach.
-                  </Note>
-                )}
-              </div>
-
-              {!contract.to && (
-                <div className="mt-4">
-                  <Note tone="warn" title="No address to write to">
-                    There is no personal email on their record, so the email cannot be addressed. Add one on the Personal step — that is where the letter goes, because the work email does not exist yet.
-                  </Note>
-                </div>
+              {issuedNow && (
+                <p className="mt-4 text-[12.5px] font-medium" style={{ color: 'var(--color-pill-active)' }}>
+                  Issued {todayLong()} · on their file
+                </p>
               )}
 
-              <div className="mt-5">
-                <Note title="Wording comes from the existing agreements">
-                  The clauses are the ones already in use in HR/team; only the facts change, and they come from this record — so the contract and the record cannot disagree.
-                </Note>
-              </div>
+              {!contract.to && (
+                <p className="mt-4 text-[12.5px] font-medium" style={{ color: 'var(--color-pill-leave)' }}>
+                  No personal email on their record — add one on the Personal step.
+                </p>
+              )}
+
             </>
           )}
         </Section>
