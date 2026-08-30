@@ -3,6 +3,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Upload, Check, ArrowLeft, FileText, CheckCircle2 } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { PageSkeleton } from './ui/Skeleton.jsx'
+// 🔒 The house dropdown. A native <select> hands the OS its own menu — a
+// different font, a different blue, a check in the wrong place — so one control
+// on the page never belongs to the product (Adama 30 Aug).
+import { MenuSelect } from './ui.jsx'
 
 // Add employee — Adama's 30 Aug design: the record is BUILT IN STEPS, and a
 // step you cannot finish today does not stop you hiring somebody.
@@ -419,22 +423,16 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
             </label>
             <label className="block">
               <span className={L}>Department</span>
-              <select value={v.department} onChange={on('department')} className="field w-full">
-                {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
-              </select>
+              <MenuSelect value={v.department} onChange={(x) => set('department', x)} options={DEPARTMENTS} />
             </label>
             <label className="block">
               <span className={L}>Reports to</span>
-              <select value={v.manager} onChange={on('manager')} className="field w-full">
-                <option value="">Not set yet</option>
-                {people.map((n) => <option key={n}>{n}</option>)}
-              </select>
+              <MenuSelect value={v.manager} onChange={(x) => set('manager', x)} placeholder="Not set yet"
+                options={[{ value: '', label: 'Not set yet' }, ...people.map((n) => ({ value: n, label: n }))]} />
             </label>
             <label className="block">
               <span className={L}>Employment type</span>
-              <select value={v.employmentType} onChange={on('employmentType')} className="field w-full">
-                {EMPLOYMENT_TYPES.map((t) => <option key={t}>{t}</option>)}
-              </select>
+              <MenuSelect value={v.employmentType} onChange={(x) => set('employmentType', x)} options={EMPLOYMENT_TYPES} />
             </label>
             <label className="block">
               <span className={L}>Start date</span>
@@ -481,10 +479,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
           <Row>
             <label className="block">
               <span className={L}>Contract length</span>
-              <select value={v.contractMonths} onChange={on('contractMonths')} className="field w-full">
-                <option value="">Indefinite</option>
-                {[3, 6, 12, 24].map((m) => <option key={m} value={m}>{m} months</option>)}
-              </select>
+              <MenuSelect value={v.contractMonths} onChange={(x) => set('contractMonths', x)}
+                options={[{ value: '', label: 'Indefinite' }, ...[3, 6, 12, 24].map((m) => ({ value: String(m), label: `${m} months` }))]} />
               <span className={HELP}>{contractEnd ? `Ends ${pretty(contractEnd)}` : 'No end date.'}</span>
             </label>
             <div className="block">
@@ -509,9 +505,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
             </div>
             <label className="block">
               <span className={L}>Length</span>
-              <select value={v.probationMonths} onChange={on('probationMonths')} disabled={!v.onProbation} className="field w-full disabled:opacity-50">
-                {[1, 3, 6].map((m) => <option key={m} value={m}>{m} month{m > 1 ? 's' : ''}</option>)}
-              </select>
+              <MenuSelect value={v.probationMonths} onChange={(x) => set('probationMonths', x)}
+                options={[1, 3, 6].map((m) => ({ value: String(m), label: `${m} month${m > 1 ? 's' : ''}` }))} />
             </label>
             <div className="block">
               <span className={L}>Review date</span>
@@ -645,10 +640,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
             <>
               <label className="block max-w-[420px]">
                 <span className={L}>Pulse access role</span>
-                <select value={v.roleId} onChange={on('roleId')} className="field w-full">
-                  <option value="">No access — record only</option>
-                  {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
+                <MenuSelect value={v.roleId} onChange={(x) => set('roleId', x)}
+                  options={[{ value: '', label: 'No access — record only' }, ...roles.map((r) => ({ value: r.id, label: r.name }))]} />
                 <span className={HELP}>Permissions belong to the role. Change the role and everyone on it changes with it.</span>
               </label>
               <div className="mt-6">
@@ -726,7 +719,10 @@ function Shell({ title, subtitle, action, children }) {
         </div>
         {action}
       </div>
-      <div className="card overflow-hidden">{children}</div>
+      {/* 🔴 No overflow-hidden. It rounds the bands nicely and then CLIPS every
+          dropdown that opens near the bottom of the card. The bands round their
+          own corners instead. */}
+      <div className="card">{children}</div>
     </div>
   )
 }
@@ -734,7 +730,7 @@ function Shell({ title, subtitle, action, children }) {
 // The step chips live in the card's header band.
 function Steps({ children }) {
   return (
-    <div className="border-b border-[var(--color-line-soft)] px-5 py-4 md:px-7" style={{ background: 'var(--color-paper)' }}>
+    <div className="rounded-t-[11px] border-b border-[var(--color-line-soft)] px-5 py-4 md:px-7" style={{ background: 'var(--color-paper)' }}>
       {children}
     </div>
   )
@@ -744,7 +740,7 @@ function Body({ children }) {
 }
 function Footer({ left, middle, right }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[var(--color-line)] px-5 py-4 md:px-7"
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-b-[11px] border-t border-[var(--color-line)] px-5 py-4 md:px-7"
       style={{ background: 'var(--color-paper)' }}>
       <span className="min-w-[90px]">{left}</span>
       {middle && <span className="text-[12px] text-[var(--color-ink-faint)]">{middle}</span>}
