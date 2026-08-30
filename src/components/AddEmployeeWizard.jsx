@@ -382,6 +382,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     const body = [
       `Dear ${first},`, '',
       'Please find your contract of employment attached.',
+      '',
+      '[ATTACH THE PDF BEFORE SENDING — delete this line]',
       'Read it carefully, and if you are happy with it, sign it and send a copy back to us.', '',
       'Adama Drammeh', 'Managing Director', 'Damia Security Solutions Ltd',
     ].join('\n')
@@ -736,9 +738,15 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
                 <button onClick={issueContract} disabled={busy} className="btn-primary disabled:opacity-60">
                   {busy ? 'Issuing…' : issuedNow ? 'Download the PDF again' : 'Issue contract & download PDF'}
                 </button>
+                {/* 🔒 THE BUTTON SAYS WHAT IT DOES. "Open in my email" read as
+                    though the PDF came with it; mailto: cannot carry an
+                    attachment — no browser can — so the label has to say that
+                    rather than leave him to discover it in a sent email with
+                    nothing on it (Adama 30 Aug: "it did not attach to the
+                    email, should i do that myself?"). */}
                 <button onClick={openInEmail} disabled={!contract.to}
                   className={`inline-flex items-center gap-2 btn-secondary hover:bg-[var(--color-soft)] disabled:opacity-50 ${issuedNow ? '' : 'opacity-60'}`}>
-                  <Mail size={15} /> Open in my email
+                  <Mail size={15} /> Open a draft — you attach the PDF
                 </button>
               </div>
 
@@ -746,7 +754,7 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
               <div className="mt-4">
                 {issuedNow ? (
                   <Note title={`Issued ${todayLong()} · on their file`}>
-                    The PDF has downloaded. Press <strong>Open in my email</strong>, attach it, and send it from whichever account you want — Pulse does not send it for you. When the signed copy comes back, upload it on the next step; both are kept and the signed one is the contract of record.
+                    The PDF is on their file and in your Downloads. <strong>You attach it yourself</strong> — an email draft opened from a browser cannot carry a file, so the draft opens addressed and written, and you drag the PDF in before sending. When the signed copy comes back, upload it on the next step; both are kept and the signed one is the contract of record.
                   </Note>
                 ) : (
                   <Note title="Nothing has been issued yet">
