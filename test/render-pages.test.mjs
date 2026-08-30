@@ -155,9 +155,16 @@ console.log(`✓ ${tabsOk} of ${cases.length} employee tab states render`);
 // first paint, so a form that lives behind a click is never rendered by it —
 // and the Add employee form spent two days unreachable without anything
 // noticing. Render the open state directly.
-const addStaff = await vite.ssrLoadModule('/src/components/AddStaffForm.jsx');
-render('Add employee form (open)', React.createElement(addStaff.default, { onClose: noop, onCreated: noop }));
-console.log('✓ the Add employee form renders when opened');
+// The wizard is what the Employees page opens now (30 Aug). Every step is
+// rendered, not just the first — a step behind two Continues is exactly the
+// kind of thing that ships blank.
+const wizard = await vite.ssrLoadModule('/src/components/AddEmployeeWizard.jsx');
+let stepsOk = 0;
+const STEP_NAMES = ['Personal', 'Employment', 'Contract & probation', 'Pay', 'Documents', 'Access'];
+for (let i = 0; i < STEP_NAMES.length; i++) {
+  if (render(`Add employee · ${STEP_NAMES[i]}`, React.createElement(wizard.default, { onClose: noop, onCreated: noop, initialStep: i }))) stepsOk++;
+}
+console.log(`✓ ${stepsOk} of ${STEP_NAMES.length} Add-employee steps render`);
 
 await vite.close();
 if (failed) {

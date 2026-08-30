@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import AddStaffForm from '../components/AddStaffForm.jsx';
+import AddEmployeeWizard from '../components/AddEmployeeWizard.jsx';
 import Pager, { usePager } from '../components/ui/Pager.jsx';
 import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
@@ -165,8 +165,10 @@ export default function Employees() {
               pair: take the list out, or add somebody. */}
           <button onClick={() => exportCsv(false)} className={light}><Download size={15} /> Export</button>
           {/* This was a <Link> to /people?tab=roster — which is this very page,
-              so it navigated to itself and looked broken (Adama 29 Aug). The
-              form it should always have opened is AddStaffForm. */}
+              so it navigated to itself and looked broken (Adama 29 Aug). It
+              opens the six-step wizard now (30 Aug): the old single modal asked
+              for a job title and Pulse access in the same toggle and had
+              nowhere to put a contract, a schedule or a document. */}
           {canAdd && (
             <button onClick={() => setAddOpen(true)} className={`${btn} btn-primary hover:bg-[var(--color-brand-600)]`}>
               <Plus size={15} /> Add employee
@@ -429,7 +431,7 @@ export default function Employees() {
           and to Reviews & Coaching, which is where it is written and read. */}
 
       {addOpen && (
-        <AddStaffForm
+        <AddEmployeeWizard
           onClose={() => setAddOpen(false)}
           onCreated={load}
         />

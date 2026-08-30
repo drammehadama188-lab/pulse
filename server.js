@@ -1092,6 +1092,40 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
   const probMonths = Number(probationMonths) || 0
   const probationEnd = probMonths > 0 ? addMonths(joined, probMonths) : null
 
+  // ---- What the Add-employee wizard collects that the old modal never did
+  // (Adama 30 Aug). Each is optional: leave it out and the record is exactly
+  // what it was before, so nothing that already creates staff has to change.
+  //
+  // 🔑 EMPLOYMENT TYPE IS NOW STATED, NOT GUESSED. It used to be inferred —
+  // "Contractor" if the contractor flag was set, "Contract" if there was an end
+  // date, otherwise "Full-time" — which had no way to say part-time or intern,
+  // and called a part-timer full-time.
+  const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Fixed term', 'Contractor', 'Intern']
+  const employmentType = EMPLOYMENT_TYPES.includes(String(req.body?.employmentType || '').trim())
+    ? String(req.body.employmentType).trim()
+    : null
+  // A contractor keeps no schedule and never checks in — the flag's whole
+  // meaning. Picking the type is now how that gets set, instead of a separate
+  // trip to another endpoint after the person exists.
+  const isContractor = employmentType === 'Contractor'
+  // Who they report to. It lives on the profile, like every other HR field, and
+  // has to be somebody actually here.
+  const manager = String(req.body?.manager || '').trim()
+  if (manager && !users.some((u) => !isArchived(u) && u.name === manager)) {
+    return res.status(400).json({ error: 'Reports to must be someone on the team' })
+  }
+  // 🔒 Pulse ACCESS is not the job title. A role is granted deliberately or not
+  // at all, and only the CEO may grant one — the same rule the Team & access
+  // page enforces. Anyone else creating a person creates them with no access.
+  const roleId = String(req.body?.roleId || '').trim()
+  let grantRole = null
+  if (roleId) {
+    if (req.realUser?.username !== CEO) return res.status(403).json({ error: 'Only the CEO grants Pulse access' })
+    if (roleId === 'owner') return res.status(403).json({ error: 'The Owner role belongs to the CEO alone' })
+    grantRole = roleById(roleId)
+    if (!grantRole) return res.status(400).json({ error: 'Unknown access role' })
+  }
+
   const rec = {
     username,
     name: String(name).trim(),
@@ -1110,6 +1144,8 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
     pay: { base: payBase, commission: payCommission, transport: payTransport, total: payBase + payCommission + payTransport },
     phone: String(phone || '').trim(),
     address: String(address || '').trim(),
+    employmentType,
+    contractor: isContractor,
     probationEnd,
     target: tgt,
     kpi: isMgr ? '' : `Close ${tgt} tracker sales per month`,
@@ -1128,7 +1164,31 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
       },
     ],
   }
+  if (grantRole) {
+    const { powers, subs } = roleGrant(grantRole)
+    rec.roleId = grantRole.id
+    rec.permissions = [...powers]
+    rec.permissionSubs = { ...subs }
+    rec.history.push({ date: joined, event: `Pulse access — ${grantRole.name}` })
+  }
   users.push(rec)
+  db.write('users', users)
+
+  if (manager) {
+    const profiles = db.read('profiles', {})
+    profiles[rec.name] = { ...(profiles[rec.name] || {}), manager }
+    db.write('profiles', profiles)
+    rec.history.push({ date: joined, event: `Reports to ${manager}` })
+  }
+  // A working week from the day they start. 🔒 A contractor gets none — that is
+  // what being a contractor means here, and a schedule they never agreed to is
+  // what filled their record with red "No clock in" days.
+  const week = req.body?.schedule
+  if (!isContractor && week && typeof week === 'object') {
+    const schedules = db.read('schedules', {})
+    upsertSchedule(schedules, username, { from: joined, days: week })
+    db.write('schedules', schedules)
+  }
   db.write('users', users)
 
   // Email the invite (a set-password link) right away — best effort: the
@@ -5487,7 +5547,7 @@ app.get('/api/hr/employees', auth, requirePower('hr'), (req, res) => {
         title: u.title || '',
         department: u.department || '',
         status,
-        employment: u.contractor ? 'Contractor' : u.contractEnd ? 'Contract' : 'Full-time',
+        employment: u.employmentType || (u.contractor ? 'Contractor' : u.contractEnd ? 'Contract' : 'Full-time'),
         // The second line under employment: what the arrangement IS, rather
         // than repeating the status chip.
         employmentNote: probation ? 'Probation' : u.contractEnd ? 'Fixed term' : u.contractor ? 'No schedule' : 'Permanent',
@@ -5769,7 +5829,7 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
       status: isArchived(u) ? 'inactive' : (u.status || 'active'),
       left: isArchived(u) ? (u.archivedAt ? u.archivedAt.slice(0, 10) : null) : null,
       leftReason: isArchived(u) ? (u.archivedReason || 'Left the team') : '',
-      employment: u.contractor ? 'Contractor' : u.contractEnd ? 'Contract' : 'Full-time',
+      employment: u.employmentType || (u.contractor ? 'Contractor' : u.contractEnd ? 'Contract' : 'Full-time'),
       contractEnd: u.contractEnd || null,
       probationEnd: u.probationEnd || null,
       reportsTo: profile.manager || '',
