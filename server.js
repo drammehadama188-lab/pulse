@@ -252,6 +252,12 @@ function publicUser(u) {
 // Usernames never contain '@', so the two can't collide.
 function findUser(id) {
   const q = String(id || '').trim().toLowerCase()
+  // 🔴 A BLANK LOOKUP MATCHES NOBODY. Somebody hired before their work email
+  // exists is stored with no email (Adama 30 Aug), and without this guard
+  // findUser('') matched the first of them on `(u.email || '') === ''` — a
+  // whitespace username at the login door would have resolved to a real
+  // account.
+  if (!q) return undefined
   return seedUsers().find((u) => u.username === q || (u.email || '').toLowerCase() === q)
 }
 function auth(req, res, next) {
@@ -1064,11 +1070,18 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
   // Two emails (Adama 19 Aug, Mustapha entered under his gmail): `email` is
   // the WORK one — it's the login and where the invite goes; personalEmail
   // is the on-file contact only, never a login.
-  if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'A valid work email is required — the login link goes there' })
+  // 🔒 THE WORK EMAIL IS CREATED LATER (Adama 30 Aug): "the work email is
+  // created after this part is done when we get her letter out and all that
+  // then we can send her the log in". So it is OPTIONAL here — somebody can be
+  // on the roster, on payroll and on a schedule before they can sign in. It
+  // must still be a real address when one IS given.
+  // 🔒 The personal email is NEVER a sign-in. It is contact on file.
+  const cleanEmail = String(email || '').trim().toLowerCase()
+  if (cleanEmail && !/^\S+@\S+\.\S+$/.test(cleanEmail)) return res.status(400).json({ error: 'That work email is not valid' })
   const cleanPersonal = String(personalEmail || '').trim().toLowerCase()
   if (cleanPersonal && !/^\S+@\S+\.\S+$/.test(cleanPersonal)) return res.status(400).json({ error: 'The personal email is not valid' })
   const users = seedUsers()
-  if (users.some((u) => (u.email || '').toLowerCase() === String(email).toLowerCase()))
+  if (cleanEmail && users.some((u) => (u.email || '').toLowerCase() === cleanEmail))
     return res.status(409).json({ error: 'A staff member with that email already exists' })
 
   const isMgr = type === 'manager'
@@ -1129,7 +1142,7 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
   const rec = {
     username,
     name: String(name).trim(),
-    email: String(email).trim().toLowerCase(),
+    email: cleanEmail,
     personalEmail: cleanPersonal,
     role: isMgr ? 'manager' : 'staff',
     // Picked on the form; a manager still defaults to Management and
@@ -1194,7 +1207,9 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
   // Email the invite (a set-password link) right away — best effort: the
   // account exists either way, and the modal tells the manager what happened.
   let invited = false
-  if (emailConfigured() || String(process.env.OUTBOUND_EMAIL || '').toLowerCase() === 'off') {
+  // Nothing to invite yet. The sign-in is sent from their record on the day the
+  // work email exists.
+  if (cleanEmail && (emailConfigured() || String(process.env.OUTBOUND_EMAIL || '').toLowerCase() === 'off')) {
     try {
       const result = await sendSetPasswordEmail(rec, { isNew: true, createdBy: req.user.username })
       invited = !result.blocked

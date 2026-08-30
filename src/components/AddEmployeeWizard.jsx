@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { X, Upload, Check, ArrowLeft, Info, FileText, CheckCircle2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Upload, Check, ArrowLeft, FileText, CheckCircle2 } from 'lucide-react'
 import { api } from '../lib/api.js'
 
 // Add employee — Adama's 30 Aug design: the record is BUILT IN STEPS, and a
 // step you cannot finish today does not stop you hiring somebody.
+//
+// 🔒 IT IS A PAGE (/people/new), not a panel over one (his call, 30 Aug). Six
+// steps of a record is a piece of work, not an interruption: as a page it gets
+// the sidebar, the ground and the same max-w-[1440px] frame every other page
+// sits in, for free — which is most of what was wrong when it was a modal.
 //
 // The old form was one cramped modal with a "Sales agent / Manager" toggle at
 // the top, which meant two things at once: it decided the job title AND it
@@ -81,7 +87,8 @@ function Note({ tone = 'quiet', title, children }) {
 // `initialStep` exists so every step can be rendered and checked. A step that
 // only appears after two Continues is exactly the kind that ships blank and
 // nobody notices for a week.
-export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 }) {
+export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
+  const navigate = useNavigate()
   const [step, setStep] = useState(initialStep)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -125,7 +132,11 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
   function problemWith(i) {
     if (i === 0) {
       if (!v.name.trim()) return 'Enter their full name'
-      if (!/^\S+@\S+\.\S+$/.test(v.email)) return 'Enter a valid work email — the sign-in link goes there'
+      // 🔒 THE WORK EMAIL COMES LATER (Adama 30 Aug): it is created once the
+      // letter is out, and the sign-in is sent then. It never blocks hiring
+      // somebody, and 🔒 the PERSONAL email is never promoted into a sign-in —
+      // it is contact on file.
+      if (v.email.trim() && !/^\S+@\S+\.\S+$/.test(v.email)) return 'That work email is not valid'
       if (v.personalEmail.trim() && !/^\S+@\S+\.\S+$/.test(v.personalEmail)) return 'That personal email is not valid'
     }
     if (i === 1) {
@@ -194,7 +205,7 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
 
   if (done) {
     return (
-      <Shell onClose={onClose} title="Employee created" subtitle={`${done.name} is on the team.`}>
+      <Shell title="Employee created" subtitle={`${done.name} is on the team.`}>
         <Body>
         <div className="mx-auto max-w-[560px] py-6 text-center">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
@@ -202,12 +213,14 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
             <CheckCircle2 size={28} />
           </span>
           <p className="mt-4 text-[15px] font-semibold text-[var(--color-ink)]">{done.name} is set up</p>
-          <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">They sign in with {done.email}</p>
+          <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">{done.email ? `They sign in with ${done.email}` : 'No work email yet — no sign-in.'}</p>
           <div className="mt-5 space-y-3 text-left">
-            <Note title={done.invited ? 'Invite sent' : 'Invite could not be sent'}>
-              {done.invited
-                ? 'They have an email with a link to choose their password. It lasts 60 minutes — open their profile and press Reset password to send another.'
-                : 'The account exists. Open their profile and press Reset password to email them a link.'}
+            <Note title={!done.email ? 'No sign-in yet' : done.invited ? 'Invite sent' : 'Invite could not be sent'}>
+              {!done.email
+                ? 'Their record is on the roster, on payroll and on a schedule. Add the work email to their record when the letter goes out, then send the sign-in from there.'
+                : done.invited
+                  ? 'They have an email with a link to choose their password. It lasts 60 minutes — open their profile and press Reset password to send another.'
+                  : 'The account exists. Open their profile and press Reset password to email them a link.'}
             </Note>
             {done.failed.length > 0 && (
               <Note tone="warn" title={`${done.failed.length} file could not be uploaded`}>
@@ -222,16 +235,23 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
           </div>
         </div>
         </Body>
-        <Footer right={<button onClick={onClose} className="btn-primary">Done</button>} />
+        <Footer
+          left={<Link to={`/people/${done.username}`} className="btn-secondary inline-flex items-center gap-2 hover:bg-[var(--color-soft)]">Open their record</Link>}
+          right={<Link to="/people" className="btn-primary">Back to employees</Link>}
+        />
       </Shell>
     )
   }
 
   const id = STEPS[step][0]
   return (
-    <Shell onClose={onClose} title="Add employee" subtitle="Build the employee record in steps. You can finish missing items later.">
-      <Body>
-      <div className="mb-7 flex flex-wrap gap-2">
+    <Shell
+      title="Add employee"
+      subtitle="Build the employee record in steps. You can finish missing items later."
+      action={<Link to="/people" className="btn-secondary hover:bg-[var(--color-soft)]">Cancel</Link>}
+    >
+      <Steps>
+      <div className="flex flex-wrap gap-2">
         {STEPS.map(([k, label], i) => (
           <button key={k} onClick={() => goTo(i)}
             className="rounded-full px-3.5 py-1.5 text-[12px] font-medium transition-colors"
@@ -242,6 +262,8 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
           </button>
         ))}
       </div>
+      </Steps>
+      <Body>
 
       {id === 'personal' && (
         <Section title="Personal" line="Who they are and how to reach them.">
@@ -255,9 +277,9 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
               <input value={v.phone} onChange={on('phone')} placeholder="e.g. 3XX XX XX" className="field w-full" />
             </label>
             <label className="block">
-              <span className={L}>Work email</span>
-              <input value={v.email} onChange={on('email')} placeholder="name@damiatracker.com" className="field w-full" />
-              <span className={HELP}>This is their sign-in, and where the invite goes.</span>
+              <span className={L}>Work email <span className="font-medium normal-case tracking-normal text-[var(--color-ink-faint)]">— optional</span></span>
+              <input value={v.email} onChange={on('email')} placeholder="Created later" className="field w-full" />
+              <span className={HELP}>Add it once their letter is out. Their sign-in is sent then, from their record.</span>
             </label>
             <label className="block">
               <span className={L}>Personal email</span>
@@ -495,6 +517,16 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
 
       {id === 'access' && (
         <Section title="Access" line="What they can see and do inside Pulse.">
+          {!v.email.trim() && (
+            <div className="mb-5">
+              {/* A role can be set now; it simply cannot be used until there is
+                  a work email to sign in with. Saying so beats a granted role
+                  that appears to do nothing. */}
+              <Note title="No sign-in until the work email exists">
+                A role can be chosen now, but nobody can sign in without a work email. Add it on their record when the letter goes out and send the invite from there.
+              </Note>
+            </div>
+          )}
           {roles ? (
             <>
               <label className="block max-w-[420px]">
@@ -520,7 +552,7 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
           <div className="mt-7 rounded-[10px] border border-[var(--color-line)] p-5">
             <p className="text-[13px] font-semibold text-[var(--color-ink)]">Ready to create</p>
             <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-[12.5px] sm:grid-cols-2">
-              {[['Name', v.name || '—'], ['Sign-in', v.email || '—'],
+              {[['Name', v.name || '—'], ['Sign-in', v.email || 'None yet'],
                 ['Role', `${v.title || '—'} · ${v.department}`], ['Type', v.employmentType],
                 ['Starts', pretty(v.joined)], ['Reports to', v.manager || 'Not set yet'],
                 ['Probation', v.onProbation ? `${v.probationMonths} months, review ${pretty(probationEnd)}` : 'None'],
@@ -565,63 +597,40 @@ function Section({ title, line, children }) {
   )
 }
 
-// 🔒 A FULL-HEIGHT PANEL, NOT A FLOATING WHITE CARD. Six steps of a record do
-// not belong in a box in the middle of a dimmed screen: it hides the app, it
-// wastes the width, and it reads as an interruption rather than a piece of
-// work. His design keeps the sidebar in place and gives the panel the whole
-// working area, on the app's own canvas rather than a black scrim.
-//
-// The header and the footer stay put while the middle scrolls, so "Step 3 of 6"
-// and Continue never wander off the bottom of a long step.
-function Shell({ title, subtitle, onClose, children }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
-    }
-  }, [onClose])
+// The page frame. 🔒 A page header the way every other Pulse page has one
+// (t-page title + one support line), then ONE card holding the steps: a header
+// band with the step chips, the body, and the footer bar. AppLayout already
+// supplies the sidebar, the --color-paper ground and the max-w-[1440px] / px-8
+// frame, so none of that is re-invented here.
+function Shell({ title, subtitle, action, children }) {
   return (
-    // 🔒 The app's own ground, and the app's own frame. Every Pulse page is
-    // white cards on --color-paper inside max-w-1440 / px-8; this covered all
-    // of that with one flat white sheet running edge to edge, which is why it
-    // did not line up with the page underneath it (Adama 30 Aug).
-    // 🔑 The overlay stops at the sidebar instead of lying over it. A pale veil
-    // across the dark rail washed it out to grey — the sidebar is the one piece
-    // of strong colour on the screen and it has to stay crisp.
-    <div className="fixed inset-y-0 right-0 left-0 z-50 overflow-hidden md:left-[228px]"
-      style={{ background: 'rgba(248,249,252,0.88)' }} onMouseDown={onClose}>
-      <div className="flex h-full">
-        <div className="min-w-0 flex-1 overflow-hidden px-4 py-4 md:px-8 md:py-8">
-      <div onMouseDown={(e) => e.stopPropagation()}
-        className="card mx-auto flex h-full max-w-[1440px] flex-col overflow-hidden">
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--color-line-soft)] px-6 py-5 md:px-9"
-          style={{ background: 'var(--color-paper)' }}>
-          <div>
-            <h1 className="text-[21px] font-semibold tracking-[-0.3px] text-[var(--color-ink)]">{title}</h1>
-            <p className="mt-1 text-[12.5px] text-[var(--color-ink-soft)]">{subtitle}</p>
-          </div>
-          <button onClick={onClose} className="rounded-[6px] p-1.5 text-[var(--color-ink-faint)] hover:bg-[var(--color-fill)] hover:text-[var(--color-ink)]">
-            <X size={18} />
-          </button>
+    <div>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="t-page text-[var(--color-ink)]">{title}</h1>
+          <p className="t-support mt-2">{subtitle}</p>
         </div>
-        {children}
+        {action}
       </div>
-        </div>
-      </div>
+      <div className="card overflow-hidden">{children}</div>
     </div>
   )
 }
 
-// The body scrolls; the footer is a bar of its own, the way his design draws it.
+// The step chips live in the card's header band.
+function Steps({ children }) {
+  return (
+    <div className="border-b border-[var(--color-line-soft)] px-5 py-4 md:px-7" style={{ background: 'var(--color-paper)' }}>
+      {children}
+    </div>
+  )
+}
 function Body({ children }) {
-  return <div className="min-h-0 flex-1 overflow-y-auto px-6 py-7 md:px-9">{children}</div>
+  return <div className="px-5 py-7 md:px-7">{children}</div>
 }
 function Footer({ left, middle, right }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-t border-[var(--color-line)] px-6 py-4 md:px-9"
+    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[var(--color-line)] px-5 py-4 md:px-7"
       style={{ background: 'var(--color-paper)' }}>
       <span className="min-w-[90px]">{left}</span>
       {middle && <span className="text-[12px] text-[var(--color-ink-faint)]">{middle}</span>}

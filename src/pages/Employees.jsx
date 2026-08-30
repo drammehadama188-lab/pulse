@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import AddEmployeeWizard from '../components/AddEmployeeWizard.jsx';
 import Pager, { usePager } from '../components/ui/Pager.jsx';
 import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
@@ -64,7 +63,6 @@ export default function Employees() {
   const [joinedTo, setJoinedTo] = useState('');
   const [milestoneOnly, setMilestoneOnly] = useState('');
   const [view, setView] = useState('employees');
-  const [addOpen, setAddOpen] = useState(false);
 
   // 🔒 Creating a staff account is a write, so it follows Pulse's write rule:
   // the button reads the VIEWED person's powers (so view-as stays faithful)
@@ -164,15 +162,15 @@ export default function Employees() {
               where you add one person, so the other two buttons are the honest
               pair: take the list out, or add somebody. */}
           <button onClick={() => exportCsv(false)} className={light}><Download size={15} /> Export</button>
-          {/* This was a <Link> to /people?tab=roster — which is this very page,
-              so it navigated to itself and looked broken (Adama 29 Aug). It
-              opens the six-step wizard now (30 Aug): the old single modal asked
-              for a job title and Pulse access in the same toggle and had
+          {/* This was a <Link> to /people?tab=roster — this very page — so it
+              navigated to itself and looked broken (Adama 29 Aug). It goes to
+              the six-step Add employee PAGE now (30 Aug): the old single modal
+              asked for a job title and Pulse access in the same toggle and had
               nowhere to put a contract, a schedule or a document. */}
           {canAdd && (
-            <button onClick={() => setAddOpen(true)} className={`${btn} btn-primary hover:bg-[var(--color-brand-600)]`}>
+            <Link to="/people/new" className={`${btn} btn-primary hover:bg-[var(--color-brand-600)]`}>
               <Plus size={15} /> Add employee
-            </button>
+            </Link>
           )}
         </div>
       </div>
@@ -430,12 +428,6 @@ export default function Employees() {
       {/* Warnings are not a directory: a warning belongs to a person's record
           and to Reviews & Coaching, which is where it is written and read. */}
 
-      {addOpen && (
-        <AddEmployeeWizard
-          onClose={() => setAddOpen(false)}
-          onCreated={load}
-        />
-      )}
     </div>
   );
 }

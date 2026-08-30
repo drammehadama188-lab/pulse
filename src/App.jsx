@@ -33,6 +33,7 @@ import TeamAccess from './pages/settings/TeamAccess.jsx'
 import RoleEditor from './pages/settings/RoleEditor.jsx'
 import HRTeam from './pages/departments/HRTeam.jsx'
 import Employees from './pages/Employees.jsx'
+import AddEmployeeWizard from './components/AddEmployeeWizard.jsx'
 import EmployeePage from './pages/EmployeePage.jsx'
 import EmployeeProfile from './pages/EmployeeProfile.jsx'
 import RecruitmentLayout from './pages/recruitment/RecruitmentLayout.jsx'
@@ -139,6 +140,9 @@ export default function App() {
             behind it — contracts, past staff, warnings — are the same page
             they always were and open on ?tab=. */}
         <Route path="/people" element={<RequireAuth power="hr"><PeoplePage /></RequireAuth>} />
+        {/* Adding somebody is a PAGE, not a modal over the list (Adama 30 Aug).
+            Above /people/:username so "new" is never read as a username. */}
+        <Route path="/people/new" element={<RequireAuth power="staffadmin"><AddEmployeeWizard /></RequireAuth>} />
         {/* One employee, resolved by username so people created in Pulse —
             who are not in the static roster — have a profile too. */}
         <Route path="/people/:username" element={<RequireAuth power="hr"><EmployeePage /></RequireAuth>} />
