@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { KeyRound } from 'lucide-react'
-import { api } from '../lib/api.js'
-import { useAuth } from '../context/AuthContext.jsx'
-import { Avatar, Button, Spinner, Modal, Field, Input } from '../components/ui.jsx'
-import { PageSkeleton } from '../components/ui/Skeleton.jsx'
+import { api } from '../../lib/api.js'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { Avatar, Button, Spinner, Modal, Field, Input } from '../../components/ui.jsx'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 
 // Staff member — the per-person access page (admin Staff parity). Email + login,
 // reset password, and the permission toggles that save instantly and are logged.

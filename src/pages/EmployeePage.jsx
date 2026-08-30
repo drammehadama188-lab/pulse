@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ChevronRight, ChevronLeft, Mail, Phone, MapPin, Briefcase, Building2, Clock,
   CalendarDays, UserRound, FileText, ArrowRight,
 } from 'lucide-react';
 import { api, getToken } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import AccessPanel from './employee/AccessPanel.jsx';
 import { payByName } from '../lib/pay.js';
 import { Attendance, Documents, Notes, History } from './employee/tabs.jsx';
 import RoleChange from '../components/employee/RoleChange.jsx';
@@ -47,6 +48,13 @@ const STATUS = {
   inactive: ['Inactive', 'var(--color-pill-inactive-bg)', 'var(--color-pill-inactive)'],
 };
 const TABS = ['Overview', 'Job & pay', 'Attendance', 'Performance', 'Documents', 'Notes', 'History'];
+// 🔴 Access is its own tab and its own GATE. The record opens with the `hr`
+// power; assigning a role, changing the login email, resetting a password and
+// pausing sign-in are `staffadmin`. Folding the old member page in here must
+// not hand a wider audience the ability to reset somebody's password, so the
+// tab is not offered at all without that power — and every control inside it
+// still asks, and the server re-checks every write regardless.
+const ACCESS_TAB = 'Access';
 
 const Row = ({ icon: Icon, label, value }) => (
   <div className="flex items-start gap-3 py-2.5">
@@ -164,7 +172,14 @@ export default function EmployeePage() {
   const [d, setD] = useState(null);
   const [error, setError] = useState(null);
   const [pay, setPay] = useState(null);
-  const [tab, setTab] = useState('Overview');
+  // A link can ask for a tab (Team & access sends people straight to Access).
+  // 🔴 Read it from the router, not window — the render check runs server-side
+  // and `window` is not defined there.
+  const [search] = useSearchParams();
+  const wantTab = search.get('tab');
+  const [tab, setTab] = useState(
+    wantTab && [...TABS, ACCESS_TAB].includes(wantTab) ? wantTab : 'Overview',
+  );
   const [roster, setRoster] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -181,7 +196,8 @@ export default function EmployeePage() {
   const [savingEmail, setSavingEmail] = useState(false);
   const [payEdit, setPayEdit] = useState(null);
   const [payErr, setPayErr] = useState('');
-  const { realUser, isViewAs } = useAuth();
+  const { realUser, isViewAs, hasRealPower } = useAuth();
+  const canSeeAccess = hasRealPower('staffadmin') && !isViewAs;
   // The Edit affordance only appears for someone who can actually save — the
   // server re-checks every write regardless, and view-as stays read-only.
   const canEditRecord = !!realUser?.canRecordsEdit && !isViewAs;
@@ -413,7 +429,7 @@ export default function EmployeePage() {
         onClose={() => setEndOpen(false)} onDone={refreshRecord} />
 
       <div className="mb-5 flex flex-wrap items-center gap-1 border-b border-[var(--color-line)]">
-        {TABS.map((t) => (
+        {[...TABS, ...(canSeeAccess ? [ACCESS_TAB] : [])].map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`-mb-px border-b-2 px-3.5 pb-3 pt-1 text-[13px] font-medium ${tab === t ? 'border-[var(--color-brand)] text-[var(--color-brand)]' : 'border-transparent text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]'}`}>
             {t}
@@ -465,6 +481,7 @@ export default function EmployeePage() {
           canDelete={!!realUser?.canDocsDelete && !isViewAs} onChanged={refreshRecord} />
       )}
       {tab === 'Notes' && <Notes notes={d.notes} username={e.username} />}
+      {tab === ACCESS_TAB && canSeeAccess && <AccessPanel username={username} onChanged={refreshRecord} />}
       {tab === 'History' && <History history={d.history} />}
 
     </div>
@@ -614,6 +631,9 @@ export function OverviewTab({ d, e, a, sales, pay, netPay, statusLabel, statusIn
                 // where the CEO grant lives.
                 { label: 'Email', value: e.email },
                 { label: 'Address', key: 'address', raw: e.address, value: e.address },
+                // Contact on file, never a sign-in. It used to be settable only
+                // on the access page, which no longer exists.
+                { label: 'Personal email', key: 'personalEmail', type: 'email', raw: e.personalEmail || '', value: e.personalEmail },
                 { label: 'Nationality', key: 'nationality', raw: e.nationality, value: e.nationality },
                 { label: 'Emergency contact', key: 'emergencyContact', raw: e.emergencyContact, value: e.emergencyContact },
                 { label: 'Emergency phone', key: 'emergencyPhone', type: 'tel', raw: e.emergencyPhone, value: e.emergencyPhone },

@@ -114,7 +114,7 @@ export default function TeamAccess() {
               {people.map((u) => (
                 <tr key={u.username} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-row-hover)]">
                   <td className="px-5 py-4">
-                    <Link to={`/settings/team/member/${u.username}`} className="font-medium text-[var(--color-ink)] hover:text-[var(--color-brand)]">
+                    <Link to={`/people/${u.username}?tab=Access`} className="font-medium text-[var(--color-ink)] hover:text-[var(--color-brand)]">
                       {u.name}
                     </Link>
                     <span className="block text-[12px] text-[var(--color-ink-faint)]">{u.title || u.department || ''}</span>
@@ -138,7 +138,7 @@ export default function TeamAccess() {
                     </span>
                   </td>
                   <td className="px-5 py-4 text-right">
-                    <Link to={`/settings/team/member/${u.username}`} className="text-[13px] font-medium text-[var(--color-brand)] hover:underline">Access</Link>
+                    <Link to={`/people/${u.username}?tab=Access`} className="text-[13px] font-medium text-[var(--color-brand)] hover:underline">Access</Link>
                   </td>
                 </tr>
               ))}

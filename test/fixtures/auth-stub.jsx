@@ -7,7 +7,7 @@ const user = {
 export function useAuth() {
   return {
     user, realUser: user, loading: false, impersonating: false, ownerActing: false,
-    isManager: true, hasPower: () => true, logout() {}, exitViewAs() {}, isViewAs: false,
+    isManager: true, hasPower: () => true, hasRealPower: () => true, realIsManager: true, logout() {}, exitViewAs() {}, isViewAs: false,
   }
 }
 export function AuthProvider({ children }) { return children }

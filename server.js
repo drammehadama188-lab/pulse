@@ -5272,13 +5272,13 @@ app.put('/api/employee-profile', auth, requireSub('hr', 'records'), notViewAs, (
 // ever since (Adama, 28 Aug: "just did not put it in the system"). An end
 // date that cannot be moved makes every renewal look like a permanent job.
 const RECORD_ROSTER_FIELDS = ['title', 'joined', 'employeeId', 'phone', 'address', 'contractEnd']
-const RECORD_PROFILE_FIELDS = ['manager', 'schedule', 'location', 'dob', 'gender', 'nationality', 'maritalStatus', 'emergencyContact', 'emergencyPhone', 'noticePeriod']
+const RECORD_PROFILE_FIELDS = ['manager', 'schedule', 'location', 'dob', 'gender', 'nationality', 'maritalStatus', 'emergencyContact', 'emergencyPhone', 'noticePeriod', 'personalEmail']
 const RECORD_FIELD_LABEL = {
   title: 'Job title', joined: 'Start date', employeeId: 'Employee ID', phone: 'Phone', address: 'Address',
   contractEnd: 'Contract ends',
   manager: 'Reports to', schedule: 'Work schedule', location: 'Location', dob: 'Date of birth', gender: 'Gender',
   nationality: 'Nationality', maritalStatus: 'Marital status', emergencyContact: 'Emergency contact',
-  emergencyPhone: 'Emergency phone', noticePeriod: 'Notice period',
+  emergencyPhone: 'Emergency phone', noticePeriod: 'Notice period', personalEmail: 'Personal email',
 }
 const isDayOrBlank = (v) => v === '' || /^\d{4}-\d{2}-\d{2}$/.test(v)
 const employeeIdOf = (u) => u.employeeId || `EMP-${String(u.username).slice(0, 3).toUpperCase()}`

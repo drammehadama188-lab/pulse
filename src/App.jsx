@@ -53,7 +53,6 @@ import Contracts from './pages/Contracts.jsx'
 import PastStaffProfile from './pages/PastStaffProfile.jsx'
 import ReviewsWarnings from './pages/ReviewsWarnings.jsx'
 import KpiTargets from './pages/KpiTargets.jsx'
-import StaffMember from './pages/StaffMember.jsx'
 import DepartmentShell from './pages/departments/DepartmentShell.jsx'
 import Policies from './pages/departments/Policies.jsx'
 import MyDocuments from './pages/MyDocuments.jsx'
@@ -82,7 +81,11 @@ function FullScreenLoader() {
 // not just somewhere in Settings.
 function StaffRedirect() {
   const { username } = useParams()
-  return <Navigate to={`/settings/team/member/${username}`} replace />
+  return <Navigate to={`/people/${username}`} replace />
+}
+function MemberRedirect() {
+  const { username } = useParams()
+  return <Navigate to={`/people/${username}`} replace />
 }
 
 function RequireAuth({ children, manager = false, power = null, teamLead = false }) {
@@ -221,7 +224,9 @@ export default function App() {
             lands somewhere real instead of 404ing. */}
         <Route path="/settings" element={<RequireAuth power="staffadmin"><Settings /></RequireAuth>} />
         <Route path="/settings/team" element={<RequireAuth power="staffadmin"><TeamAccess /></RequireAuth>} />
-        <Route path="/settings/team/member/:username" element={<RequireAuth power="staffadmin"><StaffMember /></RequireAuth>} />
+        {/* The per-person access page is gone — one page per person (Adama
+            30 Aug). Old links land on the record, where Access is a tab. */}
+        <Route path="/settings/team/member/:username" element={<MemberRedirect />} />
         <Route path="/settings/team/roles/:roleId" element={<RequireAuth power="staffadmin"><RoleEditor /></RequireAuth>} />
         <Route path="/team" element={<Navigate to="/settings/team?tab=members" replace />} />
         <Route path="/staff/:username" element={<StaffRedirect />} />
