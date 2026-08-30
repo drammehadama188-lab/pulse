@@ -179,6 +179,9 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   }, [])
 
   const probationEnd = v.onProbation ? addMonths(v.joined, v.probationMonths) : ''
+  // What is paid whatever happens, and what is paid when the target is met.
+  const guaranteed = (Number(v.baseSalary) || 0) + (Number(v.transport) || 0)
+  const onTarget = guaranteed + (Number(v.commission) || 0)
   const contractEnd = Number(v.contractMonths) > 0 ? addMonths(v.joined, v.contractMonths) : ''
   const isContractor = v.employmentType === 'Contractor'
   const isFixedTerm = FIXED_TERM_TYPES.includes(v.employmentType)
@@ -603,11 +606,28 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
               <input type="number" min="0" value={v.target} onChange={on('target')} className="field w-full" />
             </label>
           </Row>
-          <div className="mt-6">
-            <Note title="Guaranteed monthly pay">
-              D{((Number(v.baseSalary) || 0) + (Number(v.transport) || 0)).toLocaleString()} — base plus transport.
-              Commission is on top and only when the target is met.
-            </Note>
+          {/* 🔑 BOTH NUMBERS. Base + transport alone is half the story — a
+              package is agreed as "D7k base + D1k transport + D5k on target",
+              so the on-target total is the figure the offer is actually made
+              in. Showing only the guaranteed half made the page look like it
+              was not adding up what had been typed (Adama 30 Aug). */}
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="rounded-[10px] p-4" style={{ background: 'var(--color-fill)' }}>
+              <p className="text-[12px] font-medium text-[var(--color-ink-faint)]">Guaranteed every month</p>
+              <p className="mt-1.5 text-[24px] font-semibold leading-none tabular-nums text-[var(--color-ink)]">D{guaranteed.toLocaleString()}</p>
+              <p className="mt-2 text-[12px] text-[var(--color-ink-soft)]">
+                D{(Number(v.baseSalary) || 0).toLocaleString()} base + D{(Number(v.transport) || 0).toLocaleString()} transport
+              </p>
+            </div>
+            <div className="rounded-[10px] p-4" style={{ background: 'var(--color-brand-50)' }}>
+              <p className="text-[12px] font-medium" style={{ color: 'var(--color-brand)' }}>On target</p>
+              <p className="mt-1.5 text-[24px] font-semibold leading-none tabular-nums" style={{ color: 'var(--color-brand)' }}>D{onTarget.toLocaleString()}</p>
+              <p className="mt-2 text-[12px] text-[var(--color-ink-soft)]">
+                {Number(v.commission) > 0
+                  ? `+ D${(Number(v.commission)).toLocaleString()} commission at ${Number(v.target) || 0} sales`
+                  : 'No commission set — same as guaranteed'}
+              </p>
+            </div>
           </div>
         </Section>
       )}
@@ -718,7 +738,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
                 ['Starts', pretty(v.joined)], ['Reports to', v.manager || 'Not set yet'],
                 ['Probation', v.onProbation ? `${v.probationMonths} months, review ${pretty(probationEnd)}` : 'None'],
                 ['Contract', contractEnd ? `Ends ${pretty(contractEnd)}` : 'Indefinite'],
-                ['Guaranteed pay', `D${((Number(v.baseSalary) || 0) + (Number(v.transport) || 0)).toLocaleString()} a month`],
+                ['Guaranteed pay', `D${guaranteed.toLocaleString()} a month`],
+                ['On target', onTarget > guaranteed ? `D${onTarget.toLocaleString()} a month` : 'No commission'],
                 ['Documents', `${Object.values(docs).filter(Boolean).length + extra.length} attached`]].map(([k, val]) => (
                   <div key={k} className="flex justify-between gap-3 border-b border-[var(--color-line-soft)] py-1.5 last:border-0">
                     <dt className="text-[var(--color-ink-faint)]">{k}</dt>
