@@ -378,7 +378,7 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
 
   function openInEmail() {
     const first = (v.name.trim() || '').split(/\s+/)[0]
-    const subject = 'Your contract of employment — Damia Security Solutions Ltd'
+    const subject = 'Contract of Employment — Damia Security Solutions Ltd'
     const body = [
       `Dear ${first},`, '',
       'Please find your contract of employment attached.',
