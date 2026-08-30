@@ -143,6 +143,9 @@ export default function App() {
         {/* Adding somebody is a PAGE, not a modal over the list (Adama 30 Aug).
             Above /people/:username so "new" is never read as a username. */}
         <Route path="/people/new" element={<RequireAuth power="staffadmin"><AddEmployeeWizard /></RequireAuth>} />
+        {/* Picking a half-built record back up. Above /people/:username so it
+            is never read as somebody's profile. */}
+        <Route path="/people/:username/continue" element={<RequireAuth power="staffadmin"><AddEmployeeWizard /></RequireAuth>} />
         {/* One employee, resolved by username so people created in Pulse —
             who are not in the static roster — have a profile too. */}
         <Route path="/people/:username" element={<RequireAuth power="hr"><EmployeePage /></RequireAuth>} />

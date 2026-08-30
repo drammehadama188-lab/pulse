@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Upload, Check, ArrowLeft, FileText, CheckCircle2 } from 'lucide-react'
 import { api } from '../lib/api.js'
+import { PageSkeleton } from './ui/Skeleton.jsx'
 
 // Add employee — Adama's 30 Aug design: the record is BUILT IN STEPS, and a
 // step you cannot finish today does not stop you hiring somebody.
@@ -90,6 +91,12 @@ function Note({ tone = 'quiet', title, children }) {
 // nobody notices for a week.
 export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   const navigate = useNavigate()
+  // 🔒 The record is created on step 1 and SAVED AFTER EVERY STEP. Closing the
+  // page costs nothing: /people/:username/continue picks the same draft back
+  // up (Adama 30 Aug — "rather than starting each time i close it").
+  const { username: resumeUsername } = useParams()
+  const [username, setUsername] = useState(resumeUsername || null)
+  const [missing, setMissing] = useState([])
   const [step, setStep] = useState(initialStep)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -120,6 +127,31 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
 
   const [docs, setDocs] = useState({})   // slot key → File
   const [extra, setExtra] = useState([]) // other files
+
+  // Picking a draft back up: refill the form from what is already saved.
+  const [loading, setLoading] = useState(!!resumeUsername)
+  useEffect(() => {
+    if (!resumeUsername) return
+    api(`/staff/${resumeUsername}/draft`)
+      .then((d) => {
+        const x = d.draft
+        setV((p) => ({
+          ...p,
+          name: x.name, email: x.email, personalEmail: x.personalEmail, phone: x.phone, address: x.address,
+          title: x.title, department: x.department || p.department, manager: x.manager,
+          employmentType: x.employmentType || p.employmentType, joined: x.joined,
+          week: x.week && Object.keys(x.week).length ? x.week : p.week,
+          start: x.start, end: x.end,
+          contractMonths: x.contractMonths, onProbation: Number(x.probationMonths) > 0,
+          probationMonths: Number(x.probationMonths) > 0 ? x.probationMonths : p.probationMonths,
+          baseSalary: x.baseSalary, transport: x.transport, commission: x.commission,
+          target: x.target, roleId: x.roleId,
+        }))
+        setMissing(d.missing || [])
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [resumeUsername])
 
   useEffect(() => {
     api('/hr/employees').then((d) => setPeople((d.employees || []).map((e) => e.name))).catch(() => setPeople([]))
@@ -160,41 +192,73 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     }
     return ''
   }
-  const next = () => {
-    const p = problemWith(step)
-    if (p) return setError(p)
-    setError('')
-    setStep((n) => Math.min(STEPS.length - 1, n + 1))
-  }
-  const back = () => { setError(''); setStep((n) => Math.max(0, n - 1)) }
-  const goTo = (i) => {
-    if (i <= step) { setError(''); return setStep(i) }
-    for (let k = step; k < i; k++) { const p = problemWith(k); if (p) { setStep(k); return setError(p) } }
-    setError('')
-    setStep(i)
+  // Everything the record holds, in the shape both endpoints take.
+  const payload = () => {
+    const week = {}
+    for (const [k] of DAY_KEYS) week[k] = v.week[k] ? { start: v.start, end: v.end } : null
+    return {
+      name: v.name.trim(), email: v.email.trim(), personalEmail: v.personalEmail.trim(),
+      title: v.title.trim(), department: v.department, manager: v.manager,
+      employmentType: v.employmentType, joined: v.joined,
+      schedule: isContractor ? null : week,
+      contractMonths: v.contractMonths, probationMonths: v.onProbation ? v.probationMonths : 0,
+      baseSalary: v.baseSalary, transport: v.transport, commission: v.commission, target: v.target,
+      phone: v.phone.trim(), address: v.address.trim(),
+      roleId: roles ? v.roleId : '',
+    }
   }
 
-  async function create() {
-    for (let i = 0; i < STEPS.length; i++) { const p = problemWith(i); if (p) { setStep(i); return setError(p) } }
+  // 🔒 SAVE, THEN MOVE. Step 1 creates the record as PENDING; every step after
+  // updates it. Nothing typed is ever lost by closing the page, which is the
+  // whole point — the record is being worked on, not started over.
+  async function saveStep() {
     setBusy(true)
     setError('')
     try {
-      const week = {}
-      for (const [k] of DAY_KEYS) week[k] = v.week[k] ? { start: v.start, end: v.end } : null
-      const r = await api('/staff', { method: 'POST', body: {
-        type: /manager|lead|supervisor/i.test(v.title) ? 'manager' : 'agent',
-        name: v.name.trim(), email: v.email.trim(), personalEmail: v.personalEmail.trim(),
-        title: v.title.trim(), department: v.department, manager: v.manager,
-        employmentType: v.employmentType, joined: v.joined,
-        schedule: isContractor ? null : week,
-        contractMonths: v.contractMonths, probationMonths: v.onProbation ? v.probationMonths : 0,
-        baseSalary: v.baseSalary, transport: v.transport, commission: v.commission, target: v.target,
-        phone: v.phone.trim(), address: v.address.trim(),
-        roleId: roles ? v.roleId : '',
-      } })
+      if (!username) {
+        const r = await api('/staff', { method: 'POST', body: { ...payload(), type: /manager|lead|supervisor/i.test(v.title) ? 'manager' : 'agent' } })
+        setUsername(r.staff.username)
+        onCreated?.()
+      } else {
+        const r = await api(`/staff/${username}/draft`, { method: 'PUT', body: payload() })
+        setMissing(r.missing || [])
+      }
+      return true
+    } catch (e) {
+      setError(e.message)
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
 
-      // The person exists now. Files attach to them; 🔒 a failed upload never
-      // un-creates somebody — it is reported and the file stays outstanding.
+  const next = async () => {
+    const p = problemWith(step)
+    if (p) return setError(p)
+    if (!(await saveStep())) return
+    setStep((n) => Math.min(STEPS.length - 1, n + 1))
+  }
+  const back = () => { setError(''); setStep((n) => Math.max(0, n - 1)) }
+  const goTo = async (i) => {
+    if (i === step) return
+    if (i < step) { setError(''); await saveStep(); return setStep(i) }
+    for (let k = step; k < i; k++) { const p = problemWith(k); if (p) { setStep(k); return setError(p) } }
+    if (!(await saveStep())) return
+    setStep(i)
+  }
+
+  // "Complete — makes it all good." The record is finished. 🔒 It does NOT make
+  // them an employee: Activate is its own decision, on its own day.
+  async function finish() {
+    for (let i = 0; i < STEPS.length; i++) { const p = problemWith(i); if (p) { setStep(i); return setError(p) } }
+    if (!(await saveStep())) return
+    setBusy(true)
+    setError('')
+    try {
+      const who = username
+      // Files attach to a person, so they go up once the record exists.
+      // 🔒 A failed upload never un-creates somebody — it is reported and the
+      // file stays outstanding.
       const queued = [
         ...Object.entries(docs).filter(([, f]) => f).map(([key, f]) => ({ f, category: key })),
         ...extra.map((f) => ({ f, category: 'general' })),
@@ -203,13 +267,14 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
       for (const { f, category } of queued) {
         try {
           await api('/agent-files', { method: 'POST', body: {
-            agent: r.staff.name, name: f.name, mimeType: f.type, category,
+            agent: v.name.trim(), name: f.name, mimeType: f.type, category,
             base64: await readAsBase64(f),
           } })
         } catch { failed.push(f.name) }
       }
-      const missing = DOC_SLOTS.filter((d) => d.required && !docs[d.key]).map((d) => d.label)
-      setDone({ ...r.staff, invited: r.invited, missing, failed })
+      const r = await api(`/staff/${who}/complete`, { method: 'POST', body: {} })
+      const missingDocs = DOC_SLOTS.filter((d) => d.required && !docs[d.key]).map((d) => d.label)
+      setDone({ username: who, name: v.name.trim(), email: v.email.trim(), status: r.status, missing: missingDocs, failed })
       onCreated?.()
     } catch (e) {
       setError(e.message)
@@ -218,17 +283,43 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     }
   }
 
+  async function activate() {
+    setBusy(true)
+    setError('')
+    try {
+      const r = await api(`/staff/${done.username}/activate`, { method: 'POST', body: {} })
+      setDone((d) => ({ ...d, status: r.status }))
+      onCreated?.()
+    } catch (e) { setError(e.message) } finally { setBusy(false) }
+  }
+
+  if (loading) return <PageSkeleton tiles={0} rows={6} />
+
   if (done) {
     return (
-      <Shell title="Employee created" subtitle={`${done.name} is on the team.`}>
+      <Shell title={done.status === 'complete' ? 'Record complete' : 'Employee active'}
+        subtitle={done.status === 'complete'
+          ? `${done.name}'s record is finished. Activate them when they start.`
+          : `${done.name} is on the team.`}>
         <Body>
         <div className="mx-auto max-w-[560px] py-6 text-center">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
             style={{ background: 'var(--color-pill-active-bg)', color: 'var(--color-pill-active)' }}>
             <CheckCircle2 size={28} />
           </span>
-          <p className="mt-4 text-[15px] font-semibold text-[var(--color-ink)]">{done.name} is set up</p>
+          <p className="mt-4 text-[15px] font-semibold text-[var(--color-ink)]">
+            {done.status === 'complete' ? `${done.name}'s record is complete` : `${done.name} is active`}
+          </p>
           <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">{done.email ? `They sign in with ${done.email}` : 'No work email yet — no sign-in.'}</p>
+          {done.status === 'complete' && (
+            <div className="mt-5 text-left">
+              {/* 🔒 Two different facts. A record can be finished days before
+                  somebody starts, and completing it must not start paying them. */}
+              <Note title="Complete, but not employed yet">
+                They are not on payroll, not on a schedule and not scored until you activate them. Activate on the day they start.
+              </Note>
+            </div>
+          )}
           <div className="mt-5 space-y-3 text-left">
             <Note title={!done.email ? 'No sign-in yet' : done.invited ? 'Invite sent' : 'Invite could not be sent'}>
               {!done.email
@@ -252,7 +343,15 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
         </Body>
         <Footer
           left={<Link to={`/people/${done.username}`} className="btn-secondary inline-flex items-center gap-2 hover:bg-[var(--color-soft)]">Open their record</Link>}
-          right={<Link to="/people" className="btn-primary">Back to employees</Link>}
+          middle={error ? <span className="text-[12.5px] font-medium text-[var(--color-stage-out)]">{error}</span> : null}
+          right={done.status === 'complete'
+            ? (
+              <span className="flex items-center gap-2">
+                <Link to="/people" className="btn-secondary hover:bg-[var(--color-soft)]">Not yet</Link>
+                <button onClick={activate} disabled={busy} className="btn-primary disabled:opacity-60">{busy ? 'Activating…' : 'Activate'}</button>
+              </span>
+            )
+            : <Link to="/people" className="btn-primary">Back to employees</Link>}
         />
       </Shell>
     )
@@ -261,7 +360,7 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   const id = STEPS[step][0]
   return (
     <Shell
-      title="Add employee"
+      title={resumeUsername ? 'Continue employee record' : 'Add employee'}
       subtitle="Build the employee record in steps. You can finish missing items later."
       action={<Link to="/people" className="btn-secondary hover:bg-[var(--color-soft)]">Cancel</Link>}
     >
@@ -595,8 +694,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
         )}
         middle={`Step ${step + 1} of ${STEPS.length}`}
         right={step === STEPS.length - 1
-          ? <button onClick={create} disabled={busy} className="btn-primary disabled:opacity-60">{busy ? 'Creating…' : 'Create employee'}</button>
-          : <button onClick={next} className="btn-primary">Continue</button>}
+          ? <button onClick={finish} disabled={busy} className="btn-primary disabled:opacity-60">{busy ? 'Saving…' : 'Save & complete'}</button>
+          : <button onClick={next} disabled={busy} className="btn-primary disabled:opacity-60">{busy ? 'Saving…' : 'Save & continue'}</button>}
       />
     </Shell>
   )

@@ -19,6 +19,11 @@ import EmptyState from '../components/ui/EmptyState.jsx';
 
 const CARD = 'card';
 const STATUS = {
+  // 🔒 Being built and being employed are different facts (Adama 30 Aug).
+  // Pending = still being worked on. Complete = the record is good, but they
+  // are not on payroll, a schedule or the performance board until Activate.
+  pending: ['Pending completion', 'var(--color-pill-leave-bg)', 'var(--color-pill-leave)'],
+  complete: ['Ready to activate', 'var(--color-stage-new-bg)', 'var(--color-stage-new)'],
   active: ['Active', 'var(--color-pill-active-bg)', 'var(--color-pill-active)'],
   probation: ['Probation', 'var(--color-pill-probation-bg)', 'var(--color-pill-probation)'],
   leave: ['On leave', 'var(--color-pill-leave-bg)', 'var(--color-pill-leave)'],
@@ -271,7 +276,7 @@ export default function Employees() {
                     <input type="checkbox" checked={picked.has(e.username)} onChange={() => toggleOne(e.username)} className="accent-[var(--color-brand)]" />
                   </td>
                   <td className="h-[72px] px-5 py-4">
-                    <Link to={profileHref(e)} className="flex items-center gap-2.5">
+                    <Link to={e.status === 'pending' || e.status === 'complete' ? `/people/${e.username}/continue` : profileHref(e)} className="flex items-center gap-2.5">
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-fill)] text-[12.5px] font-semibold text-[var(--color-ink-soft)]">{initials(e.name)}</span>
                       <span className="min-w-0">
                         <span className="block truncate text-[13px] font-semibold text-[var(--color-ink)]">{e.name}</span>
@@ -313,10 +318,13 @@ export default function Employees() {
                     {menu === e.username && (
                       <div onMouseLeave={() => setMenu(null)}
                         className="absolute right-4 top-10 z-30 w-48 rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-lift)]">
-                        {[['Open profile', profileHref(e)],
-                          ['Attendance', '/attendance'],
-                          ['Performance', `/performance/${e.username}`],
-                          ['Payslips', '/pay']].map(([label, to]) => (
+                        {(e.status === 'pending' || e.status === 'complete'
+                          ? [['Continue record', `/people/${e.username}/continue`],
+                             ['Open profile', profileHref(e)]]
+                          : [['Open profile', profileHref(e)],
+                             ['Attendance', '/attendance'],
+                             ['Performance', `/performance/${e.username}`],
+                             ['Payslips', '/pay']]).map(([label, to]) => (
                             <Link key={label} to={to} className="block rounded-[6px] px-3 py-2 text-[12.5px] font-medium text-[var(--color-ink-soft)] hover:bg-[var(--color-fill)] hover:text-[var(--color-ink)]">{label}</Link>
                           ))}
                       </div>

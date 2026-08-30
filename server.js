@@ -125,6 +125,49 @@ function isArchived(u) {
   return u.status === 'archived'
 }
 
+// ---------- BEING BUILT vs BEING EMPLOYED (Adama 30 Aug) ----------
+// "the account should be set up pending completion ... it means it's being
+// worked on rather than starting each time i close it", and then: "we should
+// have two — Complete which makes it all good, and Activate which makes it
+// active. we can have both."
+//
+// 🔒 THEY ARE TWO DIFFERENT FACTS and both are needed:
+//   pending  — the record is being built. Save and close and come back to it.
+//   complete — every required field is there. The record is good.
+//   active   — they are actually employed. Payable, scheduled, scored.
+// A record can be complete days before the person starts, so completing it must
+// not start paying them.
+//
+// 🔴 A DRAFT IS NOT ON STAFF. The roster is built by `!isArchived(u)` in ~47
+// places — payroll, attendance, schedules, the performance board, team lists.
+// Without this, typing a name on step 1 would put a half-made person into a
+// payroll run and mark them absent for days they have not started.
+const DRAFT_STATUSES = new Set(['pending', 'complete'])
+function isDraft(u) {
+  return DRAFT_STATUSES.has(u?.status)
+}
+// On staff = a real employee today. Use this anywhere money, time or a score is
+// involved; use !isArchived where the question is "does this record exist".
+function isOnStaff(u) {
+  return !!u && !isArchived(u) && !isDraft(u)
+}
+function draftNameSet() {
+  return new Set(seedUsers().filter(isDraft).map((u) => u.name))
+}
+// What a record needs before it can be called complete. 🔒 Documents and Pulse
+// access are NEVER on this list — Adama's own rule is that a missing document
+// does not block anything, and somebody can be employed with no sign-in.
+function missingForComplete(u) {
+  const gaps = []
+  if (!String(u.name || '').trim()) gaps.push('Full name')
+  if (!String(u.title || '').trim()) gaps.push('Job title')
+  if (!String(u.department || '').trim()) gaps.push('Department')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(u.joined || ''))) gaps.push('Start date')
+  if (!String(u.employmentType || '').trim()) gaps.push('Employment type')
+  if (!(Number(u.pay?.base) > 0 || Number(u.salary) > 0)) gaps.push('Base salary')
+  return gaps
+}
+
 // ---------- team scoping (Adama 30 Jun) ----------
 // "My Team" = the people a team lead manages. Structure is department-based: the
 // performance team spans Sales + Customer Service. The Cleaner (Operations) and
@@ -139,7 +182,7 @@ function leadsATeam(u) {
 function teamMembersFor(lead) {
   if (!leadsATeam(lead)) return []
   return seedUsers().filter((u) =>
-    !isArchived(u) &&
+    isOnStaff(u) &&
     !u.contractor &&
     PERF_DEPARTMENTS.includes(u.department) &&
     u.username !== lead.username,
@@ -193,7 +236,8 @@ function archivedNameSet() {
 // created staff, mapped into the dashboard roster shape (NO salary, NO private notes)
 function createdStaffRoster() {
   return seedUsers()
-    .filter((u) => u.createdViaPulse && !isArchived(u))
+    // 🔴 A draft is not payroll's problem. This feeds the payroll roster.
+    .filter((u) => u.createdViaPulse && isOnStaff(u))
     .map((u) => ({
       name: u.name,
       role: u.title,
@@ -475,6 +519,9 @@ app.post('/api/login', (req, res) => {
   // Password is correct — only now is it safe to tell the real account holder
   // about account state (these states no longer leak to wrong-password probes).
   if (isArchived(user)) return res.status(403).json({ error: 'This account is archived. Speak to Adama.' })
+  // 🔒 A record still being built is not an account. Activating them is what
+  // opens the door, not the existence of a row with an email on it.
+  if (isDraft(user)) return res.status(403).json({ error: 'This account is not active yet. Speak to Adama.' })
   if (user.suspended) return res.status(403).json({ error: 'Your sign-in is paused. Speak to Adama.' })
 
   loginClear(key)
@@ -1166,7 +1213,9 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
     contract,
     contractEnd,
     joined,
-    status: 'active',
+    // 🔒 Created by the Add-employee wizard = PENDING, never active. The record
+    // is being built; it becomes an employee when it is activated.
+    status: req.body?.draft === false ? 'active' : 'pending',
     createdViaPulse: true,
     createdBy: req.user.username,
     createdAt: new Date().toISOString(),
@@ -1220,6 +1269,153 @@ app.post('/api/staff', auth, requireSub('staffadmin', 'add'), notViewAs, async (
     }
   }
   res.json({ staff: { username, name: rec.name, email: rec.email, title: rec.title }, invited })
+})
+
+// ---------- a record being built (Adama 30 Aug) ----------
+// The wizard saves after EVERY step, so closing it never costs anything. These
+// only ever touch a DRAFT: once somebody is activated their record is edited
+// through the record page and payroll, which have their own gates.
+// Picking a draft back up. Returns exactly what the wizard needs to refill
+// itself — no more, so this can never become a second way to read a staff
+// record (pay lives behind the payroll gate, not here... except the draft's own
+// pay, which is the thing being edited and which only staffadmin:add can see).
+app.get('/api/staff/:username/draft', auth, requireSub('staffadmin', 'add'), (req, res) => {
+  const u = seedUsers().find((x) => x.username === String(req.params.username || '').trim().toLowerCase())
+  if (!u) return res.status(404).json({ error: 'No such staff member' })
+  if (!isDraft(u)) return res.status(409).json({ error: 'That record is already active — edit it from their profile.' })
+  const monthsBetweenDates = (from, to) => {
+    if (!from || !to) return ''
+    const a = new Date(`${from}T00:00:00Z`), b = new Date(`${to}T00:00:00Z`)
+    if (isNaN(a) || isNaN(b)) return ''
+    return String((b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth()))
+  }
+  const week = effectiveWeek(db.read('schedules', {})[u.username], u.joined || todayKey())
+  const anyDay = Object.values(week).find(Boolean)
+  res.json({
+    draft: {
+      username: u.username,
+      status: u.status,
+      name: u.name || '', email: u.email || '', personalEmail: u.personalEmail || '',
+      phone: u.phone || '', address: u.address || '',
+      title: u.title || '', department: u.department || 'Sales',
+      manager: (db.read('profiles', {})[u.name] || {}).manager || '',
+      employmentType: u.employmentType || '', joined: u.joined || todayKey(),
+      week: Object.fromEntries(Object.keys(week).map((k) => [k, !!week[k]])),
+      start: anyDay?.start || '09:00', end: anyDay?.end || '17:00',
+      contractMonths: monthsBetweenDates(u.joined, u.contractEnd),
+      probationMonths: monthsBetweenDates(u.joined, u.probationEnd),
+      baseSalary: u.pay?.base ? String(u.pay.base) : '',
+      transport: u.pay?.transport ? String(u.pay.transport) : '',
+      commission: u.pay?.commission ? String(u.pay.commission) : '',
+      target: u.target != null ? String(u.target) : '5',
+      roleId: u.roleId || '',
+    },
+    missing: missingForComplete(u),
+  })
+})
+const DRAFT_TEXT = ['name', 'email', 'personalEmail', 'title', 'department', 'phone', 'address', 'employmentType']
+app.put('/api/staff/:username/draft', auth, requireSub('staffadmin', 'add'), notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === String(req.params.username || '').trim().toLowerCase())
+  if (!u) return res.status(404).json({ error: 'No such staff member' })
+  // 🔒 Refuses on anyone real. A "draft save" must never become a back door
+  // that rewrites an employed person's title, department or pay.
+  if (!isDraft(u)) return res.status(409).json({ error: 'That record is already active — edit it from their profile.' })
+  const b = req.body || {}
+
+  const cleanEmail = String(b.email ?? u.email ?? '').trim().toLowerCase()
+  if (cleanEmail && !/^\S+@\S+\.\S+$/.test(cleanEmail)) return res.status(400).json({ error: 'That work email is not valid' })
+  if (cleanEmail && users.some((x) => x.username !== u.username && (x.email || '').toLowerCase() === cleanEmail))
+    return res.status(409).json({ error: 'A staff member with that email already exists' })
+  const cleanPersonal = String(b.personalEmail ?? u.personalEmail ?? '').trim().toLowerCase()
+  if (cleanPersonal && !/^\S+@\S+\.\S+$/.test(cleanPersonal)) return res.status(400).json({ error: 'That personal email is not valid' })
+
+  for (const k of DRAFT_TEXT) if (b[k] !== undefined) u[k] = String(b[k] || '').trim()
+  u.email = cleanEmail
+  u.personalEmail = cleanPersonal
+  if (b.department !== undefined && !DEPARTMENTS.includes(u.department)) return res.status(400).json({ error: 'Unknown department' })
+  if (b.joined !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(String(b.joined))) u.joined = String(b.joined)
+  if (b.employmentType !== undefined) u.contractor = u.employmentType === 'Contractor'
+
+  if (b.contractMonths !== undefined) {
+    const m = Number(b.contractMonths) || 0
+    u.contract = m > 0 ? `${m}-month fixed` : 'Indefinite'
+    u.contractEnd = m > 0 ? addMonths(u.joined, m) : null
+  }
+  if (b.probationMonths !== undefined) {
+    const pm = Number(b.probationMonths) || 0
+    u.probationEnd = pm > 0 ? addMonths(u.joined, pm) : null
+  }
+  if (b.baseSalary !== undefined || b.transport !== undefined || b.commission !== undefined) {
+    const base = Number(b.baseSalary ?? u.pay?.base) || 0
+    const transport = Number(b.transport ?? u.pay?.transport) || 0
+    const commission = Number(b.commission ?? u.pay?.commission) || 0
+    u.pay = { base, commission, transport, total: base + commission + transport }
+    u.salary = base + transport
+  }
+  if (b.target !== undefined) u.target = Number(b.target) || 0
+  if (b.manager !== undefined) {
+    const manager = String(b.manager || '').trim()
+    if (manager && !users.some((x) => isOnStaff(x) && x.name === manager)) return res.status(400).json({ error: 'Reports to must be someone on the team' })
+    const profiles = db.read('profiles', {})
+    profiles[u.name] = { ...(profiles[u.name] || {}), manager }
+    db.write('profiles', profiles)
+  }
+  // 🔒 Access is the CEO's alone, on a draft exactly as anywhere else.
+  if (b.roleId !== undefined && String(b.roleId || '')) {
+    if (req.realUser?.username !== CEO) return res.status(403).json({ error: 'Only the CEO grants Pulse access' })
+    const role = roleById(String(b.roleId))
+    if (!role || role.id === 'owner') return res.status(400).json({ error: 'Unknown access role' })
+    const { powers, subs } = roleGrant(role)
+    u.roleId = role.id
+    u.permissions = [...powers]
+    u.permissionSubs = { ...subs }
+  }
+  if (b.schedule && typeof b.schedule === 'object' && !u.contractor) {
+    const schedules = db.read('schedules', {})
+    upsertSchedule(schedules, u.username, { from: u.joined || todayKey(), days: b.schedule })
+    db.write('schedules', schedules)
+  }
+
+  // 🔑 Completeness is a FACT about the record, not a button you can press over
+  // a gap. It is recomputed on every save, so the wizard can show what is left.
+  const missing = missingForComplete(u)
+  if (u.status === 'complete' && missing.length) u.status = 'pending'
+  db.write('users', users)
+  res.json({ staff: { username: u.username, name: u.name, status: u.status }, missing })
+})
+
+// "Complete — makes it all good." The record is finished. They are NOT employed
+// yet: a record can be finished days before somebody starts.
+app.post('/api/staff/:username/complete', auth, requireSub('staffadmin', 'add'), notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === req.params.username)
+  if (!u) return res.status(404).json({ error: 'No such staff member' })
+  if (!isDraft(u)) return res.status(409).json({ error: 'That record is already active.' })
+  const missing = missingForComplete(u)
+  if (missing.length) return res.status(400).json({ error: `Still missing: ${missing.join(', ')}`, missing })
+  u.status = 'complete'
+  ;(u.history ||= []).push({ date: todayKey(), event: 'Record completed — ready to activate' })
+  db.write('users', users)
+  res.json({ status: u.status, missing: [] })
+})
+
+// "Activate — makes it active." NOW they are employed: payable, scheduled,
+// scored, and able to sign in if they have a work email.
+app.post('/api/staff/:username/activate', auth, requireSub('staffadmin', 'add'), notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === req.params.username)
+  if (!u) return res.status(404).json({ error: 'No such staff member' })
+  if (isArchived(u)) return res.status(409).json({ error: 'That record is archived.' })
+  if (!isDraft(u)) return res.json({ status: u.status })
+  const missing = missingForComplete(u)
+  if (missing.length) return res.status(400).json({ error: `Cannot activate — still missing: ${missing.join(', ')}`, missing })
+  // Probation is a state of an ACTIVE employee, so it resolves on activation
+  // rather than being carried as a status through the draft.
+  u.status = u.probationEnd && Date.parse(u.probationEnd) >= Date.now() ? 'probation' : 'active'
+  ;(u.history ||= []).push({ date: todayKey(), event: `Activated as ${u.title || 'staff'}` })
+  db.write('users', users)
+  res.json({ status: u.status })
 })
 
 // Mark someone as a contractor — stays on payroll and in the staff list, but
@@ -3323,7 +3519,8 @@ function scheduleRoster(req) {
   // the CEO is never in anyone's roster. Contractors don't check in or hold
   // a schedule (Adama 3 Aug: Abdourahman) — they never appear here.
   const scope = powerScopeSet(req.user, 'team')
-  return seedUsers().filter((u) => scope.has(u.username) && !u.contractor)
+  // Nobody is absent from a job they have not been activated into.
+  return seedUsers().filter((u) => scope.has(u.username) && !u.contractor && isOnStaff(u))
 }
 
 // Write one dated entry for one person, and hand back what changed.
@@ -5670,8 +5867,11 @@ app.get('/api/hr/employees', auth, requirePower('hr'), (req, res) => {
   const count = (s) => employees.filter((e) => e.status === s).length
   // A contract inside two months is a conversation that has to start; a
   // milestone inside one is a decision that is already late if ignored.
-  const contractSoon = employees.filter((e) => e.contractEnd && e.milestone?.label === 'Contract ends' && e.milestone.days <= 60).length
-  const actionDue = employees.filter((e) => e.milestone && e.milestone.days <= 30 && e.milestone.label !== 'Annual review')
+  // 🔒 A record still being built is not a deadline. Its probation date and
+  // contract end are placeholders until somebody is actually activated.
+  const live = employees.filter((e) => e.status !== 'pending' && e.status !== 'complete')
+  const contractSoon = live.filter((e) => e.contractEnd && e.milestone?.label === 'Contract ends' && e.milestone.days <= 60).length
+  const actionDue = live.filter((e) => e.milestone && e.milestone.days <= 30 && e.milestone.label !== 'Annual review')
   // Who left, so the page can show them without a second endpoint and a
   // second set of permissions.
   const past = seedUsers()
@@ -5695,7 +5895,10 @@ app.get('/api/hr/employees', auth, requirePower('hr'), (req, res) => {
       active: count('active'),
       leave: count('leave'),
       probation: count('probation'),
-      inactive: employees.length - count('active') - count('leave') - count('probation'),
+      // Being built, and finished but not yet started. Neither is employed.
+      pending: count('pending'),
+      complete: count('complete'),
+      inactive: employees.length - count('active') - count('leave') - count('probation') - count('pending') - count('complete'),
       contractSoon,
       actionDue: actionDue.length,
     },
@@ -7688,7 +7891,7 @@ app.get('/api/performance/board', auth, requireSub('hr', 'performance'), async (
   // re-checks WHICH records, not just that you are logged in).
   const scope = powerScopeSet(req.realUser, 'hr')
   const roster = seedUsers().filter((u) =>
-    scope.has(u.username) && !isArchived(u) && !/cleaner/i.test(`${u.title || ''} ${u.name || ''}`))
+    scope.has(u.username) && isOnStaff(u) && !/cleaner/i.test(`${u.title || ''} ${u.name || ''}`))
   const people = await Promise.all(roster.map((u) => performanceFor(u, month)))
 
   const prev = prevMonthKey(month)
