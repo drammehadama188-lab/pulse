@@ -383,7 +383,7 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
       `Dear ${first},`, '',
       'Please find your contract of employment attached.',
       'Read it carefully, and if you are happy with it, sign it and send a copy back to us.', '',
-      'Adama Drammeh', 'Managing Director', 'Damia Security Solutions Ltd',
+      'Adama Drammeh', 'CEO', 'Damia Security Solutions Ltd',
     ].join('\n')
     window.location.href = `mailto:${encodeURIComponent(contract.to || '')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
