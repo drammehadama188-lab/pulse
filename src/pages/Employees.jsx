@@ -62,6 +62,10 @@ export default function Employees() {
   const [status, setStatus] = useState('');
   const [employment, setEmployment] = useState('');
   const [menu, setMenu] = useState(null);
+  // 🔒 ACTIVATION IS THE END OF THE PROCESS, not part of building the record
+  // (Adama 30 Aug): it happens here, from the list, once the signed contract is
+  // back and he is satisfied — not on the last step of the wizard.
+  const [activating, setActivating] = useState(null);
   const [picked, setPicked] = useState(() => new Set());
   const [moreFilters, setMoreFilters] = useState(false);
   const [joinedFrom, setJoinedFrom] = useState('');
@@ -318,6 +322,20 @@ export default function Employees() {
                     {menu === e.username && (
                       <div onMouseLeave={() => setMenu(null)}
                         className="absolute right-4 top-10 z-30 w-48 rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-lift)]">
+                        {e.status === 'complete' && (
+                          <button
+                            onClick={async () => {
+                              setMenu(null);
+                              setActivating(e.username);
+                              try { await api(`/staff/${e.username}/activate`, { method: 'POST', body: {} }); await load(); }
+                              catch (err) { setError(err.message); }
+                              finally { setActivating(null); }
+                            }}
+                            disabled={activating === e.username}
+                            className="block w-full rounded-[6px] px-3 py-2 text-left text-[12.5px] font-semibold text-[var(--color-brand)] hover:bg-[var(--color-fill)] disabled:opacity-60">
+                            {activating === e.username ? 'Activating…' : 'Activate'}
+                          </button>
+                        )}
                         {(e.status === 'pending' || e.status === 'complete'
                           ? [['Continue record', `/people/${e.username}/continue`],
                              ['Open profile', profileHref(e)]]

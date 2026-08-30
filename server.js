@@ -1299,7 +1299,7 @@ app.get('/api/staff/:username/draft', auth, requireSub('staffadmin', 'add'), (re
     draft: {
       username: u.username,
       status: u.status,
-      step: Math.max(0, Math.min(5, Number(u.draftStep) || 0)),
+      step: Math.max(0, Math.min(4, Number(u.draftStep) || 0)),
       name: u.name || '', email: u.email || '', personalEmail: u.personalEmail || '',
       phone: u.phone || '', address: u.address || '',
       title: u.title || '', department: u.department || 'Sales',
@@ -1362,7 +1362,7 @@ app.put('/api/staff/:username/draft', auth, requireSub('staffadmin', 'add'), not
   // 🔒 WHERE THEY GOT TO. Reopening a half-built record at step 1 makes them
   // walk the whole thing again to reach the step they were on — the exact
   // "starting each time i close it" this was built to stop (Adama 30 Aug).
-  if (b.step !== undefined) u.draftStep = Math.max(0, Math.min(5, Number(b.step) || 0))
+  if (b.step !== undefined) u.draftStep = Math.max(0, Math.min(4, Number(b.step) || 0))
   if (b.manager !== undefined) {
     const manager = String(b.manager || '').trim()
     if (manager && !users.some((x) => isOnStaff(x) && x.name === manager)) return res.status(400).json({ error: 'Reports to must be someone on the team' })

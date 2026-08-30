@@ -41,8 +41,14 @@ const STEPS = [
   // documents, so it comes before the step that collects them.
   ['contract', 'Contract'],
   ['documents', 'Documents'],
-  ['access', 'Access'],
 ]
+// 🔒 ACCESS IS NOT PART OF BUILDING THE RECORD (Adama 30 Aug): "i can save
+// after completing without giving her access yet or activating her. that button
+// to activate her access is the end — after she has signed and returned and i
+// feel we have everything."
+// So the wizard finishes at Documents. Granting a role and activating somebody
+// are one deliberate act, taken later from their record, when the signed
+// contract is back.
 // 🔒 The TYPE decides whether there is an end date. Asking "Full-time" and then
 // "contract length: 3/6/12/24 months" on the next page is the contradiction he
 // caught — full-time permanent and fixed term are the same axis, asked twice.
@@ -122,7 +128,6 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(null)
   const [people, setPeople] = useState([])
-  const [roles, setRoles] = useState(null) // null = not allowed to grant / not loaded
   const fileInput = useRef(null)
 
   const [v, setV] = useState({
@@ -131,7 +136,6 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     joined: today(), week: { ...DEFAULT_WEEK }, start: '09:00', end: '17:00',
     contractMonths: '', onProbation: true, probationMonths: '3',
     baseSalary: '', transport: '', commission: '', target: '5',
-    roleId: '',
   })
   // 🔴 THE MESSAGE DIES THE MOMENT YOU TOUCH THE FORM. The error was computed
   // only when Continue was pressed and nothing cleared it afterwards, so a
@@ -167,7 +171,7 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
           contractMonths: x.contractMonths, onProbation: Number(x.probationMonths) > 0,
           probationMonths: Number(x.probationMonths) > 0 ? x.probationMonths : p.probationMonths,
           baseSalary: x.baseSalary, transport: x.transport, commission: x.commission,
-          target: x.target, roleId: x.roleId,
+          target: x.target,
         }))
         setMissing(d.missing || [])
         // 🔒 Land where they stopped, not at the beginning. Back still works if
@@ -188,8 +192,6 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
 
   useEffect(() => {
     api('/hr/employees').then((d) => setPeople((d.employees || []).map((e) => e.name))).catch(() => setPeople([]))
-    // Only the CEO may grant access, so only the CEO is offered the picker.
-    api('/roles').then((d) => setRoles((d.roles || []).filter((r) => r.id !== 'owner'))).catch(() => setRoles(null))
   }, [])
 
   const probationEnd = v.onProbation ? addMonths(v.joined, v.probationMonths) : ''
@@ -247,7 +249,6 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
       contractMonths: v.contractMonths, probationMonths: v.onProbation ? v.probationMonths : 0,
       baseSalary: v.baseSalary, transport: v.transport, commission: v.commission, target: v.target,
       phone: v.phone.trim(), address: v.address.trim(),
-      roleId: roles ? v.roleId : '',
     }
   }
 
@@ -388,15 +389,6 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     window.location.href = `mailto:${encodeURIComponent(contract.to || '')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
-  async function activate() {
-    setBusy(true)
-    setError('')
-    try {
-      const r = await api(`/staff/${done.username}/activate`, { method: 'POST', body: {} })
-      setDone((d) => ({ ...d, status: r.status }))
-      onCreated?.()
-    } catch (e) { setError(e.message) } finally { setBusy(false) }
-  }
 
   if (loading) return <PageSkeleton tiles={0} rows={6} />
 
@@ -418,10 +410,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
           <p className="mt-1 text-[13px] text-[var(--color-ink-soft)]">{done.email ? `They sign in with ${done.email}` : 'No work email yet — no sign-in.'}</p>
           {done.status === 'complete' && (
             <div className="mt-5 text-left">
-              {/* 🔒 Two different facts. A record can be finished days before
-                  somebody starts, and completing it must not start paying them. */}
-              <Note title="Complete, but not employed yet">
-                They are not on payroll, not on a schedule and not scored until you activate them. Activate on the day they start.
+              <Note title="Complete, not employed yet">
+                Not on payroll, not on a schedule, no sign-in. Activate them from Employees when the signed contract is back.
               </Note>
             </div>
           )}
@@ -449,14 +439,7 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
         <Footer
           left={<Link to={`/people/${done.username}`} className="btn-secondary inline-flex items-center gap-2 hover:bg-[var(--color-soft)]">Open their record</Link>}
           middle={error ? <span className="text-[12.5px] font-medium text-[var(--color-stage-out)]">{error}</span> : null}
-          right={done.status === 'complete'
-            ? (
-              <span className="flex items-center gap-2">
-                <Link to="/people" className="btn-secondary hover:bg-[var(--color-soft)]">Not yet</Link>
-                <button onClick={activate} disabled={busy} className="btn-primary disabled:opacity-60">{busy ? 'Activating…' : 'Activate'}</button>
-              </span>
-            )
-            : <Link to="/people" className="btn-primary">Back to employees</Link>}
+          right={<Link to="/people" className="btn-primary">Back to employees</Link>}
         />
       </Shell>
     )
@@ -822,43 +805,11 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
               Anything still required is added to their onboarding checklist.
             </Note>
           </div>
-        </Section>
-      )}
 
-      {id === 'access' && (
-        <Section title="Access" line="What they can see and do inside Pulse.">
-          {!v.email.trim() && (
-            <div className="mb-5">
-              {/* A role can be set now; it simply cannot be used until there is
-                  a work email to sign in with. Saying so beats a granted role
-                  that appears to do nothing. */}
-              <Note title="No sign-in until the work email exists">
-                A role can be chosen now, but nobody can sign in without a work email. Add it on their record when the letter goes out and send the invite from there.
-              </Note>
-            </div>
-          )}
-          {roles ? (
-            <>
-              <label className="block max-w-[420px]">
-                <span className={L}>Pulse access role</span>
-                <MenuSelect value={v.roleId} onChange={(x) => set('roleId', x)}
-                  options={[{ value: '', label: 'No access — record only' }, ...roles.map((r) => ({ value: r.id, label: r.name }))]} />
-                <span className={HELP}>Permissions belong to the role. Change the role and everyone on it changes with it.</span>
-              </label>
-              <div className="mt-6">
-                <Note title="No access is a real answer">
-                  Someone can exist on the roster, be paid and be scheduled without ever signing in.
-                </Note>
-              </div>
-            </>
-          ) : (
-            <Note title="Pulse access is granted separately">
-              Only the CEO can grant an access role. This person is created as a record, and access is given from Settings → Team &amp; access.
-            </Note>
-          )}
-
+          {/* The last step, so the record is worth showing whole before it is
+              called complete. */}
           <div className="mt-7 rounded-[10px] border border-[var(--color-line)] p-5">
-            <p className="text-[13px] font-semibold text-[var(--color-ink)]">Ready to create</p>
+            <p className="text-[13px] font-semibold text-[var(--color-ink)]">Ready to complete</p>
             <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-[12.5px] sm:grid-cols-2">
               {[['Name', v.name || '—'], ['Sign-in', v.email || 'None yet'],
                 ['Role', `${v.title || '—'} · ${v.department}`], ['Type', v.employmentType],
