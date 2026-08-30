@@ -26,14 +26,26 @@ import { MenuSelect } from './ui.jsx'
 // onboarding items rather than a wall in front of creating the person, which is
 // the whole reason the old form got half-filled and abandoned.
 
+// 🔒 THE ARRANGEMENT IS ONE CONVERSATION (Adama 30 Aug): "i select the type,
+// let's say full time, then i go to probation and employment — that makes no
+// sense." Employment type, contract length and probation are the SAME decision:
+// the type is what says whether there is an end date at all, and the start date
+// is what both the contract end and the probation review are counted from.
+// Splitting them put the cause on one page and its effect on another.
 const STEPS = [
   ['personal', 'Personal'],
   ['employment', 'Employment'],
-  ['contract', 'Contract & probation'],
   ['pay', 'Pay'],
   ['documents', 'Documents'],
   ['access', 'Access'],
 ]
+// 🔒 The TYPE decides whether there is an end date. Asking "Full-time" and then
+// "contract length: 3/6/12/24 months" on the next page is the contradiction he
+// caught — full-time permanent and fixed term are the same axis, asked twice.
+const FIXED_TERM_TYPES = ['Fixed term', 'Intern', 'Contractor']
+// Probation belongs to employment. A contractor is not on probation; they are
+// on a contract, and it either runs or it does not.
+const PROBATION_TYPES = ['Full-time', 'Part-time', 'Fixed term', 'Intern']
 const DEPARTMENTS = ['Sales', 'Customer Service', 'Operations', 'Marketing', 'Training', 'Management', 'Leadership']
 const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Fixed term', 'Contractor', 'Intern']
 const TITLES = ['Sales Agent', 'Senior Sales Agent', 'Sales Intern', 'Customer Service Supervisor', 'Assistant Manager', 'Team Lead', 'Lead Technician', 'Technician', 'Office Cleaner', 'Manager']
@@ -169,6 +181,8 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
   const probationEnd = v.onProbation ? addMonths(v.joined, v.probationMonths) : ''
   const contractEnd = Number(v.contractMonths) > 0 ? addMonths(v.joined, v.contractMonths) : ''
   const isContractor = v.employmentType === 'Contractor'
+  const isFixedTerm = FIXED_TERM_TYPES.includes(v.employmentType)
+  const canProbate = PROBATION_TYPES.includes(v.employmentType)
   const scheduleLabel = useMemo(() => {
     const days = DAY_KEYS.filter(([k]) => v.week[k]).map(([, l]) => l)
     if (!days.length) return 'No working days set'
@@ -196,6 +210,11 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     if (i === 1) {
       if (!v.title.trim()) return 'Give the job title'
       if (!/^\d{4}-\d{2}-\d{2}$/.test(v.joined)) return 'Pick the start date'
+      // A fixed term with no length is a contract with no end date, which is
+      // the thing a fixed term is defined by.
+      if (FIXED_TERM_TYPES.includes(v.employmentType) && !Number(v.contractMonths)) {
+        return `${v.employmentType} needs a contract length`
+      }
     }
     return ''
   }
@@ -439,7 +458,19 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
             </label>
             <label className="block">
               <span className={L}>Employment type</span>
-              <MenuSelect value={v.employmentType} onChange={(x) => set('employmentType', x)} options={EMPLOYMENT_TYPES} />
+              <MenuSelect value={v.employmentType} options={EMPLOYMENT_TYPES}
+                onChange={(x) => {
+                  // 🔒 The type owns these. Switching to a permanent type must
+                  // not leave a 6-month contract length behind where nothing
+                  // shows it any more, and a contractor is not on probation.
+                  setV((p) => ({
+                    ...p,
+                    employmentType: x,
+                    contractMonths: FIXED_TERM_TYPES.includes(x) ? p.contractMonths : '',
+                    onProbation: PROBATION_TYPES.includes(x) ? p.onProbation : false,
+                  }))
+                  setError('')
+                }} />
             </label>
             <label className="block">
               <span className={L}>Start date</span>
@@ -473,65 +504,81 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
               )}
             </div>
           </Row>
-          <div className="mt-6">
-            <Note title="Job role and Pulse access are separate">
-              A Sales Agent can be an Employee, Manager or Admin only if you explicitly grant that access. You do that on the last step.
-            </Note>
-          </div>
-        </Section>
-      )}
 
-      {id === 'contract' && (
-        <Section title="Contract &amp; probation" line="How long the arrangement runs, and when it gets reviewed.">
-          <Row>
-            <label className="block">
-              <span className={L}>Contract length</span>
-              <MenuSelect value={v.contractMonths} onChange={(x) => set('contractMonths', x)}
-                options={[{ value: '', label: 'Indefinite' }, ...[3, 6, 12, 24].map((m) => ({ value: String(m), label: `${m} months` }))]} />
-              <span className={HELP}>{contractEnd ? `Ends ${pretty(contractEnd)}` : 'No end date.'}</span>
-            </label>
-            <div className="block">
-              <span className={L}>Contract ends</span>
-              <p className="field w-full text-[var(--color-ink-soft)]">{contractEnd ? pretty(contractEnd) : 'No end date'}</p>
-            </div>
-          </Row>
-
-          <h3 className="mt-7 text-[15px] font-semibold text-[var(--color-ink)]">Probation</h3>
-          <p className="mt-1 text-[12.5px] text-[var(--color-ink-soft)]">Is this employee starting on probation?</p>
-          <div className="mt-3 grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-4">
-            <div className="flex items-end gap-2">
-              {[[true, 'Yes'], [false, 'No']].map(([val, label]) => (
-                <button key={label} type="button" onClick={() => set('onProbation', val)}
-                  className="rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors"
-                  style={v.onProbation === val
-                    ? { background: 'var(--color-brand)', color: '#ffffff' }
-                    : { background: 'var(--color-fill)', color: 'var(--color-ink-soft)' }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-            <label className="block">
-              <span className={L}>Length</span>
-              <MenuSelect value={v.probationMonths} onChange={(x) => set('probationMonths', x)}
-                options={[1, 3, 6].map((m) => ({ value: String(m), label: `${m} month${m > 1 ? 's' : ''}` }))} />
-            </label>
-            <div className="block">
-              <span className={L}>Review date</span>
-              <p className="field w-full text-[var(--color-ink-soft)]">{probationEnd ? pretty(probationEnd) : '—'}</p>
-            </div>
-            <div className="block">
-              <span className={L}>Status</span>
-              <p className="field w-full text-[var(--color-ink-soft)]">{v.onProbation ? 'On probation' : 'Active'}</p>
-            </div>
-          </div>
-
-          {v.onProbation && (
-            <div className="mt-5">
-              <Note tone="warn" title="The probation review lands in HR reminders on its own.">
-                It appears as this person&rsquo;s next HR milestone from the day it is set. They can be created before anything is reviewed.
-              </Note>
+          {/* The contract. 🔒 Shown only when the TYPE says there is an end
+              date — a permanent full-timer is not asked for a contract length,
+              which is the contradiction that started this. */}
+          <h3 className="mt-8 text-[15px] font-semibold text-[var(--color-ink)]">Contract</h3>
+          <p className="mt-1 text-[12.5px] text-[var(--color-ink-soft)]">
+            {isFixedTerm
+              ? `${v.employmentType} runs for a set period. How long?`
+              : `${v.employmentType} has no end date. Change the employment type above if it should.`}
+          </p>
+          {isFixedTerm && (
+            <div className="mt-3">
+              <Row>
+                <label className="block">
+                  <span className={L}>Length</span>
+                  <MenuSelect value={v.contractMonths} onChange={(x) => set('contractMonths', x)}
+                    options={[3, 6, 12, 24].map((m) => ({ value: String(m), label: `${m} months` }))} />
+                </label>
+                <div className="block">
+                  <span className={L}>Contract ends</span>
+                  <p className="field w-full text-[var(--color-ink-soft)]">{contractEnd ? pretty(contractEnd) : 'Pick a length'}</p>
+                </div>
+              </Row>
             </div>
           )}
+
+          {canProbate && (
+            <>
+              <h3 className="mt-8 text-[15px] font-semibold text-[var(--color-ink)]">Probation</h3>
+              <p className="mt-1 text-[12.5px] text-[var(--color-ink-soft)]">Is this employee starting on probation?</p>
+              <div className="mt-3 grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-4">
+                <div className="flex items-end gap-2">
+                  {[[true, 'Yes'], [false, 'No']].map(([val, label]) => (
+                    <button key={label} type="button" onClick={() => set('onProbation', val)}
+                      className="rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors"
+                      style={v.onProbation === val
+                        ? { background: 'var(--color-brand)', color: '#ffffff' }
+                        : { background: 'var(--color-fill)', color: 'var(--color-ink-soft)' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {v.onProbation && (
+                  <>
+                    <label className="block">
+                      <span className={L}>Length</span>
+                      <MenuSelect value={v.probationMonths} onChange={(x) => set('probationMonths', x)}
+                        options={[1, 3, 6].map((m) => ({ value: String(m), label: `${m} month${m > 1 ? 's' : ''}` }))} />
+                    </label>
+                    <div className="block">
+                      <span className={L}>Review date</span>
+                      <p className="field w-full text-[var(--color-ink-soft)]">{probationEnd ? pretty(probationEnd) : '—'}</p>
+                    </div>
+                    <div className="block">
+                      <span className={L}>Status on activation</span>
+                      <p className="field w-full text-[var(--color-ink-soft)]">On probation</p>
+                    </div>
+                  </>
+                )}
+              </div>
+              {v.onProbation && (
+                <div className="mt-5">
+                  <Note tone="warn" title="The probation review lands in HR reminders on its own.">
+                    It becomes this person&rsquo;s next HR milestone the day they are activated. Nothing is reviewed for you.
+                  </Note>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="mt-8">
+            <Note title="Job role and Pulse access are separate">
+              A {v.title || 'Sales Agent'} can be an Employee, Manager or Admin only if you explicitly grant that access. You do that on the last step.
+            </Note>
+          </div>
         </Section>
       )}
 

@@ -160,7 +160,7 @@ console.log(`✓ ${tabsOk} of ${cases.length} employee tab states render`);
 // kind of thing that ships blank.
 const wizard = await vite.ssrLoadModule('/src/components/AddEmployeeWizard.jsx');
 let stepsOk = 0;
-const STEP_NAMES = ['Personal', 'Employment', 'Contract & probation', 'Pay', 'Documents', 'Access'];
+const STEP_NAMES = ['Personal', 'Employment', 'Pay', 'Documents', 'Access'];
 for (let i = 0; i < STEP_NAMES.length; i++) {
   if (render(`Add employee · ${STEP_NAMES[i]}`, React.createElement(wizard.default, { onCreated: noop, initialStep: i }))) stepsOk++;
 }
