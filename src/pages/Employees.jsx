@@ -322,8 +322,13 @@ export default function Employees() {
                     {menu === e.username && (
                       <div onMouseLeave={() => setMenu(null)}
                         className="absolute right-4 top-10 z-30 w-48 rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-lift)]">
+                        {/* A dead end on the row is no better than a dead end
+                            on the button — it goes where the email is set. */}
                         {e.status === 'complete' && !e.email && (
-                          <span className="block px-3 py-2 text-[12.5px] text-[var(--color-ink-faint)]">Needs a work email to activate</span>
+                          <Link to={profileHref(e)}
+                            className="block rounded-[6px] px-3 py-2 text-[12.5px] font-semibold text-[var(--color-brand)] hover:bg-[var(--color-fill)]">
+                            Add work email to activate
+                          </Link>
                         )}
                         {e.status === 'complete' && e.email && (
                           <button

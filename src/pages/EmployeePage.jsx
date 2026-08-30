@@ -171,6 +171,14 @@ export default function EmployeePage() {
   const [uploading, setUploading] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
   const [activating, setActivating] = useState(false);
+  // 🔴 The work email is read-only on a record because it is the login, and a
+  // login is changed on Team & access. But a record that has never been
+  // activated is not ON Team & access — so "Activate — needs a work email"
+  // named the blocker and led nowhere (Adama 30 Aug: "where am i putting the
+  // work email?"). While it is a draft it is set here, at the point of the
+  // block, because that is the only moment it cannot be set anywhere else.
+  const [workEmail, setWorkEmail] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
   const [payEdit, setPayEdit] = useState(null);
   const [payErr, setPayErr] = useState('');
   const { realUser, isViewAs } = useAuth();
@@ -208,6 +216,17 @@ export default function EmployeePage() {
 
   // One place to re-read the record after a write, so a document that was
   // deleted or added does not leave a stale list on screen.
+  async function saveWorkEmail() {
+    setSavingEmail(true);
+    setError(null);
+    try {
+      await api(`/staff/${username}/draft`, { method: 'PUT', body: { email: workEmail.trim() } });
+      await refreshRecord();
+      setWorkEmail('');
+    } catch (err) { setError(err.message); }
+    finally { setSavingEmail(false); }
+  }
+
   async function activate() {
     setActivating(true);
     try { await api(`/staff/${username}/activate`, { method: 'POST', body: {} }); await refreshRecord(); }
@@ -299,14 +318,27 @@ export default function EmployeePage() {
               contract comes back. Only offered once the record is complete —
               activating a half-built record is what the two states exist to
               prevent. */}
-          {/* 🔒 No company email, no activation. Said on the button rather
-              than discovered by pressing it. */}
-          {e.status === 'complete' && (
-            <button onClick={activate} disabled={activating || !e.email}
-              title={e.email ? undefined : 'Needs a work email first'}
-              className="btn-primary disabled:opacity-50">
-              {activating ? 'Activating…' : e.email ? 'Activate' : 'Activate — needs a work email'}
-            </button>
+          {/* 🔒 No company email, no activation — and the field to set one is
+              right here, so naming the blocker and fixing it are the same act. */}
+          {e.status === 'complete' && !e.email && (
+            <span className="flex items-center gap-2">
+              <input
+                value={workEmail}
+                onChange={(ev) => setWorkEmail(ev.target.value)}
+                onKeyDown={(ev) => { if (ev.key === 'Enter' && workEmail.trim()) saveWorkEmail(); }}
+                placeholder="name@damiatracker.com"
+                className="field h-[38px] w-[240px]"
+                aria-label="Work email"
+              />
+              <button onClick={saveWorkEmail} disabled={savingEmail || !workEmail.trim()}
+                className="btn-secondary disabled:opacity-50">
+                {savingEmail ? 'Saving…' : 'Save work email'}
+              </button>
+            </span>
+          )}
+          {e.status === 'complete' && e.email && (
+            <button onClick={activate} disabled={activating}
+              className="btn-primary disabled:opacity-60">{activating ? 'Activating…' : 'Activate'}</button>
           )}
           {canEditActive && !isDraftRecord && !endOpen && (
             <button onClick={() => setEndOpen(true)}
