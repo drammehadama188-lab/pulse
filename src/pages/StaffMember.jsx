@@ -51,9 +51,7 @@ export default function StaffMember() {
   const [catalogue, setCatalogue] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [savingKey, setSavingKey] = useState(null)
-  const [departments, setDepartments] = useState([])
   const [email, setEmail] = useState('')
-  const [personalEmail, setPersonalEmail] = useState('')
   const [emailBusy, setEmailBusy] = useState(false)
   const [emailMsg, setEmailMsg] = useState('')
   const [resetOpen, setResetOpen] = useState(false)
@@ -66,13 +64,11 @@ export default function StaffMember() {
       setUser(found)
       setRoster((u.users || []).filter((x) => x.username !== username))
       setEmail(found?.email || '')
-      setPersonalEmail(found?.personalEmail || '')
       setCatalogue(pw.powers || [])
       setLoaded(true)
     })
   }
   useEffect(() => { load() }, [username])
-  useEffect(() => { api('/departments').then((d) => setDepartments(d.departments || [])).catch(() => {}) }, [])
   // Roles are owner-only to read; a manager without that grant simply sees no
   // role picker rather than an error.
   useEffect(() => { api('/roles').then((r) => setRoles(r.roles || [])).catch(() => setRoles([])) }, [])
@@ -172,40 +168,16 @@ export default function StaffMember() {
   function toggleSignIn() {
     persist([...powers], !canSignIn, '__signin')
   }
-  // Department decides the sales goal, the leaderboard and My Team, so it is
-  // changed here rather than being fixed at creation (Adama 20 Aug).
-  async function changeDepartment(next) {
-    const prev = user.department
-    if (!next || next === prev) return
-    setSavingKey('__department')
-    setUser((u) => ({ ...u, department: next }))
-    try {
-      await api(`/staff/${username}/department`, { method: 'POST', body: { department: next } })
-    } catch {
-      setUser((u) => ({ ...u, department: prev }))
-    } finally {
-      setSavingKey(null)
-    }
-  }
 
-  async function toggleContractor() {
-    const next = !user.contractor
-    setSavingKey('__contractor')
-    setUser((u) => ({ ...u, contractor: next }))
-    try {
-      await api(`/staff/${username}/contractor`, { method: 'POST', body: { contractor: next } })
-    } catch {
-      setUser((u) => ({ ...u, contractor: !next }))
-    } finally {
-      setSavingKey(null)
-    }
-  }
 
   async function saveEmail() {
     setEmailBusy(true); setEmailMsg('')
     try {
-      await api(`/staff/${username}/access`, { method: 'POST', body: { powers: [...powers], canSignIn, email: email.trim(), personalEmail: personalEmail.trim() } })
-      setUser((u) => ({ ...u, email: email.trim(), personalEmail: personalEmail.trim() }))
+      // 🔒 The login only. The personal email is contact on file and belongs
+      // to the employee record; sending it from here would let two pages write
+      // the same field.
+      await api(`/staff/${username}/access`, { method: 'POST', body: { powers: [...powers], canSignIn, email: email.trim() } })
+      setUser((u) => ({ ...u, email: email.trim() }))
       setEmailMsg('Saved')
     } catch (e) {
       setEmailMsg(e.message || 'Could not save')
@@ -276,28 +248,12 @@ export default function StaffMember() {
         </div>
       )}
 
-      {/* Top cards — Email and Department only. The Access tile counted powers
-          the Access section below already lists one by one, and the header chip
-          already says whether there are any: three places, one fact. */}
-      <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2">
-        <Stat icon={Mail} label="Email" value={user.email || '—'} />
-        <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5">
-          <div className="flex items-center gap-2 mb-3"><Building2 size={15} className="text-[var(--color-ink-faint)]" /><p className="text-[13px] font-semibold text-[var(--color-ink)]">Department</p></div>
-          {hasRealPower('staffadmin') ? (
-            <select
-              value={user.department || ''}
-              disabled={savingKey === '__department'}
-              onChange={(e) => changeDepartment(e.target.value)}
-              className="w-full border border-[var(--color-line)] rounded-lg px-2 py-1.5 text-[13px] bg-white disabled:opacity-50"
-            >
-              {!user.department && <option value="">—</option>}
-              {departments.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-          ) : (
-            <p className="text-[13px] text-[var(--color-ink-soft)]">{user.department || '—'}</p>
-          )}
-        </div>
-      </div>
+      {/* 🔒 THIS IS THE ACCESS PAGE (Adama 30 Aug). It answers one question —
+          what can this person do in Pulse, and over whom — and nothing else.
+          Email as a read-only tile duplicated the editable field in Login below
+          it, and Department is EMPLOYMENT: it decides the sales goal, the
+          leaderboard and My Team, it is owned by the employee record, and two
+          pages that can both set it are two pages that can disagree about it. */}
 
       {/* Login + reset */}
       <div className="bg-white rounded-lg border border-[var(--color-line-soft)] p-5 mb-4">
@@ -307,11 +263,7 @@ export default function StaffMember() {
             <label className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Work email (login)</label>
             <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setEmailMsg('') }} placeholder="name@damiatracker.com" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
           </div>
-          <div className="flex-1">
-            <label className="text-[11.5px] font-medium text-[var(--color-ink-faint)]">Personal email</label>
-            <input type="email" value={personalEmail} onChange={(e) => { setPersonalEmail(e.target.value); setEmailMsg('') }} placeholder="name@gmail.com" className="mt-1 w-full border border-[var(--color-line)] rounded-lg px-3 py-2 text-[13px]" />
-          </div>
-          <Button onClick={saveEmail} disabled={emailBusy || (email.trim() === (user.email || '') && personalEmail.trim() === (user.personalEmail || ''))}>{emailBusy ? <Spinner size={16} /> : 'Save emails'}</Button>
+          <Button onClick={saveEmail} disabled={emailBusy || email.trim() === (user.email || '')}>{emailBusy ? <Spinner size={16} /> : 'Save login email'}</Button>
           {hasRealPower('staffadmin') && <Button variant="outline" icon={KeyRound} onClick={() => setResetOpen(true)}>Reset password</Button>}
         </div>
         {emailMsg && <p className={`text-[11.5px] mt-2 ${emailMsg === 'Saved' ? 'text-[var(--color-good)]' : 'text-[var(--color-bad)]'}`}>{emailMsg}</p>}
@@ -323,15 +275,6 @@ export default function StaffMember() {
           </div>
           <Toggle on={canSignIn} disabled={savingKey === '__signin'} onClick={toggleSignIn} />
         </div>
-        {hasRealPower('staffadmin') && (
-          <div className="mt-3 flex items-center justify-between rounded-lg border border-[var(--color-line-soft)] px-4 py-3">
-            <div>
-              <p className="text-[13px] font-semibold text-[var(--color-ink)]">Contractor</p>
-              <p className="text-[11.5px] text-[var(--color-ink-faint)]">Contractors are paid through Payroll but do not check in or out and hold no schedule — they stay off every attendance view.</p>
-            </div>
-            <Toggle on={!!user.contractor} disabled={savingKey === '__contractor'} onClick={toggleContractor} />
-          </div>
-        )}
       </div>
 
       {/* WHO THEY COVER — not WHAT they can do (Adama 28 Aug: "all permission
