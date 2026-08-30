@@ -21,7 +21,10 @@ const body = (f) => strip(readFileSync(f, 'utf8'));
 let bad = 0;
 bad += rule('no 700 weight anywhere', /font-bold|font-extrabold|font-\[7/);
 bad += rule('no 14px body text (body is 13)', /text-sm\b/);
-bad += rule('no uppercase table headings', /uppercase[^"']*tracking[^"']*text-\[var\(--color-ink-faint\)\]/);
+// Table headings only (Adama 30 Aug). Form field labels in small caps are his
+// Add-employee design and are allowed — see DESIGN.md, "Small caps". The old
+// pattern matched any uppercase+tracking in faint ink and so caught them too.
+bad += rule('no uppercase table headings', /<th[^>]*uppercase[^>]*tracking/);
 bad += rule('no pill-shaped buttons', /rounded-full[^"']*(px-5|px-6)[^"']*font-semibold/);
 bad += rule('no 12px card radius', /rounded-xl|rounded-2xl|rounded-3xl/);
 bad += rule('no heavy shadows outside the token', /shadow-\[0_6px|shadow-2xl/);

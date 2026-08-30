@@ -186,6 +186,13 @@ Never reduce spacing just to fit more on screen.
 Hierarchy comes from size and weight. Do not make everything bold. Secondary
 information recedes.
 
+**Small caps: form field labels yes, table headings no** (Adama, 30 Aug 2026,
+from his Add-employee design). A field label in 11px small caps with a little
+letter-spacing separates the label from the value under it in a dense form, and
+that is what his design uses. A TABLE heading in small caps is the pattern that
+was banned — a column of them shouts across the whole row. The check enforces
+the table half only.
+
 Typography consistency means a shared hierarchy and shared tokens — not every
 text element at the same size.
 

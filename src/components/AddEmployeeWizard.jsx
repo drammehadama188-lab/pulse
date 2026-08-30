@@ -53,11 +53,11 @@ const readAsBase64 = (file) => new Promise((resolve, reject) => {
   r.readAsDataURL(file)
 })
 
-// ⚠️ His mockup draws these labels in small caps (JOB TITLE, DEPARTMENT). The
-// 21 Aug design rules ban uppercase + letter-spacing in faint ink, and the
-// build check enforces it, so they are sentence case here like every other
-// label in Pulse. Raised with him rather than weakened in the checker.
-const L = 'mb-1.5 block text-[11.5px] font-semibold text-[var(--color-ink-faint)]'
+// His design: small caps, letter-spaced, faint. In a dense two-column form the
+// label has to separate itself from the value under it without competing with
+// it. DESIGN.md now says so, and the check was narrowed to the table headings
+// it was always named for rather than the page being bent around it.
+const L = 'mb-2 block text-[10.5px] font-semibold uppercase tracking-[0.7px] text-[var(--color-ink-faint)]'
 const HELP = 'mt-1.5 block text-[11.5px] text-[var(--color-ink-faint)]'
 
 function Row({ children }) {
@@ -192,6 +192,7 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
   if (done) {
     return (
       <Shell onClose={onClose} title="Employee created" subtitle={`${done.name} is on the team.`}>
+        <Body>
         <div className="mx-auto max-w-[560px] py-6 text-center">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
             style={{ background: 'var(--color-pill-active-bg)', color: 'var(--color-pill-active)' }}>
@@ -217,6 +218,7 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
             )}
           </div>
         </div>
+        </Body>
         <Footer right={<button onClick={onClose} className="btn-primary">Done</button>} />
       </Shell>
     )
@@ -225,6 +227,7 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
   const id = STEPS[step][0]
   return (
     <Shell onClose={onClose} title="Add employee" subtitle="Build the employee record in steps. You can finish missing items later.">
+      <Body>
       <div className="mb-7 flex flex-wrap gap-2">
         {STEPS.map(([k, label], i) => (
           <button key={k} onClick={() => goTo(i)}
@@ -528,6 +531,7 @@ export default function AddEmployeeWizard({ onClose, onCreated, initialStep = 0 
       )}
 
       {error && <p className="mt-5 text-[12.5px] font-medium text-[var(--color-stage-out)]">{error}</p>}
+      </Body>
 
       <Footer
         left={step > 0 && (
@@ -554,18 +558,31 @@ function Section({ title, line, children }) {
   )
 }
 
-// A record with six steps in it does not belong in a 500px modal — that is what
-// made the old form a scroll nobody finished.
+// 🔒 A FULL-HEIGHT PANEL, NOT A FLOATING WHITE CARD. Six steps of a record do
+// not belong in a box in the middle of a dimmed screen: it hides the app, it
+// wastes the width, and it reads as an interruption rather than a piece of
+// work. His design keeps the sidebar in place and gives the panel the whole
+// working area, on the app's own canvas rather than a black scrim.
+//
+// The header and the footer stay put while the middle scrolls, so "Step 3 of 6"
+// and Continue never wander off the bottom of a long step.
 function Shell({ title, subtitle, onClose, children }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
   }, [onClose])
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(11,18,32,0.45)] p-0 sm:p-6">
-      <div className="mx-auto flex min-h-full max-w-[1080px] flex-col bg-[var(--color-surface)] sm:min-h-0 sm:rounded-[14px] sm:shadow-[var(--shadow-lift)]">
-        <div className="flex items-start justify-between gap-4 px-6 pt-6 sm:px-8">
+    <div className="fixed inset-0 z-50 flex" style={{ background: 'rgba(11,18,32,0.28)' }} onMouseDown={onClose}>
+      <span className="hidden shrink-0 md:block" style={{ width: 228 }} />
+      <div onMouseDown={(e) => e.stopPropagation()}
+        className="flex h-full min-w-0 flex-1 flex-col border-l border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-lift)]">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--color-line-soft)] px-6 py-5 md:px-9"
+          style={{ background: 'var(--color-fill)' }}>
           <div>
             <h1 className="text-[21px] font-semibold tracking-[-0.3px] text-[var(--color-ink)]">{title}</h1>
             <p className="mt-1 text-[12.5px] text-[var(--color-ink-soft)]">{subtitle}</p>
@@ -574,18 +591,23 @@ function Shell({ title, subtitle, onClose, children }) {
             <X size={18} />
           </button>
         </div>
-        <div className="flex-1 px-6 pb-8 pt-7 sm:px-8">{children}</div>
+        {children}
       </div>
     </div>
   )
 }
 
+// The body scrolls; the footer is a bar of its own, the way his design draws it.
+function Body({ children }) {
+  return <div className="min-h-0 flex-1 overflow-y-auto px-6 py-7 md:px-9">{children}</div>
+}
 function Footer({ left, middle, right }) {
   return (
-    <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--color-line)] pt-5">
-      <span>{left}</span>
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-t border-[var(--color-line)] px-6 py-4 md:px-9"
+      style={{ background: 'var(--color-fill)' }}>
+      <span className="min-w-[90px]">{left}</span>
       {middle && <span className="text-[12px] text-[var(--color-ink-faint)]">{middle}</span>}
-      <span>{right}</span>
+      <span className="min-w-[90px] text-right">{right}</span>
     </div>
   )
 }
