@@ -41,6 +41,7 @@ const DOC_SLOTS = [
 const DAY_KEYS = [['1', 'Mon'], ['2', 'Tue'], ['3', 'Wed'], ['4', 'Thu'], ['5', 'Fri'], ['6', 'Sat'], ['0', 'Sun']]
 const DEFAULT_WEEK = { 1: true, 2: true, 3: true, 4: true, 5: true, 6: false, 0: false }
 
+const EMAIL = /^\S+@\S+\.\S+$/
 const today = () => new Date().toISOString().slice(0, 10)
 const addMonths = (iso, n) => {
   const d = new Date(`${iso}T00:00:00Z`)
@@ -105,7 +106,16 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
     baseSalary: '', transport: '', commission: '', target: '5',
     roleId: '',
   })
-  const set = (k, val) => setV((p) => ({ ...p, [k]: val }))
+  // 🔴 THE MESSAGE DIES THE MOMENT YOU TOUCH THE FORM. The error was computed
+  // only when Continue was pressed and nothing cleared it afterwards, so a
+  // message stayed on screen after the field had been fixed — Adama typed a
+  // perfectly good address and the page still said "That personal email is not
+  // valid" (30 Aug). A validation message that outlives the problem is worse
+  // than none: it sends you looking for a fault that is not there.
+  const set = (k, val) => {
+    setV((p) => ({ ...p, [k]: val }))
+    setError('')
+  }
   const on = (k) => (e) => set(k, e.target.value)
 
   const [docs, setDocs] = useState({})   // slot key → File
@@ -136,8 +146,13 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
       // letter is out, and the sign-in is sent then. It never blocks hiring
       // somebody, and 🔒 the PERSONAL email is never promoted into a sign-in —
       // it is contact on file.
-      if (v.email.trim() && !/^\S+@\S+\.\S+$/.test(v.email)) return 'That work email is not valid'
-      if (v.personalEmail.trim() && !/^\S+@\S+\.\S+$/.test(v.personalEmail)) return 'That personal email is not valid'
+      // 🔴 TEST WHAT WE WOULD SEND, NOT WHAT WAS TYPED. This trimmed to decide
+      // WHETHER to check, then tested the raw value — so an address pasted with
+      // a trailing space was rejected as invalid while looking perfectly right
+      // on screen (Adama 30 Aug). Everything is trimmed once, here and on the
+      // way to the server.
+      if (v.email.trim() && !EMAIL.test(v.email.trim())) return 'That work email is not valid'
+      if (v.personalEmail.trim() && !EMAIL.test(v.personalEmail.trim())) return 'That personal email is not valid'
     }
     if (i === 1) {
       if (!v.title.trim()) return 'Give the job title'
@@ -168,13 +183,13 @@ export default function AddEmployeeWizard({ onCreated, initialStep = 0 }) {
       for (const [k] of DAY_KEYS) week[k] = v.week[k] ? { start: v.start, end: v.end } : null
       const r = await api('/staff', { method: 'POST', body: {
         type: /manager|lead|supervisor/i.test(v.title) ? 'manager' : 'agent',
-        name: v.name, email: v.email, personalEmail: v.personalEmail,
-        title: v.title, department: v.department, manager: v.manager,
+        name: v.name.trim(), email: v.email.trim(), personalEmail: v.personalEmail.trim(),
+        title: v.title.trim(), department: v.department, manager: v.manager,
         employmentType: v.employmentType, joined: v.joined,
         schedule: isContractor ? null : week,
         contractMonths: v.contractMonths, probationMonths: v.onProbation ? v.probationMonths : 0,
         baseSalary: v.baseSalary, transport: v.transport, commission: v.commission, target: v.target,
-        phone: v.phone, address: v.address,
+        phone: v.phone.trim(), address: v.address.trim(),
         roleId: roles ? v.roleId : '',
       } })
 
