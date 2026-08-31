@@ -334,24 +334,6 @@ export default function EmployeePage() {
               contract comes back. Only offered once the record is complete —
               activating a half-built record is what the two states exist to
               prevent. */}
-          {/* 🔒 No company email, no activation — and the field to set one is
-              right here, so naming the blocker and fixing it are the same act. */}
-          {e.status === 'complete' && !e.email && (
-            <span className="flex items-center gap-2">
-              <input
-                value={workEmail}
-                onChange={(ev) => setWorkEmail(ev.target.value)}
-                onKeyDown={(ev) => { if (ev.key === 'Enter' && workEmail.trim()) saveWorkEmail(); }}
-                placeholder="name@damiatracker.com"
-                className="field h-[38px] w-[240px]"
-                aria-label="Work email"
-              />
-              <button onClick={saveWorkEmail} disabled={savingEmail || !workEmail.trim()}
-                className="btn-secondary disabled:opacity-50">
-                {savingEmail ? 'Saving…' : 'Save work email'}
-              </button>
-            </span>
-          )}
           {e.status === 'complete' && e.email && (
             <button onClick={activate} disabled={activating}
               className="btn-primary disabled:opacity-60">{activating ? 'Activating…' : 'Activate'}</button>
@@ -403,6 +385,27 @@ export default function EmployeePage() {
               Employee ID: {e.employeeId}
               {e.joined && <> · Joined {day(e.joined)} ({tenure(e.joined)})</>}
             </p>
+            {/* 🔒 No company email, no activation. The field sits here in the
+                identity block, under the Employee ID, because this address IS
+                part of who they are in our systems (Adama 31 Aug: "something
+                subtle") — not a page-level action in the header. */}
+            {e.status === 'complete' && !e.email && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="text-[12px] text-[var(--color-ink-faint)]">Work email</span>
+                <input
+                  value={workEmail}
+                  onChange={(ev) => setWorkEmail(ev.target.value)}
+                  onKeyDown={(ev) => { if (ev.key === 'Enter' && workEmail.trim()) saveWorkEmail(); }}
+                  placeholder="name@damiatracker.com"
+                  className="field h-[32px] w-[220px] text-[12px]"
+                  aria-label="Work email"
+                />
+                <button onClick={saveWorkEmail} disabled={savingEmail || !workEmail.trim()}
+                  className="btn-secondary h-[32px] px-3 text-[12px] disabled:opacity-50">
+                  {savingEmail ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
