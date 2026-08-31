@@ -1480,7 +1480,9 @@ app.get('/api/staff/:username/contract', auth, requireSub('staffadmin', 'add'), 
     // ever deleted for the other — a signed contract does not erase the
     // question of what was issued (Adama 30 Aug: "if they sign do we keep both
     // or just one").
-    issued: db.read('agent-files', []).filter((f) => f.agent === u.name && f.category === 'contract' && f.stage !== 'signed').length,
+    // A voided contract is neither awaiting a signature nor a live offer, so
+    // it counts in neither number.
+    issued: db.read('agent-files', []).filter((f) => f.agent === u.name && f.category === 'contract' && f.stage !== 'signed' && f.stage !== 'void').length,
     signed: db.read('agent-files', []).filter((f) => f.agent === u.name && f.category === 'contract' && f.stage === 'signed').length,
   })
 })
@@ -1525,6 +1527,38 @@ app.post('/api/staff/:username/contract/file', auth, requireSub('staffadmin', 'a
   // The same bytes go back so the browser can hand him the file to attach —
   // one round trip, and what he attaches is byte-for-byte what is on the record.
   res.json({ file, pdfBase64: pdf.toString('base64') })
+})
+
+// 🔒 A CONTRACT CAN BE WITHDRAWN BEFORE IT IS SIGNED (Adama 31 Aug — an
+// applicant wants to renegotiate the pay). Voiding marks the issued copy void
+// — kept on file forever, like issued vs signed, because "what was offered"
+// remains a fact — and drops the record back to pending, so Activate is gone
+// until new terms are agreed and a fresh contract is issued. The letter to
+// the applicant is GENERIC and states no reason, the way companies withdraw
+// an offer; it is composed in HIS email client exactly like the contract —
+// Pulse still sends nothing.
+app.post('/api/staff/:username/contract/void', auth, requireSub('staffadmin', 'add'), notViewAs, (req, res) => {
+  const users = seedUsers()
+  const u = users.find((x) => x.username === req.params.username)
+  if (!u) return res.status(404).json({ error: 'No such staff member' })
+  if (u.status !== 'pending' && u.status !== 'complete') {
+    return res.status(400).json({ error: 'Only a record that has not been activated can have its contract voided' })
+  }
+  const files = db.read('agent-files', [])
+  const issued = files.filter((f) => f.agent === u.name && f.category === 'contract' && f.stage === 'issued')
+  if (!issued.length) return res.status(400).json({ error: 'No issued contract to void' })
+  const when = new Date().toISOString()
+  for (const f of issued) {
+    f.stage = 'void'
+    f.voidedAt = when
+    f.voidedBy = req.user.name || req.user.username
+    if (!/^VOID/.test(f.name)) f.name = `VOID — ${f.name}`
+  }
+  db.write('agent-files', files)
+  if (u.status === 'complete') u.status = 'pending'
+  ;(u.history ||= []).push({ date: todayKey(), event: 'Contract voided — offer withdrawn, record back to pending' })
+  db.write('users', users)
+  res.json({ ok: true, to: u.personalEmail || u.email || '' })
 })
 
 // Mark someone as a contractor — stays on payroll and in the staff list, but
@@ -6099,7 +6133,7 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
   const documents = db.read('agent-files', [])
     .filter((f) => f.agent === u.name)
     .sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''))
-    .map(({ id, name, category, mimeType, sizeBytes, uploadedAt, uploadedBy }) => ({ id, name, category: category || 'other', mimeType, sizeBytes, uploadedAt, uploadedBy: uploadedBy || '' }))
+    .map(({ id, name, category, mimeType, sizeBytes, uploadedAt, uploadedBy, stage }) => ({ id, name, category: category || 'other', mimeType, sizeBytes, uploadedAt, uploadedBy: uploadedBy || '', stage: stage || null }))
 
   // WHAT NEEDS ATTENTION — the record's first screen answers "is anything
   // wrong here", so each item is a fact with somewhere to go. Only things
@@ -6147,7 +6181,8 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
   // 🔑 Judged on what is ON FILE, never on a tick: the onboarding checklist
   // has a "Signed contract" item anyone can tick with nothing uploaded, and a
   // tick is not a contract.
-  const hasDoc = (cat) => documents.some((f) => f.category === cat)
+  // A voided contract proves nothing about the terms — it does not count.
+  const hasDoc = (cat) => documents.some((f) => f.category === cat && f.stage !== 'void')
   if (!hasDoc('contract')) {
     attention.push({
       tone: 'bad',
@@ -6303,7 +6338,7 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
       endedOn: isArchived(u) ? lastDayOf(u) : null,
       endedWhy: isArchived(u) ? (u.archivedReason || 'Left the team') : '',
       noticePeriod: profile.noticePeriod || '',
-      document: documents.find((f) => f.category === 'contract') || null,
+      document: documents.find((f) => f.category === 'contract' && f.stage !== 'void') || null,
     },
     history: (u.history || []).slice().reverse(),
   })

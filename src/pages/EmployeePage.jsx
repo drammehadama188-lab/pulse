@@ -13,6 +13,7 @@ import RoleChange from '../components/employee/RoleChange.jsx';
 import Assignment from '../components/employee/Assignment.jsx';
 import EndEmployment from '../components/employee/EndEmployment.jsx';
 import LeaverFile from '../components/employee/LeaverFile.jsx';
+import { Modal } from '../components/ui.jsx';
 import { PageSkeleton } from '../components/ui/Skeleton.jsx';
 
 // One employee, in the design Adama sent (20 Aug): who they are, the four
@@ -194,6 +195,8 @@ export default function EmployeePage() {
   // block, because that is the only moment it cannot be set anywhere else.
   const [workEmail, setWorkEmail] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
+  const [voidOpen, setVoidOpen] = useState(false);
+  const [voiding, setVoiding] = useState(false);
   const [payEdit, setPayEdit] = useState(null);
   const [payErr, setPayErr] = useState('');
   const { realUser, isViewAs, hasRealPower } = useAuth();
@@ -248,6 +251,40 @@ export default function EmployeePage() {
     try { await api(`/staff/${username}/activate`, { method: 'POST', body: {} }); await refreshRecord(); }
     catch (err) { setError(err.message); }
     finally { setActivating(false); }
+  }
+
+  // 🔒 The withdrawal letter is GENERIC — no reason stated, the way companies
+  // withdraw an offer (Adama 31 Aug: "i do not want to type a reason"). One
+  // source builds both the preview and the mailto, so what he reads in the
+  // dialog is word for word what opens in his email client. Pulse sends
+  // nothing itself — same rule as the contract.
+  function voidLetter() {
+    const emp = d?.employee || {};
+    const first = (emp.name || '').split(/\s+/)[0] || 'there';
+    return {
+      to: emp.personalEmail || emp.email || '',
+      subject: 'Withdrawal of Contract of Employment - Damia Security Solutions Ltd',
+      body: [
+        `Dear ${first},`, '',
+        'Thank you for your interest in joining Damia Security Solutions Ltd.', '',
+        'Following a review, we have withdrawn the contract of employment previously sent to you. That contract is no longer valid and should be disregarded.', '',
+        'We will be in touch if there is anything further.', '',
+        'Adama Drammeh', 'CEO', 'Damia Security Solutions Ltd',
+      ].join('\n'),
+    };
+  }
+
+  async function voidContract() {
+    setVoiding(true);
+    setError(null);
+    try {
+      await api(`/staff/${username}/contract/void`, { method: 'POST', body: {} });
+      const { to, subject, body } = voidLetter();
+      await refreshRecord();
+      setVoidOpen(false);
+      window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    } catch (err) { setError(err.message); }
+    finally { setVoiding(false); }
   }
 
   async function refreshRecord() {
@@ -312,6 +349,9 @@ export default function EmployeePage() {
   const [statusLabel, statusBg, statusInk] = STATUS[e.status]
     || [e.status || 'Unknown', 'var(--color-pill-inactive-bg)', 'var(--color-pill-inactive)'];
   const isDraftRecord = e.status === 'pending' || e.status === 'complete';
+  // Void is only offered while there is a live issued contract to withdraw —
+  // once voided (or signed) the button has nothing to act on and goes away.
+  const hasIssuedContract = (d.documents || []).some((f) => f.category === 'contract' && f.stage === 'issued');
   // Someone who has left keeps their record, but it stops being editable: the
   // server refuses a write to an archived record, so an Edit button here could
   // only fail. Offboarding is the exception and stays open below.
@@ -337,6 +377,10 @@ export default function EmployeePage() {
           {e.status === 'complete' && e.email && (
             <button onClick={activate} disabled={activating}
               className="btn-primary disabled:opacity-60">{activating ? 'Activating…' : 'Activate'}</button>
+          )}
+          {isDraftRecord && hasIssuedContract && (
+            <button onClick={() => setVoidOpen(true)}
+              className="btn-secondary text-[var(--color-stage-out)]">Void contract</button>
           )}
           {canEditActive && !isDraftRecord && !endOpen && (
             <button onClick={() => setEndOpen(true)}
@@ -430,6 +474,29 @@ export default function EmployeePage() {
           means, so it is not something to go and find. */}
       <EndEmployment employee={e} canEdit={canEditRecord} open={endOpen}
         onClose={() => setEndOpen(false)} onDone={refreshRecord} />
+
+      {/* 🔒 Withdrawing an offer: the letter he reads here is exactly what
+          opens in his email client — Pulse voids the contract and files it,
+          he sends the mail from his own account, same as issuing. */}
+      <Modal open={voidOpen} onClose={() => !voiding && setVoidOpen(false)} title="Void this contract" maxWidth="max-w-xl"
+        footer={(
+          <>
+            <button onClick={() => setVoidOpen(false)} disabled={voiding} className="btn-secondary">Cancel</button>
+            <button onClick={voidContract} disabled={voiding}
+              className="btn-secondary text-[var(--color-stage-out)] disabled:opacity-50">
+              {voiding ? 'Voiding…' : 'Void and open email'}
+            </button>
+          </>
+        )}>
+        <p className="text-[13px] text-[var(--color-ink-soft)]">
+          The issued contract stays on file marked VOID. The record goes back to Pending completion until a new contract is issued. This letter opens in your email client for you to send.
+        </p>
+        <div className="mt-4 rounded-lg border border-[var(--color-line)] bg-[var(--color-soft)] p-4">
+          <p className="text-[12px] text-[var(--color-ink-faint)]">To: {voidLetter().to || 'no email on file'}</p>
+          <p className="mt-1 text-[12px] text-[var(--color-ink-faint)]">Subject: {voidLetter().subject}</p>
+          <p className="mt-3 whitespace-pre-line text-[13px] text-[var(--color-ink)]">{voidLetter().body}</p>
+        </div>
+      </Modal>
 
       <div className="mb-5 flex flex-wrap items-center gap-1 border-b border-[var(--color-line)]">
         {[...TABS, ...(canSeeAccess ? [ACCESS_TAB] : [])].map((t) => (
