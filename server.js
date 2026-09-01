@@ -4659,6 +4659,54 @@ app.get('/api/payroll/run', auth, requireOwner, async (req, res) => {
     payParts: payParts(p.name),
     paid: paidByName[p.name] || null,
   }))
+  // 🔒 A LEAVER IS PAID ON THE RUN FOR THE MONTH THEY LEFT (Adama 31 Aug:
+  // "when someone is offboarded i am asked questions about the pay and all
+  // that, the payroll should respect and reflect this").
+  //
+  // 🔴 The two halves were built and never joined. Recording an exit asks for
+  // the final settlement and stores it as `payAmount` with its whole working in
+  // `payBasis` — days worked, base and transport lines, accrued leave — under a
+  // comment saying "RECORDED, NOT PAID. Payroll stays the only writer of money."
+  // But the roster filter above drops anyone archived, and archiving is what
+  // offboarding does. So the figure was captured and the person disappeared
+  // from the only screen that can pay it. Mustapha Kora was offboarded and was
+  // simply not on the run.
+  //
+  // 🔒 The exit's own figure is the suggestion, NOT a fresh part-month sum: the
+  // settlement was agreed on the day, leave included, and payroll must not
+  // quietly recompute what somebody already signed off. `payBasis` rides along
+  // so the run can show what the number is made of.
+  // 🔑 They appear on ONE month — the month their last day falls in — so they
+  // drop off by construction once it has been run, with nothing to clean up.
+  // Anyone archived with no exit recorded stays out, exactly as before.
+  for (const x of loadExits()) {
+    if (x.cancelledAt) continue
+    if (String(x.lastDay || '').slice(0, 7) !== period) continue
+    const settlement = {
+      amount: x.payAmount ?? null,
+      basis: x.payBasis || null,
+      lastDay: x.lastDay,
+      type: x.type || '',
+    }
+    // Still on the roster (an exit dated ahead of the archive) — mark the row
+    // they already have rather than adding a second one for the same person.
+    const already = people.find((pp) => pp.name === x.name)
+    if (already) {
+      already.finalSettlement = settlement
+      if (x.payAmount != null) already.suggestedSalary = x.payAmount
+      continue
+    }
+    people.push({
+      name: x.name,
+      role: x.title || 'Leaver',
+      suggestedSalary: x.payAmount != null ? x.payAmount : 0,
+      suggestedBonus: 0,
+      partMonth: null,
+      payParts: null,
+      paid: paidByName[x.name] || null,
+      finalSettlement: settlement,
+    })
+  }
   // Payments to people no longer on the roster (past staff, pre-Pulse hires)
   // still belong to the month's story — read-only paid rows after the roster.
   const rosterNames = new Set(people.map((p) => p.name))

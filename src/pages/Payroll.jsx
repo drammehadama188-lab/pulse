@@ -660,6 +660,7 @@ function RunScreen({ period, month, rows, draftOf, setDraft, paySources, payDate
                       <p className="text-[13px] font-medium text-[var(--color-ink)]">
                         {p.name}
                         {p.past && <span className="ml-2 rounded-lg bg-[var(--color-fill)] px-1.5 py-0.5 text-[12px] font-medium text-[var(--color-ink-soft)]">Past staff</span>}
+                        {p.finalSettlement && <span className="ml-2 rounded-lg bg-[var(--color-warn-bg)] px-1.5 py-0.5 text-[12px] font-medium text-[var(--color-warn)]">Final settlement</span>}
                       </p>
                       <p className="text-[12px] text-[var(--color-ink-faint)]">{p.role}</p>
                       {/* 🔒 A smaller suggestion is not a mistake. Say why it is
@@ -680,6 +681,26 @@ function RunScreen({ period, month, rows, draftOf, setDraft, paySources, payDate
                         <p className="text-[12px] text-[var(--color-warn)]">
                           Part month · {p.partMonth.workedDays} of {p.partMonth.monthDays} working days ({p.partMonth.from.slice(8)}–{p.partMonth.to.slice(8)})
                         </p>
+                      )}
+                      {/* 🔒 THE SETTLEMENT SHOWS ITS WORKING (Adama 31 Aug).
+                          The figure was agreed at the exit — days worked, the
+                          lines it was built from, accrued leave — and payroll
+                          suggests THAT number rather than recomputing a month
+                          nobody signed off. Reading it here is how the person
+                          paying can see what they are paying for. */}
+                      {p.finalSettlement && (
+                        <div className="mt-0.5 text-[12px] text-[var(--color-ink-faint)]">
+                          <p>Last day {p.finalSettlement.lastDay}{p.finalSettlement.type ? ` · ${p.finalSettlement.type}` : ''}</p>
+                          {p.finalSettlement.basis?.monthDays ? (
+                            <p>{p.finalSettlement.basis.workedDays} of {p.finalSettlement.basis.monthDays} working days</p>
+                          ) : null}
+                          {(p.finalSettlement.basis?.lines || []).map((ln) => (
+                            <p key={ln.label}>{ln.label} · {D(ln.amount)}</p>
+                          ))}
+                          {p.finalSettlement.amount == null && (
+                            <p className="text-[var(--color-warn)]">No figure was agreed at the exit — enter it before paying.</p>
+                          )}
+                        </div>
                       )}
                     </td>
                     {paid ? (
