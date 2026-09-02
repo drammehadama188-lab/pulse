@@ -7907,7 +7907,9 @@ async function workScorecardFor({ u, person = null, name, month }) {
       { key: 'renewal', label: 'Customer renewals', kind: 'percent', target: kRn.target, weight: kRn.weight, unit: '%',
         actual: retFeed && rnDue ? Math.round((rnRen / rnDue) * 100) : null,
         due: retFeed ? rnDue : null,
-        detail: retFeed && rnDue ? `${rnRen} renewed of ${rnDue} due` : (retFeed ? 'no renewals due this month yet' : null) },
+        // The % target answers "of what" right here (Adama 1 Sep): 65% of
+        // this month's 9 due = renew 6. Same rounding as the admin desk.
+        detail: retFeed && rnDue ? `${rnRen} renewed of ${rnDue} due · goal ${Math.max(1, Math.round((rnDue * kRn.target) / 100))} of ${rnDue}` : (retFeed ? 'no renewals due this month yet' : null) },
       { key: 'cases', label: 'Case resolution', kind: 'percent', target: kC.target, weight: kC.weight, unit: '%',
         actual: typeof cas?.casesPct === 'number' ? cas.casesPct : null,
         detail: cas ? `${cas.onTime} on time of ${cas.resolved + cas.openOverdue}${cas.openOverdue ? ` · ${cas.openOverdue} open past SLA` : ''}` : null },
@@ -7949,7 +7951,7 @@ async function workScorecardFor({ u, person = null, name, month }) {
       { key: 'renewal', label: 'Customer renewal rate', kind: 'percent', target: kRn.target, weight: kRn.weight, unit: '% of renewals due',
         actual: retF && rnDue ? Math.round((rnRen / rnDue) * 100) : null,
         due: retF ? rnDue : null,
-        detail: retF && rnDue ? `${rnRen} renewed of ${rnDue} due` : (retF ? 'no renewals due this month yet' : null) },
+        detail: retF && rnDue ? `${rnRen} renewed of ${rnDue} due · goal ${Math.max(1, Math.round((rnDue * kRn.target) / 100))} of ${rnDue}` : (retF ? 'no renewals due this month yet' : null) },
       { key: 'install', label: 'Installations completed within 3 days', kind: 'percent', target: kI.target, weight: kI.weight, unit: '%',
         actual: typeof inst?.installPct === 'number' ? inst.installPct : null,
         detail: inst && (inst.completed || inst.openLate)
@@ -8018,7 +8020,7 @@ async function workScorecardFor({ u, person = null, name, month }) {
       { key: 'team-retention', label: 'Team retention', kind: 'percent', target: kTR.target, weight: kTR.weight, unit: '%',
         actual: retF && retDue ? Math.round((retRen / retDue) * 100) : null,
         due: retF ? retDue : null, // goal text says "renew N of the M due" — real dues, not an abstract %
-        detail: retF && retDue ? `${retRen} renewed of ${retDue} due` : null },
+        detail: retF && retDue ? `${retRen} renewed of ${retDue} due · goal ${Math.max(1, Math.round((retDue * kTR.target) / 100))} of ${retDue}` : null },
       { key: 'team-online', label: 'Trackers online', kind: 'percent', target: kTO.target, weight: kTO.weight, unit: '%',
         actual: onlF && onlTotal ? Math.round((onlOn / onlTotal) * 100) : null,
         detail: onlF && onlTotal ? `${onlOn} of ${onlTotal} trackers online` : null },
