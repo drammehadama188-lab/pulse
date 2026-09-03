@@ -6170,7 +6170,14 @@ app.get('/api/hr/employee/:username', auth, requirePower('hr'), async (req, res)
   // 🔑 A KPI whose `actual` is null is NOT zero — Pulse has no feed for it
   // yet, and the tab must say so rather than draw an empty bar that reads as
   // a failure. Attendance is added because we genuinely measure it.
-  const scorecard = scorecardFor(u, salesActual)
+  // 🔴 3 Sep: scorecardFor returns NULL for anyone whose role has no card in
+  // the catalog — titleScorecardKey only knows Sales, Customer Service, Team
+  // Lead and Assistant Manager, so Operations/Marketing/Finance/technicians
+  // fall through. That null 500'd this whole record on PROD (local test data
+  // has no such person). Attendance IS genuinely measured for everyone, so
+  // the record still shows it and the KPI card simply carries no role label —
+  // "not built" rather than a dead page.
+  const scorecard = scorecardFor(u, salesActual) || { role: null, kpis: [] }
   scorecard.kpis = [
     ...scorecard.kpis,
     { key: 'attendance', label: 'Attendance', kind: 'percent', unit: '%', target: 90, weight: 0, actual: attendancePct },
